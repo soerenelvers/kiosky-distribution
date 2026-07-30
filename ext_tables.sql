@@ -5,6 +5,13 @@ CREATE TABLE tx_kiosky_state (
   PRIMARY KEY (uid)
 );
 
+CREATE TABLE tx_kiosky_update_state (
+  uid int(11) unsigned NOT NULL,
+  status_json mediumtext,
+  updated_at int(11) unsigned NOT NULL default '0',
+  PRIMARY KEY (uid)
+);
+
 CREATE TABLE tx_kiosky_migration_map (
   uid int(11) unsigned NOT NULL auto_increment,
   source_type varchar(64) NOT NULL default '',

@@ -17,6 +17,9 @@ final class Api
         private readonly ?CrewBrainService $crewBrain = null,
         private readonly ?DwdService $dwd = null,
         private readonly ?EasyJobService $easyJob = null,
+        /** @var list<array<string,mixed>> */
+        private readonly array $platformUsers = [],
+        private readonly string $platform = 'cms',
     ) {
     }
 
@@ -106,6 +109,18 @@ final class Api
         }
 
         $this->assertRolePermission($method, $path);
+
+        if ($path === '/api/content-transfer/export' && in_array($method, ['GET', 'POST'], true)) {
+            $requested = is_array($body['sections'] ?? null) ? array_values(array_map('strval', $body['sections'])) : [];
+            $package = (new TransferService())->export($state, $requested, $this->platform, $this->version, $this->platformUsers);
+            $this->audit($state, 'content_transfer.exported', implode(',', $package['includedSections']));
+            return $this->ok($package, true);
+        }
+        if ($path === '/api/content-transfer/import' && $method === 'POST') {
+            $result = (new TransferService())->import($state, $body);
+            $this->audit($state, 'content_transfer.imported', implode(',', $result['includedSections']));
+            return $this->ok(['imported' => $result], true);
+        }
 
         if ($path === '/api/events') {
             if ($method === 'GET') return $this->ok(['data' => $this->active($state['events'])]);
@@ -1681,13 +1696,14 @@ final class Api
         $now = $this->now();
         return [
             'schemaVersion' => 1, 'createdAt' => $now, 'updatedAt' => $now,
-            'events' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
+            'events' => [], 'eventSchedules' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
             'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
             'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
             'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users'],
             'activeEventSource' => null,
+            'portableUsers' => [], 'portableApiUsers' => [],
             'titleExclusions' => [],
             'warningTemplates' => [[
                 'id' => 'warning-template-info', 'name' => 'Wichtige Information', 'warningType' => 'info',

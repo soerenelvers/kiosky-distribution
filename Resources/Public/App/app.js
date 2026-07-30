@@ -344,6 +344,7 @@ const pageMeta = {
   operations: ['Presets & Warnhinweise', 'Player-Monitoring, Presets und Warnhinweise'],
   integrations: ['Schnittstellen', 'Datenquellen und Synchronisation'],
   settings: ['Einstellungen', 'Funktionsbereiche modular ein- und ausschalten'],
+  updates: ['Updates', 'Kiosky-Version und Release Notes'],
   users: ['Benutzerverwaltung', 'Konten, Rollen und Zugriff'],
   features: ['Funktionen & Hilfe', 'Alles, was Kiosky kann']
 };
@@ -434,8 +435,57 @@ function setView(view) {
   if (view === 'displays') loadDisplays();
   if (view === 'schedule') loadScheduling();
   if (view === 'operations') loadOperations();
+  if (view === 'updates') loadUpdates();
   if (view === 'dashboard') loadDashboard();
 }
+
+function renderUpdates(update) {
+  document.querySelector('#update-installed-version').textContent=update.installedVersion||'–';
+  document.querySelector('#update-available-version').textContent=update.availableVersion||'–';
+  document.querySelector('#update-installation-mode').textContent=update.installationMode==='composer'?'Composer-Installation':'Standalone-Installation';
+  document.querySelector('#update-checked-at').textContent=update.checkedAt?`Geprüft ${new Date(update.checkedAt).toLocaleString('de-DE')}`:'Noch nicht geprüft';
+  const label=document.querySelector('#update-state-label');
+  label.textContent=update.updateAvailable?'Update verfügbar':'Aktuell';
+  label.className=`tag ${update.updateAvailable?'orange':'green'}`;
+  document.querySelector('#update-release-notes').innerHTML=update.releaseNotes
+    ? `<p>${escapeHtml(update.releaseNotes).replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>')}</p>`
+    : '<p>Für diese Version wurden keine eingebetteten Release Notes geliefert.</p>';
+  const link=document.querySelector('#update-release-link');
+  link.hidden=!update.releaseNotesUrl;
+  if(update.releaseNotesUrl)link.href=update.releaseNotesUrl;
+  const error=document.querySelector('#update-error');
+  error.hidden=!update.lastError;
+  error.textContent=update.lastError||'';
+  const install=document.querySelector('#update-install');
+  install.disabled=!update.updateAvailable||!update.canInstall;
+  document.querySelector('#update-install-note').textContent=update.restartRequired
+    ? 'Das Update wurde vorbereitet. Kiosky wird neu gestartet.'
+    : update.canInstall?'Paketprüfung, Sicherung, Migration und Cache-Leerung laufen automatisch.':'Diese Installationsart unterstützt kein One-Click-Update.';
+  const badge=document.querySelector('#update-nav-badge');
+  badge.hidden=!update.updateAvailable;
+}
+
+async function loadUpdates(check=false){
+  try{
+    const result=await apiRequest(check?'/api/updates/check':'/api/updates/status',check?{method:'POST',body:'{}'}:{});
+    renderUpdates(result.update);
+    if(check)showToast(result.update.updateAvailable?`Kiosky ${result.update.availableVersion} ist verfügbar.`:'Kiosky ist aktuell.');
+  }catch(error){showToast(error.message);}
+}
+
+document.querySelector('#update-check')?.addEventListener('click',async event=>{
+  event.currentTarget.disabled=true;
+  try{await loadUpdates(true);}finally{event.currentTarget.disabled=false;}
+});
+document.querySelector('#update-install')?.addEventListener('click',async event=>{
+  if(!confirm('Kiosky jetzt sichern und aktualisieren? Während des Neustarts ist das Backend kurzzeitig nicht erreichbar.'))return;
+  event.currentTarget.disabled=true;
+  try{
+    const result=await apiRequest('/api/updates/install',{method:'POST',body:'{}'});
+    renderUpdates(result.update);
+    showToast(result.scheduled?'Update wird installiert. Kiosky startet anschließend neu.':'Kein Update erforderlich.');
+  }catch(error){showToast(error.message);event.currentTarget.disabled=false;}
+});
 
 function updateDashboardHeading(date=new Date()){
   const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin';
@@ -818,7 +868,7 @@ function applyCurrentUser(user) {
   applyNavigationConfig(state.featureSettings || {}, state.navigationOrder || []);
   document.querySelector('#auth-screen').hidden = true;
   document.querySelector('#app-shell').hidden = false;
-  if(user.role==='admin')loadIntegrationSources();
+  if(user.role==='admin'){loadIntegrationSources();loadUpdates();}
   const requestedView = kioskyRuntime.initialView || window.location.hash.slice(1);
   setView(pageMeta[requestedView] ? requestedView : 'dashboard');
   loadFeatureSettings();
@@ -1212,6 +1262,7 @@ const navigationModules=[
   {view:'media',label:'Mediendatenbank',icon:'▧',description:'Bilder, Videos, Vektoren und Ordner.'},
   {view:'schedule',label:'Zeitplanung',icon:'▦',description:'Tages- und Wochenplanung für alle Ziele.'},
   {view:'operations',label:'Presets & Warnhinweise',icon:'⌁',description:'Betriebspresets, Warnungen und DWD.'},
+  {view:'updates',label:'Updates',icon:'↻',description:'Versionen prüfen, Release Notes lesen und Kiosky aktualisieren.'},
   {view:'settings',label:'Einstellungen',icon:'⚙',description:'System-, Benutzer- und Schnittstellenkonfiguration.'}
 ];
 const defaultNavigationOrder=navigationModules.map(module=>module.view);
@@ -1232,7 +1283,7 @@ function navigationViewAvailable(view){
   if(!pageMeta[view])return false;
   if(!['integrations','users'].includes(view)&&!moduleEnabled(view))return false;
   if(cmsManagedServices&&['media','users'].includes(view))return false;
-  if(['integrations','settings','users'].includes(view)&&state.currentUser?.role!=='admin')return false;
+  if(['integrations','updates','settings','users'].includes(view)&&state.currentUser?.role!=='admin')return false;
   if(state.currentUser?.role==='viewer'&&['media','operations'].includes(view))return false;
   return true;
 }
@@ -1363,6 +1414,14 @@ crewbrainConfigImportFile.addEventListener('change', async event => {
 
 const contentTransferFile = document.querySelector('#content-transfer-import-file');
 const contentTransferMessage = document.querySelector('#content-transfer-message');
+const contentTransferExportDialog = document.querySelector('#content-transfer-export-dialog');
+const contentTransferImportDialog = document.querySelector('#content-transfer-import-dialog');
+let pendingContentTransfer = null;
+const contentTransferSectionLabels = {
+  settings: 'Einstellungen', events: 'Veranstaltungen', displays: 'Displays', slides: 'Slides',
+  channels: 'Kanäle', schedules: 'Zeitplanung', operations: 'Presets & Warnhinweise',
+  users: 'Benutzer', api: 'API-Schnittstellen', integrations: 'Weitere Schnittstellen'
+};
 
 function setContentTransferMessage(message, type = '') {
   contentTransferMessage.hidden = false;
@@ -1370,31 +1429,56 @@ function setContentTransferMessage(message, type = '') {
   contentTransferMessage.className = `connection-message${type ? ` is-${type}` : ''}`;
 }
 
-document.querySelector('[data-action="export-content-transfer"]').addEventListener('click', async event => {
-  if (!window.confirm('Das Transferpaket enthält die Player-Schlüssel der Displays. Export jetzt erstellen?')) return;
-  const button = event.currentTarget;
+function downloadTransferJson(value, filename) {
+  const blobUrl = URL.createObjectURL(new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
+function contentTransferRecordCount(payload, section) {
+  const data = payload.sections?.[section];
+  if (!data || typeof data !== 'object') return section === 'settings' || section === 'integrations' ? 1 : 0;
+  if (section === 'settings' || section === 'integrations') return Object.keys(data).length;
+  return Object.values(data).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 0), 0);
+}
+
+document.querySelector('[data-action="export-content-transfer"]').addEventListener('click', () => {
+  showAuthMessage('content-transfer-export-error', '');
+  contentTransferExportDialog.showModal();
+});
+
+document.querySelectorAll('[data-transfer-selection]').forEach(button => button.addEventListener('click', () => {
+  const checked = button.dataset.transferSelection === 'all';
+  document.querySelectorAll('input[name="transfer-section"]').forEach(input => { input.checked = checked; });
+}));
+
+document.querySelector('#content-transfer-export-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const sections = [...document.querySelectorAll('input[name="transfer-section"]:checked')].map(input => input.value);
+  if (!sections.length) {
+    showAuthMessage('content-transfer-export-error', 'Bitte wähle mindestens einen Bereich aus.');
+    return;
+  }
+  const button = event.currentTarget.querySelector('[type="submit"]');
   button.disabled = true;
   button.textContent = 'Export wird erstellt …';
   try {
-    const exported = await apiRequest('/api/content-transfer/export');
-    const serialized = `${JSON.stringify(exported, null, 2)}\n`;
-    const blobUrl = URL.createObjectURL(new Blob([serialized], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `kiosky-transfer-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(blobUrl);
-    const summary = `${exported.slides.length} Slides, ${exported.channels.length} Kanäle und ${exported.displays.length} Displays`;
-    setContentTransferMessage(`Transferpaket erstellt: ${summary}.`, 'success');
+    const exported = await apiRequest('/api/content-transfer/export', { method: 'POST', body: JSON.stringify({ sections }) });
+    downloadTransferJson(exported, `kiosky-transfer-${new Date().toISOString().slice(0, 10)}.json`);
+    const summary = exported.includedSections.map(section => `${contentTransferSectionLabels[section] || section}: ${contentTransferRecordCount(exported, section)}`).join(' · ');
+    setContentTransferMessage(`Transferpaket erstellt. ${summary}`, 'success');
+    contentTransferExportDialog.close();
     showToast('Transferpaket wurde exportiert.');
   } catch (error) {
-    setContentTransferMessage(error.message, 'error');
-    showToast(error.message);
+    showAuthMessage('content-transfer-export-error', error.message);
   } finally {
     button.disabled = false;
-    button.textContent = 'Transferpaket exportieren';
+    button.textContent = 'Transferpaket erstellen';
   }
 });
 
@@ -1411,34 +1495,62 @@ contentTransferFile.addEventListener('change', async event => {
     event.currentTarget.value = '';
     return;
   }
-  if (!window.confirm('Der Import legt neue Slides, Kanäle und Displays an. Vorhandene Daten bleiben bestehen. Fortfahren?')) {
+  try {
+    try { pendingContentTransfer = JSON.parse(await file.text()); }
+    catch { throw new Error('Die ausgewählte Datei enthält kein gültiges JSON.'); }
+    const portable = pendingContentTransfer?.format === 'kiosky-system-transfer' && pendingContentTransfer?.version === 2;
+    const sections = portable ? pendingContentTransfer.includedSections || Object.keys(pendingContentTransfer.sections || {}) : ['slides', 'channels', 'displays'];
+    if (!portable && pendingContentTransfer?.format !== 'kiosky-content-transfer') throw new Error('Die Datei ist kein unterstütztes Kiosky-Transferpaket.');
+    document.querySelector('#content-transfer-import-source').textContent = portable
+      ? `Quelle: ${pendingContentTransfer.source?.platform || 'Kiosky'} ${pendingContentTransfer.source?.version || ''} · Exportiert ${new Date(pendingContentTransfer.exportedAt).toLocaleString('de-DE')}`
+      : 'Älteres Kiosky-Transferpaket mit Slides, Kanälen und Displays.';
+    document.querySelector('#content-transfer-import-summary').innerHTML = sections.map(section => {
+      const count = portable ? contentTransferRecordCount(pendingContentTransfer, section) : (pendingContentTransfer[section] || []).length;
+      return `<span>${escapeHtml(contentTransferSectionLabels[section] || section)} · ${count}</span>`;
+    }).join('');
+    contentTransferImportDialog.showModal();
+  } catch (error) {
+    pendingContentTransfer = null;
+    setContentTransferMessage(error.message, 'error');
+    showToast(error.message);
+  } finally {
     event.currentTarget.value = '';
-    return;
   }
-  const button = document.querySelector('[data-action="import-content-transfer"]');
+});
+
+document.querySelector('#content-transfer-import-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!pendingContentTransfer) return;
+  const button = event.currentTarget.querySelector('[type="submit"]');
   button.disabled = true;
   button.textContent = 'Import läuft …';
   try {
-    let payload;
-    try { payload = JSON.parse(await file.text()); }
-    catch { throw new Error('Die ausgewählte Datei enthält kein gültiges JSON.'); }
-    const result = await apiRequest('/api/content-transfer/import', { method: 'POST', body: JSON.stringify(payload) });
+    const result = await apiRequest('/api/content-transfer/import', { method: 'POST', body: JSON.stringify(pendingContentTransfer) });
     const imported = result.imported;
+    await loadEvents();
     await loadContent(null);
-    await Promise.all([loadDisplays(), loadDashboard()]);
-    const notices = [];
-    if (imported.renamedDisplaySlugs.length) notices.push(`${imported.renamedDisplaySlugs.length} URL-Kennungen wurden wegen vorhandener Displays angepasst`);
-    if (imported.regeneratedPlayerKeys) notices.push(`${imported.regeneratedPlayerKeys} Player-Schlüssel wurden wegen Überschneidungen neu erzeugt`);
-    const summary = `${imported.slides} Slides, ${imported.channels} Kanäle und ${imported.displays} Displays importiert`;
-    setContentTransferMessage(`${summary}.${notices.length ? ` ${notices.join('; ')}.` : ''}`, 'success');
+    await loadDisplays();
+    await Promise.allSettled([loadScheduling(), loadOperations(), loadFeatureSettings(), loadUsers(), loadApiUsers(), loadDashboard()]);
+    const counts = imported.counts || { slides: imported.slides, channels: imported.channels, displays: imported.displays };
+    const summary = Object.entries(counts).filter(([, count]) => Number(count) > 0).map(([name, count]) => `${count} ${contentTransferSectionLabels[name] || name}`).join(', ') || 'Keine neuen Datensätze';
+    const notices = imported.notices || [];
+    if (imported.renamedDisplaySlugs?.length) notices.push(`${imported.renamedDisplaySlugs.length} URL-Kennungen wurden angepasst`);
+    if (imported.regeneratedPlayerKeys) notices.push(`${imported.regeneratedPlayerKeys} Player-Schlüssel wurden neu erzeugt`);
+    if (imported.apiCredentials?.length) downloadTransferJson({
+      generatedAt: new Date().toISOString(),
+      warning: 'Diese Schlüssel werden nur einmal angezeigt. Sicher speichern und diese Datei anschließend löschen.',
+      apiCredentials: imported.apiCredentials
+    }, `kiosky-neue-api-schluessel-${new Date().toISOString().slice(0, 10)}.json`);
+    setContentTransferMessage(`${summary} importiert.${notices.length ? ` ${notices.join(' ')}` : ''}`, 'success');
+    contentTransferImportDialog.close();
+    pendingContentTransfer = null;
     showToast('Transferpaket wurde importiert.');
   } catch (error) {
     setContentTransferMessage(error.message, 'error');
     showToast(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = 'Transferpaket importieren';
-    event.currentTarget.value = '';
+    button.textContent = 'Jetzt importieren';
   }
 });
 

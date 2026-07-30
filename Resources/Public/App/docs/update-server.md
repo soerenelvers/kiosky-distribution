@@ -5,7 +5,7 @@ Pakete werden durch GitHub Actions in das separate private Repository
 `soerenelvers/kiosky-distribution` übertragen. Dieses enthält ausschließlich
 freigegebene Release-Stände:
 
-- `latest.json` für die WordPress-Updatesuche;
+- `latest.json` für die Update-Suche aller Plattformen;
 - WordPress-, Standalone- und TYPO3-ZIPs unter `dist/`;
 - den installierbaren TYPO3-Paketinhalt an der Repository-Wurzel;
 - einen unveränderlichen Git-Tag pro Version.
@@ -55,6 +55,14 @@ composer require casesound/kiosky
 Zugangsdaten gehören in Composer `auth.json` oder `COMPOSER_AUTH`, niemals in
 `composer.json`. Der Composer-Endpunkt und die ZIP-Downloads prüfen den
 Lizenzstatus serverseitig.
+
+Die plattformspezifischen Manifest-Endpunkte sind:
+
+- `/api/v1/standalone/latest`
+- `/api/v1/wordpress/latest`
+- `/api/v1/typo3/latest`
+
+Eine Lizenz kann `standalone`, `wordpress`, `typo3` oder `all` freischalten.
 
 Eine spätere Installationsregistrierung muss opt-in, anonymisiert und transparent
 sein. Diese Version sendet keinerlei Installationsdaten.

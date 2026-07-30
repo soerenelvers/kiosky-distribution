@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2.4.10-20260730230620%2B24a1c5b3">
+  <link rel="stylesheet" href="styles.css?v=3.0.0-20260730234258%2B14ff665e">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -79,6 +79,7 @@
         <button class="nav-item" data-view="media"><span class="nav-icon">▧</span>Mediendatenbank</button>
         <button class="nav-item" data-view="schedule"><span class="nav-icon">▦</span>Zeitplanung</button>
         <button class="nav-item" data-view="operations" data-feature-nav="presets_warnings"><span class="nav-icon">⌁</span>Presets & Warnhinweise</button>
+        <button class="nav-item admin-only" data-view="updates"><span class="nav-icon">↻</span>Updates <span class="update-nav-badge" id="update-nav-badge" hidden>Neu</span></button>
         <button class="nav-item admin-only" data-view="settings"><span class="nav-icon">⚙</span>Einstellungen</button>
         <button class="nav-item nav-help" data-view="features"><span class="nav-icon">?</span>Funktionen & Hilfe</button>
       </nav>
@@ -476,19 +477,19 @@
 
         <article class="panel content-transfer-panel" id="content-transfer-panel">
           <div class="panel-header">
-            <div><p class="eyebrow">Serverumzug</p><h2>Slides, Kanäle und Displays übertragen</h2><p>Ein vollständiges Transferpaket für eine andere Kiosky-Instanz erstellen oder ein vorhandenes Paket einlesen.</p></div>
-            <span class="tag blue">Versioniertes JSON</span>
+            <div><p class="eyebrow">Import &amp; Export · Serverumzug</p><h2>Komplette Kiosky-Instanz übertragen</h2><p>Einstellungen und Inhalte zwischen Standalone, TYPO3 und WordPress plattformübergreifend übertragen.</p></div>
+            <span class="tag blue">Portables Transferpaket</span>
           </div>
           <div class="settings-section">
-            <div class="settings-section-heading"><strong>Enthaltene Daten</strong><span>Slides samt benötigten Medien, Kanäle mit Reihenfolge und Übergängen sowie Displays und Display-Gruppen.</span></div>
-            <p class="privacy-note">Beim Import werden neue Einträge angelegt. Bereits vorhandene Daten bleiben erhalten. Belegte Display-URL-Kennungen werden automatisch umbenannt.</p>
+            <div class="settings-section-heading"><strong>Übertragbare Daten</strong><span>Inhalte, Ausspielung, Betrieb, Benutzerprofile, Schnittstellen und Systemeinstellungen.</span></div>
+            <p class="privacy-note">Wähle beim Export Veranstaltungen, Displays, Slides, Kanäle, Zeitplanung, Presets und Warnhinweise, Benutzer, API-Schnittstellen, Integrationen oder Systemeinstellungen aus. Benötigte abhängige Daten werden automatisch ergänzt.</p>
           </div>
           <div class="config-actions">
             <input id="content-transfer-import-file" type="file" accept=".json,application/json" hidden>
             <button class="button button-secondary" type="button" data-action="import-content-transfer">Transferpaket importieren</button>
             <button class="button button-primary" type="button" data-action="export-content-transfer">Transferpaket exportieren</button>
           </div>
-          <p class="credential-note config-transfer-note">Das Paket enthält die Player-Schlüssel der Displays, damit vorhandene Player nach einem vollständigen Serverumzug weiterverwendet werden können. Bewahre die Datei geschützt auf.</p>
+          <p class="credential-note config-transfer-note">Passwörter, Sitzungen, API-Schlüssel, Player-Schlüssel und Zugangsdaten werden nie exportiert. Player und sichere Zugänge müssen auf der Zielinstanz neu verbunden werden.</p>
           <p class="connection-message" id="content-transfer-message" role="status" hidden></p>
         </article>
 
@@ -650,6 +651,26 @@
             <div class="api-secret-value"><input id="api-secret-token" type="text" readonly aria-label="Neu erzeugter API-Schlüssel"><button class="button button-secondary" id="copy-api-secret" type="button">Kopieren</button></div>
           </div>
           <p class="api-doc-footer">Technische Referenz, Beispiele und alle Endpunkte: <a href="/docs/external-api.md" target="_blank" rel="noopener">Kiosky External Control API v1</a> · <a href="/docs/openapi.yaml" target="_blank" rel="noopener">OpenAPI-Spezifikation</a></p>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="updates">
+        <div class="updates-heading">
+          <div><p class="eyebrow">System</p><h2>Kiosky Update-Manager</h2><p>Versionen prüfen, Release Notes lesen und geprüfte Updates installieren.</p></div>
+          <button class="button" type="button" id="update-check">Nach Updates suchen</button>
+        </div>
+        <div class="update-version-grid">
+          <article class="panel update-version-card"><span>Installiert</span><strong id="update-installed-version">–</strong><small id="update-installation-mode">–</small></article>
+          <article class="panel update-version-card"><span>Verfügbar</span><strong id="update-available-version">–</strong><small id="update-checked-at">Noch nicht geprüft</small></article>
+        </div>
+        <article class="panel update-release-panel">
+          <div class="update-release-title"><div><span class="tag green" id="update-state-label">Aktuell</span><h3>Release Notes</h3></div><a id="update-release-link" class="text-button" target="_blank" rel="noopener noreferrer" hidden>Vollständige Hinweise ↗</a></div>
+          <div id="update-release-notes" class="update-release-notes"><p>Noch keine Release-Informationen geladen.</p></div>
+          <p class="property-note" id="update-error" hidden></p>
+          <div class="update-actions">
+            <button class="button button-primary" type="button" id="update-install" disabled>Jetzt aktualisieren</button>
+            <small id="update-install-note">Vor der Installation wird das Paket vollständig geprüft.</small>
+          </div>
         </article>
       </section>
 
@@ -865,6 +886,41 @@
       </section>
     </main>
   </div>
+
+  <dialog id="content-transfer-export-dialog" class="wide-dialog transfer-dialog">
+    <form class="dialog-content" id="content-transfer-export-form">
+      <button class="dialog-close" type="button" data-close-dialog="content-transfer-export-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">⇄</span><p class="eyebrow">Portables Transferpaket</p><h2>Was soll exportiert werden?</h2>
+      <p>Die Auswahl kann in Standalone, TYPO3 und WordPress importiert werden. Technisch benötigte Abhängigkeiten werden automatisch ergänzt.</p>
+      <div class="transfer-selection-actions"><button type="button" data-transfer-selection="all">Alles auswählen</button><button type="button" data-transfer-selection="none">Auswahl aufheben</button></div>
+      <div class="transfer-section-grid">
+        <label><input type="checkbox" name="transfer-section" value="settings" checked><span><strong>Einstellungen</strong><small>Module, Navigation und gemeinsame Regeln</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="events" checked><span><strong>Veranstaltungen</strong><small>Inhalte und Ablaufplanung</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="displays" checked><span><strong>Displays</strong><small>Geräte, Gruppen, Standorte und Matrizen</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="slides" checked><span><strong>Slides</strong><small>Versionen, Vorlagen und Medien</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="channels" checked><span><strong>Kanäle</strong><small>Playlists, Reihenfolge und Übergänge</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="schedules" checked><span><strong>Zeitplanung</strong><small>Zeitpläne und Content-Zuweisungen</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="operations" checked><span><strong>Presets &amp; Warnhinweise</strong><small>Vorlagen, Warnungen und DWD-Regeln</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="users" checked><span><strong>Benutzer</strong><small>Profile, Rollen und Standortrechte</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="api" checked><span><strong>API-Schnittstellen</strong><small>API-Benutzer ohne geheime Schlüssel</small></span></label>
+        <label><input type="checkbox" name="transfer-section" value="integrations" checked><span><strong>Weitere Schnittstellen</strong><small>CrewBrain, easyjob und Feldzuordnungen</small></span></label>
+      </div>
+      <p class="transfer-security-note">Sicherheitsdaten werden entfernt. Auf der Zielinstanz werden neue Player- und API-Schlüssel erzeugt; Passwörter und Schnittstellen-Zugänge müssen neu gesetzt werden.</p>
+      <p class="auth-message" id="content-transfer-export-error" role="alert"></p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="content-transfer-export-dialog">Abbrechen</button><button class="button button-primary" type="submit">Transferpaket erstellen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="content-transfer-import-dialog" class="wide-dialog transfer-dialog">
+    <form class="dialog-content" id="content-transfer-import-form">
+      <button class="dialog-close" type="button" data-close-dialog="content-transfer-import-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">⇩</span><p class="eyebrow">Import prüfen</p><h2>Transferpaket importieren?</h2>
+      <p id="content-transfer-import-source">Das ausgewählte Paket wird geprüft.</p>
+      <div class="transfer-import-summary" id="content-transfer-import-summary"></div>
+      <p class="transfer-security-note">Der Import legt neue Inhalte an und ergänzt Einstellungen. Vorhandene Inhalte bleiben bestehen. Sichere Zugänge und Player werden nicht ungeprüft übernommen.</p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="content-transfer-import-dialog">Abbrechen</button><button class="button button-primary" type="submit">Jetzt importieren</button></div>
+    </form>
+  </dialog>
 
   <dialog id="user-dialog" class="wide-dialog">
     <form class="dialog-content" id="user-form">
@@ -1281,7 +1337,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=2.4.10-20260730230620%2B24a1c5b3"></script>
-  <script src="app.js?v=2.4.10-20260730230620%2B24a1c5b3"></script>
+  <script src="runtime-config.js?v=3.0.0-20260730234258%2B14ff665e"></script>
+  <script src="app.js?v=3.0.0-20260730234258%2B14ff665e"></script>
 </body>
 </html>

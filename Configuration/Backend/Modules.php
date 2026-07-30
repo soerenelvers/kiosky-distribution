@@ -6,11 +6,11 @@ use Kiosky\Kiosky\Controller\ModuleController;
 
 return [
     'web_kiosky' => [
-        'parent' => 'content',
-        'position' => ['after' => 'web_layout'],
+        'parent' => 'system',
+        'position' => ['after' => 'system_config'],
         'access' => 'user',
         'workspaces' => '*',
-        'path' => '/module/web/kiosky',
+        'path' => '/module/system/kiosky',
         'labels' => [
             'title' => 'Kiosky',
             'description' => 'Veranstaltungen, Displays und Digital Signage verwalten',

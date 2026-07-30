@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "2.4.10",
-  "released_at": "2026-07-30T23:06:20.776Z",
+  "version": "3.0.0",
+  "released_at": "2026-07-30T23:42:58.792Z",
   "channel": "stable",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v2.4.10",
+  "release_notes": "## [3.0.0] - 2026-07-31\n\n### Added\n\n- Ein integrierter Update-Manager prüft neue Versionen und unterstützt\n  Standalone-, TYPO3- und WordPress-Installationen mit Release Notes,\n  Benachrichtigungen und abgesicherten Aktualisierungsabläufen.\n- Der neue portable Import und Export überträgt wählbare Einstellungen und\n  Inhalte kreuzweise zwischen Standalone, TYPO3 und WordPress.\n- Transferpakete umfassen Veranstaltungen und Abläufe, Slides samt\n  Versionshistorie, Vorlagen und Medien, Kanäle, Displays, Standorte, Gruppen,\n  Matrizen, Zeitpläne, Zuweisungen, Presets, Warnungen, Benutzerprofile und\n  Schnittstellendefinitionen.\n- Exportauswahl und Importvorschau erklären Abhängigkeiten und\n  Sicherheitsfolgen vor der Ausführung.\n\n### Changed\n\n- Standalone-Importe werden atomar ausgeführt und bei einem Fehler vollständig\n  zurückgerollt.\n- Technische IDs und sichere Zugangsschlüssel werden auf der Zielinstanz neu\n  erzeugt, damit Transferpakete zwischen unabhängigen Installationen\n  eingesetzt werden können.\n\n### Security\n\n- Passwörter, Sitzungen, API-Schlüssel, Player-Schlüssel und\n  Schnittstellen-Zugangsdaten werden nicht in Transferpakete aufgenommen.\n- Importierte Benutzerprofile bleiben bis zur sicheren Einrichtung\n  deaktiviert; Integrationen werden ohne Zugangsdaten übernommen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.0.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -12,29 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "2.4.10",
+    "core_version": "3.0.0",
     "api_version": "1",
-    "wordpress_plugin_version": "2.4.10",
-    "typo3_extension_version": "2.4.10"
+    "wordpress_plugin_version": "3.0.0",
+    "typo3_extension_version": "3.0.0"
   },
   "components": {
     "core": {
-      "version": "2.4.10",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-2.4.10.zip?ref=v2.4.10",
-      "sha256": "4f7c46d0acbcf514b8e6294fa92710fb39762f489380bb102209fcf0d20c46d1"
+      "version": "3.0.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.0.0.zip?ref=v3.0.0",
+      "sha256": "6f8e30c2b012e5901afe3ef9998c8bdaa66ddf1b80d34d8369e341769f379c9e"
+    },
+    "standalone": {
+      "version": "3.0.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.0.0.zip?ref=v3.0.0",
+      "sha256": "6f8e30c2b012e5901afe3ef9998c8bdaa66ddf1b80d34d8369e341769f379c9e"
     },
     "wordpress": {
-      "version": "2.4.10",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-2.4.10.zip?ref=v2.4.10",
-      "sha256": "7b2b28af41b7522b8142e117e4a792ab80ee6ccdd9a43d7686fe504c973ba1d5",
+      "version": "3.0.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.0.0.zip?ref=v3.0.0",
+      "sha256": "03c37f9a137817eaf4ce50a168def19c6d64a5b6f9efe7e9572ca424408e9b73",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "6.8"
     },
     "typo3": {
-      "version": "2.4.10",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_2.4.10.zip?ref=v2.4.10",
-      "sha256": "126fb78c64b9fcccc37ee872898741c3af51ba7f14a597a1b41d6c3a1864b25d",
+      "version": "3.0.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.0.0.zip?ref=v3.0.0",
+      "sha256": "d4668d838bf64b6431cae94be34120875b5bb44cf32688166d88069a8319d73c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

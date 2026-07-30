@@ -1,2 +1,11 @@
 # cat=Kiosky/API; type=string; label=Externer API-Schlüssel: Langer, zufälliger Schlüssel für die Kiosky External Control API. Der Client sendet ihn im HTTP-Header X-API-Key.
 externalApiKey =
+
+# cat=Kiosky/Updates; type=string; label=Update-Manifest: HTTPS-Adresse des Release-Manifests.
+updateManifestUrl = https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/latest.json?ref=main
+
+# cat=Kiosky/Updates; type=string; label=Update-/Lizenzschlüssel: Token für private GitHub-Releases oder den Kiosky-Update-Service.
+updateAccessToken =
+
+# cat=Kiosky/Updates; type=string; label=Composer-Programm: Absoluter Pfad oder Programmname für One-Click-Updates.
+updateComposerBinary = composer
