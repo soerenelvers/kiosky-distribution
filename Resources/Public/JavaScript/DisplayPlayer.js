@@ -104,7 +104,7 @@
     await request('heartbeat', {
       method: 'POST',
       body: JSON.stringify({
-        playerVersion: 'TYPO3 Web Player 2.4.9',
+        playerVersion: 'TYPO3 Web Player 2.4.10',
         viewport: {width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio || 1},
       }),
     }).catch(() => {});

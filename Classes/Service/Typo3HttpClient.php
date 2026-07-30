@@ -20,7 +20,7 @@ final readonly class Typo3HttpClient implements HttpClient
     {
         try {
             $response = $this->requestFactory->request($url, strtoupper($method), [
-                'headers' => $headers + ['User-Agent' => 'Kiosky/2.4.9 TYPO3'],
+                'headers' => $headers + ['User-Agent' => 'Kiosky/2.4.10 TYPO3'],
                 'body' => $body,
                 'timeout' => $timeoutSeconds,
                 'verify' => $verifyTls,

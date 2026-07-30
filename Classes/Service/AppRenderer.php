@@ -7,7 +7,6 @@ namespace Kiosky\Kiosky\Service;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\PathUtility;
 
 final readonly class AppRenderer
 {
@@ -59,14 +58,8 @@ final readonly class AppRenderer
 
     private function assetBaseUrl(ServerRequestInterface $request): string
     {
-        $webPath = PathUtility::getPublicResourceWebPath('EXT:kiosky/Resources/Public/App/runtime-config.js');
-        $uri = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority()
-            . '/' . ltrim($webPath, '/');
-        $lastSlash = strrpos($uri, '/');
-        if ($lastSlash === false) {
-            throw new RuntimeException('Die öffentliche URL der Kiosky-Oberfläche konnte nicht ermittelt werden.');
-        }
-        return substr($uri, 0, $lastSlash + 1);
+        return $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority()
+            . '/kiosky-assets/';
     }
 
     private function rewriteAppAssetUrls(string $html, string $assetBase): string

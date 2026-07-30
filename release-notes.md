@@ -1,11 +1,8 @@
-## [2.4.9] - 2026-07-30
+## [2.4.10] - 2026-07-31
 
 ### Fixed
 
-- Das TYPO3-Backend zeigt wieder genau ein Kiosky-Modul unter „Content“ statt
-  zahlreicher gleich benannter Untereinträge.
-- Das Backendmodul rendert erneut die vollständige gestaltete Kiosky-Oberfläche
-  und verbindet sie über die geschützte TYPO3-AJAX-Route mit der nativen API.
-- Release- und Integrationstests verhindern eine erneute Rückkehr der
-  ungestylten Platzhalteransicht oder doppelter Modulregistrierungen.
+- Die vollständige Kiosky-Oberfläche lädt Styles, JavaScript-Funktionen,
+  Medien, Player-Center und Launcher über einen TYPO3-Endpunkt, selbst wenn
+  Nginx den direkten Zugriff auf `typo3conf/ext` sperrt.
 

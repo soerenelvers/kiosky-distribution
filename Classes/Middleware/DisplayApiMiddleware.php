@@ -11,7 +11,6 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Http\JsonResponse;
-use TYPO3\CMS\Core\Utility\PathUtility;
 
 final readonly class DisplayApiMiddleware implements MiddlewareInterface
 {
@@ -59,9 +58,9 @@ final readonly class DisplayApiMiddleware implements MiddlewareInterface
     private function playerDocument(ServerRequestInterface $request, string $uuid): ResponseInterface
     {
         $escapedUuid = htmlspecialchars($uuid, ENT_QUOTES);
-        $webPath = PathUtility::getPublicResourceWebPath('EXT:kiosky/Resources/Public/JavaScript/DisplayPlayer.js');
         $scriptUri = htmlspecialchars(
-            $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . '/' . ltrim($webPath, '/'),
+            $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority()
+                . '/kiosky-assets/display-player.js',
             ENT_QUOTES,
         );
         $html = '<!doctype html><html lang="de"><head><meta charset="utf-8">'
