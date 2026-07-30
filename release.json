@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "2.4.8",
-  "released_at": "2026-07-30T04:44:30.393Z",
+  "version": "2.4.9",
+  "released_at": "2026-07-30T21:45:03.501Z",
   "channel": "stable",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v2.4.8",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v2.4.9",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -12,29 +12,29 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "2.4.8",
+    "core_version": "2.4.9",
     "api_version": "1",
-    "wordpress_plugin_version": "2.4.8",
-    "typo3_extension_version": "2.4.8"
+    "wordpress_plugin_version": "2.4.9",
+    "typo3_extension_version": "2.4.9"
   },
   "components": {
     "core": {
-      "version": "2.4.8",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-2.4.8.zip?ref=v2.4.8",
-      "sha256": "ce9590e85727e5b86f2a85cd06efe47bb2936b8391fca3b2948164a9ba8e4b3e"
+      "version": "2.4.9",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-2.4.9.zip?ref=v2.4.9",
+      "sha256": "4437ec8c0e368a881e1aea973c905aafdc045c1956c010214bb58e145d36db85"
     },
     "wordpress": {
-      "version": "2.4.8",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-2.4.8.zip?ref=v2.4.8",
-      "sha256": "6d39a78e56137bcb9889b16b430f35c80dcd523504f2ed0473694f500b021f01",
+      "version": "2.4.9",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-2.4.9.zip?ref=v2.4.9",
+      "sha256": "a244ef857af78e12e1c5f0a0368c88fc6d8bc621c19262f35b94878ab1c85a16",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "6.8"
     },
     "typo3": {
-      "version": "2.4.8",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_2.4.8.zip?ref=v2.4.8",
-      "sha256": "c086c0f150180b0540352a2b219d34cd45bb1588c3f95657bf828ac59a3e0d90",
+      "version": "2.4.9",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_2.4.9.zip?ref=v2.4.9",
+      "sha256": "5c5a9d162b033351d91d16e98248222b2436c061242987dbe63d3c348ec32ca9",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

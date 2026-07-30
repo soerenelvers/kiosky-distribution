@@ -27,7 +27,7 @@ final readonly class ApiFactory
         return new Api(
             $this->store,
             $identity,
-            '2.4.8',
+            '2.4.9',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
