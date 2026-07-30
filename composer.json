@@ -1,0 +1,34 @@
+{
+  "name": "casesound/kiosky",
+  "type": "typo3-cms-extension",
+  "description": "Eigenständiges Digital-Signage-System für TYPO3.",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Sören Elvers",
+      "role": "Original author and copyright holder"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "typo3/cms-backend": "^13.4 || ^14.0",
+    "typo3/cms-core": "^13.4 || ^14.0"
+  },
+  "suggest": {
+    "typo3/cms-scheduler": "Aktiviert den automatischen CrewBrain-Import als Scheduler-Aufgabe."
+  },
+  "autoload": {
+    "psr-4": {
+      "Kiosky\\Kiosky\\": "Classes/",
+      "Kiosky\\Core\\": "Classes/Core/"
+    }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "kiosky",
+      "Package": {
+        "providesPackages": {}
+      }
+    }
+  }
+}

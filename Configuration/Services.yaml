@@ -1,0 +1,15 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Kiosky\Kiosky\:
+    resource: '../Classes/*'
+    exclude: '../Classes/{Core,Task,Domain/Model}'
+
+  Kiosky\Kiosky\Controller\ModuleController:
+    tags: ['backend.controller']
+
+  Kiosky\Kiosky\Controller\ApiController:
+    tags: ['backend.controller']

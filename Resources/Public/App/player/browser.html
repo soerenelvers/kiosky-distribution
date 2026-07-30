@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#08110f">
+  <title>Kiosky Player koppeln</title>
+  <link rel="stylesheet" href="/player/browser.css">
+</head>
+<body>
+  <main>
+    <section class="player-panel" aria-live="polite">
+      <a class="brand" href="/player"><span>K</span>KIOSKY PLAYER</a>
+      <p class="eyebrow">Erster Start</p>
+      <h1>Player mit einem<br>Display verbinden.</h1>
+      <p class="lead">Geben Sie diesen Code im Kiosky-Backend beim gewünschten Display ein.</p>
+      <div id="pairing-code" class="pairing-code" aria-label="Kopplungscode">••••••</div>
+      <p id="pairing-status" class="status" role="status">Kopplungscode wird erzeugt …</p>
+      <div class="actions">
+        <button id="fullscreen" type="button">Vollbild aktivieren</button>
+        <button id="new-code" class="quiet" type="button">Neuen Code erzeugen</button>
+      </div>
+      <p id="error" class="error" hidden></p>
+    </section>
+  </main>
+  <script src="/player/browser.js"></script>
+</body>
+</html>

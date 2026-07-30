@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
+  <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2.4.8-20260730044430%2Bb7cd82a8">
+</head>
+<body>
+  <section class="auth-screen" id="auth-screen">
+    <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><strong>Kiosky</strong></div>
+    <article class="auth-card">
+      <div id="auth-status-view">
+        <p class="eyebrow">Sicherer Zugang</p>
+        <h1 id="auth-status-title">Kiosky wird vorbereitet</h1>
+        <p id="auth-status-message" role="status">Der Einrichtungsstatus wird geprüft …</p>
+        <button class="button button-primary" id="auth-status-retry" type="button" hidden>Erneut prüfen</button>
+      </div>
+      <div id="login-view" hidden>
+        <p class="eyebrow">Geschützter Administrationsbereich</p>
+        <h1>Willkommen zurück</h1>
+        <p>Mit deinem Kiosky-Konto anmelden.</p>
+        <form id="login-form">
+          <label class="form-field"><span>Benutzername oder E-Mail-Adresse</span><input id="login-email" type="text" autocomplete="username" required></label>
+          <label class="form-field"><span>Passwort</span><input id="login-password" type="password" autocomplete="current-password" required></label>
+          <p class="auth-message" id="login-message" role="alert"></p>
+          <button class="button button-primary" type="submit">Anmelden</button>
+        </form>
+        <button class="auth-setup-check" id="auth-setup-check" type="button">Noch kein Konto? Ersteinrichtung prüfen</button>
+      </div>
+      <div id="invite-view" hidden>
+        <p class="eyebrow">Einladung annehmen</p>
+        <h1>Kiosky-Konto einrichten</h1>
+        <p id="invite-summary">Deine Einladung wird geprüft …</p>
+        <form id="invite-form">
+          <label class="form-field"><span>Name</span><input id="invite-name" type="text" autocomplete="name" required minlength="2"></label>
+          <label class="form-field"><span>Benutzername</span><input id="invite-username" type="text" autocomplete="username" required minlength="3" maxlength="50" pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,49}"></label>
+          <label class="form-field"><span>Passwort</span><input id="invite-password" type="password" autocomplete="new-password" required minlength="12"></label>
+          <label class="form-field"><span>Passwort wiederholen</span><input id="invite-password-confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+          <p class="auth-message" id="invite-message" role="alert"></p>
+          <button class="button button-primary" type="submit">Konto einrichten</button>
+        </form>
+      </div>
+      <div id="setup-view" hidden>
+        <p class="eyebrow">Einmalige Ersteinrichtung</p>
+        <h1>Administrator anlegen</h1>
+        <p>Dieses Konto erhält die vollständige Verwaltung von Kiosky.</p>
+        <form id="setup-form">
+          <label class="form-field"><span>Name</span><input id="setup-name" type="text" autocomplete="name" value="Sören Elvers" required minlength="2"></label>
+          <label class="form-field"><span>E-Mail-Adresse</span><input id="setup-email" type="email" autocomplete="username" required></label>
+          <label class="form-field"><span>Passwort</span><input id="setup-password" type="password" autocomplete="new-password" required minlength="12"><small>Mindestens 12 Zeichen, ein Buchstabe und eine Zahl.</small></label>
+          <label class="form-field"><span>Passwort wiederholen</span><input id="setup-password-confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+          <p class="auth-message" id="setup-message" role="alert"></p>
+          <button class="button button-primary" type="submit">Kiosky einrichten</button>
+        </form>
+      </div>
+    </article>
+    <small>Kiosky · Sicherer Zugang</small>
+  </section>
+
+  <div class="app-shell" id="app-shell" hidden>
+    <aside class="sidebar">
+      <button class="sidebar-close" type="button" aria-label="Navigation schließen">×</button>
+      <a class="brand" href="#dashboard" aria-label="Kiosky Startseite">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>Kiosky</span>
+      </a>
+
+      <nav class="main-nav" id="main-navigation" aria-label="Hauptnavigation">
+        <button class="nav-item is-active" data-view="dashboard"><span class="nav-icon">⌂</span>Übersicht</button>
+        <button class="nav-item" data-view="events"><span class="nav-icon">◫</span>Veranstaltungen</button>
+        <button class="nav-item" data-view="displays"><span class="nav-icon">▣</span>Displays</button>
+        <button class="nav-item" data-view="channels"><span class="nav-icon">▤</span>Slides & Kanäle</button>
+        <button class="nav-item" data-view="media"><span class="nav-icon">▧</span>Mediendatenbank</button>
+        <button class="nav-item" data-view="schedule"><span class="nav-icon">▦</span>Zeitplanung</button>
+        <button class="nav-item" data-view="operations" data-feature-nav="presets_warnings"><span class="nav-icon">⌁</span>Presets & Warnhinweise</button>
+        <button class="nav-item admin-only" data-view="settings"><span class="nav-icon">⚙</span>Einstellungen</button>
+        <button class="nav-item nav-help" data-view="features"><span class="nav-icon">?</span>Funktionen & Hilfe</button>
+      </nav>
+
+      <div class="system-health">
+        <p class="eyebrow">Systemstatus</p>
+        <div><span class="status-dot"></span><span id="sidebar-display-status">Keine Displays verbunden</span></div>
+        <div><span class="status-dot"></span><span id="sidebar-sync-status">CrewBrain wird geprüft</span></div>
+      </div>
+
+      <button class="profile-button" id="profile-button" type="button">
+        <span class="avatar" id="profile-avatar">SE</span>
+        <span><strong id="profile-name">Sören Elvers</strong><small id="profile-role">Administrator</small></span>
+        <span aria-hidden="true">⋯</span>
+      </button>
+      <footer class="sidebar-footer">Kiosky · Build <span id="build-number">wird geladen</span></footer>
+    </aside>
+    <button class="nav-backdrop" type="button" aria-label="Navigation schließen" tabindex="-1"></button>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu" type="button" aria-label="Navigation ausblenden" aria-controls="main-navigation" aria-expanded="true">☰</button>
+        <div>
+          <p class="eyebrow" id="page-context"></p>
+          <h1 id="page-title">Willkommen</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" aria-label="Benachrichtigungen">♢<span class="notification-dot"></span></button>
+          <button class="button button-primary" type="button" data-action="new-event"><span>＋</span> Veranstaltung</button>
+        </div>
+      </header>
+
+      <div class="source-strip">
+        <div><span class="pulse"></span><span id="source-strip-text"><strong>CrewBrain</strong> ist die aktive Datenquelle</span></div>
+        <button class="text-button" type="button" data-view-link="integrations">Quelle verwalten →</button>
+      </div>
+
+      <section class="view is-active" data-view-panel="dashboard">
+        <div class="metric-grid">
+          <article class="metric-card">
+            <div class="metric-head"><span>Heute</span><span class="metric-icon lavender">◫</span></div>
+            <strong class="metric-value" id="dashboard-event-count">0</strong>
+            <p>Veranstaltungen im System</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-head"><span>Displays</span><span class="metric-icon mint">▣</span></div>
+            <strong class="metric-value" id="dashboard-display-count">0 <small>/ 0</small></strong>
+            <p><span class="positive" id="dashboard-display-note">Noch keine Displays angelegt</span></p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-head"><span>Aktive Kanäle</span><span class="metric-icon peach">▤</span></div>
+            <strong class="metric-value" id="dashboard-channel-count">0</strong>
+            <p>veröffentlichte Kanäle</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-head"><span>Nächster Wechsel</span><span class="metric-icon blue">↻</span></div>
+            <strong class="metric-value time" id="dashboard-next-time">–</strong>
+            <p id="dashboard-next-note">Noch kein Wechsel geplant</p>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel events-panel">
+            <div class="panel-header">
+              <div><p class="eyebrow">Tagesplan</p><h2>Heutige Veranstaltungen</h2></div>
+              <button class="text-button" type="button" data-view-link="events">Alle anzeigen →</button>
+            </div>
+            <div class="event-list" id="dashboard-event-list">
+              <div class="event-row">
+                <time>15:00</time><span class="event-line violet"></span>
+                <div><strong>Lesung am Nachmittag</strong><small>Studio · Einlass 14:30</small></div>
+                <span class="tag muted">Beendet</span>
+              </div>
+              <div class="event-row">
+                <time>19:30</time><span class="event-line coral"></span>
+                <div><strong>Sommerkonzert</strong><small>Großer Saal · Einlass 18:30</small></div>
+                <span class="tag coral">Bereit</span>
+              </div>
+              <div class="event-row">
+                <time>20:00</time><span class="event-line green"></span>
+                <div><strong>Jazz im Foyer</strong><small>Foyer · Eintritt frei</small></div>
+                <span class="tag green">Live</span>
+              </div>
+              <div class="event-row">
+                <time>21:30</time><span class="event-line blue"></span>
+                <div><strong>Aftershow-Lounge</strong><small>Restaurant · bis 00:00</small></div>
+                <span class="tag blue">Geplant</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel quick-panel">
+            <div class="panel-header"><div><p class="eyebrow">Direktzugriff</p><h2>Schnellaktionen</h2></div></div>
+            <div class="quick-actions">
+              <button type="button" data-view-link="channels"><span class="quick-icon violet">▤</span><span><strong>Kanal erstellen</strong><small>Slides zusammenstellen</small></span><span>›</span></button>
+              <button type="button" data-view-link="displays"><span class="quick-icon green">▣</span><span><strong>Displays steuern</strong><small>Kanäle sofort wechseln</small></span><span>›</span></button>
+              <button type="button" data-preset="restaurant"><span class="quick-icon peach">⌑</span><span><strong>Restaurant-Preset</strong><small>Auf 3 Displays aktivieren</small></span><span>›</span></button>
+              <button type="button" class="warning-action" data-preset="evacuation"><span class="quick-icon red">!</span><span><strong>Evakuierung</strong><small>Sicherheitsmodus öffnen</small></span><span>›</span></button>
+              <button type="button" data-view-link="features"><span class="quick-icon blue">?</span><span><strong>Kiosky entdecken</strong><small>Alle Funktionen im Überblick</small></span><span>›</span></button>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel display-overview">
+          <div class="panel-header">
+            <div><p class="eyebrow">Live-Status</p><h2>Displays im Haus</h2></div>
+            <button class="text-button" type="button" data-view-link="displays">Displayverwaltung →</button>
+          </div>
+          <div class="display-summary">
+            <div><span class="screen-shape landscape"><i></i></span><span><strong id="dashboard-landscape-count">0 Querformat</strong><small id="dashboard-landscape-note">keine Displays</small></span></div>
+            <div><span class="screen-shape portrait"><i></i></span><span><strong id="dashboard-portrait-count">0 Hochformat</strong><small id="dashboard-portrait-note">keine Displays</small></span></div>
+            <div class="next-change"><span class="clock">◷</span><span><strong id="dashboard-change-count">Keine geplanten Wechsel</strong><small id="dashboard-change-note">innerhalb der nächsten 2 Stunden</small></span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="events">
+        <div class="section-heading">
+          <div><p class="eyebrow">Programmverwaltung</p><h2>Veranstaltungen</h2><p>Importierte Stammdaten prüfen und für Website sowie Displays ergänzen.</p></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte Veranstaltungen archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte Veranstaltungen löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
+        </div>
+        <article class="panel table-panel">
+          <div class="toolbar">
+            <label class="search-field"><span>⌕</span><input type="search" id="event-search" placeholder="Veranstaltungen durchsuchen"></label>
+            <select id="event-status-filter" aria-label="Status filtern"><option value="">Alle Status</option><option value="review">Zu prüfen</option><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="cancelled">Abgesagt</option></select>
+          </div>
+          <div class="data-table" id="event-table" role="table" aria-label="Veranstaltungen"><div class="event-table-empty">Veranstaltungen werden geladen …</div></div>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="displays">
+        <div class="section-heading">
+          <div><p class="eyebrow">Digital Signage</p><h2>Displayverwaltung</h2><p>Displays, Gruppen, Matrix-Flächen und Standorte zentral verwalten.</p></div>
+          <div class="section-actions"><button class="button button-primary" type="button" data-action="new-display">＋ Display hinzufügen</button></div>
+        </div>
+        <div class="display-management-summary"><div><strong id="display-total">0</strong><span>Displays angelegt</span></div><div><strong id="display-online">0</strong><span>aktuell online</span></div><div><strong id="display-group-total">0</strong><span>Display-Gruppen</span></div><p>Die Player-URL bleibt am Endgerät unverändert. Kanal und Zeitplan werden zentral aktualisiert.</p></div>
+        <div class="management-tabs" role="tablist" aria-label="Displaybereiche">
+          <button class="is-active" type="button" data-display-tab="displays">Displays</button>
+          <button type="button" data-display-tab="groups">Displaygruppen</button>
+          <button type="button" data-display-tab="matrices">Matrix-Displays</button>
+          <button type="button" data-display-tab="locations">Standorte</button>
+          <button type="button" data-display-tab="trash">Papierkorb</button>
+        </div>
+        <article class="panel table-panel display-tab-panel is-active" data-display-tab-panel="displays">
+          <div class="toolbar management-toolbar"><label class="search-field"><span>⌕</span><input id="display-search" type="search" placeholder="Displays durchsuchen"></label><select id="display-status-filter"><option value="">Alle Status</option><option value="online">Online</option><option value="offline">Offline</option><option value="disabled">Deaktiviert</option></select><select id="display-location-filter"><option value="">Alle Standorte</option></select><select id="display-group-filter"><option value="">Alle Gruppen</option></select><select id="display-matrix-filter"><option value="">Matrix: alle</option><option value="yes">In Matrix</option><option value="no">Ohne Matrix</option></select></div>
+          <div class="admin-data-table" id="display-table" aria-live="polite"></div>
+          <div class="table-pagination"><span id="display-page-info"></span><div><button type="button" data-display-page="-1">←</button><button type="button" data-display-page="1">→</button></div></div>
+        </article>
+        <article class="panel table-panel display-tab-panel" data-display-tab-panel="groups"><div class="toolbar"><label class="search-field"><span>⌕</span><input id="group-search" type="search" placeholder="Gruppen durchsuchen"></label><button class="button button-primary" type="button" data-action="manage-groups">＋ Gruppe anlegen</button></div><div class="admin-data-table" id="group-table"></div></article>
+        <article class="panel table-panel display-tab-panel" data-display-tab-panel="matrices"><div class="toolbar"><label class="search-field"><span>⌕</span><input id="matrix-search" type="search" placeholder="Matrix-Displays durchsuchen"></label><button class="button button-primary" type="button" data-action="new-matrix">＋ Matrix anlegen</button></div><div class="admin-data-table" id="matrix-table"></div></article>
+        <article class="panel table-panel display-tab-panel" data-display-tab-panel="locations"><div class="toolbar"><label class="search-field"><span>⌕</span><input id="location-search" type="search" placeholder="Standorte durchsuchen"></label><button class="button button-primary" type="button" data-action="new-location">＋ Standort anlegen</button></div><div class="admin-data-table" id="location-table"></div></article>
+        <article class="panel table-panel display-tab-panel" data-display-tab-panel="trash"><div class="toolbar"><label class="search-field"><span>⌕</span><input id="trash-search" type="search" placeholder="Papierkorb durchsuchen"></label><select id="trash-type-filter"><option value="">Alle Typen</option><option value="event">Veranstaltungen</option><option value="slide">Slides</option><option value="channel">Kanäle</option><option value="display">Displays</option><option value="display_group">Displaygruppen</option><option value="location">Standorte</option><option value="matrix">Matrix-Displays</option></select></div><div class="admin-data-table" id="trash-table"></div></article>
+        <details class="panel display-live-overview" id="display-live-overview">
+          <summary>
+            <span><span class="eyebrow">Live-Content</span><strong>Aktuelle Ausspielung</strong><small>Miniaturvorschauen des zuletzt gemeldeten Inhalts anzeigen.</small></span>
+            <span class="display-live-summary-state"><span class="tag muted" id="display-live-updated">Minimiert</span><i aria-hidden="true">⌄</i></span>
+          </summary>
+          <div class="display-live-content">
+            <p>Einzel- und Matrix-Displays mit dem zuletzt vom Player gemeldeten Inhalt.</p>
+            <div class="display-live-grid" id="display-live-table"></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="view" data-view-panel="channels">
+        <div class="section-heading">
+          <div><p class="eyebrow">Content-Baukasten</p><h2>Slides & Kanäle</h2><p>Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.</p></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-action="new-channel">＋ Kanal anlegen</button><button class="button button-secondary" type="button" data-action="duplicate-channel">⧉ Kanal duplizieren</button><button class="button button-primary" type="button" data-action="new-slide">＋ Slide erstellen</button></div>
+        </div>
+
+        <div class="workflow-line" aria-label="Ablauf der Content-Ausspielung"><span class="is-current">1 · Slides</span><i>→</i><span class="is-current">2 · Kanal</span><i>→</i><button type="button" data-view-link="schedule">3 · Zeitplan</button><i>→</i><button type="button" data-view-link="displays">4 · Displays</button></div>
+        <div class="channel-studio">
+          <article class="panel slide-library-panel">
+            <div class="panel-header"><div><p class="eyebrow">Bibliothek</p><h2>Verfügbare Slides</h2></div><span class="tag muted"><span id="slide-count">6</span> Slides</span></div>
+            <div class="slide-toolbar">
+              <label class="search-field compact"><span>⌕</span><input type="search" id="slide-search" placeholder="Slides suchen"></label>
+              <select id="slide-filter" aria-label="Slide-Typ filtern"><option value="all">Alle Typen</option><option value="custom">Eigene Slides</option><option value="event">Veranstaltung</option><option value="text">Freitext</option><option value="image">Bild</option><option value="video">Video</option><option value="web">Website</option></select>
+            </div>
+            <div class="template-toolbar"><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
+            <div class="slide-bulk-toolbar">
+              <label class="table-check"><input id="slide-select-all" type="checkbox"> Alle sichtbaren Slides</label>
+              <span id="slide-selection-count">0 ausgewählt</span>
+              <div class="slide-bulk-actions"><button class="button button-secondary" id="slide-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="slide-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="slide-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="slide-bulk-delete" type="button" disabled>Löschen</button></div>
+            </div>
+            <p class="drag-hint">Slide in den Kanal ziehen oder über ＋ hinzufügen. Die Checkboxen dienen der Mehrfachauswahl.</p>
+            <div class="slide-library" id="slide-library" aria-live="polite"></div>
+          </article>
+
+          <article class="panel channel-builder-panel">
+            <div class="channel-builder-head">
+              <div class="channel-title-block">
+                <p class="eyebrow">Kanal bearbeiten</p>
+                <h2 id="channel-builder-title">Noch keinen Kanal angelegt</h2>
+                <div class="channel-context-line">
+                  <p id="channel-builder-meta"><span class="status-dot"></span> Kanal auswählen oder neu anlegen</p>
+                  <div class="channel-run-stats" aria-label="Kanalumfang"><span><strong id="channel-slide-summary">0</strong> Slides</span><span><strong id="channel-duration-summary">0 Sek.</strong> pro Durchlauf</span></div>
+                </div>
+              </div>
+              <button class="icon-button" type="button" data-action="edit-channel" aria-label="Kanaleinstellungen">•••</button>
+            </div>
+            <div class="channel-builder-layout">
+              <aside class="channel-navigator" aria-label="Kanäle auswählen">
+                <div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
+                <label class="search-field compact"><span>⌕</span><input id="channel-search" type="search" placeholder="Kanäle durchsuchen"></label>
+                <div class="channel-list" id="channel-overview" role="listbox" aria-label="Kanalliste"></div>
+              </aside>
+              <div class="channel-editor-body">
+                <div class="channel-settings-row">
+                  <label>Übergang<select id="channel-transition"><option value="fade">Sanft überblenden</option><option value="slide">Wischen</option><option value="zoom">Zoom</option><option value="none">Ohne Übergang</option></select></label>
+                  <label>Ausrichtung<select id="channel-orientation"><option value="auto">Automatisch</option><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label>
+                  <label class="toggle-label"><input id="channel-repeat" type="checkbox" checked> Wiederholen</label>
+                </div>
+                <div class="playlist-head"><strong>Abspielreihenfolge</strong><span>↕ Ziehen zum Sortieren</span></div>
+                <div class="channel-playlist" id="channel-playlist" aria-label="Slides im Kanal"></div>
+                <button class="playlist-drop" id="playlist-drop" type="button">＋ Slide hier ablegen</button>
+                <div class="builder-footer"><span><strong>Vorschau:</strong> Querformat · 1920 × 1080</span><span class="autosave-status" id="channel-autosave-status" data-state="idle" aria-live="polite">Autosave aktiv</span><button class="button button-secondary" type="button" data-action="preview-channel">▶ Kanalvorschau</button><span class="history-actions" aria-label="Bearbeitungsverlauf"><button class="history-button" id="channel-undo-button" type="button" title="Schritt zurück" aria-label="Schritt zurück" disabled>↶</button><button class="history-button" id="channel-redo-button" type="button" title="Schritt vorwärts" aria-label="Schritt vorwärts" disabled>↷</button></span><button class="button button-primary" type="button" data-action="save-channel">Jetzt speichern</button></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="media">
+        <div class="section-heading">
+          <div><p class="eyebrow">Zentrale Dateiablage</p><h2>Mediendatenbank</h2><p>Bilder, Vektorgrafiken und Videos zentral verwalten und in allen Slides wiederverwenden.</p></div>
+          <div class="section-actions">
+            <button class="button button-secondary" type="button" data-media-page-action="new-folder">＋ Ordner</button>
+            <button class="button button-secondary" type="button" data-media-page-action="add-url">＋ Medien-URL</button>
+            <label class="button button-primary media-upload-button">＋ Dateien hochladen<input id="media-page-upload" type="file" accept="image/*,video/mp4,video/webm" multiple></label>
+          </div>
+        </div>
+        <div class="media-summary" id="media-page-summary"></div>
+        <div class="media-page-toolbar">
+          <div class="media-filter-group" aria-label="Medientyp filtern">
+            <button class="is-active" type="button" data-media-page-filter="">Alle</button>
+            <button type="button" data-media-page-filter="image">Bilder</button>
+            <button type="button" data-media-page-filter="video">Videos</button>
+            <button type="button" data-media-page-filter="icon">Vektoren</button>
+          </div>
+          <label class="search-field compact"><span>⌕</span><input id="media-page-search" type="search" placeholder="Dateiname suchen"></label>
+        </div>
+        <div class="media-library-layout media-library-page">
+          <aside><strong>Ordner</strong><div id="media-page-folder-tree"></div></aside>
+          <section><div class="media-breadcrumb" id="media-page-breadcrumb">Alle Medien</div><div class="media-asset-grid media-asset-grid-large" id="media-page-asset-grid"></div></section>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="schedule">
+        <div class="section-heading">
+          <div><p class="eyebrow">Drag-and-drop-Planung</p><h2>Display-Zeitplan</h2><p>Inhalte direkt auf Displays, Displaygruppen und Matrix-Displays rund um die Uhr verteilen.</p></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-action="manage-groups">Display-Gruppen</button></div>
+        </div>
+
+        <article class="panel scheduler-panel">
+          <div class="scheduler-topbar">
+            <div class="week-switch"><button type="button" data-week-direction="previous" aria-label="Vorherige Woche">‹</button><button class="week-date-trigger" id="schedule-week-picker-trigger" type="button" aria-haspopup="dialog" aria-controls="schedule-week-picker" aria-expanded="false"><span>13.–19. Juli 2026</span><i aria-hidden="true">▾</i></button><button type="button" data-week-direction="next" aria-label="Nächste Woche">›</button></div>
+            <div class="schedule-topbar-actions">
+              <div class="schedule-view-toggle" role="group" aria-label="Zeitplanansicht">
+                <button class="is-active" type="button" data-schedule-view="day" aria-pressed="true">Tag</button>
+                <button type="button" data-schedule-view="week" aria-pressed="false">Woche</button>
+              </div>
+              <div class="schedule-status" id="schedule-save-status"><span class="status-dot"></span><span>Veröffentlicht</span></div>
+            </div>
+          </div>
+          <div class="schedule-week-picker" id="schedule-week-picker" popover role="dialog" aria-label="Woche auswählen">
+            <div class="schedule-calendar-head">
+              <button type="button" data-calendar-direction="-12" aria-label="Ein Jahr zurück">«</button>
+              <button type="button" data-calendar-direction="-1" aria-label="Einen Monat zurück">‹</button>
+              <strong id="schedule-calendar-title">Juli 2026</strong>
+              <button type="button" data-calendar-direction="1" aria-label="Einen Monat weiter">›</button>
+              <button type="button" data-calendar-direction="12" aria-label="Ein Jahr weiter">»</button>
+            </div>
+            <div class="schedule-calendar-weekdays" aria-hidden="true"><span>KW</span><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+            <div class="schedule-calendar-weeks" id="schedule-calendar-weeks"></div>
+            <div class="schedule-calendar-footer">
+              <p>Eine Zeile auswählen, um direkt zu dieser Woche zu springen.</p>
+              <button type="button" id="schedule-calendar-today">Heute</button>
+            </div>
+          </div>
+          <div class="day-tabs" role="tablist" aria-label="Wochentag auswählen">
+            <button type="button" data-day="mo"><span>Mo</span><strong>13</strong></button><button type="button" data-day="di"><span>Di</span><strong>14</strong></button><button type="button" data-day="mi"><span>Mi</span><strong>15</strong></button><button type="button" data-day="do"><span>Do</span><strong>16</strong></button><button type="button" data-day="fr"><span>Fr</span><strong>17</strong></button><button type="button" data-day="sa"><span>Sa</span><strong>18</strong></button><button class="is-active" type="button" data-day="so"><span>So</span><strong>19</strong></button>
+          </div>
+
+          <div class="scheduler-workspace">
+            <aside class="scheduler-sidebar">
+              <section>
+                <div class="scheduler-side-head"><div><p class="eyebrow">1 · Inhalt</p><h3>Inhalt ziehen</h3></div></div>
+                <div class="schedule-content-filters"><label><input id="schedule-show-channels" type="checkbox" checked> Kanäle</label><label><input id="schedule-show-slides" type="checkbox"> Slides</label></div>
+                <label class="search-field compact schedule-content-search"><span>⌕</span><input id="schedule-content-search" type="search" placeholder="Kanäle &amp; Slides suchen" aria-label="Kanäle und Slides suchen"></label>
+                <div class="schedule-content-list" id="schedule-content-list">
+                  <button draggable="true" data-schedule-content="Sommerkonzert" data-content-type="event"><i class="content-swatch coral"></i><span><strong>Sommerkonzert</strong><small>Eventkanal · 4 Slides</small></span><b>⠿</b></button>
+                  <button draggable="true" data-schedule-content="Tagesplan" data-content-type="default"><i class="content-swatch blue"></i><span><strong>Tagesplan</strong><small>Automatisch · 1 Slide</small></span><b>⠿</b></button>
+                  <button draggable="true" data-schedule-content="Restaurant" data-content-type="preset"><i class="content-swatch green"></i><span><strong>Restaurant</strong><small>Preset · 3 Slides</small></span><b>⠿</b></button>
+                  <button draggable="true" data-schedule-content="Reset / Default" data-content-type="default"><i class="content-swatch muted"></i><span><strong>Reset / Default</strong><small>Standardhintergrund</small></span><b>⠿</b></button>
+                </div>
+                <p class="drag-hint" id="schedule-drag-hint">Inhalt ziehen oder auswählen, danach Uhrzeit anklicken.</p>
+                <div class="schedule-assignment-options">
+                  <label>Priorität<select id="schedule-priority"><option value="normal">Normal</option><option value="high">Wichtig</option><option value="takeover">Übernahme</option></select></label>
+                  <label>Dauer<select id="schedule-duration"><option value="0.5">30 Minuten</option><option value="1">1 Stunde</option><option value="1.5">90 Minuten</option><option value="2" selected>2 Stunden</option><option value="4">4 Stunden</option><option value="8">8 Stunden</option><option value="10">10 Stunden</option><option value="12">12 Stunden</option><option value="24">24 Stunden</option><option value="midnight">Bis 24:00 Uhr</option><option value="event">bis Veranstaltungsende</option></select></label>
+                  <label>Wiederholung<select id="schedule-recurrence"><option value="once">einmalig</option><option value="daily">täglich</option><option value="weekly">wöchentlich</option></select></label>
+                  <p class="schedule-full-day-note" id="schedule-full-day-note" hidden>In der Wochenansicht gilt jede neue Zuweisung für den ganzen gewählten Tag von 00:00 bis 24:00 Uhr.</p>
+                </div>
+              </section>
+            </aside>
+
+            <div class="schedule-canvas-wrap">
+              <div class="schedule-canvas-head"><div><p class="eyebrow">2 · Ziele und Uhrzeit</p><h3>Sonntag, 19. Juli</h3></div><div class="legend"><span><i class="legend-dot event"></i>Eventkanal</span><span><i class="legend-dot preset"></i>Preset</span><span><i class="legend-dot default"></i>Default</span></div></div>
+              <div class="visual-schedule" id="visual-schedule" aria-label="Zeitplan von 0 bis 24 Uhr"></div>
+              <div class="schedule-help"><span>ⓘ Zielnamen ziehen: Reihenfolge ändern · Inhalt in eine Zielzeile ziehen: zuweisen</span><span>Block anklicken: bearbeiten · Block ziehen: verschieben · Kanten ziehen: Zeit ändern · Hover: alle Ziele markieren</span></div>
+              <div class="schedule-entry-list" id="schedule-entry-list"></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="operations">
+        <div class="section-heading">
+          <div><p class="eyebrow">Wiederverwendbare Konfigurationen</p><h2>Presets & Warnhinweise</h2><p>Gerätezustand überwachen, Presets verwalten und Warnhinweise priorisiert ausspielen.</p></div>
+          <button class="button button-secondary" type="button" data-action="refresh-operations">↻ Status aktualisieren</button>
+        </div>
+
+        <div class="ops-metrics">
+          <article><span class="ops-indicator healthy"></span><div><strong id="ops-online-count">0</strong><small>Player online</small></div></article>
+          <article><span class="ops-indicator warning"></span><div><strong id="ops-warning-count">0</strong><small>Handlungsbedarf</small></div></article>
+          <article><span class="ops-indicator cached"></span><div><strong id="ops-cached-count">0</strong><small>offline-bereit</small></div></article>
+          <article><span class="ops-indicator plays"></span><div><strong id="ops-display-count">0</strong><small>Displays gesamt</small></div></article>
+        </div>
+
+        <div class="operations-grid">
+          <article class="panel device-monitor-panel">
+            <div class="panel-header"><div><p class="eyebrow">Heartbeat & Cache</p><h2>Player-Monitoring</h2></div><span class="tag green">Intervall 30 Sekunden</span></div>
+            <div class="device-monitor-table" id="device-monitor-table"></div>
+          </article>
+
+          <article class="panel emergency-panel">
+            <div class="panel-header"><div><p class="eyebrow">Höchste Priorität</p><h2>Warnhinweis erstellen</h2></div><span class="emergency-state" id="emergency-state">Bereit</span></div>
+            <label class="form-field"><span>Vorlage</span><select id="emergency-template"><option value="">Ohne Vorlage</option></select></label>
+            <div class="warning-editor-grid"><label class="form-field"><span>Warnungstyp</span><select id="emergency-type"><option value="evacuation">Evakuierung</option><option value="weather">Unwetter</option><option value="security">Sicherheitslage</option><option value="technical">Technische Störung</option><option value="info">Wichtige Information</option></select></label><label class="form-field"><span>Warnstufe</span><select id="emergency-severity"><option value="1">1 · Hinweis</option><option value="2">2 · Wetterwarnung</option><option value="3" selected>3 · Markante Warnung</option><option value="4">4 · Unwetter</option><option value="5">5 · Extreme Gefahr</option></select></label><label class="form-field span-two"><span>Überschrift</span><input id="emergency-title" type="text" value="Gebäude bitte verlassen"></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="emergency-description" rows="2"></textarea></label><label class="form-field span-two"><span>Handlungsanweisung</span><textarea id="emergency-message" rows="4">Bitte folgen Sie den ausgeschilderten Fluchtwegen und den Anweisungen des Personals.</textarea></label><label class="form-field"><span>Priorität</span><input id="emergency-priority" type="number" min="0" max="1000" value="1000"></label><label class="form-field"><span>Automatisch beenden nach</span><select id="emergency-duration"><option value="0">Manuell beenden</option><option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option><option value="120">2 Stunden</option></select></label><label class="form-field"><span>Hintergrund</span><input id="emergency-background" type="color" value="#9f1d20"></label><label class="form-field"><span>Textfarbe</span><input id="emergency-text-color" type="color" value="#ffffff"></label><label class="form-field span-two"><span>Nach dem Ende</span><select id="emergency-return"><option value="resume_current_schedule">Aktuell gültigen Zeitplan fortsetzen</option><option value="resume_previous">Vorherigen Inhalt fortsetzen</option><option value="standard_content">Standardinhalt anzeigen</option></select></label></div>
+            <fieldset class="emergency-targets"><legend>Zielbereiche</legend><div id="emergency-target-options"></div></fieldset>
+            <div class="emergency-preview" id="emergency-preview"><small>EVAKUIERUNG</small><strong>Gebäude bitte verlassen</strong><p>Bitte folgen Sie den ausgeschilderten Fluchtwegen und den Anweisungen des Personals.</p><div class="emergency-preview-ticker" id="emergency-preview-ticker" aria-label="Lauftext-Vorschau" hidden><span id="emergency-preview-ticker-text"></span></div></div>
+            <div class="emergency-actions"><button class="button button-secondary" type="button" data-action="save-warning-as-preset">Als Preset speichern</button><button class="button button-secondary" type="button" data-action="cancel-emergency" disabled>Aktiven Warnhinweis beenden</button><button class="button emergency-button" type="button" data-action="activate-emergency">⚠ Warnhinweis veröffentlichen</button></div>
+            <p class="safety-note">Die Meldung übersteuert Zeitpläne und Kanäle. Sicherheits- und Brandmeldeanlagen werden dadurch nicht ersetzt.</p>
+          </article>
+        </div>
+
+        <article class="panel dwd-panel"><div class="panel-header"><div><p class="eyebrow">Offizielle Wetterwarnungen</p><h2>DWD · standortgenau</h2><p>Amtliche DWD-Warnungen werden über die am Standort hinterlegte Warngebietskennung abgerufen.</p></div><span class="tag">Quelle: Deutscher Wetterdienst</span></div><div class="dwd-controls"><label class="form-field"><span>Standort</span><select id="dwd-location"><option value="">Standort wählen</option></select></label><label class="form-field"><span>Mindestwarnstufe</span><select id="dwd-min-severity"><option value="1">1 · Hinweis</option><option value="2" selected>2 · Wetterwarnung</option><option value="3">3 · Markante Warnung</option><option value="4">4 · Unwetter</option><option value="5">5 · Extreme Gefahr</option></select></label><label class="form-field"><span>Warnarten</span><input id="dwd-event-types" placeholder="z. B. Gewitter, Sturm (leer = alle)"></label><label class="toggle-label"><input id="dwd-auto-publish" type="checkbox"> Passende Warnungen automatisch veröffentlichen</label></div><fieldset class="emergency-targets"><legend>Ziele für diesen Standort</legend><div id="dwd-target-options"></div></fieldset><div class="dwd-actions"><button class="button button-secondary" type="button" data-action="save-dwd-config">Einstellungen speichern</button><button class="button button-primary" type="button" data-action="preview-dwd">DWD-Warnungen abrufen</button><button class="button emergency-button" type="button" data-action="sync-dwd">Abrufen und übernehmen</button></div><div class="dwd-warning-list" id="dwd-warning-list"><p class="property-note">Bitte einen Standort mit DWD-Warngebietskennung auswählen.</p></div><p class="safety-note">Kiosky nutzt den offiziellen DWD-Open-Data-Warndienst. Eine automatische Veröffentlichung erfolgt nur, wenn sie oben ausdrücklich aktiviert wurde.</p></article>
+
+        <article class="panel warning-template-panel"><div class="panel-header"><div><p class="eyebrow">Anpassbare Inhalte</p><h2>Warnvorlagen</h2><p>Vorlagen auswählen, bearbeiten und anschließend als Warnhinweis oder Preset verwenden.</p></div><button class="button button-primary" type="button" data-action="new-warning-template">＋ Warnvorlage</button></div><div class="warning-template-grid" id="warning-template-grid"></div></article>
+
+        <article class="panel preset-panel"><div class="panel-header"><div><p class="eyebrow">Schnell schalten</p><h2>Warn- und Betriebs-Presets</h2></div><button class="button button-primary" type="button" data-action="new-preset">＋ Preset anlegen</button></div><div class="preset-grid" id="preset-grid"></div></article>
+
+      </section>
+
+      <section class="view" data-view-panel="integrations">
+        <header class="settings-header" aria-label="Einstellungsnavigation">
+          <div class="settings-header-title"><button class="settings-back" type="button" data-view-link="settings" aria-label="Zur Einstellungsübersicht">←</button><div><p class="eyebrow">Einstellungen <span aria-hidden="true">/</span> Schnittstellen</p><strong>System konfigurieren</strong></div></div>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button type="button" data-view-link="settings">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button class="is-active" type="button" aria-current="page">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
+          <nav class="settings-submenu" aria-label="Schnittstellenmenü"><button type="button" data-settings-anchor="integration-overview">Übersicht</button><button type="button" data-settings-anchor="crewbrain-config-form">CrewBrain</button><button type="button" data-settings-anchor="easyjob-config-form">easyjob</button><button type="button" data-settings-anchor="external-api-panel">Externe API</button><button type="button" data-settings-anchor="content-transfer-panel">Datentransfer</button></nav>
+        </header>
+        <div class="section-heading">
+          <div><p class="eyebrow">Datenhaltung</p><h2>Schnittstellen</h2><p>CrewBrain und easyjob stehen parallel als auswählbare Veranstaltungsquellen bereit.</p></div>
+          <span class="audit-note" id="crewbrain-last-sync">Noch nicht verbunden</span>
+        </div>
+        <div class="integration-overview-grid" id="integration-overview">
+          <article class="integration-card" data-source-card="crewbrain">
+            <div class="integration-logo crew">CB</div>
+            <div class="integration-title"><div><h3>CrewBrain</h3><p>API v2 · zentrale Veranstaltungsquelle</p></div><span class="tag muted source-state" id="crewbrain-connection-badge">Nicht geladen</span></div>
+            <label class="source-activation-toggle"><input type="checkbox" data-source-toggle="crewbrain"><span><strong>Als Datenquelle aktiv</strong><small id="crewbrain-activation-hint">Konfiguration wird geprüft …</small></span></label>
+            <ul><li><span>Mandant</span><strong id="crewbrain-tenant-label">shwz.crewbrain.com</strong></li><li><span>API-Version</span><strong id="crewbrain-version-label">–</strong></li><li><span>Automatischer Import</span><strong id="crewbrain-sync-label">Täglich um 03:00 Uhr</strong></li><li><span>Modus</span><strong>Nur lesend</strong></li></ul>
+            <button class="button button-secondary" type="button" data-action="focus-crewbrain-config">Konfiguration bearbeiten</button>
+          </article>
+          <article class="integration-card" data-source-card="easyjob">
+            <div class="integration-logo">EJ</div>
+            <div class="integration-title"><div><h3>easyjob</h3><p>WebApi · Projekte und Jobs</p></div><span class="tag muted source-state" id="easyjob-connection-badge">Nicht geladen</span></div>
+            <label class="source-activation-toggle"><input type="checkbox" data-source-toggle="easyjob"><span><strong>Als Datenquelle aktiv</strong><small id="easyjob-activation-hint">Konfiguration wird geprüft …</small></span></label>
+            <ul><li><span>Server</span><strong id="easyjob-server-label">Noch nicht konfiguriert</strong></li><li><span>Import</span><strong id="easyjob-mode-label">Projekte mit Jobs</strong></li><li><span>Modus</span><strong>Nur lesend</strong></li></ul>
+            <button class="button button-secondary" type="button" data-action="focus-easyjob-config">Konfiguration bearbeiten</button>
+          </article>
+
+          <article class="panel integration-access-panel">
+            <div><p class="eyebrow">Geschützter Bereich</p><h2>Angemeldete Sitzung</h2><p>Nur Administratoren können Zugangsdaten, Synchronisation und Feldzuordnungen ändern.</p></div>
+            <div class="signed-in-admin"><span class="avatar" id="integration-user-avatar">SE</span><span><strong id="integration-user-name">Administrator</strong><small>Sitzung serverseitig geschützt</small></span></div>
+            <span class="connection-message is-success" id="crewbrain-access-message" role="status">Administrationszugang aktiv</span>
+          </article>
+        </div>
+
+        <form class="panel integration-exclusions-panel" id="integration-title-exclusions-form">
+          <div class="panel-header">
+            <div><p class="eyebrow">Alle Datenquellen</p><h2>Titel-Ausschlussliste</h2><p>Gemeinsame Importregel für CrewBrain und easyjob.</p></div>
+            <span class="tag muted" id="integration-title-exclusions-state">Nicht geladen</span>
+          </div>
+          <label class="form-field exclusion-list-field"><span>Auszuschließende Zeichenfolgen</span><textarea id="integration-title-exclusions" rows="5" maxlength="8100" placeholder="Eine exakte Zeichenfolge pro Zeile, z. B. (St)"></textarea><small>Enthält ein importierter Veranstaltungstitel eine dieser Zeichenfolgen, wird er unabhängig von der aktiven Datenquelle ausgeschlossen. Groß- und Kleinschreibung werden exakt beachtet.</small></label>
+          <div class="config-actions"><button class="button button-primary" type="submit">Ausschlussliste speichern</button></div>
+        </form>
+
+        <article class="panel content-transfer-panel" id="content-transfer-panel">
+          <div class="panel-header">
+            <div><p class="eyebrow">Serverumzug</p><h2>Slides, Kanäle und Displays übertragen</h2><p>Ein vollständiges Transferpaket für eine andere Kiosky-Instanz erstellen oder ein vorhandenes Paket einlesen.</p></div>
+            <span class="tag blue">Versioniertes JSON</span>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-heading"><strong>Enthaltene Daten</strong><span>Slides samt benötigten Medien, Kanäle mit Reihenfolge und Übergängen sowie Displays und Display-Gruppen.</span></div>
+            <p class="privacy-note">Beim Import werden neue Einträge angelegt. Bereits vorhandene Daten bleiben erhalten. Belegte Display-URL-Kennungen werden automatisch umbenannt.</p>
+          </div>
+          <div class="config-actions">
+            <input id="content-transfer-import-file" type="file" accept=".json,application/json" hidden>
+            <button class="button button-secondary" type="button" data-action="import-content-transfer">Transferpaket importieren</button>
+            <button class="button button-primary" type="button" data-action="export-content-transfer">Transferpaket exportieren</button>
+          </div>
+          <p class="credential-note config-transfer-note">Das Paket enthält die Player-Schlüssel der Displays, damit vorhandene Player nach einem vollständigen Serverumzug weiterverwendet werden können. Bewahre die Datei geschützt auf.</p>
+          <p class="connection-message" id="content-transfer-message" role="status" hidden></p>
+        </article>
+
+        <form class="panel crewbrain-config-panel" id="crewbrain-config-form">
+          <div class="panel-header"><div><p class="eyebrow">Verbindung & Automatisierung</p><h2>CrewBrain konfigurieren</h2></div><span class="tag muted" id="crewbrain-save-state">Nicht geladen</span></div>
+          <fieldset id="crewbrain-config-fields" disabled>
+            <div class="settings-section">
+              <div class="settings-section-heading"><strong>Verbindung</strong><span>Kiosky speichert ausschließlich den Access-Token verschlüsselt.</span></div>
+              <div class="config-form-grid">
+                <label class="form-field span-two"><span>Mandanten-URL</span><input id="crewbrain-base-url" type="url" value="https://shwz.crewbrain.com/api/v2" required></label>
+                <fieldset class="auth-method-choice span-two" aria-label="CrewBrain-Anmeldeart">
+                  <legend>Anmeldeart</legend>
+                  <label><input type="radio" name="crewbrain-auth-method" value="token" checked><span><strong>Access-Token</strong><small>Vorhandenen Token direkt hinterlegen</small></span></label>
+                  <label><input type="radio" name="crewbrain-auth-method" value="login"><span><strong>CrewBrain-Login</strong><small>Token einmalig automatisch abrufen</small></span></label>
+                </fieldset>
+                <div class="auth-method-panel span-two" id="crewbrain-token-panel">
+                  <label class="form-field"><span>Access-Token</span><input id="crewbrain-access-token" type="password" autocomplete="new-password" placeholder="Noch kein Token gespeichert"><small id="crewbrain-token-hint">Der Token wird nach dem Speichern nicht mehr angezeigt.</small></label>
+                </div>
+                <div class="auth-method-panel span-two" id="crewbrain-login-panel" hidden>
+                  <div class="config-form-grid">
+                    <label class="form-field"><span>CrewBrain-Benutzername</span><input id="crewbrain-username" type="text" autocomplete="username"></label>
+                    <label class="form-field"><span>CrewBrain-Passwort</span><input id="crewbrain-password" type="password" autocomplete="current-password"></label>
+                  </div>
+                  <p class="credential-note">Benutzername und Passwort werden nur einmalig verschlüsselt an CrewBrain übertragen. Kiosky speichert anschließend ausschließlich den erhaltenen Access-Token.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-heading"><strong>Automatischer Import</strong><span>Importiert passende CrewBrain-Termine einmal täglich zur festgelegten Uhrzeit.</span></div>
+              <div class="config-form-grid four-columns">
+                <label class="form-field"><span>Täglich um</span><input id="crewbrain-auto-import-time" type="time" value="03:00" required><small>Lokale Serverzeit</small></label>
+                <label class="form-field"><span>Rückblick</span><input id="crewbrain-lookback" type="number" min="0" max="3650" value="30"><small>Tage</small></label>
+                <label class="form-field"><span>Vorausplanung</span><input id="crewbrain-lookahead" type="number" min="1" max="3650" value="365"><small>Tage</small></label>
+                <label class="form-field"><span>Datensätze je Abruf</span><input id="crewbrain-page-size" type="number" min="1" max="100" value="100"></label>
+                <label class="form-field span-two"><span>Veranstaltungsstruktur</span><select id="crewbrain-import-strategy"><option value="project">Projekte als Veranstaltungen</option><option value="job">Jobs als Veranstaltungen</option><option value="project_with_jobs">Projekte mit Haupt- und Unterjobs</option></select></label>
+              </div>
+              <div class="config-toggles">
+                <label><input id="crewbrain-sync-enabled" type="checkbox" checked><span><strong>Automatischen Import aktivieren</strong><small>Neue und geänderte CrewBrain-Termine täglich automatisch übernehmen.</small></span></label>
+                <label><input id="crewbrain-auto-channels" type="checkbox" checked><span><strong>Kanäle automatisch anlegen</strong><small>Für neue Veranstaltungen einen eigenen Kanal vorbereiten.</small></span></label>
+                <label><input id="crewbrain-auto-slides" type="checkbox" checked><span><strong>Basis-Slides automatisch anlegen</strong><small>Begrüßung, Zeiten und Tagesplan als Entwurf erzeugen.</small></span></label>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-heading"><strong>Feldzuordnung</strong><span>Bestimmt, welche CrewBrain-Felder in öffentlichen Kiosky-Inhalten erscheinen.</span></div>
+              <div class="field-mapping-grid" id="crewbrain-field-mapping">
+                <label><span>Veranstaltungstitel</span><select data-mapping-target="title"><option value="TitelExport">Exporttitel</option><option value="Title">Interner Titel</option><option value="EventIDFormatted">Veranstaltungsnummer</option></select></label>
+                <label><span>Öffentliche Beschreibung</span><select data-mapping-target="description"><option value="PublicDescription">Öffentliche Beschreibung</option><option value="Description">Beschreibung</option><option value="ExternalDescription">Externe Beschreibung</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Veranstaltungsdatum</span><select data-mapping-target="date"><option value="DateFrom">Beginn-Datum</option><option value="DateUntil">Ende-Datum</option></select></label>
+                <label><span>Einlass</span><select data-mapping-target="admissionStart"><option value="Admission">Einlass</option><option value="Start">Beginn</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Beginn</span><select data-mapping-target="eventStart"><option value="Start">Beginn-Zeit</option><option value="DateFrom">Beginn-Zeitstempel</option></select></label>
+                <label><span>Pause</span><select data-mapping-target="breakStart"><option value="BreakTimestamp">Pausenzeit</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Ende</span><select data-mapping-target="eventEnd"><option value="DateUntil">Ende-Zeitstempel</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Spielort / Raum</span><select data-mapping-target="venue"><option value="Location.Description">Ortsbeschreibung</option><option value="Location.City">Ort/Stadt</option><option value="Client.Description">Auftraggeber</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Ticket-Link</span><select data-mapping-target="ticketUrl"><option value="TicketURL">Ticket-URL</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Ticketstatus / Restkarten</span><select data-mapping-target="remainingTickets"><option value="TicketStatus">Ticketstatus</option><option value="__none">Nicht übernehmen</option></select></label>
+              </div>
+              <p class="privacy-note">Manuelle Texte, Medien, Slide-Layouts und Display-Zuordnungen bleiben in Kiosky und werden durch CrewBrain nicht überschrieben.</p>
+            </div>
+
+            <div class="config-actions">
+              <input id="crewbrain-config-import-file" type="file" accept=".json,application/json" hidden>
+              <button class="button button-secondary" type="button" data-action="import-crewbrain-config">JSON importieren</button>
+              <button class="button button-secondary" type="button" data-action="export-crewbrain-config">JSON exportieren</button>
+              <button class="button button-secondary" type="button" data-action="test-crewbrain">Verbindung testen</button>
+              <button class="button button-primary" type="submit">Konfiguration speichern</button>
+            </div>
+            <p class="credential-note config-transfer-note">Die Exportdatei enthält den CrewBrain-Zugang im Klartext. Bewahre sie geschützt auf und lösche sie nach der Übertragung.</p>
+          </fieldset>
+        </form>
+
+        <form class="panel crewbrain-config-panel" id="easyjob-config-form">
+          <div class="panel-header"><div><p class="eyebrow">Parallele Datenquelle</p><h2>easyjob WebApi konfigurieren</h2><p>OAuth-Token werden automatisch erneuert; Benutzername und Passwort bleiben verschlüsselt im Backend.</p></div><span class="tag muted" id="easyjob-save-state">Nicht geladen</span></div>
+          <fieldset id="easyjob-config-fields">
+            <div class="config-form-grid">
+              <label class="form-field span-two"><span>easyjob-Serveradresse</span><input id="easyjob-base-url" type="url" placeholder="https://easyjob.example:8008/" required></label>
+              <label class="form-field"><span>Benutzername</span><input id="easyjob-username" autocomplete="username"></label>
+              <label class="form-field"><span>Passwort</span><input id="easyjob-password" type="password" autocomplete="new-password" placeholder="Gespeichertes Passwort beibehalten"></label>
+              <label class="form-field"><span>Importstruktur</span><select id="easyjob-import-mode"><option value="projects_with_jobs">Projekte und Jobs</option><option value="projects">Nur Projekte</option><option value="jobs">Nur Jobs</option></select></label>
+              <label class="form-field"><span>Täglich um</span><input id="easyjob-auto-import-time" type="time" value="03:00"></label>
+              <label class="form-field"><span>Rückblick</span><input id="easyjob-lookback" type="number" min="0" max="3650" value="30"></label>
+              <label class="form-field"><span>Vorausplanung</span><input id="easyjob-lookahead" type="number" min="1" max="3650" value="365"></label>
+              <label class="toggle-label span-two"><input id="easyjob-allow-insecure-http" type="checkbox"> HTTP im geschützten internen Netzwerk zulassen <small>Nur verwenden, wenn die easyjob-WebApi kein HTTPS anbietet.</small></label>
+              <label class="toggle-label span-two"><input id="easyjob-allow-self-signed-certificate" type="checkbox"> SSL-Zertifikatsprüfung deaktivieren <small>Nur für selbstsignierte Zertifikate. Die Verbindung bleibt verschlüsselt, die Serveridentität wird jedoch nicht geprüft.</small></label>
+              <label class="toggle-label"><input id="easyjob-sync-enabled" type="checkbox"> Automatischen Import aktivieren</label>
+              <label class="toggle-label"><input id="easyjob-auto-channels" type="checkbox" checked> Veranstaltungskanäle automatisch anlegen</label>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-heading"><strong>Feldzuordnung</strong><span>Bestimmt, welche Projekt- und Jobfelder aus easyjob in Kiosky-Veranstaltungen übernommen werden.</span></div>
+              <div class="field-mapping-grid" id="easyjob-field-mapping">
+                <label><span>Veranstaltungstitel</span><select data-easyjob-mapping-target="title"><option value="Caption">Bezeichnung</option><option value="EventName">Veranstaltungsname</option><option value="Number">Nummer</option><option value="CustomNumber">Eigene Nummer</option><option value="__project.Caption">Projektbezeichnung</option></select></label>
+                <label><span>Untertitel</span><select data-easyjob-mapping-target="subtitle"><option value="__none">Nicht übernehmen</option><option value="ProjectState.Caption">Projektstatus</option><option value="JobState.Caption">Jobstatus</option><option value="Address_Customer.Company">Kunde</option><option value="__project.Caption">Projektbezeichnung</option></select></label>
+                <label><span>Öffentliche Beschreibung</span><select data-easyjob-mapping-target="description"><option value="Description">Beschreibung</option><option value="Comment">Kommentar</option><option value="Info">Information</option><option value="PublicInfo">Öffentliche Information</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Veranstaltungsdatum</span><select data-easyjob-mapping-target="date"><option value="StartDate">Startdatum</option><option value="EventStart">Veranstaltungsbeginn</option><option value="Start">Beginn</option><option value="JobStart">Jobbeginn</option><option value="__project.StartDate">Projektstart</option></select></label>
+                <label><span>Einlass</span><select data-easyjob-mapping-target="admissionStart"><option value="AdmissionStart">Einlassbeginn</option><option value="Admission">Einlass</option><option value="DoorsOpen">Türöffnung</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Beginn</span><select data-easyjob-mapping-target="eventStart"><option value="StartDate">Startdatum und Uhrzeit</option><option value="EventStart">Veranstaltungsbeginn</option><option value="Start">Beginn</option><option value="JobStart">Jobbeginn</option><option value="__project.StartDate">Projektstart</option></select></label>
+                <label><span>Pause</span><select data-easyjob-mapping-target="breakStart"><option value="__none">Nicht übernehmen</option><option value="BreakStart">Pausenbeginn</option><option value="PauseStart">Pause</option></select></label>
+                <label><span>Ende</span><select data-easyjob-mapping-target="eventEnd"><option value="EndDate">Enddatum und Uhrzeit</option><option value="EventEnd">Veranstaltungsende</option><option value="End">Ende</option><option value="JobEnd">Jobende</option><option value="__project.EndDate">Projektende</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Spielort</span><select data-easyjob-mapping-target="venue"><option value="Address_Venue.Company">Veranstaltungsort</option><option value="Address_Venue.City">Ort / Stadt</option><option value="Venue.Caption">Spielort</option><option value="Location.Caption">Standort</option><option value="Stock.Caption">Lager / Standort</option><option value="Address_Customer.City">Kundenort</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Raum / Saal</span><select data-easyjob-mapping-target="room"><option value="Room">Raum</option><option value="Location.Caption">Standort</option><option value="Stock.Caption">Lager / Bereich</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Öffentliche Hinweise</span><select data-easyjob-mapping-target="publicNotes"><option value="Comment">Kommentar</option><option value="PublicInfo">Öffentliche Information</option><option value="Info">Information</option><option value="Description">Beschreibung</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Ticket-Link</span><select data-easyjob-mapping-target="ticketUrl"><option value="TicketURL">Ticket-URL</option><option value="TicketUrl">Ticket-Link</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Ticketstatus / Restkarten</span><select data-easyjob-mapping-target="remainingTickets"><option value="TicketStatus">Ticketstatus</option><option value="RemainingTickets">Restkarten</option><option value="__none">Nicht übernehmen</option></select></label>
+              </div>
+              <p class="privacy-note">Die Zuordnung gilt für Projekte und Jobs. Mit „Projekt…“ gekennzeichnete Felder übernehmen für Jobs bewusst den Wert des übergeordneten Projekts.</p>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-heading"><strong>Raumnutzungsarten</strong><span>Zentrale Regeln für Kategorie, ungefähre Zeit, Sichtbarkeit und Sortierung. Änderungen werden direkt gespeichert.</span></div>
+              <div class="room-use-type-table" id="easyjob-room-use-types"><p class="property-note">Typzuordnungen werden geladen …</p></div>
+            </div>
+            <div class="config-actions"><button class="button button-secondary" type="button" data-action="test-easyjob">Verbindung testen</button><button class="button button-primary" type="submit">easyjob speichern</button></div>
+            <p class="connection-message" id="easyjob-message" hidden></p>
+          </fieldset>
+        </form>
+        <article class="panel crewbrain-preview-panel">
+          <div class="panel-header"><div><p class="eyebrow">easyjob-Projekte</p><h2>Importvorschau</h2><p>Projekte auswählen; je nach Modus werden zugehörige Jobs mit importiert.</p></div><span class="tag blue">Verändert erst beim Import Daten</span></div>
+          <form class="preview-filter-grid" id="easyjob-preview-form"><label class="form-field"><span>Von</span><input id="easyjob-preview-from" type="date"></label><label class="form-field"><span>Bis</span><input id="easyjob-preview-until" type="date"></label><label class="form-field span-two"><span>Suche</span><input id="easyjob-preview-search" type="search" placeholder="Projektname oder Nummer"></label><button class="button button-primary" type="submit">Vorschau laden</button></form>
+          <div class="preview-table" id="easyjob-preview-table"><p class="property-note">Noch keine easyjob-Vorschau geladen.</p></div>
+          <div class="dialog-actions"><button class="button button-primary" type="button" id="easyjob-import-selected" disabled>Ausgewählte easyjob-Projekte importieren</button></div>
+        </article>
+
+        <article class="panel crewbrain-preview-panel">
+          <div class="panel-header"><div><p class="eyebrow">Sicher prüfen</p><h2>Importvorschau</h2></div><span class="tag blue">Verändert keine Daten</span></div>
+          <form class="preview-filter-grid" id="crewbrain-preview-form">
+            <label class="form-field"><span>Von</span><input id="crewbrain-preview-from" type="date"></label>
+            <label class="form-field"><span>Bis</span><input id="crewbrain-preview-until" type="date"></label>
+            <label class="form-field"><span>Suche</span><input id="crewbrain-preview-search" type="search" placeholder="Titel, Ort oder Nummer"></label>
+            <label class="form-field"><span>Status</span><select id="crewbrain-preview-status"><option value="">Alle Status</option><option value="GREEN">Grün</option><option value="YELLOW">Gelb</option><option value="RED">Rot</option></select></label>
+            <button class="button button-primary" type="submit" disabled id="crewbrain-preview-button">Vorschau laden</button>
+          </form>
+          <div class="preview-message" id="crewbrain-preview-message" role="status" hidden></div>
+          <div class="preview-empty" id="crewbrain-preview-empty"><span>⌕</span><strong>Noch keine Vorschau geladen</strong><p>Nach dem Speichern und Testen der Verbindung kannst du CrewBrain-Veranstaltungen hier kontrollieren.</p></div>
+          <div class="preview-results" id="crewbrain-preview-results" hidden>
+            <div class="preview-result-summary"><span><strong id="crewbrain-preview-count">0 Veranstaltungen</strong><small id="crewbrain-preview-total"></small></span><div class="preview-import-actions"><strong class="preview-selection-count" id="crewbrain-preview-selection-count" aria-live="polite">0 Elemente ausgewählt</strong><label><input type="checkbox" id="crewbrain-preview-select-page"> Seite auswählen</label><button class="button button-secondary" type="button" id="crewbrain-preview-select-all">Alle Elemente auswählen</button><button class="button button-primary" type="button" id="crewbrain-import-selected">Ausgewählte importieren</button></div></div>
+            <nav class="crewbrain-pagination" data-preview-pagination="top" aria-label="Vorschauseiten oben"></nav>
+            <div class="preview-table" id="crewbrain-preview-table"></div>
+            <nav class="crewbrain-pagination" data-preview-pagination="bottom" aria-label="Vorschauseiten unten"></nav>
+          </div>
+        </article>
+
+        <article class="panel api-access-panel" id="external-api-panel">
+          <div class="panel-header"><div><p class="eyebrow">Externe Steuerung</p><h2>API-Zugänge</h2><p>Eigene Zugänge für Leitstellen, Gebäudeautomation und externe Integrationen verwalten.</p></div><a class="button button-secondary api-documentation-link" href="/docs/external-api.md" target="_blank" rel="noopener">↗ API-Dokumentation öffnen</a></div>
+          <div class="api-access-grid">
+            <form class="api-user-form" id="api-user-form">
+              <div class="settings-section-heading"><strong>API-Benutzer anlegen</strong><span>Der geheime Schlüssel wird nur direkt nach dem Anlegen angezeigt.</span></div>
+              <label class="form-field"><span>Name</span><input id="api-user-name" type="text" minlength="2" maxlength="100" placeholder="z. B. Gebäudeleittechnik" required></label>
+              <label class="form-field"><span>Beschreibung</span><textarea id="api-user-description" rows="3" maxlength="500" placeholder="Wofür wird dieser Zugang verwendet?"></textarea></label>
+              <p class="api-scope-note"><strong>Berechtigung:</strong> External Control API (`/api/v1`) für Displays, Kanäle, Slides, Warnungen und Betriebspresets.</p>
+              <button class="button button-primary" type="submit">＋ API-Benutzer anlegen</button>
+            </form>
+            <section class="api-user-management" aria-labelledby="api-user-list-heading">
+              <div class="settings-section-heading"><strong id="api-user-list-heading">Vorhandene API-Benutzer</strong><span id="api-user-count">Wird geladen …</span></div>
+              <div class="api-user-list" id="api-user-list"><div class="user-table-empty">API-Benutzer werden geladen …</div></div>
+            </section>
+          </div>
+          <div class="api-secret-result" id="api-secret-result" hidden>
+            <div><strong>API-Schlüssel jetzt sicher speichern</strong><p>Dieser Schlüssel wird später nicht erneut angezeigt. Bei Verlust muss ein neuer API-Benutzer angelegt werden.</p></div>
+            <div class="api-secret-value"><input id="api-secret-token" type="text" readonly aria-label="Neu erzeugter API-Schlüssel"><button class="button button-secondary" id="copy-api-secret" type="button">Kopieren</button></div>
+          </div>
+          <p class="api-doc-footer">Technische Referenz, Beispiele und alle Endpunkte: <a href="/docs/external-api.md" target="_blank" rel="noopener">Kiosky External Control API v1</a> · <a href="/docs/openapi.yaml" target="_blank" rel="noopener">OpenAPI-Spezifikation</a></p>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="settings">
+        <header class="settings-header" aria-label="Einstellungsnavigation">
+          <div class="settings-header-title"><div class="settings-header-icon" aria-hidden="true">⚙</div><div><p class="eyebrow">Systemverwaltung</p><strong>Einstellungen</strong></div></div>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
+        </header>
+        <div class="settings-overview" data-settings-overview>
+          <div class="section-heading"><div><p class="eyebrow">Alle Bereiche</p><h2>Was möchtest du einstellen?</h2><p>Wähle einen Bereich. Über den Kopfbereich und „Zurück“ kannst du jederzeit zwischen den Ebenen wechseln.</p></div></div>
+          <div class="settings-destination-grid">
+            <button class="panel settings-destination" type="button" data-settings-open="modules"><span>▦</span><strong>Module &amp; Navigation</strong><small>Sichtbarkeit und Reihenfolge der Arbeitsbereiche festlegen.</small><i>Öffnen →</i></button>
+            <button class="panel settings-destination" type="button" data-settings-open="editor"><span>◇</span><strong>Slide-Editor</strong><small>Verfügbare Gestaltungselemente zentral auswählen.</small><i>Öffnen →</i></button>
+            <button class="panel settings-destination" type="button" data-view-link="integrations"><span>⇄</span><strong>Schnittstellen</strong><small>CrewBrain, easyjob, externe API und Datentransfer verwalten.</small><i>Öffnen →</i></button>
+            <button class="panel settings-destination" type="button" data-view-link="users"><span>◎</span><strong>Benutzer &amp; Rollen</strong><small>Konten, Rollen und Standortzugriffe verwalten.</small><i>Öffnen →</i></button>
+          </div>
+        </div>
+        <div class="settings-detail" data-settings-detail="modules" hidden>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Module</p><h2>Module &amp; Navigation</h2><p>Lege fest, welche Arbeitsbereiche in welcher Reihenfolge erscheinen.</p></div></div>
+        <form class="panel feature-settings-panel" id="feature-settings-form">
+          <div class="panel-header"><div><p class="eyebrow">Modul-Switching</p><h2>Seitenleiste konfigurieren</h2><p>Mit dem Schalter wird ein Modul ausgeblendet. Ziehen oder die Pfeile ändern seine Position. Inhalte und Berechtigungen bleiben erhalten.</p></div><span class="tag blue">Daten bleiben erhalten</span></div>
+          <div class="module-switching-list" id="module-switching-list" aria-label="Module und Reihenfolge"></div>
+          <div class="dialog-actions"><button class="button button-primary" type="submit">Einstellungen speichern</button></div>
+        </form>
+        </div>
+        <div class="settings-detail" data-settings-detail="editor" hidden>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Slide-Editor</p><h2>Slide-Editor</h2><p>Steuere die Werkzeuge, die Redaktionen beim Gestalten verwenden können.</p></div></div>
+        <form class="panel feature-settings-panel" id="editor-element-settings-form">
+          <div class="panel-header"><div><p class="eyebrow">Slide-Gestaltung</p><h2>Verfügbare Editor-Elemente</h2><p>Deaktivierte Elemente werden im Slide-Editor ausgeblendet. Bereits verwendete Elemente bleiben in bestehenden Slides erhalten.</p></div><span class="tag blue">Checkboxen</span></div>
+          <div class="editor-element-settings" id="editor-element-settings"></div>
+          <div class="dialog-actions"><button class="button button-primary" type="submit">Editor-Elemente speichern</button></div>
+        </form>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="users">
+        <header class="settings-header" aria-label="Einstellungsnavigation">
+          <div class="settings-header-title"><button class="settings-back" type="button" data-view-link="settings" aria-label="Zur Einstellungsübersicht">←</button><div><p class="eyebrow">Einstellungen <span aria-hidden="true">/</span> Benutzer &amp; Rollen</p><strong>System konfigurieren</strong></div></div>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button type="button" data-view-link="settings">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-view-link="integrations">Schnittstellen</button><button class="is-active" type="button" aria-current="page">Benutzer &amp; Rollen</button></nav>
+          <nav class="settings-submenu" aria-label="Benutzermenü"><button type="button" data-settings-anchor="user-table">Konten</button><button type="button" data-settings-anchor="user-location-matrix">Standortzugriffe</button><button type="button" data-settings-anchor="role-capability-table">Rollen &amp; Rechte</button></nav>
+        </header>
+        <div class="section-heading">
+          <div><p class="eyebrow">Zugriff & Rollen</p><h2>Benutzerverwaltung</h2><p>Konten, Rollen und Zugriffsstatus zentral verwalten.</p></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-action="invite-user">✉ Benutzer einladen</button><button class="button button-primary" type="button" data-action="new-user">＋ Benutzer anlegen</button></div>
+        </div>
+        <div class="user-metrics"><article class="metric-card"><span>Aktive Konten</span><strong id="active-user-count">0</strong></article><article class="metric-card"><span>Administratoren</span><strong id="admin-user-count">0</strong></article><article class="metric-card"><span>Letzte Anmeldung</span><strong id="last-user-login">–</strong></article></div>
+        <article class="panel users-panel">
+          <div class="panel-header"><div><p class="eyebrow">Kiosky-Team</p><h2>Benutzer</h2></div><span class="tag blue">Rollenbasierter Zugriff</span></div>
+          <div class="user-table" id="user-table"><div class="user-table-empty">Benutzer werden geladen …</div></div>
+        </article>
+        <article class="panel user-location-panel">
+          <div class="panel-header"><div><p class="eyebrow">Standortberechtigungen</p><h2>Zugriffsmatrix</h2><p>Legt fest, welche Standorte und zugehörigen Displays ein Benutzer sehen kann. „Alle“ umfasst automatisch auch später angelegte Standorte.</p></div><span class="tag green">Serverseitig geschützt</span></div>
+          <div class="user-location-matrix" id="user-location-matrix"></div>
+          <div class="dialog-actions"><button class="button button-primary" id="save-user-location-matrix" type="button">Zugriffsmatrix speichern</button></div>
+        </article>
+        <article class="panel role-explainer">
+          <div><span class="role-icon admin">A</span><strong>Administrator</strong><p>Vollzugriff inklusive Benutzer, Schnittstellen, Geräteanlage, Systemeinstellungen und endgültigem Löschen.</p></div>
+          <div><span class="role-icon editor">R</span><strong>Redakteur</strong><p>Inhalte erstellen, Medien pflegen, Kanäle planen und den laufenden Betrieb steuern – ohne Systemverwaltung.</p></div>
+          <div><span class="role-icon viewer">B</span><strong>Betrachter</strong><p>Dashboard, Veranstaltungen, Slides, Kanäle, Zeitplan und Displays ausschließlich ansehen.</p></div>
+        </article>
+        <article class="panel role-capability-panel">
+          <div class="panel-header"><div><p class="eyebrow">Berechtigungen im Alltag</p><h2>Was darf welche Rolle?</h2></div><span class="tag green">Serverseitig geschützt</span></div>
+          <div class="role-capability-table" id="role-capability-table" role="table" aria-label="Berechtigungen nach Benutzerrolle">
+            <div class="role-capability-row is-head" role="row"><strong>Bereich</strong><span>Admin</span><span>Redaktion</span><span>Betrachter</span></div>
+            <div class="role-capability-row" role="row"><strong>Inhalte &amp; Zeitplan<small>Events, Slides, Kanäle</small></strong><span class="has-access">Bearbeiten</span><span class="has-access">Bearbeiten</span><span class="read-access">Ansehen</span></div>
+            <div class="role-capability-row" role="row"><strong>Medien &amp; Betrieb<small>Mediathek, Presets, Warnungen</small></strong><span class="has-access">Bearbeiten</span><span class="has-access">Bearbeiten</span><span class="no-access">Kein Zugriff</span></div>
+            <div class="role-capability-row" role="row"><strong>Displays<small>Status und Konfiguration</small></strong><span class="has-access">Verwalten</span><span class="read-access">Bestehende pflegen</span><span class="read-access">Ansehen</span></div>
+            <div class="role-capability-row" role="row"><strong>System<small>Benutzer, Integrationen, Einstellungen</small></strong><span class="has-access">Verwalten</span><span class="no-access">Kein Zugriff</span><span class="no-access">Kein Zugriff</span></div>
+            <div class="role-capability-row" role="row"><strong>Endgültig löschen<small>Papierkorb unwiderruflich leeren</small></strong><span class="has-access">Erlaubt</span><span class="no-access">Nicht erlaubt</span><span class="no-access">Nicht erlaubt</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" data-view-panel="features">
+        <div class="feature-hero">
+          <div>
+            <p class="eyebrow">Kiosky entdecken</p>
+            <h2>Was kann ich mit Kiosky machen?</h2>
+            <p>Von der Veranstaltung bis zum Display: Hier findest du alle Arbeitsbereiche, ihre wichtigsten Möglichkeiten und den direkten Weg zur passenden Funktion.</p>
+            <div class="feature-hero-actions">
+              <button class="button button-primary" id="start-product-tour" type="button"><span aria-hidden="true">▶</span> Interaktive Tour starten</button>
+              <span>6 Stationen · ca. 3 Minuten</span>
+            </div>
+          </div>
+          <div class="feature-hero-path" aria-label="Kiosky Ablauf">
+            <span><i>1</i>Inhalte</span><b>→</b><span><i>2</i>Planen</span><b>→</b><span><i>3</i>Ausspielen</span>
+          </div>
+        </div>
+
+        <section class="help-workflow" aria-labelledby="help-workflow-title">
+          <div class="help-section-heading">
+            <div><p class="eyebrow">Der typische Workflow</p><h2 id="help-workflow-title">In vier Schritten auf den Bildschirm</h2></div>
+            <p>Die Bereiche greifen ineinander. Du kannst an jeder Stelle einsteigen und später weiterarbeiten.</p>
+          </div>
+          <div class="workflow-guide">
+            <article><span>01</span><div><strong>Basis vorbereiten</strong><p>Display verbinden, Standort zuordnen und Standardkanal als sichere Rückfallebene festlegen.</p><button type="button" data-view-link="displays">Displays einrichten →</button></div></article>
+            <article><span>02</span><div><strong>Inhalte erstellen</strong><p>Veranstaltungen importieren, Medien ablegen und Slides für Quer- oder Hochformat gestalten.</p><button type="button" data-view-link="channels">Inhalte gestalten →</button></div></article>
+            <article><span>03</span><div><strong>Ausspielung planen</strong><p>Slides zu Kanälen ordnen und per Zeitplan den richtigen Displays oder Gruppen zuweisen.</p><button type="button" data-view-link="schedule">Zeitplan öffnen →</button></div></article>
+            <article><span>04</span><div><strong>Betrieb absichern</strong><p>Player-Status prüfen, Offline-Cache beobachten und bei Bedarf Presets oder Warnhinweise aktivieren.</p><button type="button" data-view-link="operations">Betrieb überwachen →</button></div></article>
+          </div>
+        </section>
+
+        <section class="help-quickstart" aria-labelledby="help-quickstart-title">
+          <div><p class="eyebrow">Schnellstart</p><h2 id="help-quickstart-title">Was möchtest du gerade erreichen?</h2><p>Wähle dein Ziel und springe direkt zum passenden Arbeitsbereich.</p></div>
+          <div class="help-goal-grid">
+            <button type="button" data-view-link="events"><span>◫</span><strong>Programm übernehmen</strong><small>Veranstaltungen importieren und veröffentlichen</small></button>
+            <button type="button" data-view-link="channels"><span>▤</span><strong>Bildschirminhalt bauen</strong><small>Slide gestalten und Kanal zusammenstellen</small></button>
+            <button type="button" data-view-link="schedule"><span>▦</span><strong>Inhalt terminieren</strong><small>Ziel, Zeitraum und Priorität festlegen</small></button>
+            <button type="button" data-view-link="operations"><span>!</span><strong>Sofort reagieren</strong><small>Preset oder Warnhinweis ausspielen</small></button>
+          </div>
+        </section>
+
+        <div class="feature-tools" aria-label="Funktionsübersicht durchsuchen und filtern">
+          <label class="feature-search"><span aria-hidden="true">⌕</span><input id="feature-search" type="search" placeholder="Funktion suchen, z. B. Wegweisung oder Warnhinweis"><kbd>/</kbd></label>
+          <div class="feature-filters" role="group" aria-label="Themen filtern">
+            <button class="is-active" type="button" data-feature-filter="all">Alle</button>
+            <button type="button" data-feature-filter="content">Inhalte</button>
+            <button type="button" data-feature-filter="display">Displays</button>
+            <button type="button" data-feature-filter="automation">Automatisierung</button>
+            <button type="button" data-feature-filter="system">System</button>
+          </div>
+        </div>
+
+        <div class="feature-result-line"><strong id="feature-result-count">9 Bereiche</strong><span>Wähle einen Bereich, um direkt weiterzuarbeiten.</span></div>
+        <div class="feature-catalog" id="feature-catalog">
+          <article class="feature-card" data-feature-category="content" data-feature-search="veranstaltungen programm crewbrain import website kalender veröffentlichen">
+            <div class="feature-card-head"><span class="feature-symbol violet">◫</span><span class="tag muted">Inhalte</span></div>
+            <h3>Veranstaltungen</h3>
+            <p>Programmdaten importieren, prüfen und mit Zeiten, Räumen, Bildern sowie Veröffentlichungstexten ergänzen.</p>
+            <ul><li>CrewBrain-Daten übernehmen</li><li>Status und Veröffentlichung steuern</li><li>Website-Kalender versorgen</li></ul>
+            <button class="feature-link" type="button" data-view-link="events">Veranstaltungen öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="content" data-feature-search="slides kanäle editor designer playlist wegweisung uhr logo dynamische felder">
+            <div class="feature-card-head"><span class="feature-symbol coral">▤</span><span class="tag muted">Inhalte</span></div>
+            <h3>Slides & Kanäle</h3>
+            <p>Bildschirminhalte gestalten und als Abspielreihenfolge zu Kanälen zusammenstellen.</p>
+            <ul><li>Freier Slide-Editor und Vorlagen</li><li>Wegweisung und dynamische Felder</li><li>Dauer und Übergänge festlegen</li></ul>
+            <button class="feature-link" type="button" data-view-link="channels">Slides & Kanäle öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="content" data-feature-search="medien bilder videos vektoren ordner zuschnitt dateien bibliothek">
+            <div class="feature-card-head"><span class="feature-symbol blue">▧</span><span class="tag muted">Inhalte</span></div>
+            <h3>Mediendatenbank</h3>
+            <p>Bilder, Videos und Vektorgrafiken zentral ablegen, organisieren und in Slides wiederverwenden.</p>
+            <ul><li>Ordner und Suche</li><li>Upload und Medienvorschau</li><li>Bildzuschnitt und Papierkorb</li></ul>
+            <button class="feature-link" type="button" data-view-link="media">Mediendatenbank öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="display" data-feature-search="displays player bildschirme gruppen matrix standorte online querformat hochformat">
+            <div class="feature-card-head"><span class="feature-symbol green">▣</span><span class="tag muted">Displays</span></div>
+            <h3>Displayverwaltung</h3>
+            <p>Player anbinden und einzelne Displays, Gruppen, Matrix-Flächen sowie Standorte zentral verwalten.</p>
+            <ul><li>Online-Status und Auflösung</li><li>Displaygruppen und Matrix-Flächen</li><li>Standardkanäle je Gerät</li></ul>
+            <button class="feature-link" type="button" data-view-link="displays">Displays öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="automation" data-feature-search="zeitplanung kalender wochenplan schedule ausspielung wechsel drag drop">
+            <div class="feature-card-head"><span class="feature-symbol peach">▦</span><span class="tag muted">Automatisierung</span></div>
+            <h3>Zeitplanung</h3>
+            <p>Kanäle und Inhalte zeitgesteuert auf Displays, Gruppen oder Matrix-Flächen ausspielen.</p>
+            <ul><li>Wochenplan per Drag-and-drop</li><li>Gültigkeitszeiträume</li><li>Prioritäten und Zielreihenfolge</li></ul>
+            <button class="feature-link" type="button" data-view-link="schedule">Zeitplanung öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="automation" data-feature-search="betrieb warnhinweise notfall evakuierung dwd wetter monitoring presets">
+            <div class="feature-card-head"><span class="feature-symbol red">!</span><span class="tag muted">Automatisierung</span></div>
+            <h3>Betrieb & Warnhinweise</h3>
+            <p>Den laufenden Betrieb überwachen und wichtige Hinweise oder Notfallinhalte gezielt veröffentlichen.</p>
+            <ul><li>Player-Monitoring und Nachweise</li><li>Betriebspresets und Sofortaktionen</li><li>DWD-Wetterwarnungen</li></ul>
+            <button class="feature-link" type="button" data-view-link="operations">Betrieb öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="system" data-feature-search="schnittstellen crewbrain api externe steuerung synchronisation cms typo3 wordpress home assistant">
+            <div class="feature-card-head"><span class="feature-symbol violet">⇄</span><span class="tag muted">System</span></div>
+            <h3>Schnittstellen</h3>
+            <p>Kiosky mit CrewBrain, Websites und externen Steuerungen verbinden und Datenflüsse konfigurieren.</p>
+            <ul><li>CrewBrain-Synchronisation</li><li>External Control API</li><li>CMS- und Plattformpakete</li></ul>
+            <button class="feature-link admin-only" type="button" data-view-link="integrations">Schnittstellen öffnen <span>→</span></button>
+            <small class="feature-role-note">Konfiguration nur für Administratoren</small>
+          </article>
+
+          <article class="feature-card" data-feature-category="system" data-feature-search="benutzer konten rollen administrator redakteur betrachter einladen rechte zugriff">
+            <div class="feature-card-head"><span class="feature-symbol blue">◎</span><span class="tag muted">System</span></div>
+            <h3>Benutzer & Rollen</h3>
+            <p>Teamzugänge anlegen, Einladungen versenden und Rechte passend zur Aufgabe vergeben.</p>
+            <ul><li>Administrator, Redakteur, Betrachter</li><li>Einladungen und Startpasswörter</li><li>Zugriffe aktivieren oder sperren</li></ul>
+            <button class="feature-link admin-only" type="button" data-view-link="users">Benutzer öffnen <span>→</span></button>
+            <small class="feature-role-note">Verwaltung nur für Administratoren</small>
+          </article>
+
+          <article class="feature-card" data-feature-category="system" data-feature-search="übersicht dashboard status schnellaktionen start systemzustand heute">
+            <div class="feature-card-head"><span class="feature-symbol green">⌂</span><span class="tag muted">System</span></div>
+            <h3>Übersicht & Schnellaktionen</h3>
+            <p>Den aktuellen Systemzustand, das Tagesprogramm und anstehende Displaywechsel auf einen Blick sehen.</p>
+            <ul><li>Live-Status der Displays</li><li>Heutige Veranstaltungen</li><li>Direktzugriffe für häufige Aufgaben</li></ul>
+            <button class="feature-link" type="button" data-view-link="dashboard">Zur Übersicht <span>→</span></button>
+          </article>
+        </div>
+        <div class="feature-empty" id="feature-empty" hidden><span>⌕</span><strong>Keine passende Funktion gefunden</strong><p>Versuche einen allgemeineren Begriff oder wähle „Alle“.</p></div>
+
+        <section class="help-faq" aria-labelledby="help-faq-title">
+          <div class="help-section-heading"><div><p class="eyebrow">Gut zu wissen</p><h2 id="help-faq-title">Häufige Fragen</h2></div><p>Kurze Antworten für den täglichen Betrieb.</p></div>
+          <div class="help-faq-list">
+            <details><summary>Was ist der Unterschied zwischen Slide und Kanal?<span>＋</span></summary><p>Eine Slide ist eine einzelne gestaltete Bildschirmseite. Ein Kanal ist eine Abspielreihenfolge aus einer oder mehreren Slides inklusive Dauer und Übergängen.</p></details>
+            <details><summary>Wann sehe ich eine Änderung auf dem Display?<span>＋</span></summary><p>Veröffentlichte Änderungen werden an verbundene Player übertragen. Der Player-Status unter „Presets &amp; Warnhinweise“ zeigt, ob das Gerät online ist und seine Inhalte lokal zwischengespeichert hat.</p></details>
+            <details><summary>Standardkanal oder Zeitplan – was hat Vorrang?<span>＋</span></summary><p>Der Standardkanal dient als Rückfallebene. Eine aktive Zeitplanung ersetzt ihn für den festgelegten Zeitraum; danach kehrt das Display automatisch zur regulären Ausspielung zurück.</p></details>
+            <details><summary>Wie spiele ich denselben Inhalt auf mehrere Displays aus?<span>＋</span></summary><p>Fasse Geräte zu einer Displaygruppe zusammen. Im Zeitplan weist du den Inhalt anschließend einmal der gesamten Gruppe zu.</p></details>
+            <details><summary>Was passiert bei einer unterbrochenen Netzwerkverbindung?<span>＋</span></summary><p>Ist der Offline-Cache bereit, spielt der Player bereits geladene Inhalte weiter. Neue Änderungen werden nach Wiederherstellung der Verbindung synchronisiert.</p></details>
+            <details><summary>Wer darf Systemeinstellungen ändern?<span>＋</span></summary><p>Benutzerrollen begrenzen den Zugriff: Administratoren verwalten das System, Redakteure pflegen Inhalte und Betrachter erhalten ausschließlich Lesezugriff.</p></details>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="user-dialog" class="wide-dialog">
+    <form class="dialog-content" id="user-form">
+      <button class="dialog-close" type="button" data-close-dialog="user-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">◎</span><p class="eyebrow">Benutzerkonto</p><h2 id="user-dialog-title">Benutzer anlegen</h2>
+      <input id="user-id" type="hidden">
+      <div class="form-grid"><label class="form-field"><span>Name</span><input id="user-name" type="text" required minlength="2"></label><label class="form-field"><span>Benutzername</span><input id="user-username" type="text" required minlength="3" maxlength="50" pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,49}"></label><label class="form-field"><span>E-Mail-Adresse <small>optional</small></span><input id="user-email" type="email"></label><label class="form-field"><span>Rolle</span><select id="user-role"><option value="admin">Administrator</option><option value="editor">Redakteur</option><option value="viewer">Betrachter</option></select></label><label class="form-field" id="user-status-field"><span>Status</span><select id="user-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label></div>
+      <label class="form-field" id="user-password-field"><span>Startpasswort</span><input id="user-password" type="password" autocomplete="new-password" minlength="12"><small>Der Benutzer muss dieses Passwort nach der ersten Anmeldung ändern.</small></label>
+      <p class="auth-message" id="user-form-message" role="alert"></p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="user-dialog">Abbrechen</button><button class="button button-primary" type="submit">Benutzer speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="invite-user-dialog" class="wide-dialog">
+    <form class="dialog-content" id="invite-user-form">
+      <button class="dialog-close" type="button" data-close-dialog="invite-user-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">✉</span><p class="eyebrow">Einladung per E-Mail</p><h2>Benutzer einladen</h2><p>Der Empfänger legt Benutzername und Passwort anschließend selbst fest.</p>
+      <div class="form-grid"><label class="form-field"><span>E-Mail-Adresse</span><input id="invite-user-email" type="email" required></label><label class="form-field"><span>Rolle</span><select id="invite-user-role"><option value="admin">Administrator</option><option value="editor" selected>Redakteur</option><option value="viewer">Betrachter</option></select></label></div>
+      <div class="invitation-result" id="invitation-result" hidden><strong id="invitation-result-title"></strong><p id="invitation-result-message"></p><label class="form-field"><span>Einladungslink</span><input id="invitation-link" type="url" readonly></label><button class="button button-secondary" type="button" id="copy-invitation-link">Link kopieren</button></div>
+      <p class="auth-message" id="invite-user-message" role="alert"></p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="invite-user-dialog">Schließen</button><button class="button button-primary" type="submit">Einladung senden</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="reset-password-dialog">
+    <form class="dialog-content" id="reset-password-form">
+      <button class="dialog-close" type="button" data-close-dialog="reset-password-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">⌁</span><p class="eyebrow">Zugang wiederherstellen</p><h2>Passwort zurücksetzen</h2>
+      <input id="reset-user-id" type="hidden"><p>Ein neues Startpasswort beendet alle aktiven Sitzungen dieses Benutzers.</p>
+      <label class="form-field"><span>Neues Startpasswort</span><input id="reset-user-password" type="password" autocomplete="new-password" required minlength="12"></label>
+      <p class="auth-message" id="reset-password-message" role="alert"></p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="reset-password-dialog">Abbrechen</button><button class="button button-primary" type="submit">Passwort zurücksetzen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="account-dialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="account-dialog-close" type="button" data-close-dialog="account-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">SE</span><p class="eyebrow">Mein Konto</p><h2 id="account-name">Benutzerkonto</h2><p id="account-email"></p>
+      <form id="change-password-form"><label class="form-field"><span>Aktuelles Passwort</span><input id="current-password" type="password" autocomplete="current-password" required></label><label class="form-field"><span>Neues Passwort</span><input id="new-password" type="password" autocomplete="new-password" required minlength="12"></label><label class="form-field"><span>Neues Passwort wiederholen</span><input id="new-password-confirm" type="password" autocomplete="new-password" required minlength="12"></label><p class="auth-message" id="account-message" role="alert"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-action="logout">Abmelden</button><button class="button button-primary" type="submit">Passwort ändern</button></div></form>
+    </div>
+  </dialog>
+
+  <dialog id="event-dialog" class="wide-dialog event-editor-dialog">
+    <form class="dialog-content" id="event-form">
+      <button class="dialog-close" type="button" data-close-dialog="event-dialog" aria-label="Editor schließen">×</button>
+      <span class="dialog-icon">◫</span><p class="eyebrow">Programmverwaltung</p><h2 id="event-dialog-title">Veranstaltung bearbeiten</h2>
+      <input id="event-id" type="hidden">
+      <div class="event-source-note" id="event-source-note">Manuell angelegte Veranstaltung</div>
+      <div class="form-grid event-editor-grid">
+        <label class="form-field span-two"><span>Titel</span><input id="event-title" type="text" maxlength="300" required></label>
+        <label class="form-field"><span>Untertitel</span><input id="event-subtitle" type="text" maxlength="300"></label>
+        <label class="form-field"><span>Status</span><select id="event-status"><option value="review">Zu prüfen</option><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="cancelled">Abgesagt</option><option value="archived">Archiviert</option></select></label>
+        <label class="form-field"><span>Datum</span><input id="event-date" type="date"></label>
+        <label class="form-field"><span>Spielort</span><input id="event-venue" type="text"></label>
+        <label class="form-field"><span>Raum / Saal</span><input id="event-room" type="text"></label>
+        <label class="form-field"><span>Einlass</span><input id="event-admission" type="time"></label>
+        <label class="form-field"><span>Beginn</span><input id="event-start" type="time"></label>
+        <label class="form-field"><span>Pause</span><input id="event-break" type="time"></label>
+        <label class="form-field"><span>Ende</span><input id="event-end" type="time"></label>
+        <label class="form-field span-two"><span>Öffentliche Beschreibung</span><textarea id="event-description" rows="4"></textarea></label>
+        <label class="form-field span-two"><span>Öffentliche Hinweise für Displays und Website</span><textarea id="event-public-notes" rows="3"></textarea></label>
+        <label class="form-field span-two"><span>Interne Notizen</span><textarea id="event-internal-notes" rows="3"></textarea></label>
+        <label class="form-field"><span>Ticket-Link</span><input id="event-ticket-url" type="url" placeholder="https://…"></label>
+        <label class="form-field"><span>Ticketstatus / Restkarten</span><input id="event-remaining-tickets" type="text"></label>
+        <label class="form-field span-two"><span>Bild-URL</span><input id="event-image-url" type="url" placeholder="https://…"></label>
+        <label class="toggle-label"><input id="event-box-office" type="checkbox"> Abendkasse verfügbar</label>
+        <label class="form-field"><span>Abendkasse öffnet</span><input id="event-box-office-open" type="time"></label>
+      </div>
+      <section class="event-schedule-section" id="event-schedule-section" hidden>
+        <div class="event-schedule-heading"><div><p class="eyebrow">Raumnutzung</p><h3>Ablauf</h3></div><button class="button button-secondary" type="button" id="new-event-schedule-entry">＋ Ablaufpunkt</button></div>
+        <div class="event-schedule-filters">
+          <label class="search-field"><span>⌕</span><input id="event-schedule-search" type="search" placeholder="Ablauf durchsuchen"></label>
+          <select id="event-schedule-room-filter" aria-label="Raum filtern"><option value="">Alle Räume</option></select>
+          <select id="event-schedule-category-filter" aria-label="Kategorie filtern"><option value="">Alle Kategorien</option></select>
+          <select id="event-schedule-type-filter" aria-label="Typ filtern"><option value="">Alle Typen</option></select>
+        </div>
+        <div class="event-schedule-list" id="event-schedule-list"><p class="event-table-empty">Ablauf wird geladen …</p></div>
+      </section>
+      <p class="privacy-note">Manuell gespeicherte Felder werden geschützt und bei einem erneuten CrewBrain-Import nicht automatisch überschrieben.</p>
+      <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-event-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-event-button" hidden>Veranstaltung archivieren</button><button class="button button-secondary" type="button" data-close-dialog="event-dialog">Abbrechen</button><button class="button button-primary" type="submit" id="save-event-button">Veranstaltung speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="event-schedule-dialog" class="wide-dialog">
+    <form class="dialog-content" id="event-schedule-form">
+      <button class="dialog-close" type="button" data-close-dialog="event-schedule-dialog" aria-label="Ablaufeditor schließen">×</button>
+      <p class="eyebrow">Veranstaltungsablauf</p><h2 id="event-schedule-dialog-title">Ablaufpunkt anlegen</h2>
+      <input id="event-schedule-entry-id" type="hidden">
+      <div class="form-grid">
+        <label class="form-field"><span>Typ</span><input id="event-schedule-type" type="text" maxlength="300" required placeholder="z. B. Einlass"></label>
+        <label class="form-field"><span>Individuelle Bezeichnung</span><input id="event-schedule-caption" type="text" maxlength="300"></label>
+        <label class="form-field"><span>Start</span><input id="event-schedule-start" type="datetime-local" required></label>
+        <label class="form-field"><span>Ende (optional)</span><input id="event-schedule-end" type="datetime-local"></label>
+        <label class="form-field"><span>Raum</span><input id="event-schedule-room" type="text" maxlength="300"></label>
+        <label class="form-field"><span>Raumkonfiguration</span><input id="event-schedule-room-configuration" type="text" maxlength="300"></label>
+        <label class="form-field"><span>Kategorie</span><select id="event-schedule-category"><option value="">Automatisch aus Typ</option><option value="access">Zugang</option><option value="setup">Aufbau</option><option value="rehearsal">Probe</option><option value="event">Veranstaltung</option><option value="break">Pause</option><option value="hospitality">Gastronomie</option><option value="teardown">Abbau</option><option value="internal">Intern</option><option value="cancelled">Storniert</option><option value="other">Sonstiges</option></select></label>
+        <label class="toggle-label"><input id="event-schedule-approximate" type="checkbox"> Uhrzeit ist ungefähr („ca.“)</label>
+      </div>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="event-schedule-dialog">Abbrechen</button><button class="button button-primary" type="submit">Ablaufpunkt speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="slide-dialog" class="slide-editor-dialog">
+    <div class="slide-editor-shell">
+      <header class="slide-editor-header">
+        <div><p class="eyebrow">Eigener Content</p><h2 id="slide-editor-title">Slide-Editor</h2></div>
+        <input id="slide-edit-id" type="hidden">
+        <label class="editor-title-field"><span>Name</span><input id="new-slide-title" type="text" value="Neue Slide" aria-label="Name der Slide"></label>
+        <label class="editor-title-field compact-field"><span>Format</span><select id="editor-ratio"><option value="auto">Automatisch / responsiv</option><option value="landscape">16:9 Querformat</option><option value="portrait">9:16 Hochformat</option></select></label>
+        <label class="editor-title-field compact-field"><span>Veranstaltung</span><select id="slide-event"><option value="">Keine feste Veranstaltung</option></select></label>
+        <label class="editor-title-field compact-field"><span>Status</span><select id="slide-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option></select></label>
+        <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar ab <small>(optional)</small></span><input id="slide-starts-at" type="datetime-local" step="60"></label>
+        <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar bis <small>(optional)</small></span><input id="slide-ends-at" type="datetime-local" step="60"></label>
+        <details class="slide-location-field slide-validity-field"><summary>Standorte <small id="slide-location-summary">Alle</small></summary><div id="slide-location-options"></div></details>
+        <button class="button button-secondary" type="button" data-editor-action="preview">▶ Vorschau</button>
+        <button class="button button-secondary" type="button" data-action="save-template">Als Vorlage</button>
+        <button class="button button-secondary" type="button" id="duplicate-slide-button" hidden>Duplizieren</button>
+        <button class="button button-secondary" type="button" id="archive-slide-button" hidden>Archivieren</button>
+        <button class="button danger-action" type="button" id="delete-slide-button" hidden>Endgültig löschen</button>
+        <span class="autosave-status" id="slide-autosave-status" data-state="idle" aria-live="polite">Autosave aktiv</span>
+        <span class="history-actions" aria-label="Bearbeitungsverlauf"><button class="history-button" id="slide-undo-button" type="button" title="Schritt zurück" aria-label="Schritt zurück" disabled>↶</button><button class="history-button" id="slide-redo-button" type="button" title="Schritt vorwärts" aria-label="Schritt vorwärts" disabled>↷</button></span>
+        <button class="button button-primary" type="button" id="create-slide-button">Jetzt speichern</button>
+        <button class="dialog-close editor-close" type="button" data-close-dialog="slide-dialog" aria-label="Editor schließen">×</button>
+      </header>
+
+      <div class="editor-main">
+        <aside class="editor-tools">
+          <p class="eyebrow">Elemente</p>
+          <button type="button" draggable="true" data-add-element="text"><span>T</span><strong>Text</strong></button>
+          <button type="button" draggable="true" data-add-element="ticker"><span>⇠</span><strong>Laufelement</strong></button>
+          <button type="button" draggable="true" data-add-element="weather"><span>☀</span><strong>Wetterdaten</strong></button>
+          <button type="button" draggable="true" data-add-element="qr-code"><span>▦</span><strong>QR-Code</strong></button>
+          <button type="button" draggable="true" data-add-element="countdown"><span>00:00</span><strong>Countdown</strong></button>
+          <button type="button" draggable="true" data-add-element="image"><span>▧</span><strong>Bild</strong></button>
+          <button type="button" draggable="true" data-add-element="video"><span>▶</span><strong>Video</strong></button>
+          <button type="button" draggable="true" data-add-element="web"><span>↗</span><strong>Website</strong></button>
+          <button type="button" draggable="true" data-add-element="event"><span>◫</span><strong>Eventdaten</strong></button>
+          <button type="button" draggable="true" data-add-element="event-field"><span>{ }</span><strong>Eventfeld</strong></button>
+          <button type="button" draggable="true" data-add-element="wayfinding"><span>↗</span><strong>Wegweisung</strong></button>
+          <button type="button" draggable="true" data-add-element="alert-icon"><span>⚠</span><strong>Warnsymbol</strong></button>
+          <label class="editor-icon-picker"><span>Symbol</span><select id="alert-icon-picker">
+            <option value="general-warning">Allgemeiner Warnhinweis</option><option value="no-passage">Durchgang verboten</option>
+            <option value="no-food">Essen verboten</option><option value="no-drinks">Getränke verboten</option>
+            <option value="no-food-drinks">Essen &amp; Getränke verboten</option><option value="no-smoking">Rauchen verboten</option>
+            <option value="authorized-only">Nur Berechtigte</option><option value="emergency-exit">Notausgang</option>
+            <option value="assembly-point">Sammelstelle</option>
+          </select></label>
+          <button type="button" data-action="open-media-library"><span>▦</span><strong>Mediathek</strong></button>
+          <button type="button" data-editor-action="slide-settings"><span>⚙</span><strong>Slide</strong></button>
+          <div class="editor-layer-actions"><button type="button" data-editor-action="forward" aria-label="Ebene nach vorne">↑</button><button type="button" data-editor-action="backward" aria-label="Ebene nach hinten">↓</button><button type="button" data-editor-action="delete" aria-label="Element löschen">×</button></div>
+        </aside>
+
+        <section class="editor-workspace">
+          <div class="editor-toolbar">
+            <button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="underline"><u>U</u></button><span></span><button type="button" data-align="left">≡</button><button type="button" data-align="center">≣</button><button type="button" data-align="right">≡</button><span class="zoom-label">100 %</span>
+          </div>
+          <div class="editor-stage-wrap">
+            <div class="slide-editor-canvas" id="slide-editor-canvas" data-ratio="landscape" aria-label="Slide-Arbeitsfläche"></div>
+          </div>
+          <p class="editor-help">Elemente auf die Fläche ziehen, anklicken und frei positionieren. Text kann direkt auf der Slide bearbeitet werden.</p>
+        </section>
+
+        <aside class="editor-layers" aria-label="Ebenen">
+          <div class="editor-panel-heading">
+            <div><p class="eyebrow">Übersicht</p><strong>Ebenen</strong></div>
+            <span id="editor-layer-count">0</span>
+            <button class="editor-panel-close" type="button" data-editor-panel-close aria-label="Ebenen schließen">×</button>
+          </div>
+          <p class="editor-panel-note">Oben liegende Elemente erscheinen vor den darunterliegenden.</p>
+          <div class="editor-layer-list" id="editor-layer-list"></div>
+        </aside>
+
+        <aside class="editor-properties">
+          <div class="editor-panel-heading">
+            <div><p class="eyebrow">Auswahl</p><strong>Eigenschaften</strong></div>
+            <button class="editor-panel-close" type="button" data-editor-panel-close aria-label="Eigenschaften schließen">×</button>
+          </div>
+          <div id="no-element-selected" class="property-empty"><span>◇</span><p>Element auswählen, um Eigenschaften zu bearbeiten.</p></div>
+          <div id="element-properties" hidden>
+            <div class="property-heading"><strong id="property-element-type">Text</strong><button type="button" data-editor-action="duplicate">⧉ Duplizieren</button></div>
+            <label class="form-field" id="property-text-field" data-property-section="text"><span>Textinhalt</span><textarea id="property-text" rows="4"></textarea></label>
+            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftgröße</span><input id="property-font-size" type="number" min="12" max="160" value="42"></label><label class="form-field"><span>Farbe</span><input id="property-color" type="color" value="#ffffff"></label></div>
+            <label class="form-field" data-property-section="event"><span>Veranstaltung</span><select id="property-event"><option>Sommerkonzert</option><option>Jazz im Foyer</option><option>Kindertheater</option><option>Sinfonieorchester</option></select></label>
+            <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass "></label><label class="form-field"><span>Ersatztext, wenn leer</span><input id="property-event-fallback" type="text" placeholder="–"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
+            <div data-property-section="image" class="editor-media-property"><button class="media-library-picker" id="property-image-library" type="button"><span>▦</span><strong>Bild aus Mediendatenbank wählen</strong><small id="property-image-selection">Noch kein Bild ausgewählt</small></button><p class="property-note">Neue Bilder werden in der Mediendatenbank hochgeladen und dort einem Ordner zugeordnet.</p></div>
+            <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><p class="property-note">Neue Videos werden zentral in der Mediendatenbank hochgeladen und gepflegt.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label></div>
+            <div data-property-section="web"><label class="form-field"><span>Externe Website</span><input id="property-web-url" type="url" placeholder="https://example.org"></label><p class="property-note">Die Zielseite muss das Einbetten technisch erlauben.</p></div>
+            <div data-property-section="wayfinding" id="wayfinding-properties"></div>
+            <div class="property-row"><label class="form-field"><span>X</span><input id="property-x" type="number" min="0" max="100"></label><label class="form-field"><span>Y</span><input id="property-y" type="number" min="0" max="100"></label></div>
+            <div class="property-row"><label class="form-field"><span>Breite %</span><input id="property-width" type="number" min="5" max="100"></label><label class="form-field"><span>Höhe %</span><input id="property-height" type="number" min="5" max="100"></label></div>
+            <div class="property-row"><label class="form-field"><span>Drehung °</span><input id="property-rotation" type="number" min="-360" max="360" step="1"></label><label class="form-field"><span>Deckkraft %</span><input id="property-opacity" type="number" min="0" max="100"></label></div>
+            <div class="property-row"><label class="form-field"><span>Innenabstand</span><input id="property-padding" type="number" min="0" max="100"></label><label class="form-field"><span>Eckenradius</span><input id="property-radius" type="number" min="0" max="100"></label></div>
+            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftstärke</span><select id="property-font-weight"><option value="400">Normal</option><option value="500">Medium</option><option value="600">Halbfett</option><option value="700">Fett</option><option value="800">Extra fett</option></select></label><label class="form-field"><span>Zeilenhöhe</span><input id="property-line-height" type="number" min="0.7" max="3" step="0.05"></label></div>
+            <div class="property-row" data-property-section="text"><label class="form-field"><span>Laufweite</span><input id="property-letter-spacing" type="number" min="-5" max="20" step="0.1"></label><label class="form-field"><span>Ausrichtung</span><select id="property-text-align"><option value="left">Linksbündig</option><option value="center">Zentriert</option><option value="right">Rechtsbündig</option></select></label></div>
+            <div data-property-section="ticker">
+              <p class="property-note">Text, Countdown, QR‑Codes und Icons laufen in der festgelegten Reihenfolge durch die Slide.</p>
+              <div class="ticker-items-editor" id="ticker-items-editor"></div>
+              <div class="ticker-add-actions" aria-label="Inhalt zum Laufelement hinzufügen"><button type="button" data-ticker-add="text">＋ Text</button><button type="button" data-ticker-add="countdown">＋ Countdown</button><button type="button" data-ticker-add="qr-code">＋ QR‑Code</button><button type="button" data-ticker-add="icon">＋ Icon</button></div>
+              <label class="form-field"><span>Geschwindigkeit</span><input id="property-ticker-duration" type="range" min="3" max="60" step="1" value="15"><small id="property-ticker-duration-label">15 Sekunden je Durchlauf</small></label><label class="form-field"><span>Laufrichtung</span><select id="property-ticker-direction"><option value="left">Von rechts nach links</option><option value="right">Von links nach rechts</option></select></label>
+            </div>
+            <div data-property-section="weather">
+              <input id="property-weather-mode" type="hidden" value="temperature">
+              <p class="property-note" id="property-weather-location-note">Das kompakte Widget zeigt ausschließlich Wettersymbol und aktuelle Temperatur für den Display-Standort.</p>
+            </div>
+            <div data-property-section="qr-code">
+              <label class="form-field"><span>QR-Code für</span><select id="property-qr-kind"><option value="link">Link / URL</option><option value="wifi">WLAN-Zugang</option><option value="text">Freier Text</option><option value="email">E-Mail-Adresse</option><option value="phone">Telefonnummer</option></select></label>
+              <label class="form-field" id="property-qr-value-field"><span id="property-qr-value-label">Link / Inhalt</span><input id="property-qr-value" type="text" placeholder="https://example.org"></label>
+              <div id="property-qr-wifi-fields" hidden><label class="form-field"><span>WLAN-Name (SSID)</span><input id="property-wifi-ssid" type="text"></label><label class="form-field"><span>Passwort</span><input id="property-wifi-password" type="text"></label><label class="form-field"><span>Verschlüsselung</span><select id="property-wifi-encryption"><option value="WPA">WPA / WPA2 / WPA3</option><option value="WEP">WEP</option><option value="nopass">Offenes WLAN</option></select></label><label class="toggle-label"><input id="property-wifi-hidden" type="checkbox"> Verstecktes WLAN</label></div>
+              <label class="form-field"><span>Code-Farbe</span><input id="property-qr-foreground" type="color" value="#111111"></label>
+              <p class="property-note">Der QR-Code wird lokal erzeugt und funktioniert auch ohne externen Generator.</p>
+            </div>
+            <div data-property-section="countdown">
+              <label class="form-field"><span>Ziel</span><select id="property-countdown-mode"><option value="daily">Täglich zu einer Uhrzeit</option><option value="datetime">Einmaliges Datum mit Uhrzeit</option></select></label>
+              <label class="form-field" id="property-countdown-daily-field"><span>Tägliche Zielzeit</span><input id="property-countdown-daily-time" type="time" step="60" value="18:00"></label>
+              <label class="form-field" id="property-countdown-datetime-field" hidden><span>Datum und Uhrzeit</span><input id="property-countdown-target" type="datetime-local" step="60"></label>
+              <label class="form-field"><span>Text davor</span><input id="property-countdown-prefix" type="text" placeholder="z. B. Noch "></label>
+              <label class="form-field"><span>Text danach</span><input id="property-countdown-suffix" type="text" placeholder="z. B. bis zum Einlass"></label>
+              <label class="toggle-label"><input id="property-countdown-show-seconds" type="checkbox" checked> Sekunden anzeigen</label>
+              <p class="property-note">Nach Erreichen der täglichen Uhrzeit startet der Countdown automatisch für den nächsten Tag neu.</p>
+            </div>
+            <label class="form-field" id="property-background-field"><span>Element-Hintergrund</span><input id="property-background" type="color" value="#315b49"></label>
+          </div>
+          <div id="slide-settings-properties"></div>
+        </aside>
+        <nav class="editor-mobile-dock" aria-label="Editor-Werkzeuge">
+          <button type="button" data-editor-panel-toggle="tools"><span>＋</span>Hinzufügen</button>
+          <button type="button" data-editor-panel-toggle="layers"><span>▱</span>Ebenen <i id="editor-mobile-layer-count">0</i></button>
+          <button type="button" data-editor-panel-toggle="properties"><span>⚙</span>Eigenschaften</button>
+        </nav>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="template-dialog" class="wide-dialog">
+    <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="template-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Wiederverwendbare Layouts</p><h2>Slide-Vorlagen</h2><p>Vorlagen können verwendet, vollständig bearbeitet oder archiviert werden.</p><div id="template-list" class="template-list"></div></div>
+  </dialog>
+
+  <dialog id="template-chooser-dialog" class="wide-dialog">
+    <form class="dialog-content" id="template-chooser-form"><button class="dialog-close" type="button" data-close-dialog="template-chooser-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Neue Slide</p><h2>Vorlage auswählen</h2><p>Wähle das passende Layout aus und bestätige die Auswahl.</p><div id="template-chooser-list" class="template-choice-grid"></div><p class="auth-message" id="template-chooser-message" role="alert"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="template-chooser-dialog">Abbrechen</button><button class="button button-primary" type="submit">Auswahl bestätigen</button></div></form>
+  </dialog>
+
+  <dialog id="slide-versions-dialog" class="wide-dialog">
+    <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="slide-versions-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">↶</span><p class="eyebrow">Slide-Historie</p><h2 id="slide-versions-title">Versionen</h2><p>Ältere Stände können angesehen oder als neue aktuelle Version wiederhergestellt werden.</p><div id="slide-version-list" class="slide-version-list"></div></div>
+  </dialog>
+
+  <dialog id="media-dialog" class="wide-dialog media-library-dialog">
+    <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="media-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Zentrale Medienauswahl</p><h2 id="media-dialog-title">Mediendatenbank</h2><p class="media-dialog-context" id="media-dialog-context">Medium auswählen oder direkt in den passenden Ordner hochladen.</p><div class="media-library-toolbar"><button class="button button-secondary" type="button" data-media-action="new-folder">＋ Ordner</button><button class="button button-secondary" type="button" data-media-action="add-url">＋ Medien-URL</button><label class="button button-primary media-upload-button">＋ Dateien hochladen<input id="media-upload" type="file" accept="image/*,video/mp4,video/webm" multiple></label><label class="search-field compact"><span>⌕</span><input id="media-search" type="search" placeholder="Medien suchen"></label></div><div class="media-library-layout"><aside><strong>Ordner</strong><div id="media-folder-tree"></div></aside><section><div class="media-breadcrumb" id="media-breadcrumb">Alle Medien</div><div class="media-asset-grid" id="media-asset-grid"></div></section></div></div>
+  </dialog>
+
+  <dialog id="media-edit-dialog" class="wide-dialog media-edit-dialog">
+    <form class="dialog-content" id="media-edit-form">
+      <button class="dialog-close" type="button" data-close-dialog="media-edit-dialog" aria-label="Dialog schließen">×</button>
+      <p class="eyebrow">Medium bearbeiten</p><h2 id="media-edit-title">Datei bearbeiten</h2>
+      <input id="media-edit-id" type="hidden">
+      <div class="media-edit-layout">
+        <div class="media-edit-preview">
+          <canvas id="media-crop-canvas" width="960" height="540" hidden></canvas>
+          <video id="media-trim-video" controls preload="metadata" hidden></video>
+        </div>
+        <div class="media-edit-fields">
+          <label class="form-field"><span>Dateiname</span><input id="media-edit-name" type="text" required maxlength="300"></label>
+          <label class="form-field"><span>Ordner</span><select id="media-edit-folder"><option value="">Alle Medien / ohne Ordner</option></select></label>
+          <div id="media-image-controls" hidden>
+            <label class="form-field"><span>Seitenverhältnis</span><select id="media-crop-ratio"><option value="original">Original</option><option value="16:9">16:9</option><option value="4:3">4:3</option><option value="1:1">Quadrat</option><option value="9:16">9:16</option></select></label>
+            <label class="range-field"><span>Zoom</span><input id="media-crop-zoom" type="range" min="100" max="300" value="100"></label>
+            <label class="range-field"><span>Horizontal</span><input id="media-crop-x" type="range" min="0" max="100" value="50"></label>
+            <label class="range-field"><span>Vertikal</span><input id="media-crop-y" type="range" min="0" max="100" value="50"></label>
+            <p class="property-note">Der Zuschnitt ersetzt die aktuelle Medienfassung in der zentralen Datenbank.</p>
+          </div>
+          <div id="media-video-controls" hidden>
+            <label class="form-field"><span>Start bei (Sekunden)</span><input id="media-trim-start" type="number" min="0" step="0.1" value="0"></label>
+            <label class="form-field"><span>Ende bei (Sekunden)</span><input id="media-trim-end" type="number" min="0" step="0.1"></label>
+            <p class="property-note">Videos werden nicht neu komprimiert. Kiosky spielt in Slides nur den gewählten Ausschnitt ab.</p>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="media-edit-dialog">Abbrechen</button><button class="button button-primary" type="submit">Änderungen speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="preset-dialog" class="wide-dialog"><form class="dialog-content" id="preset-form"><button class="dialog-close" type="button" data-close-dialog="preset-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">⌑</span><p class="eyebrow">Betriebsablauf</p><h2 id="preset-dialog-title">Preset anlegen</h2><input id="preset-edit-id" type="hidden"><div class="form-grid"><label class="form-field"><span>Name</span><input id="preset-name" type="text" required></label><label class="form-field"><span>Typ</span><select id="preset-type"><option value="channel">Zustands-Preset</option><option value="emergency">Warnhinweis-Preset</option><option value="reset">Reset / Standard</option></select></label></div>
+    <section id="preset-state-fields" class="preset-state-builder"><div class="preset-builder-head"><div><strong>Kanalinhalte setzen</strong><small>Beim Auslösen werden die gewählten Slides in dieser Reihenfolge in den Kanal geschrieben.</small></div><button class="button button-secondary" type="button" data-add-preset-channel>＋ Kanalzustand</button></div><div id="preset-channel-actions"></div><div class="preset-builder-head"><div><strong>Content ausspielen</strong><small>Kanäle oder einzelne Slides direkt Displays, Gruppen oder Matrix-Displays zuweisen.</small></div><button class="button button-secondary" type="button" data-add-preset-assignment>＋ Zuweisung</button></div><div id="preset-assignment-actions"></div></section>
+    <section id="preset-warning-fields">
+      <div class="form-grid"><label class="form-field span-two"><span>Vorlage</span><select id="preset-template"><option value="">Ohne Vorlage</option></select></label><label class="form-field"><span>Warnungstyp</span><select id="preset-alert-type"><option value="evacuation">Evakuierung</option><option value="weather">Unwetter</option><option value="security">Sicherheitslage</option><option value="technical">Technische Störung</option><option value="info">Information</option></select></label><label class="form-field"><span>Warnstufe</span><select id="preset-severity"><option value="1">1 · Hinweis</option><option value="2">2 · Wetterwarnung</option><option value="3" selected>3 · Markante Warnung</option><option value="4">4 · Unwetter</option><option value="5">5 · Extreme Gefahr</option></select></label><label class="form-field span-two"><span>Überschrift</span><input id="preset-alert-title" type="text"></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="preset-alert-description" rows="2"></textarea></label><label class="form-field span-two"><span>Handlungsanweisung</span><textarea id="preset-alert-message" rows="3"></textarea></label><label class="form-field"><span>Priorität</span><input id="preset-priority" type="number" min="0" max="1000" value="900"></label><label class="form-field"><span>Laufzeit</span><select id="preset-duration"><option value="0">Manuell beenden</option><option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option><option value="120">2 Stunden</option></select></label></div>
+      <section class="warning-preset-designer" aria-labelledby="warning-preset-designer-title">
+        <header><div><strong id="warning-preset-designer-title">Visueller Warnhinweis-Editor</strong><small>Texte und Icons hinzufügen, auswählen und direkt auf der Fläche verschieben.</small></div><label><span>Hintergrund</span><input id="preset-design-background" type="color" value="#9f1d20"></label></header>
+        <div class="warning-designer-toolbar" role="toolbar" aria-label="Elemente hinzufügen">
+          <button class="button button-secondary" type="button" data-add-warning-element="title">＋ Überschrift</button>
+          <button class="button button-secondary" type="button" data-add-warning-element="text">＋ Text</button>
+          <button class="button button-secondary" type="button" data-add-warning-element="icon">＋ Icon</button>
+        </div>
+        <div class="warning-designer-workspace">
+          <div class="warning-design-stage-wrap"><div id="warning-preset-canvas" class="warning-design-canvas" aria-label="Warnhinweis-Arbeitsfläche"></div></div>
+          <aside id="warning-preset-properties" class="warning-design-properties">
+            <div class="warning-property-empty"><strong>Element auswählen</strong><small>Klicke einen Text oder ein Icon an, um es zu bearbeiten.</small></div>
+            <div class="warning-property-fields" hidden>
+              <label class="form-field"><span>Inhalt / Icon</span><textarea id="warning-element-content" rows="3"></textarea></label>
+              <label class="form-field warning-icon-field" hidden><span>Icon wählen</span><select id="warning-element-icon"><option>⚠</option><option>!</option><option>ℹ</option><option>🔥</option><option>☂</option><option>✚</option><option>⛔</option><option>✓</option><option>→</option><option>⌁</option></select></label>
+              <div class="property-row"><label class="form-field"><span>X in %</span><input id="warning-element-x" type="number" min="0" max="100" step="0.1"></label><label class="form-field"><span>Y in %</span><input id="warning-element-y" type="number" min="0" max="100" step="0.1"></label></div>
+              <div class="property-row"><label class="form-field"><span>Breite in %</span><input id="warning-element-width" type="number" min="3" max="100" step="0.1"></label><label class="form-field"><span>Schriftgröße</span><input id="warning-element-size" type="number" min="12" max="180"></label></div>
+              <div class="property-row"><label class="form-field"><span>Textfarbe</span><input id="warning-element-color" type="color"></label><label class="form-field"><span>Ausrichtung</span><select id="warning-element-align"><option value="left">Links</option><option value="center">Mitte</option><option value="right">Rechts</option></select></label></div>
+              <label class="toggle-label"><input id="warning-element-bold" type="checkbox"><span>Fett darstellen</span></label>
+              <button class="button button-secondary danger-action" id="delete-warning-element" type="button">Element löschen</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <fieldset class="emergency-targets"><legend>Gespeicherte Zielbereiche</legend><div id="preset-target-options"></div></fieldset>
+    </section><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="preset-dialog">Abbrechen</button><button class="button button-primary" type="submit">Preset speichern</button></div></form></dialog>
+
+  <dialog id="warning-template-dialog" class="wide-dialog"><form class="dialog-content" id="warning-template-form"><button class="dialog-close" type="button" data-close-dialog="warning-template-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">⚠</span><p class="eyebrow">Wiederverwendbarer Warninhalt</p><h2 id="warning-template-dialog-title">Warnvorlage anlegen</h2><input id="warning-template-edit-id" type="hidden"><div class="form-grid"><label class="form-field"><span>Name</span><input id="warning-template-name" required maxlength="200"></label><label class="form-field"><span>Warnungstyp</span><select id="warning-template-type"><option value="evacuation">Evakuierung</option><option value="weather">Unwetter</option><option value="security">Sicherheitslage</option><option value="technical">Technische Störung</option><option value="power_outage">Stromausfall</option><option value="fire">Brandalarm</option><option value="medical">Medizinischer Notfall</option><option value="all_clear">Entwarnung</option><option value="info">Information</option></select></label><label class="form-field span-two"><span>Interne Beschreibung</span><textarea id="warning-template-description" rows="2"></textarea></label><label class="form-field span-two"><span>Überschrift</span><input id="warning-template-title" required></label><label class="form-field span-two"><span>Beschreibung für die Anzeige</span><textarea id="warning-template-display-description" rows="2"></textarea></label><label class="form-field span-two"><span>Handlungsanweisung</span><textarea id="warning-template-instructions" rows="3" required></textarea></label><label class="form-field"><span>Priorität</span><input id="warning-template-priority" type="number" min="0" max="1000" value="900"></label><label class="form-field"><span>Symbol</span><input id="warning-template-symbol" placeholder="z. B. weather"></label><label class="form-field"><span>Hintergrund</span><input id="warning-template-background" type="color" value="#9f1d20"></label><label class="form-field"><span>Textfarbe</span><input id="warning-template-text-color" type="color" value="#ffffff"></label><label class="form-field span-two"><span>Lauftext</span><input id="warning-template-ticker"></label><label class="form-field"><span>Bild- oder Logo-URL</span><input id="warning-template-image"></label><label class="form-field"><span>QR-Code-Ziel</span><input id="warning-template-qr"></label><label class="form-field span-two"><span>Optionale Audio-URL</span><input id="warning-template-audio"></label></div><div class="dialog-actions"><button class="button button-secondary" id="archive-warning-template" type="button" hidden>Vorlage archivieren</button><button class="button button-secondary" type="button" data-close-dialog="warning-template-dialog">Abbrechen</button><button class="button button-primary" type="submit">Vorlage speichern</button></div></form></dialog>
+
+  <dialog id="channel-dialog" class="wide-dialog">
+    <form class="dialog-content" id="channel-form">
+      <button class="dialog-close" type="button" data-close-dialog="channel-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">▤</span><p class="eyebrow">Abspielkanal</p><h2 id="channel-dialog-title">Kanal anlegen</h2>
+      <input id="channel-edit-id" type="hidden">
+      <div class="form-grid">
+        <label class="form-field span-two"><span>Name</span><input id="channel-name" type="text" maxlength="200" required></label>
+        <label class="form-field span-two"><span>Beschreibung</span><textarea id="channel-description" rows="3"></textarea></label>
+        <label class="form-field"><span>Veranstaltung</span><select id="channel-event"><option value="">Keine feste Veranstaltung</option></select></label>
+        <label class="form-field"><span>Status</span><select id="channel-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="paused">Pausiert</option></select></label>
+      </div>
+      <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-channel-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-channel-button" hidden>Kanal archivieren</button><button class="button button-secondary" type="button" data-close-dialog="channel-dialog">Abbrechen</button><button class="button button-primary" type="submit">Kanal speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="display-dialog" class="wide-dialog">
+    <form class="dialog-content" id="display-form">
+      <button class="dialog-close" type="button" data-close-dialog="display-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">▣</span><p class="eyebrow">Endgerät</p><h2 id="display-dialog-title">Display hinzufügen</h2>
+      <input id="display-edit-id" type="hidden">
+      <div class="form-grid"><label class="form-field"><span>Name</span><input id="display-name" type="text" placeholder="z. B. Foyer links" required></label><label class="form-field"><span>URL-Kennung</span><input id="display-slug" type="text" placeholder="foyer-links" required></label><label class="form-field"><span>Displaytyp</span><select id="display-type"><option value="standard">Standarddisplay</option><option value="led">LED-Display</option><option value="projection">Projektion</option><option value="touch">Touchdisplay</option></select></label><label class="form-field"><span>Ausrichtung</span><select id="display-orientation"><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label><label class="form-field span-two"><span>Auflösungsmodus</span><select id="display-resolution-mode"><option value="native">Responsiv · native Browsergröße</option><option value="fixed">Feste Zielauflösung</option></select><small id="display-resolution-help">Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.</small></label><div class="display-resolution-fields span-two" id="display-fixed-resolution-fields"><label class="form-field"><span>Breite (px)</span><input id="display-width" type="number" min="320" max="16384" value="1920"></label><label class="form-field"><span>Höhe (px)</span><input id="display-height" type="number" min="240" max="16384" value="1080"></label></div><label class="form-field"><span>Standardkanal</span><select id="display-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Standort</span><select id="display-location"><option value="">Kein Standort</option></select></label><label class="form-field"><span>Status</span><select id="display-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="toggle-label"><input id="display-cache-enabled" type="checkbox" checked> Offline-Cache aktiv</label></div>
+      <fieldset class="display-group-choice"><legend>Display-Gruppen</legend><div id="display-group-options"></div></fieldset>
+      <div class="display-url-preview"><span>Player-URL</span><code id="new-display-url">…</code></div>
+      <section class="display-player-pairing" id="display-player-pairing" hidden>
+        <div><strong>Universal Player koppeln</strong><p>Den sechsstelligen Code eingeben, der beim ersten Start des Universal Players angezeigt wird.</p></div>
+        <label class="form-field"><span>Kopplungscode</span><input id="display-player-pairing-code" type="text" inputmode="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABC234"></label>
+        <button class="button button-secondary" id="pair-display-player" type="button">Player koppeln</button>
+        <small id="display-player-pairing-status" role="status"></small>
+      </section>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="display-dialog">Abbrechen</button><button class="button button-primary" id="save-display-button" type="submit">Display speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="group-dialog" class="wide-dialog">
+    <div class="dialog-content">
+      <button class="dialog-close" type="button" data-close-dialog="group-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">▦</span><p class="eyebrow">Gemeinsam planen</p><h2>Display-Gruppen</h2><p>Gruppen bündeln mehrere Displays. Ein Zeitplan-Eintrag wird automatisch auf alle enthaltenen Endgeräte verteilt.</p>
+      <div class="group-manager"><div class="group-list" id="group-list"></div><form id="group-form"><input id="group-edit-id" type="hidden"><label class="form-field"><span>Gruppenname</span><input id="group-name" type="text" placeholder="z. B. Außenanzeigen" required></label><fieldset class="display-group-choice"><legend>Enthaltene Displays</legend><div id="group-display-options"></div></fieldset><div class="dialog-actions"><button class="button button-secondary" type="button" id="reset-group-form">Neue Gruppe</button><button class="button button-primary" type="submit">Gruppe speichern</button></div></form></div>
+    </div>
+  </dialog>
+
+  <dialog id="location-dialog" class="wide-dialog">
+    <form class="dialog-content" id="location-form"><button class="dialog-close" type="button" data-close-dialog="location-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Multi-Standort</p><h2 id="location-dialog-title">Standort anlegen</h2><input id="location-edit-id" type="hidden"><div class="form-grid"><label class="form-field span-two"><span>Standortname</span><input id="location-name" required maxlength="200"></label><label class="form-field"><span>Straße</span><input id="location-street"></label><label class="form-field"><span>Hausnummer</span><input id="location-house-number"></label><label class="form-field"><span>Postleitzahl</span><input id="location-postal-code"></label><label class="form-field"><span>Ort</span><input id="location-city"></label><label class="form-field"><span>Land</span><input id="location-country" value="Deutschland"></label><label class="form-field"><span>Gebäudeteil</span><input id="location-building-part"></label><label class="form-field"><span>Etage</span><input id="location-floor"></label><label class="form-field"><span>Raum</span><input id="location-room"></label><section class="warncell-picker span-two" aria-labelledby="warncell-picker-heading"><div class="warncell-picker-heading"><div><strong id="warncell-picker-heading">DWD-Warngebiet zuweisen</strong><small>Direkt in der offiziellen WarnCellID-Liste nach Ort, Gebiet, Kürzel oder ID suchen.</small></div><a href="https://www.dwd.de/DE/leistungen/opendata/help/warnungen/cap_warncellids_csv.html" target="_blank" rel="noopener">DWD-Quelle ↗</a></div><label class="form-field"><span>Warngebiet suchen</span><input id="location-warning-search" type="search" autocomplete="off" placeholder="z. B. Wetzlar, Lahn-Dill oder 106…" aria-controls="location-warning-results"></label><label class="form-field"><span>Ausgewählte WarnCellID</span><input id="location-warning-code" inputmode="numeric" placeholder="Kann auch manuell eingetragen werden"></label><p class="warncell-search-status" id="location-warning-status" aria-live="polite">Mindestens zwei Zeichen eingeben.</p><div class="warncell-results" id="location-warning-results" role="listbox" hidden></div></section><label class="form-field"><span>Breitengrad</span><input id="location-latitude" type="number" step="0.000001"></label><label class="form-field"><span>Längengrad</span><input id="location-longitude" type="number" step="0.000001"></label><p class="coordinate-lookup-note span-two" id="location-coordinate-status">Koordinaten werden beim Speichern automatisch aus der Adresse ermittelt. Daten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>.</p><label class="form-field span-two"><span>Beschreibung</span><textarea id="location-description" rows="3"></textarea></label></div><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="location-dialog">Abbrechen</button><button class="button button-primary" type="submit">Standort speichern</button></div></form>
+  </dialog>
+
+  <dialog id="matrix-dialog" class="wide-dialog matrix-dialog">
+    <form class="dialog-content" id="matrix-form"><button class="dialog-close" type="button" data-close-dialog="matrix-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Gemeinsame Anzeigefläche</p><h2 id="matrix-dialog-title">Matrix-Display anlegen</h2><input id="matrix-edit-id" type="hidden"><div class="form-grid"><label class="form-field span-two"><span>Name</span><input id="matrix-name" required maxlength="200"></label><label class="form-field"><span>Zeilen</span><input id="matrix-rows" type="number" min="1" max="20" value="1"></label><label class="form-field"><span>Spalten</span><input id="matrix-columns" type="number" min="1" max="20" value="2"></label><label class="form-field"><span>Standardkanal</span><select id="matrix-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Status</span><select id="matrix-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="matrix-description" rows="2"></textarea></label></div><p class="property-note">Displays in die Rasterfelder ziehen oder im Feld auswählen. Bereits aktive Matrix-Zuordnungen werden serverseitig verhindert.</p><div class="matrix-configurator"><aside><strong>Verfügbare Displays</strong><div id="matrix-display-pool"></div></aside><section><div class="matrix-grid" id="matrix-grid"></div><div class="matrix-resolution" id="matrix-resolution">Gesamtauflösung: 0 × 0 px</div></section></div><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="matrix-dialog">Abbrechen</button><button class="button button-primary" type="submit">Matrix speichern</button></div></form>
+  </dialog>
+
+  <dialog id="schedule-entry-dialog" class="wide-dialog">
+    <form class="dialog-content" id="schedule-entry-form">
+      <button class="dialog-close" type="button" data-close-dialog="schedule-entry-dialog" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">▦</span><p class="eyebrow">Zeitplaneintrag</p><h2 id="schedule-entry-title">Inhalt bearbeiten</h2>
+      <input id="schedule-entry-ids" type="hidden">
+      <div class="form-grid">
+        <label class="form-field span-two"><span>Inhalt</span><input id="schedule-entry-content" type="text" readonly></label>
+        <div class="form-field" role="group" aria-labelledby="schedule-entry-start-label"><span id="schedule-entry-start-label">Von</span><div class="schedule-date-time-input"><input id="schedule-entry-start-date" type="date" required aria-label="Startdatum"><input id="schedule-entry-start-time" type="time" step="60" required aria-label="Startzeit"></div></div>
+        <div class="form-field" role="group" aria-labelledby="schedule-entry-end-label"><span id="schedule-entry-end-label">Bis</span><div class="schedule-date-time-input"><input id="schedule-entry-end-date" type="date" required aria-label="Enddatum"><input id="schedule-entry-end-time" type="time" step="60" required aria-label="Endzeit"></div></div>
+        <label class="form-field"><span>Priorität</span><select id="schedule-entry-priority"><option value="normal">Normal</option><option value="high">Wichtig</option><option value="takeover">Übernahme</option></select></label>
+        <label class="form-field"><span>Wiederholung</span><select id="schedule-entry-recurrence"><option value="once">einmalig</option><option value="daily">täglich</option><option value="weekly">wöchentlich</option></select></label>
+      </div>
+      <p class="property-note">„Von“ und „Bis“ berücksichtigen jeweils Datum und Uhrzeit. „Bis“ muss nach „Von“ liegen.</p>
+      <fieldset class="schedule-target-choice"><legend>Zugewiesene Ziele</legend><div id="schedule-entry-targets"></div></fieldset>
+      <p class="schedule-dialog-save-status" id="schedule-dialog-save-status"><span class="status-dot"></span><span>Veröffentlicht</span></p>
+      <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-schedule-entry">Aus Zeitplan entfernen</button><button class="button button-primary" type="button" data-close-dialog="schedule-entry-dialog">Schließen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="schedule-conflict-dialog" class="schedule-conflict-dialog">
+    <form method="dialog" class="dialog-content">
+      <button class="dialog-close" type="submit" value="cancel" aria-label="Dialog schließen">×</button>
+      <span class="dialog-icon">▦</span><p class="eyebrow">Doppelte Zuweisung</p><h2>Zeitbereich bereits belegt</h2>
+      <p id="schedule-conflict-summary">Für dieses Ziel ist in diesem Zeitraum bereits ein Inhalt eingeplant.</p>
+      <div class="schedule-conflict-options">
+        <button class="button button-secondary" type="submit" value="add"><span>＋</span><strong>Zusätzlich hinzufügen</strong><small>Bestehende und neue Inhalte bleiben parallel im Zeitplan.</small></button>
+        <button class="button button-primary" type="submit" value="replace"><span>↺</span><strong>Vorhandenen ersetzen</strong><small>Überlappende Einträge werden entfernt und durch den neuen Inhalt ersetzt.</small></button>
+      </div>
+      <div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel">Abbrechen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="preview-dialog" class="preview-dialog">
+    <form method="dialog" class="dialog-content preview-content">
+      <button class="dialog-close" value="cancel" aria-label="Vorschau schließen">×</button>
+      <p class="eyebrow">Kanalvorschau</p>
+      <div class="channel-preview-screen"><span>KIOSKY · HEUTE</span><div><small>GROSSER SAAL</small><strong>Sommerkonzert</strong><p>Einlass 18:30 · Beginn 19:30</p></div></div>
+      <div class="preview-controls"><button class="button button-secondary" value="cancel">Vorschau schließen</button><span id="preview-slide-count">4 Slides im Kanal</span></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="product-tour" id="product-tour" hidden aria-live="polite">
+    <div class="tour-backdrop"></div>
+    <aside class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-description">
+      <div class="tour-progress"><span id="tour-step-label">Station 1 von 6</span><button id="close-product-tour" type="button" aria-label="Tour beenden">×</button></div>
+      <div class="tour-progress-track"><i id="tour-progress-bar"></i></div>
+      <p class="eyebrow" id="tour-kicker">Willkommen</p>
+      <h2 id="tour-title">Kiosky kennenlernen</h2>
+      <p id="tour-description">Wir folgen gemeinsam dem Weg vom Inhalt bis zur kontrollierten Ausspielung.</p>
+      <div class="tour-tip" id="tour-tip"></div>
+      <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
+    </aside>
+  </div>
+  <script src="runtime-config.js?v=2.4.8-20260730044430%2Bb7cd82a8"></script>
+  <script src="app.js?v=2.4.8-20260730044430%2Bb7cd82a8"></script>
+</body>
+</html>

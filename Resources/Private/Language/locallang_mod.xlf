@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2">
+  <file source-language="en" target-language="de" datatype="plaintext" original="messages">
+    <body>
+      <trans-unit id="mlang_tabs_tab">
+        <source>Kiosky</source>
+        <target>Kiosky</target>
+      </trans-unit>
+      <trans-unit id="mlang_labels_tabdescr">
+        <source>Digital signage management</source>
+        <target>Digital-Signage-Verwaltung</target>
+      </trans-unit>
+      <trans-unit id="mlang_labels_tablabel">
+        <source>Kiosky</source>
+        <target>Kiosky</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

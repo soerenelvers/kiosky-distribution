@@ -1,0 +1,329 @@
+openapi: 3.1.0
+info:
+  title: Kiosky External Control API
+  version: 1.0.0
+  description: Externe Steuerung von Displayinhalten, Sicherheitswarnungen und Betriebspresets.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+tags:
+  - name: Resources
+  - name: Channels
+  - name: Assignments
+  - name: Emergencies
+  - name: Presets
+paths:
+  /:
+    get:
+      tags: [Resources]
+      summary: API-Informationen und Dokumentationspfade
+      responses:
+        '200': { description: API-Informationen }
+  /displays:
+    get:
+      tags: [Resources]
+      summary: Displays auflisten
+      responses:
+        '200':
+          description: Displayliste
+          content: { application/json: { schema: { $ref: '#/components/schemas/ListResponse' } } }
+  /display-groups:
+    get:
+      tags: [Resources]
+      summary: Displaygruppen auflisten
+      responses:
+        '200': { description: Gruppenliste }
+  /matrix-displays:
+    get:
+      tags: [Resources]
+      summary: Matrix-Displays auflisten
+      responses:
+        '200': { description: Matrixliste }
+  /locations:
+    get:
+      tags: [Resources]
+      summary: Standorte auflisten
+      responses:
+        '200': { description: Standortliste }
+  /slides:
+    get:
+      tags: [Resources]
+      summary: Slides auflisten
+      responses:
+        '200': { description: Slideliste }
+  /channels:
+    get:
+      tags: [Resources]
+      summary: Kanäle auflisten
+      responses:
+        '200': { description: Kanalliste }
+  /presets:
+    get:
+      tags: [Resources]
+      summary: Aktive Betriebspresets auflisten
+      responses:
+        '200': { description: Presetliste }
+  /channels/{channelId}/slides:
+    put:
+      tags: [Channels]
+      summary: Komplette Slide-Playlist eines Kanals ersetzen
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 200
+                  items: { $ref: '#/components/schemas/PlaylistItem' }
+      responses:
+        '200': { description: Aktualisierter Kanal }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+  /assignments:
+    get:
+      tags: [Assignments]
+      summary: Zuweisungen auflisten
+      parameters:
+        - { name: targetType, in: query, schema: { $ref: '#/components/schemas/TargetType' } }
+        - { name: targetId, in: query, schema: { type: string } }
+        - { name: activeAt, in: query, description: Nur zu diesem ISO-8601-Zeitpunkt aktive Zuweisungen, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: Zuweisungsliste }
+    post:
+      tags: [Assignments]
+      summary: Zuweisung erstellen oder aktuelle Zielzuweisung ersetzen
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AssignmentInput' } } }
+      responses:
+        '201': { description: Gespeicherte Zuweisung }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+    put:
+      tags: [Assignments]
+      summary: Zuweisung idempotent setzen
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AssignmentInput' } } }
+      responses:
+        '200': { description: Gespeicherte Zuweisung }
+  /assignments/{assignmentId}:
+    delete:
+      tags: [Assignments]
+      summary: Zuweisung löschen
+      parameters:
+        - { name: assignmentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Zuweisung gelöscht }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+  /displays/{targetId}/channel:
+    $ref: '#/components/pathItems/TargetChannel'
+  /display-groups/{targetId}/channel:
+    $ref: '#/components/pathItems/TargetChannel'
+  /displays/{targetId}/slide:
+    $ref: '#/components/pathItems/TargetSlide'
+  /display-groups/{targetId}/slide:
+    $ref: '#/components/pathItems/TargetSlide'
+  /emergencies:
+    post:
+      tags: [Emergencies]
+      summary: Sicherheitswarnung aktivieren
+      description: Beendet eine gegebenenfalls aktive vorherige Warnung und aktiviert die neue Warnung sofort.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EmergencyInput' } } }
+      responses:
+        '201': { description: Aktive Warnung }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+  /emergencies/active:
+    get:
+      tags: [Emergencies]
+      summary: Aktive Warnung lesen
+      responses:
+        '200': { description: Aktive Warnung oder null }
+    delete:
+      tags: [Emergencies]
+      summary: Aktive Warnung beenden
+      responses:
+        '200': { description: Warnung beendet }
+  /presets/{presetId}/execute:
+    post:
+      tags: [Presets]
+      summary: Betriebspreset ausführen
+      parameters:
+        - { name: presetId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PresetExecutionInput' } } }
+      responses:
+        '201': { description: Protokollierte Preset-Ausführung }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+  /preset-executions:
+    get:
+      tags: [Presets]
+      summary: Letzte Preset-Ausführungen lesen
+      parameters:
+        - { name: presetId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Maximal 100 Ausführungen }
+  /presets/status:
+    get:
+      tags: [Presets]
+      summary: Aktive Zuweisungen und letzte Preset-Ausführungen lesen
+      responses:
+        '200': { description: Presetstatus }
+  /presets/stop:
+    post:
+      tags: [Presets]
+      summary: Preset-Zuweisungen auf den angegebenen Zielen stoppen
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PresetExecutionInput' } } }
+      responses:
+        '200': { description: Anzahl entfernter Zuweisungen }
+  /warnings/webhook:
+    post:
+      tags: [Emergencies]
+      summary: Warnmeldung aus einem authentifizierten externen Gateway übernehmen
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses:
+        '201': { description: Normalisierte Warnmeldung }
+        '422': { $ref: '#/components/responses/InvalidInput' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Ein unter Schnittstellen angelegter API-Benutzerschlüssel oder KIOSKY_ADMIN_API_KEY
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  parameters:
+    ChannelId: { name: channelId, in: path, required: true, schema: { type: string } }
+  pathItems:
+    TargetChannel:
+      put:
+        tags: [Assignments]
+        summary: Kanal einem Display oder einer Displaygruppe zuweisen
+        parameters:
+          - { name: targetId, in: path, required: true, schema: { type: string } }
+        requestBody:
+          required: true
+          content: { application/json: { schema: { $ref: '#/components/schemas/DirectAssignmentInput' } } }
+        responses:
+          '200': { description: Gespeicherte Zuweisung }
+          '422': { $ref: '#/components/responses/InvalidInput' }
+    TargetSlide:
+      put:
+        tags: [Assignments]
+        summary: Slide einem Display oder einer Displaygruppe zuweisen
+        parameters:
+          - { name: targetId, in: path, required: true, schema: { type: string } }
+        requestBody:
+          required: true
+          content: { application/json: { schema: { $ref: '#/components/schemas/DirectAssignmentInput' } } }
+        responses:
+          '200': { description: Gespeicherte Zuweisung }
+          '422': { $ref: '#/components/responses/InvalidInput' }
+  responses:
+    Unauthorized:
+      description: API-Key fehlt oder ist ungültig
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    InvalidInput:
+      description: Ressource fehlt oder Eingabe ist ungültig
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    TargetType: { type: string, enum: [display, group, matrix, location, global] }
+    ContentType: { type: string, enum: [channel, slide] }
+    Target:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: { $ref: '#/components/schemas/TargetType' }
+        id: { type: string, minLength: 1, maxLength: 100 }
+    Content:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: { $ref: '#/components/schemas/ContentType' }
+        id: { type: string, minLength: 1, maxLength: 100 }
+    AssignmentInput:
+      type: object
+      additionalProperties: false
+      required: [target, content]
+      properties:
+        target: { $ref: '#/components/schemas/Target' }
+        content: { $ref: '#/components/schemas/Content' }
+        priority: { type: integer, minimum: 0, maximum: 1000, default: 100 }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    DirectAssignmentInput:
+      type: object
+      additionalProperties: false
+      required: [contentId]
+      properties:
+        contentId: { type: string, minLength: 1, maxLength: 100 }
+        priority: { type: integer, minimum: 0, maximum: 1000, default: 100 }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    PlaylistItem:
+      type: object
+      additionalProperties: false
+      required: [slideId]
+      properties:
+        slideId: { type: string }
+        durationSeconds: { type: integer, minimum: 3, maximum: 600, default: 12 }
+        transition: { type: string, enum: [inherit, fade, slide, zoom, none], default: inherit }
+    WarningType:
+      type: string
+      enum: [evacuation, fire, severe_weather, security, medical, technical, information, custom]
+    EmergencyInput:
+      type: object
+      additionalProperties: false
+      required: [warningType, title, instructions, targets]
+      properties:
+        warningType: { $ref: '#/components/schemas/WarningType' }
+        title: { type: string, minLength: 1, maxLength: 300 }
+        instructions: { type: string, minLength: 1, maxLength: 3000 }
+        targets: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/Target' } }
+    PresetExecutionInput:
+      type: object
+      additionalProperties: false
+      required: [targets]
+      properties:
+        targets: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/Target' } }
+        channelId: { type: string }
+        warningType: { $ref: '#/components/schemas/WarningType' }
+        title: { type: string, maxLength: 300 }
+        instructions: { type: string, maxLength: 3000 }
+        priority: { type: integer, minimum: 0, maximum: 1000 }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        endEmergency: { type: boolean, default: true }
+    ListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { type: object, additionalProperties: true } }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }

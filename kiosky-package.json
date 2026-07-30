@@ -1,0 +1,9 @@
+{
+  "name": "Kiosky",
+  "version": "2.4.8",
+  "platform": "typo3",
+  "mode": "native",
+  "builtAt": "2026-07-30T04:44:30.165Z",
+  "sharedFrontend": true,
+  "canonicalBackend": "included"
+}

@@ -1,0 +1,16 @@
+Kiosky for TYPO3
+Copyright © 2026 Sören Elvers
+
+Sören Elvers is the original author and copyright holder of Kiosky,
+except for separately identified third-party components.
+
+This TYPO3 distribution is licensed under the GNU General Public License,
+version 2 or any later version (GPL-2.0-or-later).
+The full GPLv2 license text is included as LICENSE.txt.
+
+The GPL license grants recipients rights to use, study, modify, and
+redistribute this distribution. It does not transfer copyright ownership
+or grant rights to the Kiosky name, logo, or associated branding.
+
+Canonical license source:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.html

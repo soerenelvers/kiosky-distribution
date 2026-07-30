@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#08110f">
+  <title>Kiosky Player herunterladen</title>
+  <link rel="stylesheet" href="/player/index.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="/" aria-label="Kiosky öffnen"><span>K</span>KIOSKY</a>
+    <a class="backend-link" href="/">Backend öffnen <span>↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Player Center</p>
+      <h1>Den passenden Player<br>für Ihr Display.</h1>
+      <p class="intro">Player auswählen, installieren und mit einem einmaligen Code dem gewünschten Display zuordnen.</p>
+      <div class="server-address"><span>Diese Kiosky-Installation</span><strong id="server-address">…</strong><button id="copy-server" type="button">Adresse kopieren</button></div>
+    </section>
+
+    <section class="players" aria-labelledby="players-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Downloads</p><h2 id="players-title">Player auswählen</h2></div>
+        <p id="catalog-status" role="status">Player werden geladen …</p>
+      </div>
+      <div id="player-grid" class="player-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="download-types" aria-labelledby="download-types-title">
+      <div>
+        <p class="eyebrow">Zwei Möglichkeiten</p>
+        <h2 id="download-types-title">Universal oder bereits zugeordnet.</h2>
+      </div>
+      <div class="type-grid">
+        <article>
+          <span>01</span>
+          <h3>Universal Player</h3>
+          <p>Der Download auf dieser Seite zeigt beim ersten Start einen Code. Damit ordnen Sie den Player anschließend im Backend einem Display zu.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Display-Player</h3>
+          <p>Im Backend können Sie am gewünschten Display einen bereits fertig zugeordneten Windows-, Linux- oder macOS-Player herunterladen. Dieser startet ohne Kopplungscode.</p>
+          <a href="/">Zum Backend <b>↗</b></a>
+        </article>
+      </div>
+    </section>
+
+    <section class="pairing" aria-labelledby="pairing-title">
+      <div>
+        <p class="eyebrow">In drei Schritten</p>
+        <h2 id="pairing-title">Einmal koppeln.<br>Danach automatisch starten.</h2>
+      </div>
+      <ol>
+        <li><span>01</span><div><strong>Player auswählen</strong><p>Browser-Player direkt starten oder das passende Windows-, Linux- beziehungsweise macOS-Paket herunterladen.</p></div></li>
+        <li><span>02</span><div><strong>Code am Bildschirm ablesen</strong><p>Beim ersten Start erscheint ein sechsstelliger, zeitlich begrenzter Kopplungscode.</p></div></li>
+        <li><span>03</span><div><strong>Im Backend zuordnen</strong><p>Unter <b>Displays</b> beim gewünschten Display „Player einrichten“ öffnen und den Code über „Code koppeln“ eingeben.</p></div></li>
+      </ol>
+    </section>
+  </main>
+
+  <footer><span>Kiosky Player Center</span><a href="#pairing-title">Einfache Anleitung</a></footer>
+  <script src="/player/index.js"></script>
+</body>
+</html>

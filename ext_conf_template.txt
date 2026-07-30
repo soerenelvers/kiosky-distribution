@@ -1,0 +1,2 @@
+# cat=Kiosky/API; type=string; label=Externer API-Schlüssel: Langer, zufälliger Schlüssel für die Kiosky External Control API. Der Client sendet ihn im HTTP-Header X-API-Key.
+externalApiKey =

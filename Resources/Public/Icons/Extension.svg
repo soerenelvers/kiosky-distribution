@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kiosky">
+  <rect width="64" height="64" rx="12" fill="#17342b"/>
+  <rect x="13" y="15" width="10" height="34" rx="3" fill="#f2b56b"/>
+  <rect x="27" y="22" width="10" height="27" rx="3" fill="#ffffff"/>
+  <rect x="41" y="10" width="10" height="39" rx="3" fill="#75b99c"/>
+</svg>
