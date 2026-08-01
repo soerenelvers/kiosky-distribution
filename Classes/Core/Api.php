@@ -133,8 +133,32 @@ final class Api
         if ($path === '/api/events/bulk' && $method === 'POST') {
             $ids = array_values(array_unique(array_map('strval', is_array($body['ids'] ?? null) ? $body['ids'] : [])));
             $action = (string)($body['action'] ?? '');
+            if (!$ids) throw new RuntimeException('Bitte mindestens eine Veranstaltung auswählen.', 422);
             if ($action === 'delete' && ($this->identity['role'] ?? '') !== 'admin') {
                 throw new RuntimeException('Endgültiges Löschen ist Administratoren vorbehalten.', 403);
+            }
+            if ($action === 'update') {
+                $field = (string)($body['field'] ?? '');
+                if (!in_array($field, ['admissionStart', 'eventStart', 'breakStart', 'eventEnd', 'imageUrl'], true)) throw new RuntimeException('Das Feld der Massenaktion ist ungültig.', 422);
+                $time = (string)($body['time'] ?? ''); $breakEndTime = (string)($body['breakEndTime'] ?? ''); $imageUrl = trim((string)($body['imageUrl'] ?? ''));
+                if ($field === 'imageUrl' && ($imageUrl === '' || strlen($imageUrl) > 2000)) throw new RuntimeException('Bitte ein Veranstaltungsbild auswählen.', 422);
+                if ($field !== 'imageUrl' && !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time)) throw new RuntimeException('Bitte eine gültige Uhrzeit auswählen.', 422);
+                if ($breakEndTime !== '' && !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $breakEndTime)) throw new RuntimeException('Das Ende der Pause ist ungültig.', 422);
+                $result = ['updated' => 0, 'skippedManual' => 0, 'skippedWithoutDate' => 0, 'missing' => 0];
+                foreach ($ids as $id) {
+                    $index = $this->index($state['events'], $id); if ($index === null) { $result['missing']++; continue; }
+                    $event = $state['events'][$index]; if (empty($event['sourceId'])) { $result['skippedManual']++; continue; }
+                    $locks = is_array($event['lockedFields'] ?? null) ? $event['lockedFields'] : [];
+                    if ($field === 'imageUrl') $event['imageUrl'] = $imageUrl;
+                    else {
+                        $value = $this->berlinEventTime((string)($event['date'] ?? ''), $time); if ($value === null) { $result['skippedWithoutDate']++; continue; }
+                        $event[$field] = $value;
+                        if ($field === 'breakStart' && $breakEndTime !== '') { $event['breakEnd'] = $this->berlinEventTime((string)($event['date'] ?? ''), $breakEndTime); $locks[] = 'breakEnd'; }
+                    }
+                    $locks[] = $field; $event['lockedFields'] = array_values(array_unique($locks)); $event['syncStatus'] = 'manually_modified';
+                    $this->saveRecord($state, 'events', $event, $id); $result['updated']++;
+                }
+                return $this->ok(['ok' => true, 'count' => $result['updated']] + $result, true);
             }
             foreach ($ids as $id) {
                 if ($action === 'archive') $this->trashRecord($state, 'events', 'event', $id);
@@ -602,7 +626,8 @@ final class Api
                     if (($state['easyjob']['config']['importMode'] ?? '') !== 'jobs') {
                         $mapped = $this->easyJob()->mapEvent($project, null, $state['easyjob']['mapping']);
                         $exclusion = $this->matchingTitleExclusion((string)($mapped['title'] ?? ''), $this->titleExclusions($state));
-                        $results[] = $exclusion ? ['action' => 'excluded', 'reason' => $exclusion, 'projectId' => $projectId] : $this->upsertExternalEvent($state, $mapped);
+                        if ($exclusion) $results[] = ['action' => 'excluded', 'reason' => $exclusion, 'projectId' => $projectId];
+                        else { $result = $this->upsertExternalEvent($state, $mapped); $result['projectId'] = $projectId; $result['images'] = $this->syncEasyJobAdvertisingImages($state, $result['event'], $projectId); $results[] = $result; }
                     }
                     if (($state['easyjob']['config']['importMode'] ?? '') !== 'projects') foreach (($project['Jobs'] ?? []) as $listedJob) {
                         if (!is_array($listedJob)) continue;
@@ -610,12 +635,13 @@ final class Api
                         if ($jobId !== '') {
                             $mapped = $this->easyJob()->mapEvent($project, $this->easyJob()->job($state['easyjob']['config'], $jobId), $state['easyjob']['mapping']);
                             $exclusion = $this->matchingTitleExclusion((string)($mapped['title'] ?? ''), $this->titleExclusions($state));
-                            $results[] = $exclusion ? ['action' => 'excluded', 'reason' => $exclusion, 'projectId' => $projectId, 'jobId' => $jobId] : $this->upsertExternalEvent($state, $mapped);
+                            if ($exclusion) $results[] = ['action' => 'excluded', 'reason' => $exclusion, 'projectId' => $projectId, 'jobId' => $jobId];
+                            else { $result = $this->upsertExternalEvent($state, $mapped); $result['projectId'] = $projectId; $result['jobId'] = $jobId; $result['images'] = $this->syncEasyJobAdvertisingImages($state, $result['event'], $projectId, $jobId); $results[] = $result; }
                         }
                     }
                 } catch (Throwable $error) { $results[] = ['action' => 'error', 'reason' => $error->getMessage(), 'projectId' => $projectId]; }
             }
-            $summary = ['created' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'created')), 'updated' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'updated')), 'unchanged' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'unchanged')), 'excluded' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'excluded')), 'errors' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'error'))];
+            $summary = ['created' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'created')), 'updated' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'updated')), 'unchanged' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'unchanged')), 'excluded' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'excluded')), 'errors' => count(array_filter($results, fn(array $item): bool => ($item['action'] ?? '') === 'error')), 'imagesImported' => array_sum(array_map(fn(array $item): int => (int)($item['images']['imported'] ?? 0), $results)), 'imagesUpdated' => array_sum(array_map(fn(array $item): int => (int)($item['images']['updated'] ?? 0), $results)), 'imagesRemoved' => array_sum(array_map(fn(array $item): int => (int)($item['images']['removed'] ?? 0), $results)), 'imageWarnings' => array_sum(array_map(fn(array $item): int => count($item['images']['warnings'] ?? []), $results))];
             return [$summary['errors'] ? 207 : 200, ['summary' => $summary, 'results' => $results], true];
         }
 
@@ -756,10 +782,118 @@ final class Api
             return ['event' => $event, 'eventId' => $event['id'], 'action' => 'created'];
         }
         if (($existing['importHash'] ?? '') === ($mapped['importHash'] ?? '')) return ['event' => $existing, 'eventId' => $existing['id'], 'action' => 'unchanged'];
-        $updated = array_replace($existing, $mapped, ['lockedFields' => $existing['lockedFields'] ?? []]);
+        $locked = is_array($existing['lockedFields'] ?? null) ? $existing['lockedFields'] : [];
+        $updated = $existing;
+        foreach ($mapped as $key => $value) if (!in_array($key, $locked, true)) $updated[$key] = $value;
+        $updated['lockedFields'] = $locked;
+        $updated['syncStatus'] = $locked ? 'manually_modified' : ($mapped['syncStatus'] ?? 'synced');
+        if (isset($mapped['importHash'])) $updated['importHash'] = $mapped['importHash'];
         $event = $this->saveRecord($state, 'events', $updated, (string)$existing['id']);
         $this->ensureEventChannel($state, $event);
         return ['event' => $event, 'eventId' => $event['id'], 'action' => 'updated'];
+    }
+
+    /** @param array<string,mixed> $source */
+    private function easyJobAttachmentText(array $source, array $paths): string
+    {
+        foreach ($paths as $path) {
+            $value = $source;
+            foreach (explode('.', $path) as $key) $value = is_array($value) ? ($value[$key] ?? null) : null;
+            if (is_scalar($value) && trim((string)$value) !== '') return trim((string)$value);
+        }
+        return '';
+    }
+
+    /** @param array<string,mixed> $attachment */
+    private function easyJobDocumentType(array $attachment): string
+    {
+        foreach (['DocumentType','ShortCutType','AttachmentType','Type'] as $key) {
+            $value = $attachment[$key] ?? null;
+            if (is_string($value)) return trim($value);
+            if (is_array($value)) {
+                $caption = $this->easyJobAttachmentText($value, ['Caption','CaptionNew','Name','Description','Value']);
+                if ($caption !== '') return $caption;
+            }
+        }
+        return $this->easyJobAttachmentText($attachment, ['DocumentTypeCaption','DocumentTypeName','TypeCaption','TypeName']);
+    }
+
+    /** @param array<string,mixed> $state */
+    private function ensureEasyJobMediaFolder(array &$state, string $name, ?string $parentId = null): string
+    {
+        foreach ($state['mediaFolders'] as $folder) if (($folder['name'] ?? '') === $name && (string)($folder['parentId'] ?? '') === (string)($parentId ?? '')) return (string)$folder['id'];
+        return (string)$this->saveRecord($state, 'mediaFolders', ['name' => $name, 'parentId' => $parentId])['id'];
+    }
+
+    /** @param array<string,mixed> $state @param array<string,mixed> $event @return array<string,mixed> */
+    private function syncEasyJobAdvertisingImages(array &$state, array $event, string $projectId, ?string $jobId = null): array
+    {
+        $service = $this->easyJob();
+        $config = $state['easyjob']['config'];
+        $warnings = [];
+        $source = 'none';
+        $attachments = [];
+        if ($jobId) {
+            try { $attachments = $service->shortcuts($config, $jobId, 'job'); }
+            catch (Throwable $error) { $warnings[] = 'Job-Anhänge konnten nicht gelesen werden: ' . $error->getMessage(); }
+            $attachments = array_values(array_filter($attachments, fn(array $item): bool => strtolower(trim($this->easyJobDocumentType($item))) === 'veranstaltungsbild'));
+            if ($attachments) $source = 'job';
+        }
+        if (!$attachments) {
+            try { $attachments = $service->shortcuts($config, $projectId, 'project'); }
+            catch (Throwable $error) { return ['source' => 'none', 'found' => 0, 'imported' => 0, 'updated' => 0, 'removed' => 0, 'warnings' => array_merge($warnings, ['Projektanhänge konnten nicht gelesen werden: ' . $error->getMessage()])]; }
+            $attachments = array_values(array_filter($attachments, fn(array $item): bool => strtolower(trim($this->easyJobDocumentType($item))) === 'veranstaltungsbild'));
+            if ($attachments) $source = 'project';
+        }
+        usort($attachments, fn(array $left, array $right): int => strcmp((string)($right['ChangedDate'] ?? $right['UpdatedAt'] ?? ''), (string)($left['ChangedDate'] ?? $left['UpdatedAt'] ?? '')));
+        $existing = array_values(array_filter($state['mediaAssets'], fn(array $asset): bool => ($asset['metadata']['source'] ?? '') === 'easyjob' && ($asset['metadata']['easyjobDocumentType'] ?? '') === 'Veranstaltungsbild' && ($asset['metadata']['easyjobEventId'] ?? '') === ($event['id'] ?? '')));
+        if (!$attachments) {
+            foreach ($existing as $asset) {
+                $index = $this->index($state['mediaAssets'], (string)$asset['id']);
+                if ($index !== null) $state['mediaAssets'][$index]['deletedAt'] = $this->now();
+            }
+            if (!in_array('imageUrl', $event['lockedFields'] ?? [], true) && $existing) {
+                $event['imageUrl'] = null;
+                $this->saveRecord($state, 'events', $event, (string)$event['id']);
+            }
+            return ['source' => $source, 'found' => 0, 'imported' => 0, 'updated' => 0, 'removed' => count($existing), 'warnings' => $warnings];
+        }
+        $date = preg_match('/^(\d{4})(\d{2})(\d{2})/', (string)($event['date'] ?? ''), $dateMatch) ? [$dateMatch[1],$dateMatch[2],$dateMatch[3]] : [date('Y'),date('m'),date('d')];
+        $rootId = $this->ensureEasyJobMediaFolder($state, 'Werbung');
+        $yearId = $this->ensureEasyJobMediaFolder($state, $date[0], $rootId);
+        $monthId = $this->ensureEasyJobMediaFolder($state, $date[1], $yearId);
+        $safeTitle = trim(preg_replace('/[\x00-\x1F\x7F\/\\:*?"<>|]+/u', ' ', (string)($event['title'] ?? $event['id'])) ?: (string)$event['id']);
+        $shortTitle = function_exists('mb_substr') ? mb_substr($safeTitle, 0, 140, 'UTF-8') : substr($safeTitle, 0, 140);
+        $folderId = $this->ensureEasyJobMediaFolder($state, $date[0] . '-' . $date[1] . '-' . $date[2] . ' – ' . $shortTitle, $monthId);
+        $imported = 0; $updated = 0; $activeIds = []; $imageUrl = null; $available = $existing;
+        foreach ($attachments as $attachment) {
+            $documentId = $this->easyJobAttachmentText($attachment, ['IdShortCut','IdShortcut','IdDocument','ID','Id','id']);
+            if ($documentId === '') { $warnings[] = 'easyjob-Anhang ohne Dokument-ID wurde übersprungen.'; continue; }
+            $name = $this->easyJobAttachmentText($attachment, ['FileName','Filename','OriginalFileName','Name','Caption','Description']) ?: 'Veranstaltungsbild-' . $documentId;
+            try { $download = $service->downloadShortcut($config, $documentId, $this->easyJobAttachmentText($attachment, ['AccessKey','AccessKeyString','DownloadKey','access_key'])); }
+            catch (Throwable $error) { $warnings[] = $name . ': ' . $error->getMessage(); continue; }
+            $mime = $download['contentType'];
+            $head = bin2hex(substr($download['body'], 0, 12));
+            if (str_starts_with($head, 'ffd8ff')) $mime = 'image/jpeg';
+            elseif (str_starts_with($head, '89504e470d0a1a0a')) $mime = 'image/png';
+            elseif (str_starts_with(substr($download['body'], 0, 6), 'GIF8')) $mime = 'image/gif';
+            elseif (substr($download['body'], 0, 4) === 'RIFF' && substr($download['body'], 8, 4) === 'WEBP') $mime = 'image/webp';
+            if (!in_array($mime, ['image/jpeg','image/png','image/gif','image/webp','image/avif'], true)) { $warnings[] = $name . ' ist kein unterstütztes Bildformat.'; continue; }
+            $hash = hash('sha256', $download['body']);
+            $current = $this->first($available, fn(array $asset): bool => ($asset['metadata']['easyjobDocumentId'] ?? '') === $documentId);
+            if ($current) $available = array_values(array_filter($available, fn(array $asset): bool => ($asset['id'] ?? '') !== ($current['id'] ?? '')));
+            else $current = array_shift($available);
+            $src = 'data:' . $mime . ';base64,' . base64_encode($download['body']);
+            $metadata = ['source' => 'easyjob','easyjobDocumentType' => 'Veranstaltungsbild','easyjobDocumentId' => $documentId,'easyjobObjectType' => $source,'easyjobObjectId' => $source === 'job' ? $jobId : $projectId,'easyjobProjectId' => $projectId,'easyjobJobId' => $jobId,'easyjobEventId' => $event['id'],'contentHash' => $hash,'contentType' => $mime,'size' => strlen($download['body'])];
+            $asset = $this->saveRecord($state, 'mediaAssets', ['name' => $download['fileName'] ?: $name,'folderId' => $folderId,'type' => 'image','src' => $src,'metadata' => $metadata,'deletedAt' => null], $current['id'] ?? null);
+            if ($current) $updated++; else $imported++;
+            $activeIds[] = $asset['id'];
+            $imageUrl ??= $src;
+        }
+        $removed = 0;
+        foreach ($existing as $asset) if (!in_array($asset['id'], $activeIds, true)) { $index = $this->index($state['mediaAssets'], (string)$asset['id']); if ($index !== null) { $state['mediaAssets'][$index]['deletedAt'] = $this->now(); $removed++; } }
+        if ($imageUrl && !in_array('imageUrl', $event['lockedFields'] ?? [], true)) { $event['imageUrl'] = $imageUrl; $this->saveRecord($state, 'events', $event, (string)$event['id']); }
+        return ['source' => $source, 'found' => count($attachments), 'imported' => $imported, 'updated' => $updated, 'removed' => $removed, 'imageUrl' => $imageUrl, 'warnings' => $warnings];
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $event */
@@ -865,7 +999,7 @@ final class Api
         $scheduled = $now->setTime($hour, $minute);
         if ($now < $scheduled) return ['ran' => false, 'reason' => 'not_due'];
         if (!empty($config['lastSyncAt']) && substr((string)$config['lastSyncAt'], 0, 10) === $now->format('Y-m-d')) return ['ran' => false, 'reason' => 'already_ran'];
-        $summary = ['ran' => true, 'examined' => 0, 'created' => 0, 'updated' => 0, 'unchanged' => 0, 'excluded' => 0, 'errors' => 0];
+        $summary = ['ran' => true, 'examined' => 0, 'created' => 0, 'updated' => 0, 'unchanged' => 0, 'excluded' => 0, 'errors' => 0, 'imagesImported' => 0, 'imagesUpdated' => 0, 'imageWarnings' => 0];
         $details = [];
         try {
             $service = $this->easyJob();
@@ -883,7 +1017,7 @@ final class Api
                     if (($config['importMode'] ?? '') !== 'jobs') {
                         $mapped = $service->mapEvent($project, null, $state['easyjob']['mapping']);
                         if ($this->matchingTitleExclusion((string)$mapped['title'], $this->titleExclusions($state))) $summary['excluded']++;
-                        else $summary[$this->upsertExternalEvent($state, $mapped)['action']]++;
+                        else { $result = $this->upsertExternalEvent($state, $mapped); $summary[$result['action']]++; $images = $this->syncEasyJobAdvertisingImages($state, $result['event'], $projectId); $summary['imagesImported'] += $images['imported']; $summary['imagesUpdated'] += $images['updated']; $summary['imageWarnings'] += count($images['warnings']); }
                     }
                     if (($config['importMode'] ?? '') !== 'projects') foreach (($project['Jobs'] ?? []) as $listedJob) {
                         if (!is_array($listedJob)) continue;
@@ -891,7 +1025,7 @@ final class Api
                         if ($jobId === '') continue;
                         $mapped = $service->mapEvent($project, $service->job($config, $jobId), $state['easyjob']['mapping']);
                         if ($this->matchingTitleExclusion((string)$mapped['title'], $this->titleExclusions($state))) $summary['excluded']++;
-                        else $summary[$this->upsertExternalEvent($state, $mapped)['action']]++;
+                        else { $result = $this->upsertExternalEvent($state, $mapped); $summary[$result['action']]++; $images = $this->syncEasyJobAdvertisingImages($state, $result['event'], $projectId, $jobId); $summary['imagesImported'] += $images['imported']; $summary['imagesUpdated'] += $images['updated']; $summary['imageWarnings'] += count($images['warnings']); }
                     }
                 } catch (Throwable $error) {
                     $summary['errors']++;
@@ -1543,6 +1677,14 @@ final class Api
         $slide = $this->saveRecord($state, 'slides', $body, $id);
         $state['slideVersions'][] = $this->record(['slideId' => $slide['id'], 'version' => $version, 'document' => $slide['document'] ?? [], 'changeNote' => $current ? 'Im Slide-Editor gespeichert' : 'Slide angelegt']);
         return $slide;
+    }
+
+    private function berlinEventTime(string $date, string $time): ?string
+    {
+        $digits = preg_replace('/\D/', '', $date) ?: '';
+        if (strlen($digits) < 8 || !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time)) return null;
+        $value = \DateTimeImmutable::createFromFormat('!Ymd H:i', substr($digits, 0, 8) . ' ' . $time, new \DateTimeZone('Europe/Berlin'));
+        return $value ? $value->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z') : null;
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array<string,mixed> */

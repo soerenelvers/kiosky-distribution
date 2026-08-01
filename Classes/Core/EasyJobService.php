@@ -116,6 +116,38 @@ final class EasyJobService
     /** @param array<string,mixed> $config @return array<string,mixed> */
     public function job(array $config, string $id): array { return $this->detailPayload($this->request($config, 'api.json/Job/Details/' . rawurlencode($id)), ['Data', 'Job', 'Item', 'data', 'job', 'item']); }
 
+    /** @param array<string,mixed> $config @return array<int,array<string,mixed>> */
+    public function shortcuts(array $config, string $objectId, string $table): array
+    {
+        if (!in_array($table, ['project', 'job'], true)) throw new RuntimeException('Ungültiger easyjob-Dokumentbezug.', 422);
+        $payload = $this->request($config, 'api.json/ShortCuts/List2Object/' . rawurlencode($objectId), ['table' => $table, 'style' => 'List']);
+        foreach (['ShortCuts','Shortcuts','Documents','Attachments','Items','Data','Result','Value','shortcuts','documents','attachments','items','data','result','value'] as $key) {
+            if (is_array($payload[$key] ?? null)) {
+                $value = $payload[$key];
+                if (array_is_list($value)) return array_values(array_filter($value, 'is_array'));
+                foreach (['Items','Data','Value','items','data','value'] as $nested) if (is_array($value[$nested] ?? null) && array_is_list($value[$nested])) return array_values(array_filter($value[$nested], 'is_array'));
+            }
+        }
+        return array_is_list($payload) ? array_values(array_filter($payload, 'is_array')) : [];
+    }
+
+    /** @param array<string,mixed> $config @return array{body:string,contentType:string,fileName:string} */
+    public function downloadShortcut(array $config, string $id, string $accessKey = ''): array
+    {
+        $token = $this->accessToken($config);
+        $query = array_filter(['access_token' => $token, 'access_key' => $accessKey], static fn(string $value): bool => $value !== '');
+        $url = rtrim((string)$config['baseUrl'], '/') . '/ShortCuts/download/' . rawurlencode($id) . '?' . http_build_query($query);
+        $response = $this->http->request('GET', $url, ['Accept' => 'image/*,application/octet-stream', 'Authorization' => 'Bearer ' . $token], null, 50, true, empty($config['allowSelfSignedCertificate']));
+        if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob meldet beim Dokumentabruf HTTP ' . $response->status . '.', 502);
+        if ($response->body === '') throw new RuntimeException('easyjob hat eine leere Dokumentdatei geliefert.', 502);
+        if (strlen($response->body) > 20000000) throw new RuntimeException('Das easyjob-Veranstaltungsbild ist größer als 20 MB.', 413);
+        $disposition = $response->header('Content-Disposition');
+        $fileName = '';
+        if (preg_match('/filename\*=UTF-8\'\'([^;]+)/i', $disposition, $match)) $fileName = rawurldecode($match[1]);
+        elseif (preg_match('/filename="?([^";]+)"?/i', $disposition, $match)) $fileName = trim($match[1]);
+        return ['body' => $response->body, 'contentType' => strtolower(trim(explode(';', $response->header('Content-Type'))[0] ?? '')), 'fileName' => $fileName];
+    }
+
     /** @param array<string,mixed> $mapping @return array<string,string> */
     public function validateMapping(array $mapping): array
     {
@@ -165,17 +197,24 @@ final class EasyJobService
     /** @param array<string,mixed> $config @param array<string,mixed> $query @return array<string,mixed> */
     private function request(array $config, string $path, array $query = []): array
     {
-        $credentials = $this->credentials($config);
         $verifyTls = empty($config['allowSelfSignedCertificate']);
-        $tokenResponse = $this->http->request('POST', rtrim((string)$config['baseUrl'], '/') . '/token', ['Accept' => 'application/json', 'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8'], http_build_query(['grant_type' => 'password'] + $credentials), 50, true, $verifyTls);
-        if ($tokenResponse->status < 200 || $tokenResponse->status >= 300) throw new RuntimeException('easyjob hat die Zugangsdaten abgelehnt.', 401);
-        $token = (string)($tokenResponse->json()['access_token'] ?? '');
-        if ($token === '') throw new RuntimeException('easyjob hat keinen Access-Token geliefert.', 502);
+        $token = $this->accessToken($config);
         $query = array_filter($query, static fn(mixed $value): bool => $value !== null && $value !== '');
         $url = rtrim((string)$config['baseUrl'], '/') . '/' . $path . ($query ? '?' . http_build_query($query) : '');
         $response = $this->http->request('GET', $url, ['Accept' => 'application/json; charset=utf-8', 'Content-Type' => 'application/json; charset=utf-8', 'Authorization' => 'Bearer ' . $token], null, 50, true, $verifyTls);
         if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob meldet HTTP ' . $response->status . '.', $response->status >= 400 && $response->status < 600 ? $response->status : 502);
         return $response->json();
+    }
+    /** @param array<string,mixed> $config */
+    private function accessToken(array $config): string
+    {
+        $credentials = $this->credentials($config);
+        $verifyTls = empty($config['allowSelfSignedCertificate']);
+        $response = $this->http->request('POST', rtrim((string)$config['baseUrl'], '/') . '/token', ['Accept' => 'application/json', 'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8'], http_build_query(['grant_type' => 'password'] + $credentials), 50, true, $verifyTls);
+        if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob hat die Zugangsdaten abgelehnt.', 401);
+        $token = (string)($response->json()['access_token'] ?? '');
+        if ($token === '') throw new RuntimeException('easyjob hat keinen Access-Token geliefert.', 502);
+        return $token;
     }
     /** @param array<string,mixed> $payload @param array<int,string> $keys @return array<string,mixed> */
     private function detailPayload(array $payload, array $keys): array { foreach ($keys as $key) if (is_array($payload[$key] ?? null) && !array_is_list($payload[$key])) return $payload[$key]; return $payload; }

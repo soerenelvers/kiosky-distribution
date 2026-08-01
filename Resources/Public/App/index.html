@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.0.0-20260730234258%2B14ff665e">
+  <link rel="stylesheet" href="styles.css?v=3.1.3-20260801161623%2B86d6ece6">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -76,6 +76,7 @@
         <button class="nav-item" data-view="events"><span class="nav-icon">◫</span>Veranstaltungen</button>
         <button class="nav-item" data-view="displays"><span class="nav-icon">▣</span>Displays</button>
         <button class="nav-item" data-view="channels"><span class="nav-icon">▤</span>Slides & Kanäle</button>
+        <button class="nav-item" data-view="advertising"><span class="nav-icon">◇</span>Werbung</button>
         <button class="nav-item" data-view="media"><span class="nav-icon">▧</span>Mediendatenbank</button>
         <button class="nav-item" data-view="schedule"><span class="nav-icon">▦</span>Zeitplanung</button>
         <button class="nav-item" data-view="operations" data-feature-nav="presets_warnings"><span class="nav-icon">⌁</span>Presets & Warnhinweise</button>
@@ -199,11 +200,12 @@
       <section class="view" data-view-panel="events">
         <div class="section-heading">
           <div><p class="eyebrow">Programmverwaltung</p><h2>Veranstaltungen</h2><p>Importierte Stammdaten prüfen und für Website sowie Displays ergänzen.</p></div>
-          <div class="section-actions"><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte Veranstaltungen archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte Veranstaltungen löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" id="bulk-edit-events" disabled>⚙ Massenaktion …</button><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
         </div>
         <article class="panel table-panel">
           <div class="toolbar">
             <label class="search-field"><span>⌕</span><input type="search" id="event-search" placeholder="Veranstaltungen durchsuchen"></label>
+            <select id="event-object-filter" aria-label="EasyJob-Objekt filtern"><option value="">Projekte und Jobs</option><option value="PROJECT">Nur Projekte</option><option value="JOB">Nur Jobs</option></select>
             <select id="event-status-filter" aria-label="Status filtern"><option value="">Alle Status</option><option value="review">Zu prüfen</option><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="cancelled">Abgesagt</option></select>
           </div>
           <div class="data-table" id="event-table" role="table" aria-label="Veranstaltungen"><div class="event-table-empty">Veranstaltungen werden geladen …</div></div>
@@ -246,17 +248,18 @@
 
       <section class="view" data-view-panel="channels">
         <div class="section-heading">
-          <div><p class="eyebrow">Content-Baukasten</p><h2>Slides & Kanäle</h2><p>Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.</p></div>
+          <div><p class="eyebrow" id="content-module-eyebrow">Content-Baukasten</p><h2 id="content-module-title">Slides & Kanäle</h2><p id="content-module-description">Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.</p></div>
           <div class="section-actions"><button class="button button-secondary" type="button" data-action="new-channel">＋ Kanal anlegen</button><button class="button button-secondary" type="button" data-action="duplicate-channel">⧉ Kanal duplizieren</button><button class="button button-primary" type="button" data-action="new-slide">＋ Slide erstellen</button></div>
         </div>
 
         <div class="workflow-line" aria-label="Ablauf der Content-Ausspielung"><span class="is-current">1 · Slides</span><i>→</i><span class="is-current">2 · Kanal</span><i>→</i><button type="button" data-view-link="schedule">3 · Zeitplan</button><i>→</i><button type="button" data-view-link="displays">4 · Displays</button></div>
         <div class="channel-studio">
           <article class="panel slide-library-panel">
-            <div class="panel-header"><div><p class="eyebrow">Bibliothek</p><h2>Verfügbare Slides</h2></div><span class="tag muted"><span id="slide-count">6</span> Slides</span></div>
+            <div class="panel-header"><div><p class="eyebrow">Bibliothek</p><h2 id="content-slide-library-title">Verfügbare Slides</h2></div><span class="tag muted"><span id="slide-count">6</span> Slides</span></div>
             <div class="slide-toolbar">
               <label class="search-field compact"><span>⌕</span><input type="search" id="slide-search" placeholder="Slides suchen"></label>
               <select id="slide-filter" aria-label="Slide-Typ filtern"><option value="all">Alle Typen</option><option value="custom">Eigene Slides</option><option value="event">Veranstaltung</option><option value="text">Freitext</option><option value="image">Bild</option><option value="video">Video</option><option value="web">Website</option></select>
+              <select id="slide-tag-filter" aria-label="Slides nach Tag filtern"><option value="">Alle Tags</option></select>
             </div>
             <div class="template-toolbar"><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
             <div class="slide-bulk-toolbar">
@@ -284,6 +287,7 @@
               <aside class="channel-navigator" aria-label="Kanäle auswählen">
                 <div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
                 <label class="search-field compact"><span>⌕</span><input id="channel-search" type="search" placeholder="Kanäle durchsuchen"></label>
+                <select id="channel-tag-filter" aria-label="Kanäle nach Tag filtern"><option value="">Alle Tags</option></select>
                 <div class="channel-list" id="channel-overview" role="listbox" aria-label="Kanalliste"></div>
               </aside>
               <div class="channel-editor-body">
@@ -580,10 +584,13 @@
             </div>
             <div class="settings-section">
               <div class="settings-section-heading"><strong>Feldzuordnung</strong><span>Bestimmt, welche Projekt- und Jobfelder aus easyjob in Kiosky-Veranstaltungen übernommen werden.</span></div>
+              <p class="property-note span-two"><strong>Veranstaltungsbilder:</strong> Kiosky importiert Bildanhänge mit der easyjob-Dokumentenart „Veranstaltungsbild“. Job-Anhänge haben Vorrang; ohne Jobbild wird das Bild des Projekts verwendet. Die Ablage erfolgt automatisch unter Werbung/Jahr/Monat/Veranstaltung.</p>
               <div class="field-mapping-grid" id="easyjob-field-mapping">
                 <label><span>Veranstaltungstitel</span><select data-easyjob-mapping-target="title"><option value="Caption">Bezeichnung</option><option value="EventName">Veranstaltungsname</option><option value="Number">Nummer</option><option value="CustomNumber">Eigene Nummer</option><option value="__project.Caption">Projektbezeichnung</option></select></label>
                 <label><span>Untertitel</span><select data-easyjob-mapping-target="subtitle"><option value="__none">Nicht übernehmen</option><option value="ProjectState.Caption">Projektstatus</option><option value="JobState.Caption">Jobstatus</option><option value="Address_Customer.Company">Kunde</option><option value="__project.Caption">Projektbezeichnung</option></select></label>
                 <label><span>Öffentliche Beschreibung</span><select data-easyjob-mapping-target="description"><option value="Description">Beschreibung</option><option value="Comment">Kommentar</option><option value="Info">Information</option><option value="PublicInfo">Öffentliche Information</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Veranstalter / Kunde</span><select data-easyjob-mapping-target="organizer"><option value="Address_Customer.Company">Projektkunde</option><option value="Address_Delivery.Company">Lieferadresse / Veranstalter</option><option value="__project.Address_Customer.Company">Kunde des Projekts</option><option value="__none">Nicht übernehmen</option></select></label>
+                <label><span>Veranstaltungs-/Jobtyp</span><select data-easyjob-mapping-target="eventType"><option value="JobType.Caption">Jobtyp</option><option value="JobType">Jobtyp (Text)</option><option value="JobState.Caption">Jobstatus</option><option value="ProjectType.Caption">Projektart</option><option value="ProjectType">Projektart (Text)</option><option value="__none">Nicht übernehmen</option></select></label>
                 <label><span>Veranstaltungsdatum</span><select data-easyjob-mapping-target="date"><option value="StartDate">Startdatum</option><option value="EventStart">Veranstaltungsbeginn</option><option value="Start">Beginn</option><option value="JobStart">Jobbeginn</option><option value="__project.StartDate">Projektstart</option></select></label>
                 <label><span>Einlass</span><select data-easyjob-mapping-target="admissionStart"><option value="AdmissionStart">Einlassbeginn</option><option value="Admission">Einlass</option><option value="DoorsOpen">Türöffnung</option><option value="__none">Nicht übernehmen</option></select></label>
                 <label><span>Beginn</span><select data-easyjob-mapping-target="eventStart"><option value="StartDate">Startdatum und Uhrzeit</option><option value="EventStart">Veranstaltungsbeginn</option><option value="Start">Beginn</option><option value="JobStart">Jobbeginn</option><option value="__project.StartDate">Projektstart</option></select></label>
@@ -607,9 +614,10 @@
         </form>
         <article class="panel crewbrain-preview-panel">
           <div class="panel-header"><div><p class="eyebrow">easyjob-Projekte</p><h2>Importvorschau</h2><p>Projekte auswählen; je nach Modus werden zugehörige Jobs mit importiert.</p></div><span class="tag blue">Verändert erst beim Import Daten</span></div>
-          <form class="preview-filter-grid" id="easyjob-preview-form"><label class="form-field"><span>Von</span><input id="easyjob-preview-from" type="date"></label><label class="form-field"><span>Bis</span><input id="easyjob-preview-until" type="date"></label><label class="form-field span-two"><span>Suche</span><input id="easyjob-preview-search" type="search" placeholder="Projektname oder Nummer"></label><button class="button button-primary" type="submit">Vorschau laden</button></form>
+          <form class="preview-filter-grid" id="easyjob-preview-form"><label class="form-field"><span>Von</span><input id="easyjob-preview-from" type="date"></label><label class="form-field"><span>Bis</span><input id="easyjob-preview-until" type="date"></label><label class="form-field"><span>Objekte</span><select id="easyjob-preview-object-type"><option value="all">Projekte und Jobs</option><option value="project">Nur Projekte</option><option value="job">Nur Projekte mit Jobs</option></select></label><label class="form-field"><span>Veranstaltungs-/Jobtyp</span><input id="easyjob-preview-event-type" type="search" placeholder="z. B. kulturell"></label><label class="form-field span-two"><span>Suche</span><input id="easyjob-preview-search" type="search" placeholder="Projektname oder Nummer"></label><button class="button button-primary" type="submit">Vorschau laden</button></form>
           <div class="preview-table" id="easyjob-preview-table"><p class="property-note">Noch keine easyjob-Vorschau geladen.</p></div>
-          <div class="dialog-actions"><button class="button button-primary" type="button" id="easyjob-import-selected" disabled>Ausgewählte easyjob-Projekte importieren</button></div>
+          <details class="easyjob-field-analysis" id="easyjob-field-analysis" hidden><summary>Erkannte EasyJob-Felder und Datentypen</summary><div id="easyjob-field-analysis-content"></div></details>
+          <div class="dialog-actions"><label class="form-field"><span>Importieren als</span><select id="easyjob-import-kind"><option value="both">Projekt und ausgewählte Jobs</option><option value="project">Nur Projekte</option><option value="job">Nur ausgewählte Jobs</option></select></label><button class="button button-primary" type="button" id="easyjob-import-selected" disabled>Auswahl importieren</button></div>
         </article>
 
         <article class="panel crewbrain-preview-panel">
@@ -677,13 +685,14 @@
       <section class="view" data-view-panel="settings">
         <header class="settings-header" aria-label="Einstellungsnavigation">
           <div class="settings-header-title"><div class="settings-header-icon" aria-hidden="true">⚙</div><div><p class="eyebrow">Systemverwaltung</p><strong>Einstellungen</strong></div></div>
-          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-settings-open="advertising">Werbung</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
         </header>
         <div class="settings-overview" data-settings-overview>
           <div class="section-heading"><div><p class="eyebrow">Alle Bereiche</p><h2>Was möchtest du einstellen?</h2><p>Wähle einen Bereich. Über den Kopfbereich und „Zurück“ kannst du jederzeit zwischen den Ebenen wechseln.</p></div></div>
           <div class="settings-destination-grid">
             <button class="panel settings-destination" type="button" data-settings-open="modules"><span>▦</span><strong>Module &amp; Navigation</strong><small>Sichtbarkeit und Reihenfolge der Arbeitsbereiche festlegen.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="editor"><span>◇</span><strong>Slide-Editor</strong><small>Verfügbare Gestaltungselemente zentral auswählen.</small><i>Öffnen →</i></button>
+            <button class="panel settings-destination" type="button" data-settings-open="advertising"><span>▤</span><strong>Werbung</strong><small>Automatische Werbeslides und den Werbekanal konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-view-link="integrations"><span>⇄</span><strong>Schnittstellen</strong><small>CrewBrain, easyjob, externe API und Datentransfer verwalten.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-view-link="users"><span>◎</span><strong>Benutzer &amp; Rollen</strong><small>Konten, Rollen und Standortzugriffe verwalten.</small><i>Öffnen →</i></button>
           </div>
@@ -703,6 +712,27 @@
           <div class="editor-element-settings" id="editor-element-settings"></div>
           <div class="dialog-actions"><button class="button button-primary" type="submit">Editor-Elemente speichern</button></div>
         </form>
+        </div>
+        <div class="settings-detail" data-settings-detail="advertising" hidden>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Veranstaltungswerbung</h2><p>Erzeugt responsive Slides aus passenden Veranstaltungen und pflegt daraus automatisch den Werbekanal.</p></div></div>
+          <form class="panel feature-settings-panel" id="advertising-settings-form">
+            <div class="panel-header"><div><p class="eyebrow">Werbekanal</p><h2>Generator konfigurieren</h2><p>Manuelle Slides und Kanäle werden von dieser Automatik nicht verändert.</p></div><span class="tag blue" id="advertising-status-tag">Deaktiviert</span></div>
+            <div class="config-form-grid">
+              <label class="toggle-label span-two"><input id="advertising-enabled" type="checkbox"> Automatische Werbung aktivieren</label>
+              <label class="form-field"><span>Name des Werbekanals</span><input id="advertising-channel-name" value="Werbung" maxlength="200"></label>
+              <label class="form-field"><span>Nächste Veranstaltungen</span><input id="advertising-maximum-events" type="number" min="1" max="200" value="15"></label>
+              <label class="form-field"><span>Anzeigedauer je Slide</span><input id="advertising-duration" type="number" min="3" max="600" value="12"></label>
+              <label class="form-field"><span>Responsive Slide-Vorlage</span><select id="advertising-template"><option value="">Integrierte Werbevorlage</option></select></label>
+              <label class="toggle-label"><input id="advertising-show-date" type="checkbox"> Datum anzeigen</label>
+              <label class="toggle-label"><input id="advertising-show-time" type="checkbox" checked> Uhrzeiten anzeigen</label>
+              <label class="toggle-label"><input id="advertising-show-seconds" type="checkbox"> Sekunden anzeigen</label>
+              <label class="toggle-label"><input id="advertising-hour12" type="checkbox"> 12-Stunden-Format verwenden</label>
+            </div>
+            <fieldset class="advertising-event-types"><legend>Standorte des automatischen Werbekanals</legend><div id="advertising-location-options"></div><p class="property-note">Ohne Auswahl ist der Kanal an allen Standorten verfügbar.</p></fieldset>
+            <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Nur aktivierte Arten erzeugen Werbung. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
+            <div class="advertising-summary" id="advertising-summary">Noch nicht geladen.</div>
+            <div class="dialog-actions"><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
+          </form>
         </div>
       </section>
 
@@ -749,7 +779,7 @@
           <div>
             <p class="eyebrow">Kiosky entdecken</p>
             <h2>Was kann ich mit Kiosky machen?</h2>
-            <p>Von der Veranstaltung bis zum Display: Hier findest du alle Arbeitsbereiche, ihre wichtigsten Möglichkeiten und den direkten Weg zur passenden Funktion.</p>
+            <p>Von der Ersteinrichtung bis zum laufenden Player: Hier findest du den vollständigen Arbeitsablauf, detaillierte Schritt-für-Schritt-Anleitungen und alle aktuellen Funktionen von Kiosky 3.1.3.</p>
             <div class="feature-hero-actions">
               <button class="button button-primary" id="start-product-tour" type="button"><span aria-hidden="true">▶</span> Interaktive Tour starten</button>
               <span>6 Stationen · ca. 3 Minuten</span>
@@ -762,14 +792,15 @@
 
         <section class="help-workflow" aria-labelledby="help-workflow-title">
           <div class="help-section-heading">
-            <div><p class="eyebrow">Der typische Workflow</p><h2 id="help-workflow-title">In vier Schritten auf den Bildschirm</h2></div>
-            <p>Die Bereiche greifen ineinander. Du kannst an jeder Stelle einsteigen und später weiterarbeiten.</p>
+            <div><p class="eyebrow">Der typische Workflow</p><h2 id="help-workflow-title">In fünf Schritten auf den Bildschirm</h2></div>
+            <p>Ein Standardkanal stellt die Grundversorgung sicher. Zeitpläne, externe Zuweisungen und Warnungen übernehmen nur dann, wenn sie benötigt werden.</p>
           </div>
           <div class="workflow-guide">
-            <article><span>01</span><div><strong>Basis vorbereiten</strong><p>Display verbinden, Standort zuordnen und Standardkanal als sichere Rückfallebene festlegen.</p><button type="button" data-view-link="displays">Displays einrichten →</button></div></article>
-            <article><span>02</span><div><strong>Inhalte erstellen</strong><p>Veranstaltungen importieren, Medien ablegen und Slides für Quer- oder Hochformat gestalten.</p><button type="button" data-view-link="channels">Inhalte gestalten →</button></div></article>
-            <article><span>03</span><div><strong>Ausspielung planen</strong><p>Slides zu Kanälen ordnen und per Zeitplan den richtigen Displays oder Gruppen zuweisen.</p><button type="button" data-view-link="schedule">Zeitplan öffnen →</button></div></article>
-            <article><span>04</span><div><strong>Betrieb absichern</strong><p>Player-Status prüfen, Offline-Cache beobachten und bei Bedarf Presets oder Warnhinweise aktivieren.</p><button type="button" data-view-link="operations">Betrieb überwachen →</button></div></article>
+            <article><span>01</span><div><strong>System vorbereiten</strong><p>Module, Benutzer, Standorte sowie CrewBrain oder easyjob konfigurieren.</p><button type="button" data-view-link="settings">Einstellungen öffnen →</button></div></article>
+            <article><span>02</span><div><strong>Player anbinden</strong><p>Display anlegen, Standardkanal wählen und Browser- oder Desktop-Player koppeln.</p><button type="button" data-view-link="displays">Displays einrichten →</button></div></article>
+            <article><span>03</span><div><strong>Inhalt erstellen</strong><p>Veranstaltungen und Medien pflegen, Slides gestalten und zu Kanälen ordnen.</p><button type="button" data-view-link="channels">Inhalte gestalten →</button></div></article>
+            <article><span>04</span><div><strong>Ausspielung planen</strong><p>Kanal oder Slide auf Display, Gruppe oder Matrix terminieren.</p><button type="button" data-view-link="schedule">Zeitplan öffnen →</button></div></article>
+            <article><span>05</span><div><strong>Betrieb überwachen</strong><p>Status und Cache prüfen sowie Presets oder Warnhinweise einsetzen.</p><button type="button" data-view-link="operations">Betrieb öffnen →</button></div></article>
           </div>
         </section>
 
@@ -778,8 +809,73 @@
           <div class="help-goal-grid">
             <button type="button" data-view-link="events"><span>◫</span><strong>Programm übernehmen</strong><small>Veranstaltungen importieren und veröffentlichen</small></button>
             <button type="button" data-view-link="channels"><span>▤</span><strong>Bildschirminhalt bauen</strong><small>Slide gestalten und Kanal zusammenstellen</small></button>
+            <button type="button" data-view-link="displays"><span>▣</span><strong>Player einrichten</strong><small>Display anlegen, herunterladen oder koppeln</small></button>
             <button type="button" data-view-link="schedule"><span>▦</span><strong>Inhalt terminieren</strong><small>Ziel, Zeitraum und Priorität festlegen</small></button>
+            <button type="button" data-view-link="advertising"><span>◇</span><strong>Werbung automatisieren</strong><small>Veranstaltungsarten, Vorlage und Bilder festlegen</small></button>
             <button type="button" data-view-link="operations"><span>!</span><strong>Sofort reagieren</strong><small>Preset oder Warnhinweis ausspielen</small></button>
+          </div>
+        </section>
+
+        <section class="help-guides" aria-labelledby="help-guides-title">
+          <div class="help-section-heading">
+            <div><p class="eyebrow">Praxis-Handbuch</p><h2 id="help-guides-title">Einrichten, erstellen, planen und ausspielen</h2></div>
+            <p>Die Anleitungen nennen jeweils den Menüpfad, die notwendigen Eingaben und das Ergebnis. Öffne nur den Abschnitt, den du gerade brauchst.</p>
+          </div>
+          <div class="help-guide-list">
+            <details class="help-guide" open>
+              <summary><span class="help-guide-number">01</span><span><strong>Ersteinrichtung und Programmdaten</strong><small>Benutzer, Module, Schnittstellen und Veranstaltungen</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Grundsystem vorbereiten</h3><ol><li>Lege beim ersten Start das Administratorkonto an. Weitere Konten findest du unter <b>Einstellungen → Benutzer &amp; Rollen</b>. Weise Administrator, Redakteur oder Betrachter und bei Bedarf einzelne Standortzugriffe zu.</li><li>Unter <b>Einstellungen → Module</b> blendest du Arbeitsbereiche ein oder aus und sortierst die Navigation. Bereits gespeicherte Daten bleiben dabei erhalten.</li><li>Lege unter <b>Displays → Standorte</b> Gebäude oder Spielstätten an. Adresse, Raum, Zeitzone, Koordinaten und DWD-Warngebiet werden später für Wetter, Warnungen und Standortfreigaben verwendet.</li></ol></section>
+                <section><h3>CrewBrain oder easyjob verbinden</h3><ol><li>Öffne als Administrator <b>Einstellungen → Schnittstellen</b> und aktiviere die gewünschte Veranstaltungsquelle.</li><li>Trage Serveradresse und Zugangsdaten ein, konfiguriere Zeitraum, Importstrategie, Titel-Ausschlüsse und Feldzuordnung und führe zuerst den Verbindungstest aus.</li><li>Lade anschließend die <b>Importvorschau</b>. Filtere Zeitraum, Status, Projekt/Job oder Veranstaltungsart, prüfe die erkannten Datensätze und importiere nur die markierte Auswahl. Ein automatischer Tagesimport kann getrennt aktiviert werden.</li></ol><p>Bei easyjob werden Raumnutzungsarten auf Aufbau, Einlass, Beginn, Pause und Ende abgebildet. Bildanhänge mit der Dokumentenart „Veranstaltungsbild“ werden jobbezogen, ersatzweise projektbezogen, nach <b>Werbung/Jahr/Monat/Veranstaltung</b> in die Mediendatenbank importiert.</p></section>
+                <section><h3>Veranstaltungen pflegen</h3><ol><li>Unter <b>Veranstaltungen → Veranstaltung</b> legst du Termine manuell an oder öffnest importierte Datensätze über „Bearbeiten“.</li><li>Pflege Titel, Veranstaltungsart, Datum, öffentliche Zeiten, Spielort, Raum, Hinweise, Ticketinformationen und Veranstaltungsbild. Gesperrte importierte Felder werden bei der nächsten Synchronisierung nicht überschrieben.</li><li>Markiere mehrere importierte Zeilen, um per <b>Massenaktion</b> Einlass-, Beginn-, Pausen- oder Endzeit beziehungsweise ein gemeinsames Bild zu setzen.</li></ol><p>Der Status steuert die redaktionelle Reife. Dynamische Slide-Felder lesen die Veranstaltung live; fehlt ein Wert, bleibt der reservierte Bereich erhalten, wird auf dem Player aber vollständig unsichtbar.</p></section>
+              </div>
+            </details>
+
+            <details class="help-guide">
+              <summary><span class="help-guide-number">02</span><span><strong>Medien, Slides und Vorlagen erstellen</strong><small>Gestaltung vom Upload bis zur wiederverwendbaren Vorlage</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Medien vorbereiten</h3><ol><li>Öffne <b>Mediendatenbank</b>, erstelle Ordner und lade Bilder, Vektorgrafiken oder MP4/WebM-Videos hoch. Alternativ kannst du eine erreichbare Medien-URL hinterlegen.</li><li>Nutze Suche und Typfilter. Medien können in mehreren Slides wiederverwendet, verschoben, ersetzt, wiederhergestellt oder über den Papierkorb endgültig gelöscht werden.</li></ol></section>
+                <section><h3>Eine Slide gestalten</h3><ol><li>Öffne <b>Slides &amp; Kanäle → Slide erstellen</b> und beginne leer oder über „Vorlage verwenden“.</li><li>Wähle <b>Automatisch/responsiv</b>, 16:9 Querformat oder 9:16 Hochformat. Bei einer Veranstaltungs-Slide verknüpfst du zusätzlich den Termin; Tags, Status, optionale Sichtbarkeit und Standorte begrenzen die Verwendung.</li><li>Ziehe Elemente auf die Fläche: Text, Lauftext, Wetter, QR-Code, Countdown, Bild, Video, Website, kompletter Eventblock, einzelnes Eventfeld oder Wegweisung. Position, Größe, Ebenen, Farben, Schrift, Transparenz und Zuschnitt bearbeitest du in den Eigenschaften.</li><li>Nutze die Vorschau und speichere. „Als Vorlage“ übernimmt Gestaltung und Elemente; responsive Slides bleiben responsive. Vorlagen können später frei bearbeitet und erneut verwendet werden.</li></ol><p>Ein fest am Bildelement ausgewähltes Medium hat Vorrang. Ohne feste Quelle nutzt ein veranstaltungsbezogenes Bildelement das Bild der verknüpften Veranstaltung.</p></section>
+                <section><h3>Dynamische Inhalte richtig einsetzen</h3><p>Eventfelder unterstützen unter anderem Titel, Datum, Aufbau, Einlass, Beginn, Pause, Ende, Spielort, Raum, Restkarten, Abendkasse und öffentliche Hinweise. Präfix und Suffix werden nur ausgespielt, wenn der Wert vorhanden ist. Wetter verwendet die Koordinaten des Ziel-Displays; QR-Code, Website und Medien benötigen eine vom Player erreichbare Quelle.</p></section>
+              </div>
+            </details>
+
+            <details class="help-guide">
+              <summary><span class="help-guide-number">03</span><span><strong>Kanal bauen und Ausspielung planen</strong><small>Playlist, Standardkanal, Zeitplan und Prioritäten</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Slides zu einem Kanal ordnen</h3><ol><li>Wähle unter <b>Slides &amp; Kanäle</b> „Kanal anlegen“, gib Name, Tags, Status, Ausrichtung und gegebenenfalls Standortfreigaben an.</li><li>Füge vorhandene Slides zur Playlist hinzu und sortiere sie per Drag-and-drop. Pro Eintrag legst du Anzeigedauer und optional einen vom Kanal abweichenden Übergang fest.</li><li>Aktiviere „Wiederholen“, prüfe die Kanalvorschau und veröffentliche den Kanal. Dieselbe Slide darf in mehreren Kanälen verwendet werden.</li></ol></section>
+                <section><h3>Grundversorgung und Zeitplan</h3><ol><li>Weise einem Display oder einer Matrix einen <b>Standardkanal</b> zu. Dieser läuft immer dann, wenn keine höher priorisierte Zuweisung aktiv ist.</li><li>Öffne <b>Zeitplanung</b>, wähle Tag oder Woche und aktiviere links Kanäle und/oder einzelne Slides. Ziehe den Inhalt in die Zeile des gewünschten Displays, der Gruppe oder Matrix.</li><li>Lege Start und Ende, Priorität „Normal“, „Wichtig“ oder „Übernahme“ sowie einmalige, tägliche oder wöchentliche Wiederholung fest. Ziehen verschiebt einen Block, die Seitenkanten ändern seine Zeit.</li><li>Bei Überschneidungen entscheidest du, ob der neue Inhalt zusätzlich laufen oder vorhandene Einträge ersetzen soll. Nach Ablauf kehrt das Ziel zum verbleibenden Zeitplan beziehungsweise Standardkanal zurück.</li></ol></section>
+                <section><h3>Was wird tatsächlich angezeigt?</h3><p>Der Standardkanal ist die Rückfallebene. Aktive Zeitplaneinträge übernehmen im festgelegten Zeitraum; aktuelle Priorität und Stapelreihenfolge entscheiden bei mehreren Treffern. Eine gezielte externe API-Zuweisung kann den Zeitplan übersteuern. Sicherheitswarnungen werden zusätzlich als vorrangige Übernahme ausgegeben.</p></section>
+              </div>
+            </details>
+
+            <details class="help-guide">
+              <summary><span class="help-guide-number">04</span><span><strong>Display und Player einrichten</strong><small>Browser, Windows, Linux, macOS und Kopplungscode</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Display in Kiosky anlegen</h3><ol><li>Öffne <b>Displays → Display hinzufügen</b>. Vergib einen eindeutigen Namen und eine URL-Kennung.</li><li>Wähle Displaytyp, Quer- oder Hochformat und den Auflösungsmodus: <b>Responsiv/nativ</b> übernimmt die Browsergröße, <b>fest</b> verwendet die eingetragene Zielauflösung für Planung und Matrix.</li><li>Ordne Standort, Standardkanal, Gruppen und bei Bedarf eine Matrix zu. Aktiviere den Offline-Cache, damit bereits geladene Inhalte bei Netzunterbrechung weiterlaufen.</li></ol></section>
+                <section><h3>Verfügbare Player</h3><ul class="help-player-list"><li><b>Browser-Player:</b> startet ohne Installation aus dem öffentlichen Player Center; ideal für Kiosk-Browser, ChromeOS oder einen schnellen Test.</li><li><b>Windows Universal Player:</b> als 64-Bit- oder 32-Bit-Programm verfügbar.</li><li><b>Linux Universal Player:</b> 64-Bit-Version für Ubuntu/Debian; nach dem Download gegebenenfalls ausführbar machen.</li><li><b>macOS Universal Player:</b> gemeinsame App für Apple Silicon und Intel als ZIP; beim ersten Start gegebenenfalls per Rechtsklick → Öffnen bestätigen.</li><li><b>Zugeordneter Desktop-Player:</b> wird direkt am bestehenden Display heruntergeladen und enthält dessen feste Player-URL bereits. Diese Variante benötigt keine Codekopplung.</li></ul><p>Das <b>Player Center</b> erreichst du über das Download-Menü eines Displays oder öffentlich unter <code>/player</code>. Dort stehen Browser- und Universal-Player bereit.</p></section>
+                <section><h3>Universal Player mit Code koppeln</h3><ol><li>Starte den Universal Player. Beim ersten Start erzeugt er einen kurzlebigen sechsstelligen Code.</li><li>Öffne in Kiosky <b>Displays</b>, beim gewünschten Gerät das Download-Menü und „Universal Player – Code koppeln“; alternativ öffne „Bearbeiten“.</li><li>Trage den Code im Abschnitt <b>Universal Player koppeln</b> ein und bestätige „Player koppeln“. Der Code kann nur einmal verwendet werden und muss vor Ablauf eingegeben werden.</li><li>Der Player erhält danach automatisch die feste, geschützte Player-URL des Displays. Prüfe in der Displayliste „Online“, die gemeldete Auflösung und den aktuellen Inhalt. „Display identifizieren“ blendet den Gerätenamen am Bildschirm ein.</li></ol></section>
+                <section><h3>Direkter Browser- oder zugeordneter Player</h3><p>In der Displayzeile kopiert „⧉“ die geschützte Player-URL, „↗“ öffnet sie direkt. Der Download-Pfeil bietet in Standalone zusätzlich fertige Windows-, Linux- und macOS-Player für genau dieses Display. Behandle die URL wie ein Gerätekennwort und veröffentliche sie nicht.</p></section>
+              </div>
+            </details>
+
+            <details class="help-guide">
+              <summary><span class="help-guide-number">05</span><span><strong>Werbung automatisieren</strong><small>Veranstaltungsarten, Vorlagen und Bild-Fallbacks</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Automatischen Werbekanal einrichten</h3><ol><li>Öffne <b>Werbung → Einstellungen</b> oder <b>Einstellungen → Werbung</b> und aktiviere die Automatik.</li><li>Lege Kanalname, maximale Anzahl kommender Veranstaltungen, Anzeigedauer, responsive Vorlage, Datum-/Zeitanzeige und Zielstandorte fest.</li><li>Aktiviere nur die gewünschten Veranstaltungsarten. Pro aktiver Art kannst du ein Standardbild aus der Mediendatenbank wählen.</li><li>Speichere und nutze „Jetzt synchronisieren“. Kiosky erzeugt beziehungsweise aktualisiert die getaggten Werbeslides und den automatischen Werbekanal; manuelle Inhalte bleiben unangetastet.</li></ol></section>
+                <section><h3>Welches Bild wird verwendet?</h3><p>Die Reihenfolge ist: eigenes Bild der Veranstaltung, danach Standardbild ihrer Veranstaltungsart, danach der Hintergrund der gewählten Werbevorlage. Wird ein easyjob-Veranstaltungsbild ausgetauscht, übernimmt der nächste Import die neue Datei in den bestehenden Veranstaltungsordner.</p></section>
+                <section><h3>Automatik ausspielen</h3><p>Behandle den erzeugten Werbekanal wie jeden anderen Kanal: als Standardkanal eines Displays, als Eintrag im Zeitplan oder als Ziel einer externen Zuweisung. Die Automatik bestimmt die enthaltenen Veranstaltungen, nicht das Ziel oder den Zeitraum der Anzeige.</p></section>
+              </div>
+            </details>
+
+            <details class="help-guide">
+              <summary><span class="help-guide-number">06</span><span><strong>Betrieb, Warnungen und Fehlerprüfung</strong><small>Monitoring, Sofortaktionen, Updates und Datensicherung</small></span><i>＋</i></summary>
+              <div class="help-guide-content">
+                <section><h3>Laufende Ausspielung kontrollieren</h3><ol><li>Unter <b>Displays</b> siehst du Online-Status, letzte Verbindung, Auflösung, Kanal, Matrix und den zuletzt gemeldeten Inhalt. Die aufklappbare Live-Übersicht zeigt Miniaturvorschauen.</li><li>Unter <b>Presets &amp; Warnhinweise</b> prüfst du Player-Version, Cache-Bereitschaft und aktuellen Content. Fordere bei Bedarf „Synchronisieren“, „Neu laden“ oder „Identifizieren“ an.</li><li>Ist ein Player offline, kontrolliere Netzwerk, Kiosky-Adresse und Geräteschlüssel. Mit bereitem Offline-Cache läuft der letzte geladene Stand weiter; neue Änderungen kommen erst nach Wiederverbindung an.</li></ol></section>
+                <section><h3>Sofort reagieren</h3><p>Betriebspresets bündeln wiederkehrende Kanalzuweisungen. Warnvorlagen und manuelle Warnungen können ausgewählte Displays, Gruppen oder Matrizen übernehmen; DWD-Warnungen verwenden das Warngebiet des Standorts. Beende eine aktive Warnung ausdrücklich, damit die reguläre Ausspielung wieder sichtbar wird.</p></section>
+                <section><h3>System pflegen</h3><p>Unter <b>Updates</b> prüfen Administratoren signierte Releases und installieren neue Versionen. <b>Einstellungen → Schnittstellen</b> bietet außerdem portable Export-/Importpakete für Konfiguration, Veranstaltungen, Displays, Slides, Vorlagen und Medien. Vor produktiven Updates oder größeren Importen sollte zusätzlich eine externe Sicherung der Instanz vorhanden sein.</p></section>
+              </div>
+            </details>
           </div>
         </section>
 
@@ -794,22 +890,30 @@
           </div>
         </div>
 
-        <div class="feature-result-line"><strong id="feature-result-count">9 Bereiche</strong><span>Wähle einen Bereich, um direkt weiterzuarbeiten.</span></div>
+        <div class="feature-result-line"><strong id="feature-result-count">12 Bereiche</strong><span>Suche nach Aufgabe oder Fachbegriff und öffne den passenden Arbeitsbereich.</span></div>
         <div class="feature-catalog" id="feature-catalog">
-          <article class="feature-card" data-feature-category="content" data-feature-search="veranstaltungen programm crewbrain import website kalender veröffentlichen">
+          <article class="feature-card" data-feature-category="content" data-feature-search="veranstaltungen programm crewbrain easyjob import projekt job massenaktion zeiten bild website kalender veröffentlichen">
             <div class="feature-card-head"><span class="feature-symbol violet">◫</span><span class="tag muted">Inhalte</span></div>
             <h3>Veranstaltungen</h3>
-            <p>Programmdaten importieren, prüfen und mit Zeiten, Räumen, Bildern sowie Veröffentlichungstexten ergänzen.</p>
-            <ul><li>CrewBrain-Daten übernehmen</li><li>Status und Veröffentlichung steuern</li><li>Website-Kalender versorgen</li></ul>
+            <p>Termine manuell pflegen oder aus CrewBrain und easyjob übernehmen, redaktionell schützen und für Website, Werbung sowie Displays bereitstellen.</p>
+            <ul><li>Projekt-/Job-Import mit Vorschau</li><li>Ablaufzeiten, Bilder und Massenaktionen</li><li>Status, Tickets und öffentliche Hinweise</li></ul>
             <button class="feature-link" type="button" data-view-link="events">Veranstaltungen öffnen <span>→</span></button>
           </article>
 
-          <article class="feature-card" data-feature-category="content" data-feature-search="slides kanäle editor designer playlist wegweisung uhr logo dynamische felder">
+          <article class="feature-card" data-feature-category="content" data-feature-search="slides kanäle editor designer playlist vorlage responsiv wegweisung ticker wetter qr countdown uhr logo dynamische eventfelder">
             <div class="feature-card-head"><span class="feature-symbol coral">▤</span><span class="tag muted">Inhalte</span></div>
             <h3>Slides & Kanäle</h3>
-            <p>Bildschirminhalte gestalten und als Abspielreihenfolge zu Kanälen zusammenstellen.</p>
-            <ul><li>Freier Slide-Editor und Vorlagen</li><li>Wegweisung und dynamische Felder</li><li>Dauer und Übergänge festlegen</li></ul>
+            <p>Responsive oder formatgebundene Bildschirmseiten gestalten, als Vorlage sichern und in wiederverwendbaren Playlists organisieren.</p>
+            <ul><li>Text, Medien, Wetter, QR und Countdown</li><li>Eventfelder, Wegweisung und Vorlagen</li><li>Playlist, Dauer, Übergang und Tags</li></ul>
             <button class="feature-link" type="button" data-view-link="channels">Slides & Kanäle öffnen <span>→</span></button>
+          </article>
+
+          <article class="feature-card" data-feature-category="automation" data-feature-search="werbung automatisch veranstaltungsarten standardbild default bild easyjob vorlage werbekanal">
+            <div class="feature-card-head"><span class="feature-symbol coral">◇</span><span class="tag muted">Automatisierung</span></div>
+            <h3>Veranstaltungswerbung</h3>
+            <p>Aus kommenden Veranstaltungen automatisch responsive Werbeslides und einen aktuell gehaltenen Werbekanal erzeugen.</p>
+            <ul><li>Veranstaltungsarten und Zielstandorte</li><li>Eigenes Bild oder Standardbild je Art</li><li>Vorlage, Anzahl, Dauer, Datum und Zeit</li></ul>
+            <button class="feature-link" type="button" data-view-link="advertising">Werbung öffnen <span>→</span></button>
           </article>
 
           <article class="feature-card" data-feature-category="content" data-feature-search="medien bilder videos vektoren ordner zuschnitt dateien bibliothek">
@@ -820,35 +924,35 @@
             <button class="feature-link" type="button" data-view-link="media">Mediendatenbank öffnen <span>→</span></button>
           </article>
 
-          <article class="feature-card" data-feature-category="display" data-feature-search="displays player bildschirme gruppen matrix standorte online querformat hochformat">
+          <article class="feature-card" data-feature-category="display" data-feature-search="displays player browser windows linux ubuntu debian macos universal koppeln code launcher bildschirme gruppen matrix standorte online querformat hochformat auflösung cache">
             <div class="feature-card-head"><span class="feature-symbol green">▣</span><span class="tag muted">Displays</span></div>
-            <h3>Displayverwaltung</h3>
-            <p>Player anbinden und einzelne Displays, Gruppen, Matrix-Flächen sowie Standorte zentral verwalten.</p>
-            <ul><li>Online-Status und Auflösung</li><li>Displaygruppen und Matrix-Flächen</li><li>Standardkanäle je Gerät</li></ul>
+            <h3>Displays & Player</h3>
+            <p>Browser- oder Desktop-Player anbinden und Geräte, Gruppen, Matrix-Flächen sowie Standorte zentral verwalten.</p>
+            <ul><li>Universal Player per sechsstelligen Code koppeln</li><li>Windows, Linux, macOS und Browser</li><li>Auflösung, Offline-Cache und Standardkanal</li></ul>
             <button class="feature-link" type="button" data-view-link="displays">Displays öffnen <span>→</span></button>
           </article>
 
-          <article class="feature-card" data-feature-category="automation" data-feature-search="zeitplanung kalender wochenplan schedule ausspielung wechsel drag drop">
+          <article class="feature-card" data-feature-category="automation" data-feature-search="zeitplanung kalender tagesplan wochenplan schedule ausspielung slide kanal priorität wiederholung konflikt wechsel drag drop">
             <div class="feature-card-head"><span class="feature-symbol peach">▦</span><span class="tag muted">Automatisierung</span></div>
             <h3>Zeitplanung</h3>
-            <p>Kanäle und Inhalte zeitgesteuert auf Displays, Gruppen oder Matrix-Flächen ausspielen.</p>
-            <ul><li>Wochenplan per Drag-and-drop</li><li>Gültigkeitszeiträume</li><li>Prioritäten und Zielreihenfolge</li></ul>
+            <p>Kanäle oder einzelne Slides zeitgesteuert auf Displays, Gruppen und Matrix-Flächen ausspielen.</p>
+            <ul><li>Tages- und Wochenplan per Drag-and-drop</li><li>Start, Ende und Wiederholung</li><li>Prioritäten, Stapelung und Konfliktauflösung</li></ul>
             <button class="feature-link" type="button" data-view-link="schedule">Zeitplanung öffnen <span>→</span></button>
           </article>
 
-          <article class="feature-card" data-feature-category="automation" data-feature-search="betrieb warnhinweise notfall evakuierung dwd wetter monitoring presets">
+          <article class="feature-card" data-feature-category="automation" data-feature-search="betrieb warnhinweise notfall evakuierung dwd wetter monitoring presets cache synchronisieren reload identifizieren">
             <div class="feature-card-head"><span class="feature-symbol red">!</span><span class="tag muted">Automatisierung</span></div>
             <h3>Betrieb & Warnhinweise</h3>
-            <p>Den laufenden Betrieb überwachen und wichtige Hinweise oder Notfallinhalte gezielt veröffentlichen.</p>
-            <ul><li>Player-Monitoring und Nachweise</li><li>Betriebspresets und Sofortaktionen</li><li>DWD-Wetterwarnungen</li></ul>
+            <p>Player und Cache überwachen, Fernbefehle senden und priorisierte Hinweise oder Notfallinhalte gezielt veröffentlichen.</p>
+            <ul><li>Heartbeat, Inhalt und Cache-Bereitschaft</li><li>Synchronisieren, neu laden, identifizieren</li><li>Presets, Warnvorlagen und DWD</li></ul>
             <button class="feature-link" type="button" data-view-link="operations">Betrieb öffnen <span>→</span></button>
           </article>
 
-          <article class="feature-card" data-feature-category="system" data-feature-search="schnittstellen crewbrain api externe steuerung synchronisation cms typo3 wordpress home assistant">
+          <article class="feature-card" data-feature-category="system" data-feature-search="schnittstellen crewbrain easyjob api externe steuerung synchronisation import export transfer cms typo3 wordpress home assistant">
             <div class="feature-card-head"><span class="feature-symbol violet">⇄</span><span class="tag muted">System</span></div>
             <h3>Schnittstellen</h3>
-            <p>Kiosky mit CrewBrain, Websites und externen Steuerungen verbinden und Datenflüsse konfigurieren.</p>
-            <ul><li>CrewBrain-Synchronisation</li><li>External Control API</li><li>CMS- und Plattformpakete</li></ul>
+            <p>Kiosky mit CrewBrain, easyjob, Websites und externer Steuerung verbinden sowie Inhalte zwischen Installationen übertragen.</p>
+            <ul><li>Importvorschau, Mapping und Auto-Import</li><li>External Control API und API-Benutzer</li><li>Portable Transferpakete für alle Plattformen</li></ul>
             <button class="feature-link admin-only" type="button" data-view-link="integrations">Schnittstellen öffnen <span>→</span></button>
             <small class="feature-role-note">Konfiguration nur für Administratoren</small>
           </article>
@@ -862,6 +966,24 @@
             <small class="feature-role-note">Verwaltung nur für Administratoren</small>
           </article>
 
+          <article class="feature-card" data-feature-category="system" data-feature-search="einstellungen module navigation editor elemente werbung standorte konfiguration">
+            <div class="feature-card-head"><span class="feature-symbol green">⚙</span><span class="tag muted">System</span></div>
+            <h3>Einstellungen</h3>
+            <p>Arbeitsbereiche, Navigation, verfügbare Editorwerkzeuge und die automatische Werbung zentral konfigurieren.</p>
+            <ul><li>Module ein-/ausblenden und sortieren</li><li>Editor-Elemente freigeben</li><li>Werbegenerator und Standardbilder</li></ul>
+            <button class="feature-link admin-only" type="button" data-view-link="settings">Einstellungen öffnen <span>→</span></button>
+            <small class="feature-role-note">Konfiguration nur für Administratoren</small>
+          </article>
+
+          <article class="feature-card" data-feature-category="system" data-feature-search="updates version release aktualisieren signatur installation sicherung">
+            <div class="feature-card-head"><span class="feature-symbol violet">↻</span><span class="tag muted">System</span></div>
+            <h3>Updates</h3>
+            <p>Installierte und verfügbare Versionen vergleichen, Release Notes prüfen und verifizierte Aktualisierungen installieren.</p>
+            <ul><li>Manuelle Updateprüfung</li><li>Geprüfte Releasepakete</li><li>Installationsstatus und Hinweise</li></ul>
+            <button class="feature-link admin-only" type="button" data-view-link="updates">Updates öffnen <span>→</span></button>
+            <small class="feature-role-note">Installation nur für Administratoren</small>
+          </article>
+
           <article class="feature-card" data-feature-category="system" data-feature-search="übersicht dashboard status schnellaktionen start systemzustand heute">
             <div class="feature-card-head"><span class="feature-symbol green">⌂</span><span class="tag muted">System</span></div>
             <h3>Übersicht & Schnellaktionen</h3>
@@ -873,13 +995,19 @@
         <div class="feature-empty" id="feature-empty" hidden><span>⌕</span><strong>Keine passende Funktion gefunden</strong><p>Versuche einen allgemeineren Begriff oder wähle „Alle“.</p></div>
 
         <section class="help-faq" aria-labelledby="help-faq-title">
-          <div class="help-section-heading"><div><p class="eyebrow">Gut zu wissen</p><h2 id="help-faq-title">Häufige Fragen</h2></div><p>Kurze Antworten für den täglichen Betrieb.</p></div>
+          <div class="help-section-heading"><div><p class="eyebrow">Gut zu wissen</p><h2 id="help-faq-title">Häufige Fragen</h2></div><p>Konkrete Antworten zu Inhalt, Planung, Playern und Betrieb.</p></div>
           <div class="help-faq-list">
             <details><summary>Was ist der Unterschied zwischen Slide und Kanal?<span>＋</span></summary><p>Eine Slide ist eine einzelne gestaltete Bildschirmseite. Ein Kanal ist eine Abspielreihenfolge aus einer oder mehreren Slides inklusive Dauer und Übergängen.</p></details>
-            <details><summary>Wann sehe ich eine Änderung auf dem Display?<span>＋</span></summary><p>Veröffentlichte Änderungen werden an verbundene Player übertragen. Der Player-Status unter „Presets &amp; Warnhinweise“ zeigt, ob das Gerät online ist und seine Inhalte lokal zwischengespeichert hat.</p></details>
-            <details><summary>Standardkanal oder Zeitplan – was hat Vorrang?<span>＋</span></summary><p>Der Standardkanal dient als Rückfallebene. Eine aktive Zeitplanung ersetzt ihn für den festgelegten Zeitraum; danach kehrt das Display automatisch zur regulären Ausspielung zurück.</p></details>
+            <details><summary>Wie erstelle ich meinen ersten Inhalt?<span>＋</span></summary><p>Lege unter „Slides &amp; Kanäle“ zuerst eine Slide an, gestalte sie leer oder aus einer Vorlage und veröffentliche sie. Lege danach einen Kanal an, füge die Slide zur Playlist hinzu und veröffentliche auch den Kanal. Diesen Kanal wählst du als Standardkanal eines Displays oder planst ihn im Zeitplan ein.</p></details>
+            <details><summary>Wann sehe ich eine Änderung auf dem Display?<span>＋</span></summary><p>Gespeicherte und veröffentlichte Änderungen werden beim nächsten Statusabruf an den Online-Player übertragen. Mit „Synchronisieren“ kannst du den Abruf anfordern. Ist der Player offline, zeigt er bei bereitem Cache den letzten geladenen Stand und übernimmt Neues nach Wiederverbindung.</p></details>
+            <details><summary>Standardkanal, Zeitplan oder Warnung – was hat Vorrang?<span>＋</span></summary><p>Der Standardkanal ist die Rückfallebene. Eine aktive Zeitplanung übernimmt im festgelegten Zeitraum. Gezielte externe API-Zuweisungen können den Zeitplan übersteuern; eine aktive Sicherheitswarnung wird als vorrangige Übernahme angezeigt. Nach deren Ende fällt das Display auf die nächste gültige Ebene zurück.</p></details>
             <details><summary>Wie spiele ich denselben Inhalt auf mehrere Displays aus?<span>＋</span></summary><p>Fasse Geräte zu einer Displaygruppe zusammen. Im Zeitplan weist du den Inhalt anschließend einmal der gesamten Gruppe zu.</p></details>
-            <details><summary>Was passiert bei einer unterbrochenen Netzwerkverbindung?<span>＋</span></summary><p>Ist der Offline-Cache bereit, spielt der Player bereits geladene Inhalte weiter. Neue Änderungen werden nach Wiederherstellung der Verbindung synchronisiert.</p></details>
+            <details><summary>Wie kopple ich einen neuen Universal Player?<span>＋</span></summary><p>Lege zuerst das Display in Kiosky an. Starte dann einen Universal Player aus dem Player Center. Trage dessen sechsstelligen Code beim gewünschten Display über das Download-Menü oder im Bearbeitungsdialog unter „Universal Player koppeln“ ein. Nach erfolgreicher Kopplung lädt der Player automatisch die geschützte Display-URL.</p></details>
+            <details><summary>Braucht jeder Player einen Kopplungscode?<span>＋</span></summary><p>Nein. Universal Player aus dem Player Center werden beim ersten Start per Code gekoppelt. Die direkte Browser-URL und die am konkreten Display heruntergeladenen Windows-, Linux- oder macOS-Player sind bereits diesem Display zugeordnet.</p></details>
+            <details><summary>Welche Player kann ich verwenden?<span>＋</span></summary><p>Kiosky bietet einen Browser-Player sowie Universal Player für Windows 64/32 Bit, Linux 64 Bit auf Ubuntu/Debian und macOS für Apple Silicon und Intel. In Standalone können zusätzlich bereits zugeordnete Desktop-Player direkt am Display heruntergeladen werden.</p></details>
+            <details><summary>Warum zeigt ein Veranstaltungsfeld nichts an?<span>＋</span></summary><p>Wenn der verknüpften Veranstaltung der gewählte Wert fehlt, bleibt das Element absichtlich mit seiner Position und Größe bestehen, wird aber einschließlich Präfix, Suffix, Platzhalter und Hintergrund unsichtbar. Ergänze den Wert in der Veranstaltung oder wähle ein anderes dynamisches Feld.</p></details>
+            <details><summary>Welches Veranstaltungsbild verwendet Werbung?<span>＋</span></summary><p>Zuerst wird das eigene Bild der Veranstaltung verwendet. Fehlt es, folgt das in den Werbeeinstellungen gewählte Standardbild der Veranstaltungsart. Danach greift der Hintergrund der Werbevorlage. easyjob-Bilder der Dokumentenart „Veranstaltungsbild“ werden automatisch importiert.</p></details>
+            <details><summary>Was passiert bei einer unterbrochenen Netzwerkverbindung?<span>＋</span></summary><p>Ist der Offline-Cache bereit, spielt der Player bereits geladene Inhalte weiter. Medien oder Websites, die ausschließlich extern erreichbar sind, können von deren eigener Verfügbarkeit abhängen. Neue Kiosky-Änderungen werden nach Wiederherstellung der Verbindung synchronisiert.</p></details>
             <details><summary>Wer darf Systemeinstellungen ändern?<span>＋</span></summary><p>Benutzerrollen begrenzen den Zugriff: Administratoren verwalten das System, Redakteure pflegen Inhalte und Betrachter erhalten ausschließlich Lesezugriff.</p></details>
           </div>
         </section>
@@ -974,12 +1102,16 @@
         <label class="form-field span-two"><span>Titel</span><input id="event-title" type="text" maxlength="300" required></label>
         <label class="form-field"><span>Untertitel</span><input id="event-subtitle" type="text" maxlength="300"></label>
         <label class="form-field"><span>Status</span><select id="event-status"><option value="review">Zu prüfen</option><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="cancelled">Abgesagt</option><option value="archived">Archiviert</option></select></label>
+        <label class="form-field"><span>Veranstalter / Kunde</span><input id="event-organizer" type="text" maxlength="300"></label>
+        <label class="form-field"><span>Veranstaltungs-/Jobtyp</span><input id="event-type" type="text" maxlength="200"></label>
         <label class="form-field"><span>Datum</span><input id="event-date" type="date"></label>
         <label class="form-field"><span>Spielort</span><input id="event-venue" type="text"></label>
         <label class="form-field"><span>Raum / Saal</span><input id="event-room" type="text"></label>
+        <label class="form-field"><span>Aufbau / Veranstalter vor Ort</span><input id="event-setup" type="time"></label>
         <label class="form-field"><span>Einlass</span><input id="event-admission" type="time"></label>
         <label class="form-field"><span>Beginn</span><input id="event-start" type="time"></label>
-        <label class="form-field"><span>Pause</span><input id="event-break" type="time"></label>
+        <label class="form-field"><span>Pause von</span><input id="event-break" type="time"></label>
+        <label class="form-field"><span>Pause bis</span><input id="event-break-end" type="time"></label>
         <label class="form-field"><span>Ende</span><input id="event-end" type="time"></label>
         <label class="form-field span-two"><span>Öffentliche Beschreibung</span><textarea id="event-description" rows="4"></textarea></label>
         <label class="form-field span-two"><span>Öffentliche Hinweise für Displays und Website</span><textarea id="event-public-notes" rows="3"></textarea></label>
@@ -1002,6 +1134,29 @@
       </section>
       <p class="privacy-note">Manuell gespeicherte Felder werden geschützt und bei einem erneuten CrewBrain-Import nicht automatisch überschrieben.</p>
       <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-event-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-event-button" hidden>Veranstaltung archivieren</button><button class="button button-secondary" type="button" data-close-dialog="event-dialog">Abbrechen</button><button class="button button-primary" type="submit" id="save-event-button">Veranstaltung speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="event-bulk-dialog">
+    <form class="dialog-content" id="event-bulk-form">
+      <button class="dialog-close" type="button" data-close-dialog="event-bulk-dialog" aria-label="Massenaktion schließen">×</button>
+      <span class="dialog-icon">⚙</span><p class="eyebrow">Programmverwaltung</p><h2>Importierte Veranstaltungen bearbeiten</h2>
+      <p class="event-source-note" id="event-bulk-selection-note">Keine Veranstaltungen ausgewählt.</p>
+      <label class="form-field"><span>Massenaktion</span><select id="event-bulk-field"><option value="admissionStart">Anwarts-/Einlasszeit setzen</option><option value="eventStart">Beginnzeit setzen</option><option value="breakStart">Pausezeit setzen</option><option value="eventEnd">Endzeit setzen</option><option value="imageUrl">Veranstaltungsbild setzen</option></select></label>
+      <div class="event-bulk-value" data-event-bulk-time>
+        <label class="form-field"><span id="event-bulk-time-label">Anwarts-/Einlasszeit</span><input id="event-bulk-time" type="time" required></label>
+      </div>
+      <div class="event-bulk-value" data-event-bulk-break hidden>
+        <label class="form-field"><span>Pause von</span><input id="event-bulk-break-start" type="time"></label>
+        <label class="form-field"><span>Pause bis (optional)</span><input id="event-bulk-break-end" type="time"></label>
+      </div>
+      <div class="event-bulk-value event-bulk-image" data-event-bulk-image hidden>
+        <input id="event-bulk-image-url" type="hidden">
+        <div class="event-bulk-image-preview" id="event-bulk-image-preview">Noch kein Bild ausgewählt</div>
+        <div><strong>Bild aus der Mediendatenbank</strong><p>Das Bild wird für alle ausgewählten importierten Veranstaltungen gesetzt und vor dem Standardbild der Veranstaltungsart angezeigt.</p><button class="button button-secondary" id="event-bulk-image-select" type="button">Bild auswählen / hochladen</button></div>
+      </div>
+      <p class="privacy-note">Manuell angelegte Veranstaltungen werden übersprungen. Geänderte Importfelder werden geschützt und bei späteren Synchronisierungen nicht überschrieben.</p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="event-bulk-dialog">Abbrechen</button><button class="button button-primary" type="submit">Auf ausgewählte Veranstaltungen anwenden</button></div>
     </form>
   </dialog>
 
@@ -1032,6 +1187,7 @@
         <label class="editor-title-field"><span>Name</span><input id="new-slide-title" type="text" value="Neue Slide" aria-label="Name der Slide"></label>
         <label class="editor-title-field compact-field"><span>Format</span><select id="editor-ratio"><option value="auto">Automatisch / responsiv</option><option value="landscape">16:9 Querformat</option><option value="portrait">9:16 Hochformat</option></select></label>
         <label class="editor-title-field compact-field"><span>Veranstaltung</span><select id="slide-event"><option value="">Keine feste Veranstaltung</option></select></label>
+        <label class="editor-title-field compact-field"><span>Tags</span><input id="slide-tags" type="text" placeholder="z. B. Werbung, Kultur"></label>
         <label class="editor-title-field compact-field"><span>Status</span><select id="slide-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option></select></label>
         <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar ab <small>(optional)</small></span><input id="slide-starts-at" type="datetime-local" step="60"></label>
         <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar bis <small>(optional)</small></span><input id="slide-ends-at" type="datetime-local" step="60"></label>
@@ -1103,9 +1259,10 @@
           <div id="element-properties" hidden>
             <div class="property-heading"><strong id="property-element-type">Text</strong><button type="button" data-editor-action="duplicate">⧉ Duplizieren</button></div>
             <label class="form-field" id="property-text-field" data-property-section="text"><span>Textinhalt</span><textarea id="property-text" rows="4"></textarea></label>
-            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftgröße</span><input id="property-font-size" type="number" min="12" max="160" value="42"></label><label class="form-field"><span>Farbe</span><input id="property-color" type="color" value="#ffffff"></label></div>
+            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftgröße</span><input id="property-font-size" type="number" min="6" max="240" value="42"></label><label class="form-field"><span>Farbe</span><input id="property-color" type="color" value="#ffffff"></label></div>
+            <label class="toggle-label" data-property-section="text"><input id="property-auto-font-size" type="checkbox"> Schrift automatisch an das Textfeld anpassen</label>
             <label class="form-field" data-property-section="event"><span>Veranstaltung</span><select id="property-event"><option>Sommerkonzert</option><option>Jazz im Foyer</option><option>Kindertheater</option><option>Sinfonieorchester</option></select></label>
-            <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass "></label><label class="form-field"><span>Ersatztext, wenn leer</span><input id="property-event-fallback" type="text" placeholder="–"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
+            <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
             <div data-property-section="image" class="editor-media-property"><button class="media-library-picker" id="property-image-library" type="button"><span>▦</span><strong>Bild aus Mediendatenbank wählen</strong><small id="property-image-selection">Noch kein Bild ausgewählt</small></button><p class="property-note">Neue Bilder werden in der Mediendatenbank hochgeladen und dort einem Ordner zugeordnet.</p></div>
             <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><p class="property-note">Neue Videos werden zentral in der Mediendatenbank hochgeladen und gepflegt.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label></div>
             <div data-property-section="web"><label class="form-field"><span>Externe Website</span><input id="property-web-url" type="url" placeholder="https://example.org"></label><p class="property-note">Die Zielseite muss das Einbetten technisch erlauben.</p></div>
@@ -1242,9 +1399,11 @@
       <div class="form-grid">
         <label class="form-field span-two"><span>Name</span><input id="channel-name" type="text" maxlength="200" required></label>
         <label class="form-field span-two"><span>Beschreibung</span><textarea id="channel-description" rows="3"></textarea></label>
+        <label class="form-field span-two"><span>Tags <small>(mit Komma trennen)</small></span><input id="channel-tags" type="text" placeholder="z. B. Veranstaltung, Werbung"></label>
         <label class="form-field"><span>Veranstaltung</span><select id="channel-event"><option value="">Keine feste Veranstaltung</option></select></label>
         <label class="form-field"><span>Status</span><select id="channel-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="paused">Pausiert</option></select></label>
       </div>
+      <fieldset class="display-group-choice"><legend>Standorte</legend><div id="channel-location-options"></div><p class="property-note">Ohne Auswahl ist der Kanal an allen Standorten verfügbar.</p></fieldset>
       <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-channel-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-channel-button" hidden>Kanal archivieren</button><button class="button button-secondary" type="button" data-close-dialog="channel-dialog">Abbrechen</button><button class="button button-primary" type="submit">Kanal speichern</button></div>
     </form>
   </dialog>
@@ -1337,7 +1496,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.0.0-20260730234258%2B14ff665e"></script>
-  <script src="app.js?v=3.0.0-20260730234258%2B14ff665e"></script>
+  <script src="runtime-config.js?v=3.1.3-20260801161623%2B86d6ece6"></script>
+  <script src="app.js?v=3.1.3-20260801161623%2B86d6ece6"></script>
 </body>
 </html>

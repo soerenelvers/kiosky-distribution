@@ -63,6 +63,8 @@ Der Adapter versteht verschachtelte Reportobjekte (`roomUseType.captionNew`) sow
 
 Die zentrale Konfiguration ordnet bekannte Werte `access`, `setup`, `rehearsal`, `event`, `break`, `hospitality`, `teardown`, `internal`, `cancelled` und als Fallback `other` zu. `Abbau` und `Ende` setzen standardmäßig `isApproximate=true`. Interne Typen sind unsichtbar. Administratoren können Kategorie, `ca.`, Sichtbarkeit und Sortierpriorität im vorhandenen easyjob-Bereich oder per API überschreiben. Icon und Farbe sind optional vorbereitet; Komponenten verwenden weiterhin das Kiosky-Designsystem.
 
+Beim Veranstaltungsimport werden die Ablaufpunkte zusätzlich in die zentralen Zeitfelder verdichtet: `Einlass` setzt den Einlass, die erste öffentliche Veranstaltung/Show den Programmbeginn, eine Pausennutzung Beginn und – sofern vorhanden – Ende der Pause und `Ende` das Publikumsende. Fehlt bei einer kulturellen Veranstaltung das Pausenende, setzt Kiosky zunächst 20 Minuten; die Zeit bleibt redaktionell änderbar. `DayTimeOut` bleibt getrennt als Aufbau beziehungsweise Ankunft des Veranstalters erhalten.
+
 ## Upsert und externe Löschungen
 
 Der bevorzugte Schlüssel ist `easyjob + RoomUse.Id`. Ohne ID erzeugt der Mapper zentral einen SHA-256-Schlüssel aus Event, Raum, Originaltyp, Startzeit und Caption. Der fachliche Klartext entspricht `easyjob:{eventId}:{room}:{type}:{startAt}:{caption}`. Verschiedene `sourceId`-Werte bleiben bei gleicher Uhrzeit getrennt; manuelle Einträge werden nie getroffen.
@@ -104,7 +106,7 @@ Die Vorschau liefert je Zeile `new`, `changed`, `unchanged` oder `invalid` mitsa
 
 ## Datum, Displays und Importprotokoll
 
-easyjob-Zeitwerte müssen einen ISO-8601-Offset (`Z`, `+01:00` oder `+02:00`) enthalten. Offsetlose Zeiten sind während der Zeitumstellung mehrdeutig und werden als Importfehler behandelt. Die UI formatiert mit `Europe/Berlin`; API-Werte sind kanonische UTC-ISO-Zeitpunkte.
+easyjob liefert in den dokumentierten Projekt-, Job- und Raumkalenderantworten lokale ISO-8601-Zeitwerte ohne Offset. Kiosky interpretiert diese Werte deshalb ausdrücklich in `Europe/Berlin` und speichert sie anschließend als kanonische UTC-Zeitpunkte. Bereits mit `Z`, `+01:00` oder `+02:00` gelieferte Werte werden unverändert korrekt umgerechnet. Die Vorschau weist auf die vorgenommene Zeitzonenannahme hin.
 
 `getUpcomingScheduleEntries()` unterstützt Raum, Kategorien, Limit, Zeitraum, Vergangenheit, Quelle und `publicOnly`. Öffentliche Ausgaben müssen `publicOnly=true` verwenden; die öffentliche Route erzwingt dies.
 

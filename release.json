@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "3.0.0",
-  "released_at": "2026-07-30T23:42:58.792Z",
+  "version": "3.1.3",
+  "released_at": "2026-08-01T16:16:23.361Z",
   "channel": "stable",
-  "release_notes": "## [3.0.0] - 2026-07-31\n\n### Added\n\n- Ein integrierter Update-Manager prüft neue Versionen und unterstützt\n  Standalone-, TYPO3- und WordPress-Installationen mit Release Notes,\n  Benachrichtigungen und abgesicherten Aktualisierungsabläufen.\n- Der neue portable Import und Export überträgt wählbare Einstellungen und\n  Inhalte kreuzweise zwischen Standalone, TYPO3 und WordPress.\n- Transferpakete umfassen Veranstaltungen und Abläufe, Slides samt\n  Versionshistorie, Vorlagen und Medien, Kanäle, Displays, Standorte, Gruppen,\n  Matrizen, Zeitpläne, Zuweisungen, Presets, Warnungen, Benutzerprofile und\n  Schnittstellendefinitionen.\n- Exportauswahl und Importvorschau erklären Abhängigkeiten und\n  Sicherheitsfolgen vor der Ausführung.\n\n### Changed\n\n- Standalone-Importe werden atomar ausgeführt und bei einem Fehler vollständig\n  zurückgerollt.\n- Technische IDs und sichere Zugangsschlüssel werden auf der Zielinstanz neu\n  erzeugt, damit Transferpakete zwischen unabhängigen Installationen\n  eingesetzt werden können.\n\n### Security\n\n- Passwörter, Sitzungen, API-Schlüssel, Player-Schlüssel und\n  Schnittstellen-Zugangsdaten werden nicht in Transferpakete aufgenommen.\n- Importierte Benutzerprofile bleiben bis zur sicheren Einrichtung\n  deaktiviert; Integrationen werden ohne Zugangsdaten übernommen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.0.0",
+  "release_notes": "## [3.1.3] - 2026-08-01\n\n### Changed\n\n- „Funktionen & Hilfe“ dokumentiert sämtliche aktuellen Arbeitsbereiche mit\n  ausführlichen Schritt-für-Schritt-Anleitungen für Ersteinrichtung,\n  Veranstaltungsimport, Medien, Slides, Vorlagen, Kanäle, Zeitplanung,\n  Werbeautomatik, Betrieb und Updates.\n- Die Player-Hilfe beschreibt Browser-, Windows-, Linux- und macOS-Player,\n  direkte zugeordnete Launcher sowie die vollständige Kopplung eines Universal\n  Players per sechsstelligen Code.\n- Die interaktive Tour führt in sechs aktualisierten Stationen vom Programmdatum\n  über Gestaltung und Planung bis zum gekoppelten Player und überwachten Betrieb.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.1.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.0.0",
+    "core_version": "3.1.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.0.0",
-    "typo3_extension_version": "3.0.0"
+    "wordpress_plugin_version": "3.1.3",
+    "typo3_extension_version": "3.1.3"
   },
   "components": {
     "core": {
-      "version": "3.0.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.0.0.zip?ref=v3.0.0",
-      "sha256": "6f8e30c2b012e5901afe3ef9998c8bdaa66ddf1b80d34d8369e341769f379c9e"
+      "version": "3.1.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.1.3.zip?ref=v3.1.3",
+      "sha256": "95da3b9325fa3e46e3396b1ccc61593a1bf604f24d5e3354ea6641b022ca50ed"
     },
     "standalone": {
-      "version": "3.0.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.0.0.zip?ref=v3.0.0",
-      "sha256": "6f8e30c2b012e5901afe3ef9998c8bdaa66ddf1b80d34d8369e341769f379c9e"
+      "version": "3.1.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.1.3.zip?ref=v3.1.3",
+      "sha256": "95da3b9325fa3e46e3396b1ccc61593a1bf604f24d5e3354ea6641b022ca50ed"
     },
     "wordpress": {
-      "version": "3.0.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.0.0.zip?ref=v3.0.0",
-      "sha256": "03c37f9a137817eaf4ce50a168def19c6d64a5b6f9efe7e9572ca424408e9b73",
+      "version": "3.1.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.1.3.zip?ref=v3.1.3",
+      "sha256": "b29a6cd53a04d02138937446ccf99ad83966762982f3850292b9d3f75d3233ba",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "6.8"
     },
     "typo3": {
-      "version": "3.0.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.0.0.zip?ref=v3.0.0",
-      "sha256": "d4668d838bf64b6431cae94be34120875b5bb44cf32688166d88069a8319d73c",
+      "version": "3.1.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.1.3.zip?ref=v3.1.3",
+      "sha256": "a2185738a08868c1a573a3ea510726ed4dc953673c7463e257bac2c8e49a9cf2",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

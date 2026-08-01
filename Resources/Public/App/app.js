@@ -237,6 +237,58 @@ const weatherElementObserver = new MutationObserver(records => {
 });
 weatherElementObserver.observe(document.documentElement, { childList: true, subtree: true });
 
+function eventFieldDisplayValue(event, field, options={}) {
+  const value = event?.[field];
+  if (!value) return '';
+  if (['setupStart', 'admissionStart', 'eventStart', 'breakStart', 'breakEnd', 'eventEnd', 'boxOfficeOpenAt'].includes(field)) {
+    const date=new Date(value);
+    if(!Number.isNaN(date.valueOf()))return new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',...(options.showSeconds?{second:'2-digit'}:{}),hour12:Boolean(options.hour12)}).format(date);
+    return eventTimeInput(value) || String(value);
+  }
+  if (field === 'date') {
+    const digits = String(value).replace(/\D/g, '').slice(0, 8);
+    return digits.length === 8 ? `${digits.slice(6, 8)}.${digits.slice(4, 6)}.${digits.slice(0, 4)}` : String(value);
+  }
+  return String(value);
+}
+
+function eventFieldPresentation(event,field,options={}){
+  const value=eventFieldDisplayValue(event,field,options),present=value!=='';
+  return{value,present,text:`${options.prefix||''}${present?value:options.fallback||'–'}${options.suffix||''}`};
+}
+function hiddenEventValueAttributes(present){return present?'':'data-event-value-missing="true" aria-hidden="true"';}
+
+function eventWelcomeBlockMarkup(event, fallbackTitle = 'Veranstaltung',options={}) {
+  const time = field => eventFieldDisplayValue(event, field,options);
+  const pauseStart = time('breakStart'), pauseEnd = time('breakEnd');
+  const pause = pauseStart && pauseEnd && pauseStart !== pauseEnd ? `${pauseStart}–${pauseEnd}` : pauseStart || pauseEnd || '–';
+  const schedule = [
+    ['Einlass', time('admissionStart') || '–'],
+    ['Beginn', time('eventStart') || '–'],
+    ['Pause', pause],
+    ['Ende', time('eventEnd') || '–']
+  ].map(([label, value]) => `<b>${label}:</b> ${escapeHtml(value)}`).join(' · ');
+  const date=options.showDate?eventFieldDisplayValue(event,'date'):'';
+  return `<small>Herzlich willkommen zu</small><strong>${escapeHtml(event?.title || fallbackTitle)}</strong>${date?`<em>${escapeHtml(date)}</em>`:''}${options.showTime===false?'':`<span>${schedule}</span>`}`;
+}
+
+function fitAutomaticText(root=document){
+  root.querySelectorAll?.('[data-auto-font="true"]').forEach(node=>{
+    const outer=node.classList.contains('canvas-element')||node.classList.contains('player-layout-element');
+    const container=outer?node:node.parentElement;
+    const target=outer?(node.querySelector('.canvas-text-content,.canvas-event-content,.canvas-countdown,.weather-mini-widget,.player-countdown span')||node):node;
+    if(!container||!target||container.clientWidth<2||container.clientHeight<2)return;
+    const maximum=Math.max(6,Math.min(240,Number(node.dataset.autoFontMax||getComputedStyle(node).fontSize.replace('px','')||72)));
+    const ticker=node.classList.contains('type-ticker')||Boolean(node.querySelector('.player-slide-ticker,.canvas-ticker'));
+    const apply=size=>{if(outer)node.style.fontSize=`${size}px`;else node.style.fontSize=`${size}px`;};
+    const fits=()=>target.scrollHeight<=container.clientHeight+1&&(ticker||target.scrollWidth<=container.clientWidth+1);
+    let low=6,high=maximum,best=6;
+    for(let iteration=0;iteration<10&&high-low>.25;iteration+=1){const middle=(low+high)/2;apply(middle);if(fits()){best=middle;low=middle;}else high=middle;}
+    apply(best);
+  });
+}
+function scheduleAutomaticTextFit(root=document){requestAnimationFrame(()=>requestAnimationFrame(()=>fitAutomaticText(root)));document.fonts?.ready?.then(()=>fitAutomaticText(root)).catch?.(()=>{});}
+
 async function renderDisplayPlayer(slug) {
   document.body.className = 'player-mode';
   let wakeLock=null;
@@ -247,20 +299,30 @@ async function renderDisplayPlayer(slug) {
   const key=new URLSearchParams(window.location.search).get('key')||''; const cacheKey=`kiosky-player-cache-${slug}`; let playerState=null,index=0,timer=null,currentItem=null,currentMatrixIndex=-1,renderedOrientation=null,resizeTimer=null,identificationTimer=null,commandPollRunning=false,serverClockOffsetMs=0,playbackSyncKey='';
   const headers={'X-Player-Key':key,'Content-Type':'application/json','Accept':'application/json',...(kioskyRuntime.playerRequestHeaders||{})};
   const fetchState=async()=>{try{const requestStartedAt=Date.now(),response=await fetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/state`),{headers}),responseReceivedAt=Date.now();if(!response.ok)throw new Error('Player nicht gefunden');playerState=await response.json();const serverTimeMs=Number(playerState.playbackSync?.serverTimeMs||Date.parse(playerState.serverTime));if(Number.isFinite(serverTimeMs))serverClockOffsetMs=serverTimeMs-(requestStartedAt+responseReceivedAt)/2;playerState.cachedClockOffsetMs=serverClockOffsetMs;localStorage.setItem(cacheKey,JSON.stringify(playerState));document.querySelector('#player-offline-indicator')?.setAttribute('hidden','');return playerState;}catch(error){try{playerState=JSON.parse(localStorage.getItem(cacheKey));serverClockOffsetMs=Number(playerState.cachedClockOffsetMs||0);document.querySelector('#player-offline-indicator')?.removeAttribute('hidden');return playerState;}catch{return null;}}};
-  const fieldValue=(event,field)=>{const value=event?.[field];if(!value)return '';if(['admissionStart','eventStart','breakStart','eventEnd','boxOfficeOpenAt'].includes(field)){const match=String(value).match(/(\d{2}):?(\d{2})(?:\d{2})?Z?$/);return match?`${match[1]}:${match[2]}`:String(value);}if(field==='date'){const digits=String(value).replace(/\D/g,'').slice(0,8);return digits.length===8?`${digits.slice(6,8)}.${digits.slice(4,6)}.${digits.slice(0,4)}`:String(value);}return String(value);};
   const arrowGlyph=direction=>({up:'↑',down:'↓',left:'←',right:'→','up-left':'↖','up-right':'↗','down-left':'↙','down-right':'↘','stairs-up-left':'▰↖','stairs-up-right':'▰↗','stairs-down-left':'▰↙','stairs-down-right':'▰↘'}[direction]||'→');
   const playerCountdown=target=>{const seconds=Math.max(0,Math.floor((Date.parse(target||'')-Date.now())/1000));if(!Number.isFinite(seconds))return'00:00:00';const days=Math.floor(seconds/86400),hours=Math.floor(seconds%86400/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;return`${days?`${days} T · `:''}${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(rest).padStart(2,'0')}`;};
   const playerContrastColor=settings=>{const colors=[settings?.background?.color1||'#17342b',settings?.background?.mode==='gradient'?(settings?.background?.color2||'#315b49'):null].filter(Boolean),values=colors.map(hex=>{const clean=hex.replace('#',''),rgb=[0,2,4].map(index=>parseInt(clean.slice(index,index+2),16)||0);return rgb.reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);});return values.reduce((a,b)=>a+b,0)/values.length>145?'#111111':'#ffffff';};
   const playerRowColor=(row,settings)=>row?.colorMode==='custom'?(row.color||'#ffffff'):playerContrastColor(settings);
-  const wayfindingCell=(cell,event,color)=>{if(!cell||cell.kind==='empty')return '';const colorStyle=`color:${color}`;if(cell.kind==='image')return cell.src?`<img class="wf-cropped-image" src="${cell.src}" alt="" style="object-fit:${cell.imageFit||'cover'};object-position:${Number(cell.imageX??50)}% ${Number(cell.imageY??50)}%;transform:scale(${Number(cell.imageZoom||100)/100})">`:'';if(cell.kind==='arrow')return `<span class="wf-arrow-image" style="${colorStyle};--arrow-mask:url('${assetUrl(`/media/arrows/${cell.direction||'right'}.svg`)}')" role="img" aria-label="${arrowGlyph(cell.direction)}"></span>`;if(cell.kind==='iframe')return cell.src?`<iframe src="${cell.src}" title="Eingebettete Website"></iframe>`:'';if(cell.kind==='countdown'){const target=cell.targetSource==='event'?event?.[cell.eventField||'eventStart']:cell.targetTime,countdown=cell.targetSource==='daily'?{countdownMode:'daily',countdownDailyTime:cell.dailyTime||'12:00',prefix:cell.prefix||'',suffix:cell.suffix||'',showSeconds:cell.showSeconds!==false}:{countdownMode:'datetime',targetTime:target||'',prefix:cell.prefix||'',suffix:cell.suffix||'',showSeconds:cell.showSeconds!==false};return `<span class="wf-countdown" style="${colorStyle};${countdownFontStyle(cell)}" data-wayfinding-countdown="${escapeHtml(encodeURIComponent(JSON.stringify(countdown)))}">${escapeHtml(countdown.prefix)}${countdownText(countdown)}${escapeHtml(countdown.suffix)}</span>`;}if(cell.kind==='event-field')return `<span class="wf-text" style="${colorStyle}">${cell.prefix||''}${fieldValue(event,cell.eventField)||cell.fallback||'–'}</span>`;const styles={hero:'clamp(30px,5vw,82px)',heading:'clamp(24px,4vw,64px)',subheading:'clamp(20px,3vw,48px)',body:'clamp(16px,2.2vw,34px)',subtitle:'clamp(14px,1.8vw,28px)',label:'clamp(12px,1.4vw,22px)',note:'clamp(10px,1.1vw,18px)'};return `<span class="wf-text ${cell.underline?'is-underlined':''}" style="${colorStyle};font-size:${styles[cell.textStyle]||styles.body};text-align:${cell.align||'left'};font-weight:${cell.bold||['hero','heading'].includes(cell.textStyle)?700:400}">${cell.text||''}</span>`;};
+  const wayfindingCell=(cell,event,color)=>{
+    if(!cell||cell.kind==='empty')return '';
+    const colorStyle=`color:${color}`,auto=cell.autoFontSize?'data-auto-font="true" data-auto-font-max="240"':'';
+    if(cell.kind==='image')return cell.src?`<img class="wf-cropped-image" src="${cell.src}" alt="" style="object-fit:${cell.imageFit||'cover'};object-position:${Number(cell.imageX??50)}% ${Number(cell.imageY??50)}%;transform:scale(${Number(cell.imageZoom||100)/100})">`:'';
+    if(cell.kind==='arrow')return `<span class="wf-arrow-image" style="${colorStyle};--arrow-mask:url('${assetUrl(`/media/arrows/${cell.direction||'right'}.svg`)}')" role="img" aria-label="${arrowGlyph(cell.direction)}"></span>`;
+    if(cell.kind==='iframe')return cell.src?`<iframe src="${cell.src}" title="Eingebettete Website"></iframe>`:'';
+    if(cell.kind==='countdown'){const target=cell.targetSource==='event'?event?.[cell.eventField||'eventStart']:cell.targetTime,present=cell.targetSource!=='event'||Boolean(target),countdown=cell.targetSource==='daily'?{countdownMode:'daily',countdownDailyTime:cell.dailyTime||'12:00',prefix:cell.prefix||'',suffix:cell.suffix||'',showSeconds:cell.showSeconds!==false}:{countdownMode:'datetime',targetTime:target||'',prefix:cell.prefix||'',suffix:cell.suffix||'',showSeconds:cell.showSeconds!==false};return `<span class="wf-countdown" ${auto} ${hiddenEventValueAttributes(present)} style="${colorStyle};${countdownFontStyle(cell)}" data-wayfinding-countdown="${escapeHtml(encodeURIComponent(JSON.stringify(countdown)))}">${escapeHtml(countdown.prefix)}${countdownText(countdown)}${escapeHtml(countdown.suffix)}</span>`;}
+    if(cell.kind==='event-field'){const presentation=eventFieldPresentation(event,cell.eventField,cell);return `<span class="wf-text" ${auto} ${hiddenEventValueAttributes(presentation.present)} style="${colorStyle};font-size:${Math.max(6,Math.min(240,Number(cell.fontSize)||42))}px">${escapeHtml(presentation.text)}</span>`;}
+    const styles={hero:'clamp(30px,5vw,82px)',heading:'clamp(24px,4vw,64px)',subheading:'clamp(20px,3vw,48px)',body:'clamp(16px,2.2vw,34px)',subtitle:'clamp(14px,1.8vw,28px)',label:'clamp(12px,1.4vw,22px)',note:'clamp(10px,1.1vw,18px)'};
+    return `<span class="wf-text ${cell.underline?'is-underlined':''}" ${auto} style="${colorStyle};font-size:${styles[cell.textStyle]||styles.body};text-align:${cell.align||'left'};font-weight:${cell.bold||['hero','heading'].includes(cell.textStyle)?700:400}">${cell.text||''}</span>`;
+  };
   const wayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};font-size:${Number(element.fontSize||32)}px;text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${wayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown')return`<div class="player-layout-element player-countdown" style="${style}" data-slide-countdown data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(element)}${escapeHtml(element.suffix||'')}</span></div>`;if(element.type==='image')return `<div class="player-layout-element" style="${style}"><img src="${element.src||event?.imageUrl||''}" alt=""></div>`;if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${element.src||''}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const value=`${element.prefix||''}${fieldValue(event,element.field)||element.fallback||'–'}`;return `<div class="player-layout-element player-dynamic-field" style="${style}">${value}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" style="${style}"><small>${event?.room||event?.venue||''}</small><strong>${event?.title||element.text||'Veranstaltung'}</strong><span>${fieldValue(event,'admissionStart')?`Einlass ${fieldValue(event,'admissionStart')} · `:''}${fieldValue(event,'eventStart')?`Beginn ${fieldValue(event,'eventStart')}`:''}</span></div>`;return `<div class="player-layout-element" style="${style}">${element.text||''}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};font-size:${Number(element.fontSize||32)}px;text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${wayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown')return`<div class="player-layout-element player-countdown" style="${style}" data-slide-countdown data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(element)}${escapeHtml(element.suffix||'')}</span></div>`;if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${element.src||''}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
   const browserOrientation=()=>window.innerHeight>window.innerWidth?'portrait':'landscape';
   const applyMatrixViewport=()=>{const display=document.querySelector('.display-player'),canvas=document.querySelector('#player-matrix-canvas'),matrix=playerState?.matrix,active=matrix?.mode==='matrix'&&matrix.totalResolution&&matrix.viewport;if(!display||!canvas)return;display.classList.toggle('is-matrix-segment',Boolean(active));if(!active){canvas.removeAttribute('style');return;}const total=matrix.totalResolution,viewport=matrix.viewport,scaleX=window.innerWidth/Math.max(1,Number(viewport.width)),scaleY=window.innerHeight/Math.max(1,Number(viewport.height));canvas.style.width=`${Number(total.width)}px`;canvas.style.height=`${Number(total.height)}px`;canvas.style.left=`${-Number(viewport.x||0)*scaleX}px`;canvas.style.top=`${-Number(viewport.y||0)*scaleY}px`;canvas.style.transform=`scale(${scaleX},${scaleY})`;canvas.style.transformOrigin='top left';};
   const itemOrientation=item=>item?.slide?.orientation==='auto'?browserOrientation():item?.slide?.orientation==='portrait'?'portrait':'landscape';
   const itemElements=(item,orientation)=>{const documentData=item?.slide?.document||{},responsive=documentData.responsiveLayouts;return item?.slide?.orientation==='auto'&&Array.isArray(responsive?.[orientation])?responsive[orientation]:documentData.elements||[];};
-  const renderPlayerItem=(item,animate=true,elapsedMs=0)=>{if(!item)return;const slide=document.querySelector('#player-slide'),orientation=itemOrientation(item),elements=itemElements(item,orientation),settings=item.slide.document?.settings;renderedOrientation=orientation;slide.dataset.slideOrientation=item.slide.orientation||'landscape';slide.dataset.renderOrientation=orientation;const display=document.querySelector('.display-player');display?.classList.toggle('display-player-portrait',orientation==='portrait');display?.classList.toggle('display-player-landscape',orientation==='landscape');const designed=Boolean(settings)||elements.some(element=>element.type==='wayfinding');display?.classList.toggle('has-slide-design',designed||playerState?.matrix?.mode==='matrix');slide.innerHTML=playerSettingsMarkup(settings)+elements.map(element=>elementMarkup(element,item.event,settings)).join('')||`<div class="player-empty-channel"><strong>${item.slide.name}</strong></div>`;slide.querySelectorAll('video[data-trim-start]').forEach(video=>{const start=Number(video.dataset.trimStart||0),end=Number(video.dataset.trimEnd||0),synchronizedStart=()=>{const segmentDuration=end>start?end-start:Math.max(0,Number(video.duration||0)-start);video.currentTime=start+(segmentDuration>0?(elapsedMs/1000)%segmentDuration:0);};video.addEventListener('loadedmetadata',synchronizedStart);video.addEventListener('timeupdate',()=>{if(end>start&&video.currentTime>=end)video.currentTime=start;});});applyMatrixViewport();slide.style.transitionDelay=animate&&elapsedMs>0?`${-Math.min(450,elapsedMs)}ms`:'';if(animate&&elapsedMs<450)requestAnimationFrame(()=>slide.classList.add('is-visible'));else slide.classList.add('is-visible');};
+  const renderPlayerItem=(item,animate=true,elapsedMs=0)=>{if(!item)return;const slide=document.querySelector('#player-slide'),orientation=itemOrientation(item),elements=itemElements(item,orientation),settings=item.slide.document?.settings;renderedOrientation=orientation;slide.dataset.slideOrientation=item.slide.orientation||'landscape';slide.dataset.renderOrientation=orientation;const display=document.querySelector('.display-player');display?.classList.toggle('display-player-portrait',orientation==='portrait');display?.classList.toggle('display-player-landscape',orientation==='landscape');const designed=Boolean(settings)||elements.some(element=>element.type==='wayfinding');display?.classList.toggle('has-slide-design',designed||playerState?.matrix?.mode==='matrix');slide.innerHTML=playerSettingsMarkup(settings)+elements.map(element=>elementMarkup(element,item.event,settings)).join('')||`<div class="player-empty-channel"><strong>${item.slide.name}</strong></div>`;slide.querySelectorAll('.player-layout-element').forEach((node,index)=>{const element=elements[index];if(element?.autoFontSize){node.dataset.autoFont='true';node.dataset.autoFontMax='240';}});scheduleAutomaticTextFit(slide);slide.querySelectorAll('video[data-trim-start]').forEach(video=>{const start=Number(video.dataset.trimStart||0),end=Number(video.dataset.trimEnd||0),synchronizedStart=()=>{const segmentDuration=end>start?end-start:Math.max(0,Number(video.duration||0)-start);video.currentTime=start+(segmentDuration>0?(elapsedMs/1000)%segmentDuration:0);};video.addEventListener('loadedmetadata',synchronizedStart);video.addEventListener('timeupdate',()=>{if(end>start&&video.currentTime>=end)video.currentTime=start;});});applyMatrixViewport();slide.style.transitionDelay=animate&&elapsedMs>0?`${-Math.min(450,elapsedMs)}ms`:'';if(animate&&elapsedMs<450)requestAnimationFrame(()=>slide.classList.add('is-visible'));else slide.classList.add('is-visible');};
+  window.addEventListener('resize',()=>scheduleAutomaticTextFit(document));
   const renderShell=state=>{const display=state.display;document.body.innerHTML=`<main class="display-player display-player-${display.orientation}"><div class="player-brand">KIOSKY</div><div class="player-matrix-canvas" id="player-matrix-canvas"><section id="player-slide" class="player-layout-slide"></section></div><div class="player-status"><span>${display.name}</span><span id="player-clock"></span></div></main><div class="player-offline-indicator" id="player-offline-indicator" hidden>Offline · gespeicherte Inhalte werden weiter abgespielt</div><aside class="emergency-takeover" id="player-emergency" hidden><div class="emergency-symbol">!</div><small id="player-emergency-type"></small><strong id="player-emergency-title"></strong><p id="player-emergency-message"></p><span>Bitte beachten Sie die Anweisungen des Personals.</span><div class="emergency-ticker" id="player-emergency-ticker" role="status" aria-label="Lauftext" hidden><span id="player-emergency-ticker-text"></span></div></aside>`;applyMatrixViewport();};
   const heartbeat=async item=>{await fetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({channelId:playerState.channel?.id,slideId:item?.slide?.id,version:`${playerDevice()} · Player 1.2`,cached:true,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})}).catch(()=>{});};
   const showIdentification=()=>{
@@ -319,6 +381,7 @@ const state = {
   currentScheduleEventId: null,
   selectedEvents: new Set(),
   selectedSlides: new Set(),
+  contentScope: 'standard',
   crewbrainPreview: [],
   crewbrainPreviewSelection: new Set(),
   crewbrainPreviewPage: 1,
@@ -339,6 +402,7 @@ const pageMeta = {
   events: ['Veranstaltungen', 'Programm und Veröffentlichung'],
   displays: ['Displays', 'Digital Signage im Haus'],
   channels: ['Slides & Kanäle', 'Content und Abspielreihenfolge'],
+  advertising: ['Werbung', 'Werbeslides und standortbezogene Werbekanäle'],
   media: ['Mediendatenbank', 'Zentrale Bilder, Vektoren und Videos'],
   schedule: ['Display-Zeitplan', 'Drag-and-drop-Ausspielung'],
   operations: ['Presets & Warnhinweise', 'Player-Monitoring, Presets und Warnhinweise'],
@@ -413,7 +477,8 @@ function setView(view) {
   const hiddenSettingsRecovery=view==='settings'&&state.currentUser?.role==='admin'&&window.location.hash.slice(1)==='settings';
   if (!navigationViewAvailable(view)&&!hiddenSettingsRecovery) view = firstAvailableNavigationView();
   state.view = view;
-  panels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.viewPanel === view));
+  state.contentScope=view==='advertising'?'advertising':view==='channels'?'standard':state.contentScope||'standard';
+  panels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.viewPanel === view || (view==='advertising'&&panel.dataset.viewPanel==='channels')));
   navItems.forEach(item => item.classList.toggle('is-active', item.dataset.view === view || (item.dataset.view === 'settings' && ['integrations', 'users'].includes(view))));
   pageTitle.textContent = pageMeta[view][0];
   pageContext.textContent = pageMeta[view][1];
@@ -427,10 +492,10 @@ function setView(view) {
     loadEasyJobConfiguration();
     loadApiUsers();
   }
-  if(view==='settings'){showSettingsLevel();loadFeatureSettings();}
+  if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
-  if (view === 'channels') loadContent();
+  if (['channels','advertising'].includes(view)) loadContent();
   if (view === 'media') refreshMedia();
   if (view === 'displays') loadDisplays();
   if (view === 'schedule') loadScheduling();
@@ -529,6 +594,7 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
   const level = button.dataset.settingsOpen;
   if (state.view !== 'settings') setView('settings');
   showSettingsLevel(level);
+  if(level==='advertising')loadAdvertisingSettings();
 }));
 document.querySelectorAll('[data-settings-anchor]').forEach(button => button.addEventListener('click', () => {
   const target = document.getElementById(button.dataset.settingsAnchor);
@@ -572,12 +638,12 @@ document.addEventListener('keydown', event => {
 
 const productTour = document.querySelector('#product-tour');
 const tourSteps = [
-  { view: 'features', target: '.feature-hero', kicker: 'Orientierung', title: 'Dein Weg durch Kiosky', description: 'Kiosky verbindet Inhalte, Ausspielregeln und Player in einem durchgängigen Workflow. Diese Tour zeigt dir die wichtigsten Stationen.', tip: 'Du kannst die Tour jederzeit mit Esc beenden und später hier neu starten.' },
-  { view: 'events', target: '[data-view-panel="events"]', kicker: '1 · Programmdaten', title: 'Veranstaltungen übernehmen', description: 'Importiere Termine aus CrewBrain oder pflege sie manuell. Ergänze Räume, Zeiten, Bilder und Veröffentlichungstexte für Website und Displays.', tip: 'Prüfe importierte Datensätze vor der Veröffentlichung – die Quelle bleibt dabei nachvollziehbar.' },
-  { view: 'channels', target: '[data-view-panel="channels"]', kicker: '2 · Gestaltung', title: 'Slides bauen, Kanäle ordnen', description: 'Gestalte einzelne Slides frei oder aus Vorlagen. Anschließend legst du im Kanal Reihenfolge, Anzeigedauer und Übergänge fest.', tip: 'Eine Slide ist eine Seite; ein Kanal ist die fertige Abspielreihenfolge.' },
-  { view: 'schedule', target: '[data-view-panel="schedule"]', kicker: '3 · Automatisierung', title: 'Den richtigen Inhalt einplanen', description: 'Ziehe Kanäle auf Displays, Gruppen oder Matrix-Flächen und bestimme Zeitraum sowie Priorität. Kiosky kehrt danach automatisch zum Standardkanal zurück.', tip: 'Displaygruppen sparen Zeit, wenn mehrere Geräte immer gemeinsam bespielt werden.' },
-  { view: 'displays', target: '[data-view-panel="displays"]', kicker: '4 · Endgeräte', title: 'Player und Flächen im Blick', description: 'Verbinde Player, hinterlege Auflösung und Ausrichtung und strukturiere Geräte nach Standort, Gruppe oder gemeinsamer Matrix-Fläche.', tip: 'Der Standardkanal ist die Rückfallebene, wenn keine Zeitplanung aktiv ist.' },
-  { view: 'operations', target: '[data-view-panel="operations"]', kicker: '5 · Sicherer Betrieb', title: 'Überwachen und sofort reagieren', description: 'Kontrolliere Online-Status und Offline-Cache. Presets und Warnhinweise ermöglichen eine schnelle, priorisierte Ausspielung auf ausgewählten Zielen.', tip: 'Geschafft! Unter „Funktionen & Hilfe“ kannst du jederzeit nach Funktionen suchen oder die Tour wiederholen.' }
+  { view: 'features', target: '.feature-hero', kicker: 'Orientierung', title: 'Vom Datensatz bis zum Display', description: 'Kiosky verbindet Veranstaltungen, Medien und Slides mit Kanälen, Zeitplänen und gekoppelten Playern. Die sechs Stationen zeigen den vollständigen Weg bis zur überwachten Ausspielung.', tip: 'Das ausführliche Praxis-Handbuch unter „Funktionen & Hilfe“ erklärt danach jeden Schritt mit den genauen Menüpunkten.' },
+  { view: 'events', target: '[data-view-panel="events"]', kicker: '1 · Programmdaten', title: 'Veranstaltungen übernehmen und ergänzen', description: 'Lege Veranstaltungen manuell an oder importiere Projekte und Jobs über CrewBrain beziehungsweise easyjob. Prüfe Status, öffentliche Texte, Ablaufzeiten, Raum und Veranstaltungsbild; für mehrere importierte Termine stehen Massenaktionen bereit.', tip: 'easyjob-Bilder der Dokumentenart „Veranstaltungsbild“ werden automatisch in die Mediendatenbank übernommen. Jobbilder haben Vorrang vor Projektbildern.' },
+  { view: 'channels', target: '[data-view-panel="channels"]', kicker: '2 · Inhalt', title: 'Slide gestalten und Kanal bauen', description: 'Erstelle eine Slide leer oder aus einer Vorlage, wähle feste oder responsive Ausrichtung und platziere Text, Medien, Wetter, QR-Code, Countdown, Wegweisung und dynamische Veranstaltungsfelder. Ordne fertige Slides anschließend mit Dauer und Übergang in einem Kanal.', tip: 'Fehlt ein Veranstaltungswert, bleibt der Platz des dynamischen Elements erhalten, sein sichtbarer Inhalt wird aber vollständig ausgeblendet.' },
+  { view: 'schedule', target: '[data-view-panel="schedule"]', kicker: '3 · Planung', title: 'Inhalt einem Ziel und Zeitraum zuweisen', description: 'Ziehe einen veröffentlichten Kanal oder eine einzelne Slide in der Tages- oder Wochenansicht auf ein Display, eine Gruppe oder eine Matrix. Lege Start, Ende, Wiederholung und Priorität fest und entscheide bei Konflikten zwischen zusätzlicher oder ersetzender Planung.', tip: 'Ohne aktive Planung läuft der Standardkanal des Displays beziehungsweise der Matrix weiter.' },
+  { view: 'displays', target: '[data-view-panel="displays"]', kicker: '4 · Player', title: 'Display anlegen und Player koppeln', description: 'Lege zuerst das Display mit Ausrichtung, Auflösungsmodus, Standort und Standardkanal an. Starte dann einen Browser-, Windows-, Linux- oder macOS-Universal-Player. Dessen sechsstelligen Code trägst du beim Display unter „Universal Player koppeln“ ein.', tip: 'Ein direkt beim Display heruntergeladener zugeordneter Desktop-Player enthält die feste Player-URL bereits und benötigt keinen Kopplungscode.' },
+  { view: 'operations', target: '[data-view-panel="operations"]', kicker: '5 · Ausspielung', title: 'Betrieb kontrollieren und eingreifen', description: 'Prüfe Online-Status, zuletzt gemeldeten Inhalt und Offline-Cache. Fordere Synchronisierung oder Neuladen an und nutze Betriebspresets, Warnvorlagen oder DWD-Warnungen für eine gezielte, priorisierte Übernahme.', tip: 'Geschafft! Im Praxis-Handbuch findest du zusätzlich Einrichtung, Fehlerprüfung, Werbeautomatik, Schnittstellen, Benutzer und Updates.' }
 ];
 let activeTourStep = 0;
 let tourHighlight = null;
@@ -626,9 +692,11 @@ function closeProductTour(completed = false) {
 }
 
 document.querySelector('#start-product-tour').addEventListener('click', openProductTour);
-document.querySelector('#close-product-tour').addEventListener('click', () => closeProductTour());
-document.querySelector('#tour-previous').addEventListener('click', () => { if (activeTourStep > 0) { activeTourStep -= 1; renderTourStep(); } });
-document.querySelector('#tour-next').addEventListener('click', () => {
+productTour.addEventListener('click', event => {
+  const action = event.target.closest('#close-product-tour, #tour-previous, #tour-next');
+  if (!action) return;
+  if (action.id === 'close-product-tour') { closeProductTour(); return; }
+  if (action.id === 'tour-previous') { if (activeTourStep > 0) { activeTourStep -= 1; renderTourStep(); } return; }
   if (activeTourStep === tourSteps.length - 1) closeProductTour(true);
   else { activeTourStep += 1; renderTourStep(); }
 });
@@ -683,27 +751,38 @@ function eventDateInput(value) {
 
 function eventTimeInput(value) {
   if (!value) return '';
-  const match = String(value).match(/T?(\d{2}):?(\d{2})(?::?\d{2})?(?:Z)?$/);
+  const date = new Date(value);
+  if (!Number.isNaN(date.valueOf()) && /(?:T|Z|[+-]\d{2}:?\d{2})/.test(String(value))) {
+    return new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
+  }
+  const match = String(value).match(/T?(\d{2}):?(\d{2})(?::?\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
   return match ? `${match[1]}:${match[2]}` : '';
 }
 
 function eventTimestamp(date, time) {
-  return date && time ? `${date.replaceAll('-', '')}T${time.replace(':', '')}00Z` : undefined;
+  if(!date||!time)return undefined;
+  const timestamp=new Date(`${date}T${time}:00`);
+  return Number.isNaN(timestamp.valueOf())?undefined:timestamp.toISOString();
 }
 
-function renderEvents() {
+function visibleEventRows(){
   const query = document.querySelector('#event-search').value.trim().toLowerCase();
   const status = document.querySelector('#event-status-filter').value;
-  const rows = state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber].some(value => String(value || '').toLowerCase().includes(query))) && (!status || item.status === status));
+  const objectType = document.querySelector('#event-object-filter').value;
+  return state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber,item.organizer,item.eventType].some(value => String(value || '').toLowerCase().includes(query))) && (!status || item.status === status)&&(!objectType||item.externalObjectType===objectType));
+}
+function renderEvents() {
+  const rows = visibleEventRows();
   document.querySelector('#event-table').innerHTML = `<div class="table-row table-head" role="row"><span><label class="table-check"><input type="checkbox" id="event-select-all" ${rows.length&&rows.every(item=>state.selectedEvents.has(item.id))?'checked':''}> Veranstaltung</label></span><span>Termin</span><span>Ort</span><span>Quelle</span><span>Status</span><span></span></div>${rows.map(item => {
     const date = eventDateInput(item.date);
     const formattedDate = date ? new Date(`${date}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Termin offen';
     const time = eventTimeInput(item.eventStart);
     const source = item.sourceId === 'source-crewbrain' ? 'CrewBrain' : item.sourceId === 'source-easyjob' ? 'easyjob' : 'Manuell';
     const syncLabel = item.syncStatus === 'manually_modified' ? 'redaktionell angepasst' : item.syncStatus === 'synced' ? 'synchronisiert' : 'manuell';
-    return `<div class="table-row" role="row" data-event-row="${escapeHtml(item.id)}"><span><label class="table-check"><input type="checkbox" data-event-select="${escapeHtml(item.id)}" ${state.selectedEvents.has(item.id)?'checked':''}><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.externalNumber || 'Eigene Veranstaltung')} · ${escapeHtml(syncLabel)}</small></span></label></span><span>${escapeHtml(formattedDate)}${time ? ` · ${escapeHtml(time)}` : ''}</span><span>${escapeHtml(item.venue || item.room || '–')}</span><span class="source-label">${escapeHtml(source)}</span><span><i class="tag ${eventStatusTones[item.status] || 'muted'}">${escapeHtml(eventStatusLabels[item.status] || item.status)}</i></span><button class="row-menu" type="button" data-edit-event="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.title)} bearbeiten">Bearbeiten</button></div>`;
+    const objectLabel=item.externalObjectType==='PROJECT'?'Projekt':item.externalObjectType==='JOB'?'Job':'';
+    return `<div class="table-row" role="row" data-event-row="${escapeHtml(item.id)}"><span><label class="table-check"><input type="checkbox" data-event-select="${escapeHtml(item.id)}" ${state.selectedEvents.has(item.id)?'checked':''}><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.externalNumber || 'Eigene Veranstaltung')} · ${escapeHtml([objectLabel,item.eventType,item.organizer,syncLabel].filter(Boolean).join(' · '))}</small></span></label></span><span>${escapeHtml(formattedDate)}${time ? ` · ${escapeHtml(time)}` : ''}</span><span>${escapeHtml(item.venue || item.room || '–')}</span><span class="source-label">${escapeHtml(source)}</span><span><i class="tag ${eventStatusTones[item.status] || 'muted'}">${escapeHtml(eventStatusLabels[item.status] || item.status)}</i></span><button class="row-menu" type="button" data-edit-event="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.title)} bearbeiten">Bearbeiten</button></div>`;
   }).join('') || '<div class="event-table-empty">Keine passenden Veranstaltungen vorhanden. Importiere Termine aus CrewBrain oder easyjob oder lege eine Veranstaltung manuell an.</div>'}`;
-  const selected=state.selectedEvents.size;document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
+  const selected=state.selectedEvents.size,selectedImported=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.sourceId).length;document.querySelector('#bulk-edit-events').disabled=!selectedImported;document.querySelector('#bulk-edit-events').title=selected&&!selectedImported?'Massenänderungen gelten nur für importierte Veranstaltungen':'';document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
 }
 
 async function loadEvents() {
@@ -721,13 +800,17 @@ async function openEventEditor(item = null) {
   document.querySelector('#event-source-note').textContent = item?.sourceId === 'source-crewbrain' ? `Aus CrewBrain importiert${item.externalNumber ? ` · ${item.externalNumber}` : ''} · manuelle Änderungen werden geschützt` : item?.sourceId === 'source-easyjob' ? `Aus easyjob importiert${item.externalNumber ? ` · ${item.externalNumber}` : ''} · manuelle Änderungen werden geschützt` : 'Manuell angelegte Veranstaltung';
   document.querySelector('#event-title').value = item?.title || '';
   document.querySelector('#event-subtitle').value = item?.subtitle || '';
+  document.querySelector('#event-organizer').value = item?.organizer || '';
+  document.querySelector('#event-type').value = item?.eventType || '';
   document.querySelector('#event-status').value = item?.status || 'draft';
   document.querySelector('#event-date').value = eventDateInput(item?.date);
   document.querySelector('#event-venue').value = item?.venue || '';
   document.querySelector('#event-room').value = item?.room || '';
+  document.querySelector('#event-setup').value = eventTimeInput(item?.setupStart);
   document.querySelector('#event-admission').value = eventTimeInput(item?.admissionStart);
   document.querySelector('#event-start').value = eventTimeInput(item?.eventStart);
   document.querySelector('#event-break').value = eventTimeInput(item?.breakStart);
+  document.querySelector('#event-break-end').value = eventTimeInput(item?.breakEnd);
   document.querySelector('#event-end').value = eventTimeInput(item?.eventEnd);
   document.querySelector('#event-description').value = item?.description || '';
   document.querySelector('#event-public-notes').value = item?.publicNotes || '';
@@ -791,18 +874,39 @@ document.querySelector('#event-schedule-form').addEventListener('submit',async e
 
 function collectEventEditor() {
   const date = document.querySelector('#event-date').value;
-  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), admissionStart: eventTimestamp(date, document.querySelector('#event-admission').value), eventStart: eventTimestamp(date, document.querySelector('#event-start').value), breakStart: eventTimestamp(date, document.querySelector('#event-break').value), eventEnd: eventTimestamp(date, document.querySelector('#event-end').value), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventTimestamp(date, document.querySelector('#event-box-office-open').value) };
+  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventTimestamp(date,document.querySelector('#event-setup').value), admissionStart: eventTimestamp(date, document.querySelector('#event-admission').value), eventStart: eventTimestamp(date, document.querySelector('#event-start').value), breakStart: eventTimestamp(date, document.querySelector('#event-break').value), breakEnd:eventTimestamp(date,document.querySelector('#event-break-end').value), eventEnd: eventTimestamp(date, document.querySelector('#event-end').value), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventTimestamp(date, document.querySelector('#event-box-office-open').value) };
 }
 
 document.querySelector('#event-search').addEventListener('input', renderEvents);
 document.querySelector('#event-status-filter').addEventListener('change', renderEvents);
+document.querySelector('#event-object-filter').addEventListener('change', renderEvents);
 document.querySelector('#event-table').addEventListener('click', event => {
   const button = event.target.closest('[data-edit-event]');
   if (button) openEventEditor(state.events.find(item => item.id === button.dataset.editEvent));
 });
 document.querySelector('#event-table').addEventListener('change',event=>{
-  if(event.target.id==='event-select-all'){const query=document.querySelector('#event-search').value.trim().toLowerCase(),status=document.querySelector('#event-status-filter').value;state.events.filter(item=>(!query||[item.title,item.venue,item.externalNumber].some(value=>String(value||'').toLowerCase().includes(query)))&&(!status||item.status===status)).forEach(item=>event.target.checked?state.selectedEvents.add(item.id):state.selectedEvents.delete(item.id));renderEvents();return;}
+  if(event.target.id==='event-select-all'){visibleEventRows().forEach(item=>event.target.checked?state.selectedEvents.add(item.id):state.selectedEvents.delete(item.id));renderEvents();return;}
   if(event.target.matches('[data-event-select]')){event.target.checked?state.selectedEvents.add(event.target.dataset.eventSelect):state.selectedEvents.delete(event.target.dataset.eventSelect);renderEvents();}
+});
+function renderEventBulkFields(){
+  const field=document.querySelector('#event-bulk-field').value,isBreak=field==='breakStart',isImage=field==='imageUrl',timeBox=document.querySelector('[data-event-bulk-time]'),breakBox=document.querySelector('[data-event-bulk-break]'),imageBox=document.querySelector('[data-event-bulk-image]'),time=document.querySelector('#event-bulk-time'),breakStart=document.querySelector('#event-bulk-break-start'),breakEnd=document.querySelector('#event-bulk-break-end');
+  timeBox.hidden=isBreak||isImage;breakBox.hidden=!isBreak;imageBox.hidden=!isImage;time.disabled=isBreak||isImage;time.required=!isBreak&&!isImage;breakStart.disabled=!isBreak;breakStart.required=isBreak;breakEnd.disabled=!isBreak;
+  document.querySelector('#event-bulk-time-label').textContent=field==='admissionStart'?'Anwarts-/Einlasszeit':field==='eventStart'?'Beginnzeit':'Endzeit';
+}
+function openEventBulkDialog(){
+  const selected=state.events.filter(item=>state.selectedEvents.has(item.id)),imported=selected.filter(item=>item.sourceId);if(!imported.length)return;
+  document.querySelector('#event-bulk-form').reset();document.querySelector('#event-bulk-image-url').value='';document.querySelector('#event-bulk-image-preview').textContent='Noch kein Bild ausgewählt';document.querySelector('#event-bulk-selection-note').textContent=`${imported.length} importierte Veranstaltung${imported.length===1?'':'en'} ausgewählt${selected.length>imported.length?` · ${selected.length-imported.length} manuelle werden übersprungen`:''}.`;renderEventBulkFields();document.querySelector('#event-bulk-dialog').showModal();
+}
+document.querySelector('#bulk-edit-events').addEventListener('click',openEventBulkDialog);
+document.querySelector('#event-bulk-field').addEventListener('change',renderEventBulkFields);
+document.querySelector('#event-bulk-image-select').addEventListener('click',async()=>{try{await refreshMedia();openMediaLibrary(asset=>{const imageUrl=String(asset.src||'').startsWith('data:image/')?`/media/library/${encodeURIComponent(asset.id)}`:asset.src;document.querySelector('#event-bulk-image-url').value=imageUrl;document.querySelector('#event-bulk-image-preview').innerHTML=`<img src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.name||'Ausgewähltes Veranstaltungsbild')}">`;},'image-only','Veranstaltungsbild für die ausgewählten Termine auswählen oder hochladen');}catch(error){showToast(error.message);}});
+document.querySelector('#event-bulk-form').addEventListener('submit',async event=>{
+  event.preventDefault();const ids=[...state.selectedEvents],field=document.querySelector('#event-bulk-field').value,payload={ids,action:'update',field};
+  if(field==='breakStart'){payload.time=document.querySelector('#event-bulk-break-start').value;payload.breakEndTime=document.querySelector('#event-bulk-break-end').value||undefined;}
+  else if(field==='imageUrl'){payload.imageUrl=document.querySelector('#event-bulk-image-url').value;if(!payload.imageUrl){showToast('Bitte zuerst ein Veranstaltungsbild auswählen.');return;}}
+  else payload.time=document.querySelector('#event-bulk-time').value;
+  const button=event.submitter;button.disabled=true;
+  try{const result=await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify(payload)});document.querySelector('#event-bulk-dialog').close();state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);const skipped=Number(result.skippedManual||0)+Number(result.skippedWithoutDate||0);showToast(`${result.count} importierte Veranstaltung${result.count===1?'':'en'} aktualisiert${skipped?` · ${skipped} übersprungen`:''}.`);}catch(error){showToast(error.message);}finally{button.disabled=false;}
 });
 async function bulkEvents(action){const ids=[...state.selectedEvents];if(!ids.length)return;const label=action==='archive'?'archivieren':'endgültig löschen';if(!confirm(`${ids.length} gewählte Veranstaltung${ids.length===1?'':'en'} ${label}?`))return;try{await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify({ids,action})});state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);showToast(`${ids.length} Veranstaltung${ids.length===1?'':'en'} wurde${ids.length===1?'':'n'} verarbeitet.`);}catch(error){showToast(error.message);}}
 document.querySelector('#bulk-archive-events').addEventListener('click',()=>bulkEvents('archive'));
@@ -1250,15 +1354,19 @@ document.querySelector('#integration-title-exclusions-form').addEventListener('s
 });
 document.querySelector('[data-action="focus-easyjob-config"]').addEventListener('click',()=>document.querySelector('#easyjob-config-form').scrollIntoView({behavior:'smooth',block:'start'}));
 document.querySelector('#easyjob-config-form').addEventListener('submit',async event=>{event.preventDefault();const username=document.querySelector('#easyjob-username').value.trim(),password=document.querySelector('#easyjob-password').value;let baseUrl;try{baseUrl=normalizeEasyJobUrl(document.querySelector('#easyjob-base-url').value);document.querySelector('#easyjob-base-url').value=baseUrl;}catch{showToast('Die easyjob-Serveradresse ist ungültig.');return;}const payload={baseUrl,...(username||password?{username,password}:{}),allowInsecureHttp:document.querySelector('#easyjob-allow-insecure-http').checked,allowSelfSignedCertificate:document.querySelector('#easyjob-allow-self-signed-certificate').checked,importMode:document.querySelector('#easyjob-import-mode').value,autoImportTime:document.querySelector('#easyjob-auto-import-time').value,lookbackDays:Number(document.querySelector('#easyjob-lookback').value),lookaheadDays:Number(document.querySelector('#easyjob-lookahead').value),pageSize:100,syncEnabled:document.querySelector('#easyjob-sync-enabled').checked,autoCreateChannels:document.querySelector('#easyjob-auto-channels').checked};try{await apiRequest('/api/integrations/easyjob',{method:'PUT',body:JSON.stringify(payload)});await apiRequest('/api/integrations/easyjob/mapping',{method:'PUT',body:JSON.stringify(collectEasyJobFieldMapping())});document.querySelector('#easyjob-password').value='';await loadEasyJobConfiguration();showToast('easyjob-Konfiguration und Feldzuordnung wurden gespeichert.');}catch(error){showToast(error.message);}});
-document.querySelector('[data-action="test-easyjob"]').addEventListener('click',async()=>{try{const result=await apiRequest('/api/integrations/easyjob/test',{method:'POST',body:'{}'});document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className='connection-message is-success';document.querySelector('#easyjob-message').textContent=result.ok?`Verbindung und Projektabruf erfolgreich (${Number(result.projectCount||0)} Projekte in der ungefilterten Liste).`:'Verbindung fehlgeschlagen.';await loadEasyJobConfiguration();}catch(error){document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className='connection-message is-error';document.querySelector('#easyjob-message').textContent=error.message;}});
-document.querySelector('#easyjob-preview-form').addEventListener('submit',async event=>{event.preventDefault();const table=document.querySelector('#easyjob-preview-table');table.innerHTML='<p class="property-note">easyjob-Projekte werden geladen …</p>';try{const result=await apiRequest('/api/integrations/easyjob/import-preview',{method:'POST',body:JSON.stringify({from:document.querySelector('#easyjob-preview-from').value?new Date(document.querySelector('#easyjob-preview-from').value).toISOString():undefined,until:document.querySelector('#easyjob-preview-until').value?new Date(`${document.querySelector('#easyjob-preview-until').value}T23:59:59`).toISOString():undefined,search:document.querySelector('#easyjob-preview-search').value.trim(),limit:100,offset:0})});table.innerHTML=(result.data||[]).map(item=>`<label class="preview-row"><input type="checkbox" data-easyjob-project="${escapeHtml(item.easyjob.projectId)}"><span><strong>${escapeHtml(item.event.title)}</strong><small>${escapeHtml(item.easyjob.number||item.easyjob.projectId)} · ${escapeHtml(item.event.date||'Termin offen')}</small></span><span>${escapeHtml(item.event.venue||'Ort nicht hinterlegt')}</span><span class="tag blue">easyjob</span></label>`).join('')||'<p class="property-note">Keine passenden easyjob-Projekte gefunden.</p>';table.onchange=()=>{document.querySelector('#easyjob-import-selected').disabled=!table.querySelector('[data-easyjob-project]:checked');};}catch(error){table.innerHTML=`<p class="auth-message">${escapeHtml(error.message)}</p>`;}});
-document.querySelector('#easyjob-import-selected').addEventListener('click',async event=>{const ids=[...document.querySelectorAll('[data-easyjob-project]:checked')].map(input=>input.dataset.easyjobProject);if(!ids.length)return;const button=event.currentTarget;button.disabled=true;button.textContent='Importiert …';try{const result=await apiRequest('/api/integrations/easyjob/import',{method:'POST',body:JSON.stringify({ids})});await Promise.all([loadEvents(),loadContent()]);const errors=(result.results||[]).filter(item=>item.action==='error');const summary=`${result.summary.created} neu, ${result.summary.updated} aktualisiert, ${result.summary.unchanged} unverändert, ${result.summary.excluded||0} ausgeschlossen${result.summary.errors?`, ${result.summary.errors} Fehler`:''}.`;document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className=`connection-message ${errors.length?'is-error':'is-success'}`;document.querySelector('#easyjob-message').textContent=errors.length?`${summary} ${errors.slice(0,3).map(item=>`Projekt ${item.projectId}: ${item.reason}`).join(' · ')}`:summary;if(result.summary.created||result.summary.updated||result.summary.unchanged){setView('events');showToast('Die ausgewählten easyjob-Datensätze wurden unter Veranstaltungen übernommen.');}else showToast(errors[0]?.reason||'Es wurde keine Veranstaltung importiert.');}catch(error){document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className='connection-message is-error';document.querySelector('#easyjob-message').textContent=error.message;showToast(error.message);}finally{button.disabled=false;button.textContent='Ausgewählte easyjob-Projekte importieren';}});
+document.querySelector('[data-action="test-easyjob"]').addEventListener('click',async()=>{try{const result=await apiRequest('/api/integrations/easyjob/test',{method:'POST',body:'{}'}),checks=[['Projektliste',result.projectsReadable],['Projektdetails',result.projectDetailsReadable],['Jobliste',result.jobsReadable],['Jobdetails',result.jobDetailsReadable],['Raumkalender',result.roomCalendarReadable]],failed=checks.filter(([,ok])=>ok===false);document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className=`connection-message ${failed.length?'is-error':'is-success'}`;document.querySelector('#easyjob-message').textContent=result.ok?`${Number(result.projectCount||0)} Projekte und ${Number(result.jobCount||0)} Jobs lesbar. ${checks.map(([name,ok])=>`${name}: ${ok===null?'nicht prüfbar':ok?'OK':'Fehler'}`).join(' · ')}${result.warnings?.length?` · ${result.warnings.join(' · ')}`:''}`:'Verbindung fehlgeschlagen.';await loadEasyJobConfiguration();}catch(error){document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className='connection-message is-error';document.querySelector('#easyjob-message').textContent=error.message;}});
+function easyJobTime(value){if(!value)return'–';const date=new Date(value);return Number.isNaN(date.valueOf())?String(value):new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Berlin'}).format(date);}
+function renderEasyJobFieldAnalysis(analysis={}){const panel=document.querySelector('#easyjob-field-analysis'),content=document.querySelector('#easyjob-field-analysis-content');const groups=[['Projekte',analysis.projects],['Jobs',analysis.jobs],['Raumnutzungen',analysis.roomUses]].filter(([,rows])=>rows?.length);panel.hidden=!groups.length;content.innerHTML=groups.map(([label,rows])=>`<section><h4>${label} <span class="tag muted">${rows.length} Felder</span></h4><div class="easyjob-field-table">${rows.map(field=>`<div><code>${escapeHtml(field.path)}</code><span>${escapeHtml((field.types||[]).join(', '))}</span><span>${Number(field.present||0)}×</span><small>${escapeHtml((field.samples||[]).join(' · '))}</small></div>`).join('')}</div></section>`).join('');}
+function renderEasyJobPreview(data=[]){const table=document.querySelector('#easyjob-preview-table');table.innerHTML=data.map(item=>{const projectId=escapeHtml(item.easyjob.projectId),quality=item.quality||{},warnings=[...(quality.errors||[]),...(quality.warnings||[])];return`<details class="easyjob-project" ${data.length===1?'open':''}><summary><input type="checkbox" data-easyjob-project="${projectId}" ${quality.valid===false?'disabled':''}><span><strong>${escapeHtml(item.event?.title||item.easyjob.caption||'Ohne Titel')}</strong><small>${escapeHtml(item.easyjob.number||item.easyjob.projectId)} · ${easyJobTime(item.event?.eventStart)}–${easyJobTime(item.event?.eventEnd)} · ${escapeHtml(item.event?.organizer||'Veranstalter nicht hinterlegt')}</small></span><span class="tag ${quality.valid===false?'coral':'green'}">${quality.valid===false?'Prüfen':'Verarbeitbar'}</span></summary>${warnings.length?`<div class="easyjob-quality">${warnings.map(value=>`<span>${escapeHtml(value)}</span>`).join('')}</div>`:''}<div class="easyjob-job-list">${(item.jobs||[]).map(job=>`<label class="easyjob-job"><input type="checkbox" data-easyjob-job="${escapeHtml(job.easyjob.jobId)}" data-project-id="${projectId}" ${job.quality?.valid===false?'disabled':''}><span><strong>${escapeHtml(job.event.title)}</strong><small>${escapeHtml(job.easyjob.number||job.easyjob.jobId)} · ${escapeHtml(job.event.eventType||'Typ nicht hinterlegt')} · ${escapeHtml(job.event.organizer||item.event.organizer||'Veranstalter offen')}</small><small>Aufbau ${easyJobTime(job.event.setupStart)} · Einlass ${easyJobTime(job.event.admissionStart)} · Pause ${easyJobTime(job.event.breakStart)}–${easyJobTime(job.event.breakEnd)}</small></span><span>Beginn ${easyJobTime(job.event.eventStart)}<br>Ende ${easyJobTime(job.event.eventEnd)}</span><span>${(job.roomUses||[]).length} Raumnutzungen</span></label>`).join('')||'<p class="property-note">Keine Jobs im Projekt geliefert.</p>'}</div>${(item.roomUses||[]).length?`<div class="easyjob-room-uses"><strong>Raumnutzungen</strong>${item.roomUses.map(use=>`<span>${escapeHtml(use.room||'Raum')} · ${escapeHtml(use.type||'Nutzung')} · ${easyJobTime(use.start)}–${easyJobTime(use.end)}</span>`).join('')}</div>`:''}</details>`;}).join('')||'<p class="property-note">Keine passenden easyjob-Projekte gefunden.</p>';table.onchange=event=>{if(event.target.matches('[data-easyjob-project]'))table.querySelectorAll(`[data-project-id="${CSS.escape(event.target.dataset.easyjobProject)}"]:not(:disabled)`).forEach(input=>{input.checked=event.target.checked;});const checked=table.querySelector('[data-easyjob-project]:checked,[data-easyjob-job]:checked');document.querySelector('#easyjob-import-selected').disabled=!checked;};}
+document.querySelector('#easyjob-preview-form').addEventListener('submit',async event=>{event.preventDefault();const table=document.querySelector('#easyjob-preview-table'),from=document.querySelector('#easyjob-preview-from').value,until=document.querySelector('#easyjob-preview-until').value;table.innerHTML='<p class="property-note">Projektdetails, Jobs und Raumkalender werden geprüft …</p>';try{const result=await apiRequest('/api/integrations/easyjob/import-preview',{method:'POST',body:JSON.stringify({from:from||undefined,until:until||undefined,search:document.querySelector('#easyjob-preview-search').value.trim(),eventType:document.querySelector('#easyjob-preview-event-type').value.trim(),objectType:document.querySelector('#easyjob-preview-object-type').value,limit:100,offset:0})});renderEasyJobPreview(result.data||[]);renderEasyJobFieldAnalysis(result.fieldAnalysis||{});}catch(error){table.innerHTML=`<p class="auth-message">${escapeHtml(error.message)}</p>`;}});
+document.querySelector('#easyjob-import-selected').addEventListener('click',async event=>{const projectChecks=[...document.querySelectorAll('[data-easyjob-project]:checked')],jobChecks=[...document.querySelectorAll('[data-easyjob-job]:checked')],ids=[...new Set([...projectChecks.map(input=>input.dataset.easyjobProject),...jobChecks.map(input=>input.dataset.projectId)])],jobIds=jobChecks.map(input=>input.dataset.easyjobJob);if(!ids.length)return;const button=event.currentTarget;button.disabled=true;button.textContent='Importiert …';try{const result=await apiRequest('/api/integrations/easyjob/import',{method:'POST',body:JSON.stringify({ids,jobIds,importKind:document.querySelector('#easyjob-import-kind').value,from:document.querySelector('#easyjob-preview-from').value||undefined,until:document.querySelector('#easyjob-preview-until').value||undefined})});await Promise.all([loadEvents(),loadContent()]);const errors=(result.results||[]).filter(item=>item.action==='error');const scheduleCount=(result.results||[]).reduce((sum,item)=>sum+Number(item.schedule?.created||0)+Number(item.schedule?.updated||0),0);const summary=`${result.summary.created} neu, ${result.summary.updated} aktualisiert, ${result.summary.unchanged} unverändert, ${result.summary.excluded||0} ausgeschlossen, ${scheduleCount} Ablaufpunkte übernommen${result.summary.errors?`, ${result.summary.errors} Fehler`:''}.`;document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className=`connection-message ${errors.length?'is-error':'is-success'}`;document.querySelector('#easyjob-message').textContent=errors.length?`${summary} ${errors.slice(0,3).map(item=>`Projekt ${item.projectId}: ${item.reason}`).join(' · ')}`:summary;if(result.summary.created||result.summary.updated||result.summary.unchanged){setView('events');showToast('Die easyjob-Auswahl wurde unter Veranstaltungen übernommen.');}else showToast(errors[0]?.reason||'Es wurde keine Veranstaltung importiert.');}catch(error){document.querySelector('#easyjob-message').hidden=false;document.querySelector('#easyjob-message').className='connection-message is-error';document.querySelector('#easyjob-message').textContent=error.message;showToast(error.message);}finally{button.disabled=false;button.textContent='Auswahl importieren';}});
 
 const navigationModules=[
   {view:'dashboard',label:'Übersicht',icon:'⌂',description:'Dashboard, Kennzahlen und Schnellaktionen.'},
   {view:'events',label:'Veranstaltungen',icon:'◫',description:'Programm, Termine und Veröffentlichungsdaten.'},
   {view:'displays',label:'Displays',icon:'▣',description:'Displays, Gruppen, Matrizen und Standorte.'},
   {view:'channels',label:'Slides & Kanäle',icon:'▤',description:'Slide-Editor, Bibliothek und Abspielkanäle.'},
+  {view:'advertising',label:'Werbung',icon:'◇',description:'Werbeslides und standortbezogene Werbekanäle.'},
   {view:'media',label:'Mediendatenbank',icon:'▧',description:'Bilder, Videos, Vektoren und Ordner.'},
   {view:'schedule',label:'Zeitplanung',icon:'▦',description:'Tages- und Wochenplanung für alle Ziele.'},
   {view:'operations',label:'Presets & Warnhinweise',icon:'⌁',description:'Betriebspresets, Warnungen und DWD.'},
@@ -1266,7 +1374,7 @@ const navigationModules=[
   {view:'settings',label:'Einstellungen',icon:'⚙',description:'System-, Benutzer- und Schnittstellenkonfiguration.'}
 ];
 const defaultNavigationOrder=navigationModules.map(module=>module.view);
-const legacyFeatureViewMap={events:'events',displays:'displays',channels:'content',media:'content',schedule:'schedule',integrations:'integrations',operations:'presets_warnings'};
+const legacyFeatureViewMap={events:'events',displays:'displays',channels:'content',advertising:'advertising',media:'content',schedule:'schedule',integrations:'integrations',operations:'presets_warnings'};
 
 function normalizedNavigationOrder(order){
   const requested=Array.isArray(order)?order.map(String):[];
@@ -1348,6 +1456,39 @@ document.querySelector('#editor-element-settings-form').addEventListener('submit
   try{const result=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify(editorSettings)});applyNavigationConfig(result.data||{...state.featureSettings,...editorSettings},result.navigationOrder||state.navigationOrder);renderEditorElementSettings();showToast('Die verfügbaren Slide-Editor-Elemente wurden gespeichert.');}
   catch(error){showToast(error.message);}
 });
+
+function renderAdvertisingSettings(status){
+  const settings=status.settings||{},types=status.availableEventTypes||[],selected=new Set(settings.eventTypes||[]);
+  state.advertisingAvailableTypes=types;
+  state.advertisingTypeDefaultMedia={...(settings.eventTypeDefaultMedia||{})};
+  document.querySelector('#advertising-enabled').checked=Boolean(settings.enabled);
+  document.querySelector('#advertising-channel-name').value=settings.channelName||'Werbung';
+  document.querySelector('#advertising-maximum-events').value=settings.maximumEvents||15;
+  document.querySelector('#advertising-duration').value=settings.durationSeconds||12;
+  document.querySelector('#advertising-show-date').checked=Boolean(settings.showDate);
+  document.querySelector('#advertising-show-time').checked=settings.showTime!==false;
+  document.querySelector('#advertising-show-seconds').checked=Boolean(settings.showSeconds);
+  document.querySelector('#advertising-hour12').checked=Boolean(settings.hour12);
+  const selectedLocations=new Set(settings.locationIds||[]);
+  document.querySelector('#advertising-location-options').innerHTML=state.locations.length?state.locations.map(location=>`<label class="toggle-label"><input type="checkbox" value="${escapeHtml(location.id)}" ${selectedLocations.has(location.id)?'checked':''}> ${escapeHtml(location.name)}</label>`).join(''):'<p class="property-note">Noch keine Standorte vorhanden.</p>';
+  document.querySelector('#advertising-status-tag').textContent=settings.enabled?'Aktiv':'Deaktiviert';
+  document.querySelector('#advertising-status-tag').className=`tag ${settings.enabled?'green':'muted'}`;
+  renderAdvertisingTypeOptions(types,selected);
+  document.querySelector('#advertising-summary').innerHTML=`<strong>${Number(status.generatedSlides||0)} Werbeslides</strong><span>${Number(status.eligibleEvents||0)} passende zukünftige Veranstaltungen · ${Number(status.channel?.itemCount||0)} Slides im Kanal</span>${status.lastSynchronizedAt?`<small>Zuletzt synchronisiert: ${escapeHtml(new Date(status.lastSynchronizedAt).toLocaleString('de-DE'))}</small>`:''}`;
+}
+async function loadAdvertisingSettings(){
+  if(!document.querySelector('#advertising-settings-form'))return;
+  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),apiRequest('/api/templates'),apiRequest('/api/locations'),apiRequest('/api/media')]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Integrierte Werbevorlage</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
+}
+function renderAdvertisingTypeOptions(types=state.advertisingAvailableTypes||[],selected=new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value))){
+  const list=document.querySelector('#advertising-event-types');if(!list)return;
+  list.innerHTML=types.map(type=>{const active=selected.has(type),assetId=state.advertisingTypeDefaultMedia?.[type],asset=state.mediaAssets?.find(item=>item.id===assetId&&!item.deletedAt&&item.type==='image');return`<article class="advertising-type-default ${active?'':'is-inactive'}"><div class="advertising-type-default-preview">${asset?`<img src="${escapeHtml(asset.src)}" alt="">`:'Kein<br>Standardbild'}</div><div class="advertising-type-default-body"><label class="toggle-label"><input type="checkbox" data-advertising-event-type value="${escapeHtml(type)}" ${active?'checked':''}> ${escapeHtml(type)}</label><small title="${escapeHtml(asset?.name||'')}">${escapeHtml(asset?.name||'Veranstaltungsspezifisches Bild erforderlich')}</small><div class="advertising-type-default-actions"><button class="button button-secondary" type="button" data-advertising-type-media="${escapeHtml(type)}" ${active?'':'disabled'}>${asset?'Bild ersetzen':'Bild auswählen / hochladen'}</button>${asset?`<button class="button button-ghost" type="button" data-advertising-type-media-remove="${escapeHtml(type)}" ${active?'':'disabled'}>Entfernen</button>`:''}</div></div></article>`;}).join('')||'<p class="property-note">Noch keine Veranstaltungsarten vorhanden. Sie erscheinen nach dem ersten Import.</p>';
+}
+function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:document.querySelector('#advertising-template').value||undefined,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
+document.querySelector('#advertising-event-types').addEventListener('change',event=>{if(event.target.matches('[data-advertising-event-type]'))renderAdvertisingTypeOptions(state.advertisingAvailableTypes,new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value)));});
+document.querySelector('#advertising-event-types').addEventListener('click',event=>{const select=event.target.closest('[data-advertising-type-media]'),remove=event.target.closest('[data-advertising-type-media-remove]');if(select){const type=select.dataset.advertisingTypeMedia;openMediaLibrary(asset=>{state.advertisingTypeDefaultMedia={...(state.advertisingTypeDefaultMedia||{}),[type]:asset.id};renderAdvertisingTypeOptions();},'image-only',`Standardbild für „${type}“ auswählen oder hochladen`);}if(remove){const type=remove.dataset.advertisingTypeMediaRemove;delete state.advertisingTypeDefaultMedia[type];renderAdvertisingTypeOptions();}});
+document.querySelector('#advertising-settings-form').addEventListener('submit',async event=>{event.preventDefault();try{const result=await apiRequest('/api/settings/advertising',{method:'PUT',body:JSON.stringify(advertisingPayload())});renderAdvertisingSettings(result);await loadContent();showToast('Werbung wurde gespeichert und synchronisiert.');}catch(error){showToast(error.message);}});
+document.querySelector('#advertising-sync').addEventListener('click',async event=>{event.currentTarget.disabled=true;try{const result=await apiRequest('/api/advertising/synchronize',{method:'POST',body:'{}'});renderAdvertisingSettings(result);await loadContent();showToast('Werbeslides und Werbekanal wurden synchronisiert.');}catch(error){showToast(error.message);}finally{event.currentTarget.disabled=false;}});
 
 document.querySelector('[data-action="export-crewbrain-config"]').addEventListener('click', async event => {
   if (!window.confirm('Die JSON-Datei enthält den CrewBrain-Zugang im Klartext. Konfiguration jetzt exportieren?')) return;
@@ -2121,7 +2262,7 @@ function thumbnailElementMarkup(element, settings) {
   if (element.type === 'image') content = element.src ? `<img src="${escapeHtml(element.src)}" alt="">` : '<span class="slide-thumb-symbol">▧</span>';
   if (element.type === 'video') content = element.src ? `<video src="${escapeHtml(element.src)}" muted preload="metadata"></video>` : '<span class="slide-thumb-symbol">▶</span>';
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
-  if (element.type === 'event') content = `<span class="slide-thumb-event"><small>GROSSER SAAL</small><strong>${escapeHtml(element.event || element.text || 'Veranstaltung')}</strong><i>Einlass 18:30 · Beginn 19:30</i></span>`;
+  if (element.type === 'event') content = `<span class="slide-thumb-event"><small>Herzlich willkommen zu</small><strong>${escapeHtml(element.event || element.text || 'Veranstaltung')}</strong><i>Einlass: 18:30 · Beginn: 19:30 · Pause: 20:15 · Ende: 22:00</i></span>`;
   if (element.type === 'event-field') content = escapeHtml(`${element.prefix || ''}${element.fallback || 'Veranstaltungsfeld'}`);
   return `<span class="slide-thumb-element type-${escapeHtml(element.type)}" style="${style}">${content}</span>`;
 }
@@ -2224,6 +2365,24 @@ function slideForUi(record) {
   return { ...record, title: record.name, ratio: record.orientation, designOrientation: documentData.designOrientation || (record.orientation === 'portrait' ? 'portrait' : 'landscape'), elements: Array.isArray(documentData.elements) ? documentData.elements : [], settings: documentData.settings || {}, meta: `Version ${record.currentVersion} · ${record.status === 'published' ? 'veröffentlicht' : record.status === 'ready' ? 'bereit' : 'Entwurf'}${validity ? ` · ${validity}` : ''}`, thumbTitle: documentData.thumbTitle || record.name, thumbSub: documentData.thumbSub || orientationLabels[record.orientation] || 'Querformat' };
 }
 
+function tagInput(value){return[...new Set(String(value||'').split(',').map(tag=>tag.trim()).filter(Boolean))];}
+function contentTagMarkup(tags=[]){return tags.length?`<span class="content-tags">${tags.map(tag=>`<i>${escapeHtml(tag)}</i>`).join('')}</span>`:'';}
+function isAdvertisingContent(item){return Boolean(item?.automationKey?.startsWith('advertising:'))||(item?.tags||[]).some(tag=>String(tag).toLocaleLowerCase('de-DE')==='werbung');}
+function scopedSlides(){return state.slides.filter(slide=>state.contentScope==='advertising'?isAdvertisingContent(slide):!isAdvertisingContent(slide));}
+function scopedChannels(){return state.channels.filter(channel=>state.contentScope==='advertising'?isAdvertisingContent(channel):!isAdvertisingContent(channel));}
+function scopedTags(tags=[]){return state.contentScope==='advertising'?[...new Set([...tags,'Werbung'])]:tags.filter(tag=>String(tag).toLocaleLowerCase('de-DE')!=='werbung');}
+function applyContentScopeUi(){
+  const advertising=state.contentScope==='advertising';
+  document.querySelector('#content-module-eyebrow').textContent=advertising?'Werbemodul':'Content-Baukasten';
+  document.querySelector('#content-module-title').textContent=advertising?'Werbung':'Slides & Kanäle';
+  document.querySelector('#content-module-description').textContent=advertising?'Werbeslides erstellen, nach Standorten organisieren und in eigenen Werbekanälen ausspielen.':'Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.';
+  document.querySelector('#content-slide-library-title').textContent=advertising?'Werbeslides':'Verfügbare Slides';
+}
+function populateContentTagFilters(){
+  const populate=(selector,items)=>{const select=document.querySelector(selector),selected=select.value,tags=[...new Set(items.flatMap(item=>item.tags||[]))].sort((a,b)=>a.localeCompare(b,'de'));select.innerHTML=`<option value="">Alle Tags</option>${tags.map(tag=>`<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')}`;select.value=tags.includes(selected)?selected:'';};
+  populate('#slide-tag-filter',scopedSlides());populate('#channel-tag-filter',scopedChannels());
+}
+
 function hydrateMediaReferences(value) {
   if (Array.isArray(value)) return value.map(hydrateMediaReferences);
   if (!value || typeof value !== 'object') return value;
@@ -2281,12 +2440,15 @@ async function loadContent(preferredChannelId = state.activeChannelId) {
     state.mediaAssets = mediaResult.assets || [];
     state.locations = locationResult.data || [];
     state.slides = (slidesResult.data || []).map(slideForUi);
-    state.selectedSlides = new Set([...state.selectedSlides].filter(id => state.slides.some(slide => slide.id === id)));
+    state.selectedSlides = new Set([...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)));
     state.channels = channelsResult.data || [];
     state.templates = (templatesResult.data || []).map(template => ({ ...template, document: hydrateMediaReferences(structuredClone(template.document || {})) }));
-    state.activeChannelId = state.channels.some(channel => channel.id === preferredChannelId) ? preferredChannelId : state.channels[0]?.id || null;
+    const availableChannels=scopedChannels();
+    state.activeChannelId = availableChannels.some(channel => channel.id === preferredChannelId) ? preferredChannelId : availableChannels[0]?.id || null;
     state.contentLoaded = true;
+    applyContentScopeUi();
     populateContentEventOptions();
+    populateContentTagFilters();
     renderSlideLibrary();
     renderChannelOverview();
     renderTemplates();
@@ -2299,11 +2461,12 @@ function channelDuration(channel){return Number(channel?.totalDurationSeconds??c
 function channelStatusLabel(status){return status==='published'?'Veröffentlicht':status==='ready'?'Bereit':status==='paused'?'Pausiert':'Entwurf';}
 function renderChannelOverview(){
   const table=document.querySelector('#channel-overview');if(!table)return;
-  const query=document.querySelector('#channel-search').value.trim().toLowerCase(),channels=state.channels.filter(channel=>!query||`${channel.name} ${channel.description||''} ${channel.items.map(item=>state.slides.find(slide=>slide.id===item.slideId)?.title||'').join(' ')}`.toLowerCase().includes(query));
-  document.querySelector('#channel-count').textContent=state.channels.length;
-  table.innerHTML=channels.map(channel=>`<button class="channel-list-item ${channel.id===state.activeChannelId?'is-active':''}" type="button" role="option" aria-selected="${channel.id===state.activeChannelId}" data-channel-switch="${escapeHtml(channel.id)}"><span class="channel-list-title"><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description||'Ohne Beschreibung')}</small></span><span class="channel-list-status ${channel.status}"><i></i>${escapeHtml(channelStatusLabel(channel.status))}</span><span class="channel-list-meta">${channel.items.length} Slide${channel.items.length===1?'':'s'} · ${escapeHtml(formatDuration(channelDuration(channel)))}</span><span class="channel-list-arrow" aria-hidden="true">›</span></button>`).join('')||'<p class="channel-list-empty">Keine passenden Kanäle gefunden.</p>';
+  const scoped=scopedChannels(),query=document.querySelector('#channel-search').value.trim().toLowerCase(),tag=document.querySelector('#channel-tag-filter').value,channels=scoped.filter(channel=>(!tag||(channel.tags||[]).includes(tag))&&(!query||`${channel.name} ${channel.description||''} ${(channel.tags||[]).join(' ')} ${channel.items.map(item=>state.slides.find(slide=>slide.id===item.slideId)?.title||'').join(' ')}`.toLowerCase().includes(query)));
+  document.querySelector('#channel-count').textContent=scoped.length;
+  table.innerHTML=channels.map(channel=>`<button class="channel-list-item ${channel.id===state.activeChannelId?'is-active':''}" type="button" role="option" aria-selected="${channel.id===state.activeChannelId}" data-channel-switch="${escapeHtml(channel.id)}"><span class="channel-list-title"><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description||'Ohne Beschreibung')}</small>${contentTagMarkup(channel.tags)}</span><span class="channel-list-status ${channel.status}"><i></i>${escapeHtml(channelStatusLabel(channel.status))}</span><span class="channel-list-meta">${channel.items.length} Slide${channel.items.length===1?'':'s'} · ${escapeHtml(formatDuration(channelDuration(channel)))} · ${channel.locationIds?.length?`${channel.locationIds.length} Standort${channel.locationIds.length===1?'':'e'}`:'alle Standorte'}</span><span class="channel-list-arrow" aria-hidden="true">›</span></button>`).join('')||'<p class="channel-list-empty">Keine passenden Kanäle gefunden.</p>';
 }
 document.querySelector('#channel-search').addEventListener('input',renderChannelOverview);
+document.querySelector('#channel-tag-filter').addEventListener('change',renderChannelOverview);
 document.querySelector('#channel-overview').addEventListener('click',async event=>{
   const button=event.target.closest('[data-channel-switch]');if(!button||button.dataset.channelSwitch===state.activeChannelId)return;
   try{await flushChannelAutosave();state.activeChannelId=button.dataset.channelSwitch;applyActiveChannel();}catch(error){showToast(error.message);}
@@ -2324,11 +2487,13 @@ function renderSlideLibrary() {
   if (!library) return;
   const search = document.querySelector('#slide-search').value.trim().toLowerCase();
   const filter = document.querySelector('#slide-filter').value;
-  const visibleSlides = state.slides.filter(slide => {
-    const matchesSearch = !search || `${slide.title} ${slide.meta}`.toLowerCase().includes(search);
-    return matchesSearch && (filter === 'all' || slide.type === filter);
+  const tag=document.querySelector('#slide-tag-filter').value;
+  const availableSlides=scopedSlides();
+  const visibleSlides = availableSlides.filter(slide => {
+    const matchesSearch = !search || `${slide.title} ${slide.meta} ${(slide.tags||[]).join(' ')}`.toLowerCase().includes(search);
+    return matchesSearch && (!tag||(slide.tags||[]).includes(tag)) && (filter === 'all' || slide.type === filter);
   });
-  document.querySelector('#slide-count').textContent = state.slides.length;
+  document.querySelector('#slide-count').textContent = availableSlides.length;
   const selectedVisible = visibleSlides.filter(slide => state.selectedSlides.has(slide.id)).length;
   const selectAll = document.querySelector('#slide-select-all');
   selectAll.checked = Boolean(visibleSlides.length) && selectedVisible === visibleSlides.length;
@@ -2342,7 +2507,7 @@ function renderSlideLibrary() {
     <div class="slide-library-card ${state.selectedSlides.has(slide.id) ? 'is-selected' : ''}" draggable="${canEditContent}" data-slide-id="${escapeHtml(slide.id)}">
       ${canEditContent ? `<label class="slide-library-check"><input type="checkbox" data-slide-select="${escapeHtml(slide.id)}" aria-label="${escapeHtml(slide.title)} auswählen" ${state.selectedSlides.has(slide.id) ? 'checked' : ''}></label>` : '<span></span>'}
       ${slideThumb(slide)}
-      <span class="slide-card-info"><strong>${escapeHtml(slide.title)}</strong><small>${escapeHtml(slideTypeLabels[slide.type])} · ${escapeHtml(slide.meta)}</small></span>
+      <span class="slide-card-info"><strong>${escapeHtml(slide.title)}</strong><small>${escapeHtml(slideTypeLabels[slide.type])} · ${escapeHtml(slide.meta)}</small>${contentTagMarkup(slide.tags)}</span>
       <span class="slide-card-actions">${canEditContent ? `<button type="button" data-add-library-slide="${escapeHtml(slide.id)}" title="Zum Kanal hinzufügen">＋</button>` : ''}<button type="button" data-version-library-slide="${escapeHtml(slide.id)}" title="Versionen anzeigen">Versionen</button>${canEditContent ? `<button type="button" data-edit-library-slide="${escapeHtml(slide.id)}" title="Slide bearbeiten">Bearbeiten</button>` : ''}</span>
     </div>`).join('') || '<p class="property-note">Noch keine passende Slide vorhanden.</p>';
 
@@ -2363,7 +2528,8 @@ function renderSlideLibrary() {
 function visibleLibrarySlides() {
   const search = document.querySelector('#slide-search').value.trim().toLowerCase();
   const filter = document.querySelector('#slide-filter').value;
-  return state.slides.filter(slide => (!search || `${slide.title} ${slide.meta}`.toLowerCase().includes(search)) && (filter === 'all' || slide.type === filter));
+  const tag=document.querySelector('#slide-tag-filter').value;
+  return scopedSlides().filter(slide => (!search || `${slide.title} ${slide.meta} ${(slide.tags||[]).join(' ')}`.toLowerCase().includes(search)) && (!tag||(slide.tags||[]).includes(tag)) && (filter === 'all' || slide.type === filter));
 }
 
 document.querySelector('#slide-select-all').addEventListener('change', event => {
@@ -2386,7 +2552,8 @@ function slideUpdatePayload(slide, name) {
     document: slide.document,
     status: slide.status,
     startsAt: slide.startsAt || undefined,
-    endsAt: slide.endsAt || undefined
+    endsAt: slide.endsAt || undefined,
+    tags: slide.tags || []
   };
 }
 
@@ -2535,6 +2702,7 @@ if (playlistDrop) {
 
 document.querySelector('#slide-search').addEventListener('input', renderSlideLibrary);
 document.querySelector('#slide-filter').addEventListener('change', renderSlideLibrary);
+document.querySelector('#slide-tag-filter').addEventListener('change',renderSlideLibrary);
 const slideDialog = document.querySelector('#slide-dialog');
 slideDialog.addEventListener('cancel', event => {
   if (state.editingTemplateId) return;
@@ -2591,6 +2759,7 @@ function slideEditorPayload() {
     status: document.querySelector('#slide-status').value,
     startsAt,
     endsAt,
+    tags:scopedTags(tagInput(document.querySelector('#slide-tags').value)),
     locationIds:[...document.querySelectorAll('#slide-location-options input:checked')].map(input=>input.value),
     document: {
       thumbTitle: title,
@@ -2618,7 +2787,7 @@ async function persistSlideEditor() {
   if (index >= 0) state.slides[index] = uiSlide;
   else state.slides.unshift(uiSlide);
   renderSlideLibrary();
-  document.querySelector('#slide-count').textContent = state.slides.length;
+  document.querySelector('#slide-count').textContent = scopedSlides().length;
   return uiSlide;
 }
 
@@ -2683,15 +2852,15 @@ function openSlideEditor(slide = null, options = {}) {
   document.querySelector('#slide-status').value = slide?.status || 'draft';
   document.querySelector('#slide-starts-at').value = slideDateTimeInputValue(slide?.startsAt);
   document.querySelector('#slide-ends-at').value = slideDateTimeInputValue(slide?.endsAt);
+  document.querySelector('#slide-tags').value=scopedTags(slide?.tags||[]).join(', ');
   renderSlideLocationOptions(slide?.locationIds||[]);
   document.querySelectorAll('.slide-validity-field').forEach(field => { field.hidden = Boolean(state.editingTemplateId); });
   document.querySelector('#archive-slide-button').hidden = !slide || state.currentUser?.role === 'viewer';
   document.querySelector('#duplicate-slide-button').hidden = !slide || Boolean(state.editingTemplateId);
   document.querySelector('#delete-slide-button').hidden = !slide || Boolean(state.editingTemplateId) || state.currentUser?.role !== 'admin';
-  state.editorElements = slide?.elements?.length ? slide.elements.map(element => ({ ...element })) : [createEditorElement('text', 10, 16), createEditorElement('event', 10, 44)];
+  state.editorElements = slide?.elements?.length ? slide.elements.map(element => ({ ...element })) : [createEditorElement('event', 10, 30)];
   state.editorSlideSettings = { ...defaultSlideSettings(), ...(slide?.settings || {}), background: { ...defaultSlideSettings().background, ...(slide?.settings?.background || {}) }, logo: { ...defaultSlideSettings().logo, ...(slide?.settings?.logo || {}) }, clock: { ...defaultSlideSettings().clock, ...(slide?.settings?.clock || {}) } };
   state.showSlideSettings = false;
-  if (!slide) state.editorElements[0].text = 'Willkommen';
   state.selectedEditorElementId = state.editorElements[0]?.id || null;
   state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
   state.editorUndo=[];state.editorRedo=[];
@@ -2712,7 +2881,7 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'weather') return { ...base, weatherMode: 'temperature', fontSize: 32, fontWeight: 600, color: '#ffffff', background: '#315b49', x: 78, y: 6, width: 16, height: 12, padding: 6, radius: 10 };
   if (type === 'qr-code') return { ...base, qrKind: 'link', qrValue: 'https://example.org', wifiSsid: '', wifiPassword: '', wifiEncryption: 'WPA', wifiHidden: false, qrForeground: '#111111', background: '#ffffff', x: 64, y: 18, width: 24, height: 42, padding: 8 };
   if (type === 'countdown') return { ...base, countdownMode: 'daily', countdownDailyTime: '18:00', targetTime: '', prefix: 'Noch ', suffix: '', showSeconds: true, fontSize: 52, fontWeight: 700, color: '#ffffff', background: 'transparent', align: 'center', width: 48, height: 18 };
-  if (type === 'event') return { ...base, event: 'Sommerkonzert', text: 'Sommerkonzert', fontSize: 38, color: '#ffffff', width: 58, height: 28 };
+  if (type === 'event') return { ...base, event: 'Sommerkonzert', text: 'Sommerkonzert', fontSize: 38, color: '#ffffff', width: 80, height: 32 };
   if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: true, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
   if (type === 'alert-icon') { const picker=document.querySelector('#alert-icon-picker'),key=picker?.value||'general-warning',alt=picker?.selectedOptions?.[0]?.textContent||'Warnsymbol'; return { ...base, type: 'image', src: assetUrl(`/media/alerts/${key}.svg`), alt, background: 'transparent', width: 24, height: 36 }; }
@@ -2787,6 +2956,7 @@ function editorSnapshot(){
     status:document.querySelector('#slide-status').value,
     startsAt:document.querySelector('#slide-starts-at').value,
     endsAt:document.querySelector('#slide-ends-at').value,
+    tags:document.querySelector('#slide-tags').value,
     locationIds:[...document.querySelectorAll('#slide-location-options input:checked')].map(input=>input.value)
   });
 }
@@ -2814,6 +2984,7 @@ function restoreEditorSnapshot(snapshot){
     document.querySelector('#slide-status').value=value.status||'draft';
     document.querySelector('#slide-starts-at').value=value.startsAt||'';
     document.querySelector('#slide-ends-at').value=value.endsAt||'';
+    document.querySelector('#slide-tags').value=value.tags||'';
     renderSlideLocationOptions(value.locationIds||[]);
     applyEditorOrientation(value.ratio||'landscape',value.designOrientation);
   }
@@ -2877,19 +3048,19 @@ function automaticContrastColor(settings = state.editorSlideSettings) {
   return luminance > 145 ? '#111111' : '#ffffff';
 }
 function rowDisplayColor(row, settings = state.editorSlideSettings) { return row?.colorMode === 'custom' ? row.color || '#ffffff' : automaticContrastColor(settings); }
-function wayfindingCellMarkup(cell, color = automaticContrastColor()) {
+function wayfindingCellMarkup(cell, color = automaticContrastColor(), event = null) {
   if (!cell || cell.kind === 'empty') return '';
   const colorStyle = `color:${color}`;
   if (cell.kind === 'image') return cell.src ? `<img class="wf-cropped-image" src="${escapeHtml(cell.src)}" alt="" style="object-fit:${escapeHtml(cell.imageFit || 'cover')};object-position:${Number(cell.imageX ?? 50)}% ${Number(cell.imageY ?? 50)}%;transform:scale(${Number(cell.imageZoom || 100) / 100})">` : `<span class="canvas-placeholder">▧<small>Bild wählen</small></span>`;
   if (cell.kind === 'arrow') return `<span class="wf-arrow-image" style="${colorStyle};--arrow-mask:url('${arrowAssetSrc(cell.direction)}')" role="img" aria-label="${escapeHtml(directionGlyphs[cell.direction] || 'Pfeil')}"></span>`;
   if (cell.kind === 'iframe') return cell.src ? `<iframe src="${escapeHtml(cell.src)}" title="Eingebettete Website"></iframe>` : '<span class="canvas-placeholder">↗<small>Website eintragen</small></span>';
-  if (cell.kind === 'countdown') return `<span class="wf-countdown" style="${colorStyle};${countdownFontStyle(cell)}" data-editor-wayfinding-countdown="${escapeHtml(encodeURIComponent(JSON.stringify(cell)))}">${escapeHtml(cell.prefix || '')}${countdownPreview(cell)}${escapeHtml(cell.suffix || '')}</span>`;
-  if (cell.kind === 'event-field') return `<span class="wf-text" style="${colorStyle}">${escapeHtml(cell.prefix || '')}${escapeHtml(cell.fallback || 'Veranstaltungsfeld')}</span>`;
-  return `<span class="wf-text ${cell.bold ? 'is-bold' : ''} ${cell.underline ? 'is-underlined' : ''}" style="${colorStyle};font-size:${wayfindingTextSizes[cell.textStyle] || wayfindingTextSizes.body};text-align:${escapeHtml(cell.align || 'left')};font-weight:${cell.bold || ['hero', 'heading'].includes(cell.textStyle) ? 700 : 400}">${escapeHtml(cell.text || '')}</span>`;
+  if (cell.kind === 'countdown') { const present=cell.targetSource!=='event'||Boolean(event?.[cell.eventField||'eventStart']); return `<span class="wf-countdown" ${cell.autoFontSize?'data-auto-font="true" data-auto-font-max="240"':''} ${hiddenEventValueAttributes(present)} style="${colorStyle};${countdownFontStyle(cell)}" data-editor-wayfinding-countdown="${escapeHtml(encodeURIComponent(JSON.stringify(cell)))}">${escapeHtml(cell.prefix || '')}${countdownPreview(cell,event)}${escapeHtml(cell.suffix || '')}</span>`; }
+  if (cell.kind === 'event-field') { const presentation=eventFieldPresentation(event,cell.eventField,cell); return `<span class="wf-text" ${cell.autoFontSize?'data-auto-font="true" data-auto-font-max="240"':''} ${hiddenEventValueAttributes(presentation.present)} style="${colorStyle};font-size:${Math.max(6,Math.min(240,Number(cell.fontSize)||42))}px">${escapeHtml(presentation.text)}</span>`; }
+  return `<span class="wf-text ${cell.bold ? 'is-bold' : ''} ${cell.underline ? 'is-underlined' : ''}" ${cell.autoFontSize?'data-auto-font="true" data-auto-font-max="240"':''} style="${colorStyle};font-size:${wayfindingTextSizes[cell.textStyle] || wayfindingTextSizes.body};text-align:${escapeHtml(cell.align || 'left')};font-weight:${cell.bold || ['hero', 'heading'].includes(cell.textStyle) ? 700 : 400}">${escapeHtml(cell.text || '')}</span>`;
 }
-function wayfindingMarkup(element, settings = state.editorSlideSettings) {
+function wayfindingMarkup(element, settings = state.editorSlideSettings, event = null) {
   const rows = (element.rows || []).map((row, index) => {
-    const rowColor = rowDisplayColor(row, settings), left = wayfindingCellMarkup(row.left, rowColor), center = wayfindingCellMarkup(row.center, rowColor), right = wayfindingCellMarkup(row.right, rowColor);
+    const rowColor = rowDisplayColor(row, settings), left = wayfindingCellMarkup(row.left, rowColor,event), center = wayfindingCellMarkup(row.center, rowColor,event), right = wayfindingCellMarkup(row.right, rowColor,event);
     const centerClass = !left && !right && row.expandCenter ? ' center-full' : left && !right ? ' center-to-right' : '';
     const cells = centerClass === ' center-full' ? `<div class="wayfinding-cell is-center center-full">${center}</div>` : `${left ? `<div class="wayfinding-cell">${left}</div>` : '<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right && !centerClass ? `<div class="wayfinding-cell">${right}</div>` : !centerClass ? '<div></div>' : ''}`;
     return `<div class="wayfinding-row ${index && row.separator ? 'has-separator' : ''}" style="color:${rowColor}">${cells}</div>`;
@@ -2913,24 +3084,27 @@ function slideDecorationsMarkup(settings = state.editorSlideSettings) {
 }
 
 function editorElementMarkup(element) {
-  if (element.type === 'wayfinding') return wayfindingMarkup(element);
+  const event=state.events.find(item=>item.id===document.querySelector('#slide-event').value);
+  if (element.type === 'wayfinding') return wayfindingMarkup(element,state.editorSlideSettings,event);
   if (element.type === 'ticker') return `<div class="canvas-ticker ${element.tickerDirection==='right'?'is-right':''}" style="--ticker-duration:${Math.max(3,Math.min(60,Number(element.tickerDuration||15)))}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div>`;
   if (element.type === 'weather') return weatherElementMarkup(element);
   if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
   if (element.type === 'countdown') return `<div class="canvas-countdown">${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</div>`;
-  if (element.type === 'image') return element.src ? `<img src="${escapeHtml(element.src)}" alt="">` : '<span class="canvas-placeholder">▧<small>Bild auswählen</small></span>';
+  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt="">`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
-  if (element.type === 'event') return `<div class="canvas-event-content"><small>GROSSER SAAL</small><strong>${escapeHtml(element.event || 'Sommerkonzert')}</strong><span>Einlass 18:30 · Beginn 19:30</span></div>`;
-  if (element.type === 'event-field') { const event=state.events.find(item=>item.id===document.querySelector('#slide-event').value); const raw=event?.[element.field]; const preview=raw?String(raw):element.fallback||'–'; return `<div class="canvas-text-content">${escapeHtml(`${element.prefix||''}${preview}`)}</div>`; }
+  if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Sommerkonzert',element)}</div>`;
+  if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="canvas-text-content" ${hiddenEventValueAttributes(presentation.present)}>${escapeHtml(presentation.text)}</div>`; }
   return `<div class="canvas-text-content" contenteditable="true" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
 }
 
 function renderEditorCanvas() {
   const canvas = document.querySelector('#slide-editor-canvas');
   if(!state.selectedEditorElementIds)state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
-  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const selected=state.selectedEditorElementIds.has(element.id);return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${element.id}" style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(element.background || 'transparent')};color:${escapeHtml(element.color || '#ffffff')};font-size:${Number(element.fontSize || 24)}px;text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(element)}<button class="canvas-rotate-handle" type="button" aria-label="Element drehen">↻</button><button class="canvas-element-handle" type="button" aria-label="Element verschieben">⠿</button>${selected?'<button class="canvas-delete-button" type="button" aria-label="Element löschen">×</button><i class="resize-handle nw"></i><i class="resize-handle ne"></i><i class="resize-handle sw"></i><i class="resize-handle se"></i>':''}</div>`;}).join('');
+  const selectedEvent=state.events.find(item=>item.id===document.querySelector('#slide-event').value);
+  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${element.id}" ${element.autoFontSize?'data-auto-font="true" data-auto-font-max="240"':''} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};font-size:${Number(element.fontSize || 24)}px;text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(element)}<button class="canvas-rotate-handle" type="button" aria-label="Element drehen">↻</button><button class="canvas-element-handle" type="button" aria-label="Element verschieben">⠿</button>${selected?'<button class="canvas-delete-button" type="button" aria-label="Element löschen">×</button><i class="resize-handle nw"></i><i class="resize-handle ne"></i><i class="resize-handle sw"></i><i class="resize-handle se"></i>':''}</div>`;}).join('');
   hydrateWeatherElements(canvas);
+  scheduleAutomaticTextFit(canvas);
 
   canvas.querySelectorAll('.canvas-element').forEach(node => {
     node.addEventListener('click', event => {
@@ -2990,16 +3164,16 @@ function wayfindingRowColorControls(row, rowIndex) {
 function wayfindingCellConfig(cell, rowIndex, column, label) {
   const kind = cell?.kind || 'empty';
   let detail = '';
-  if (kind === 'text') detail = `<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="text" value="${escapeHtml(cell.text || '')}" placeholder="Text"><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="textStyle">${Object.entries(wayfindingTextStyles).map(([value, text]) => `<option value="${value}" ${cell.textStyle === value ? 'selected' : ''}>${text}</option>`).join('')}</select><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="align"><option value="left" ${cell.align === 'left' ? 'selected' : ''}>Linksbündig</option><option value="center" ${cell.align === 'center' ? 'selected' : ''}>Mittig</option><option value="right" ${cell.align === 'right' ? 'selected' : ''}>Rechtsbündig</option></select><div class="wayfinding-checks"><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="bold" ${cell.bold ? 'checked' : ''}> Fett</label><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="underline" ${cell.underline ? 'checked' : ''}> Unterstrichen</label></div>`;
+  if (kind === 'text') detail = `<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="text" value="${escapeHtml(cell.text || '')}" placeholder="Text"><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="textStyle">${Object.entries(wayfindingTextStyles).map(([value, text]) => `<option value="${value}" ${cell.textStyle === value ? 'selected' : ''}>${text}</option>`).join('')}</select><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="align"><option value="left" ${cell.align === 'left' ? 'selected' : ''}>Linksbündig</option><option value="center" ${cell.align === 'center' ? 'selected' : ''}>Mittig</option><option value="right" ${cell.align === 'right' ? 'selected' : ''}>Rechtsbündig</option></select><div class="wayfinding-checks"><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="bold" ${cell.bold ? 'checked' : ''}> Fett</label><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="underline" ${cell.underline ? 'checked' : ''}> Unterstrichen</label></div><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
   if (kind === 'arrow') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="direction">${Object.entries(directionGlyphs).map(([value, glyph]) => `<option value="${value}" ${cell.direction === value ? 'selected' : ''}>${glyph} ${value.replaceAll('-', ' ')}</option>`).join('')}</select>`;
   if (kind === 'image') detail = `<button class="mini-button" type="button" data-way-media="${rowIndex}:${column}">${cell.src ? 'Bild ersetzen' : 'Aus Mediathek wählen'}</button><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageFit"><option value="cover" ${cell.imageFit !== 'contain' ? 'selected' : ''}>Zuschneiden / füllen</option><option value="contain" ${cell.imageFit === 'contain' ? 'selected' : ''}>Vollständig einpassen</option></select><label class="range-field">Zoom <input type="range" min="100" max="250" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageZoom" value="${Number(cell.imageZoom || 100)}"></label><label class="range-field">Horizontal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageX" value="${Number(cell.imageX ?? 50)}"></label><label class="range-field">Vertikal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageY" value="${Number(cell.imageY ?? 50)}"></label>`;
-  if (kind === 'countdown') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetSource"><option value="manual" ${!['event','daily'].includes(cell.targetSource) ? 'selected' : ''}>Manuelle Zielzeit</option><option value="event" ${cell.targetSource === 'event' ? 'selected' : ''}>Zeit aus Veranstaltung</option><option value="daily" ${cell.targetSource === 'daily' ? 'selected' : ''}>Täglich zu einer Uhrzeit</option></select>${cell.targetSource === 'event' ? `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select>` : cell.targetSource === 'daily' ? `<label class="form-field"><span>Tägliche Zielzeit</span><input type="time" step="60" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="dailyTime" value="${escapeHtml(cell.dailyTime || '12:00')}"></label>` : `<input type="datetime-local" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetTime" value="${escapeHtml(cell.targetTime || '')}">`}<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor, z. B. Noch "><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="suffix" value="${escapeHtml(cell.suffix || '')}" placeholder="Text danach, z. B. bis zum Einlass"><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="showSeconds" ${cell.showSeconds !== false ? 'checked' : ''}> Sekunden anzeigen</label><label class="form-field"><span>Textgröße (px)</span><input type="number" min="12" max="160" step="1" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${Math.max(12, Math.min(160, Number(cell.fontSize) || 68))}"></label>`;
-  if (kind === 'event-field') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor"><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fallback" value="${escapeHtml(cell.fallback || '')}" placeholder="Ersatztext">`;
+  if (kind === 'countdown') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetSource"><option value="manual" ${!['event','daily'].includes(cell.targetSource) ? 'selected' : ''}>Manuelle Zielzeit</option><option value="event" ${cell.targetSource === 'event' ? 'selected' : ''}>Zeit aus Veranstaltung</option><option value="daily" ${cell.targetSource === 'daily' ? 'selected' : ''}>Täglich zu einer Uhrzeit</option></select>${cell.targetSource === 'event' ? `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select>` : cell.targetSource === 'daily' ? `<label class="form-field"><span>Tägliche Zielzeit</span><input type="time" step="60" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="dailyTime" value="${escapeHtml(cell.dailyTime || '12:00')}"></label>` : `<input type="datetime-local" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetTime" value="${escapeHtml(cell.targetTime || '')}">`}<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor, z. B. Noch "><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="suffix" value="${escapeHtml(cell.suffix || '')}" placeholder="Text danach, z. B. bis zum Einlass"><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="showSeconds" ${cell.showSeconds !== false ? 'checked' : ''}> Sekunden anzeigen</label><label class="form-field"><span>Maximale Textgröße (px)</span><input type="number" min="6" max="240" step="1" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${Math.max(6, Math.min(240, Number(cell.fontSize) || 68))}"></label><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
+  if (kind === 'event-field') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor"><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fallback" value="${escapeHtml(cell.fallback || '')}" placeholder="Vorlagenplatzhalter · bei fehlendem Wert unsichtbar"><label class="form-field"><span>Textgröße (px)</span><input type="number" min="6" max="240" step="1" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${Math.max(6,Math.min(240,Number(cell.fontSize)||42))}"></label><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
   if (kind === 'iframe') detail = `<input type="url" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="src" value="${escapeHtml(cell.src || '')}" placeholder="https://…"><small class="property-note">Die Website muss das Einbetten erlauben.</small>`;
   const kinds = column === 'left' ? [['empty','Frei / leer'],['image','Bild / Icon'],['arrow','Pfeil']] : column === 'right' ? [['empty','Frei / leer'],['image','Bild / Icon'],['arrow','Pfeil'],['text','Text']] : [['empty','Frei / leer'],['text','Formatierter Text'],['image','Bild'],['countdown','Countdown'],['event-field','Veranstaltungszeit'],['iframe','iFrame / Website']];
   return `<div class="wayfinding-cell-config"><label>${label}</label><div><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="kind">${kinds.map(([value, text]) => `<option value="${value}" ${kind === value ? 'selected' : ''}>${text}</option>`).join('')}</select>${detail}</div></div>`;
 }
-function eventTimeFieldOptions(selected) { return [['admissionStart','Einlass'],['eventStart','Beginn / Start'],['breakStart','Pause'],['eventEnd','Ende']].map(([value, text]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${text}</option>`).join(''); }
+function eventTimeFieldOptions(selected) { return [['setupStart','Aufbau / Veranstalter vor Ort'],['admissionStart','Einlass'],['eventStart','Beginn / Start'],['breakStart','Pause von'],['breakEnd','Pause bis'],['eventEnd','Ende']].map(([value, text]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${text}</option>`).join(''); }
 
 function normalizeWayfindingRows(rows) {
   if (rows[0]) rows[0].separator = false;
@@ -3045,7 +3219,7 @@ function renderWayfindingProperties(element) {
     if (target.dataset.wayField !== 'fontSize' || !active || active.type !== 'wayfinding') return;
     pushEditorHistory();
     const cell = active.rows[Number(target.dataset.wayRow)][target.dataset.wayColumn];
-    cell.fontSize = Math.max(12, Math.min(160, Number(target.value) || 68));
+    cell.fontSize = Math.max(6, Math.min(240, Number(target.value) || 68));
     scheduleSlideAutosave();
   };
   panel.onchange = event => {
@@ -3060,7 +3234,7 @@ function renderWayfindingProperties(element) {
     if (target.dataset.wayField) {
       const cell = active.rows[Number(target.dataset.wayRow)][target.dataset.wayColumn];
       cell[target.dataset.wayField] = target.type === 'checkbox' ? target.checked : ['range', 'number'].includes(target.type) ? Number(target.value) : target.value;
-      if (target.dataset.wayField === 'kind') Object.assign(cell, target.value === 'text' ? { text: '', textStyle: 'body', align: target.dataset.wayColumn === 'right' ? 'right' : 'left', bold: false, underline: false } : target.value === 'arrow' ? { direction: 'right' } : target.value === 'image' ? { src: '', imageFit: 'cover', imageZoom: 100, imageX: 50, imageY: 50 } : target.value === 'countdown' ? { targetSource: 'manual', targetTime: '', dailyTime: '12:00', eventField: 'eventStart', prefix: '', suffix: '', showSeconds: true, fontSize: 68 } : target.value === 'event-field' ? { eventField: 'eventStart', prefix: '', fallback: 'Zeit folgt' } : target.value === 'iframe' ? { src: '' } : {});
+      if (target.dataset.wayField === 'kind') Object.assign(cell, target.value === 'text' ? { text: '', textStyle: 'body', align: target.dataset.wayColumn === 'right' ? 'right' : 'left', bold: false, underline: false } : target.value === 'arrow' ? { direction: 'right' } : target.value === 'image' ? { src: '', imageFit: 'cover', imageZoom: 100, imageX: 50, imageY: 50 } : target.value === 'countdown' ? { targetSource: 'manual', targetTime: '', dailyTime: '12:00', eventField: 'eventStart', prefix: '', suffix: '', showSeconds: true, fontSize: 68 } : target.value === 'event-field' ? { eventField: 'eventStart', prefix: '', fallback: 'Zeit folgt', fontSize: 42 } : target.value === 'iframe' ? { src: '' } : {});
     }
     renderEditorCanvas();
     scheduleSlideAutosave();
@@ -3190,6 +3364,8 @@ function syncEditorProperties() {
   document.querySelector('#property-text-field').hidden = ['ticker', 'weather'].includes(element.type);
   document.querySelector('#property-text').value = element.text || '';
   document.querySelector('#property-font-size').value = element.fontSize || 24;
+  document.querySelector('#property-auto-font-size').checked=Boolean(element.autoFontSize);
+  document.querySelector('#property-font-size').disabled=Boolean(element.autoFontSize);
   document.querySelector('#property-color').value = element.color || '#ffffff';
   document.querySelector('#property-event').value = element.event || 'Sommerkonzert';
   document.querySelector('#property-event-field').value = element.field || 'title';
@@ -3283,6 +3459,7 @@ document.querySelector('#slide-event').addEventListener('change',()=>{pushEditor
 document.querySelector('#slide-status').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
 document.querySelector('#slide-starts-at').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
 document.querySelector('#slide-ends-at').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
+document.querySelector('#slide-tags').addEventListener('input',()=>{pushEditorHistory();scheduleSlideAutosave();});
 document.querySelector('#slide-location-options').addEventListener('change',()=>{pushEditorHistory();const selected=[...document.querySelectorAll('#slide-location-options input:checked')].map(input=>input.value);document.querySelector('#slide-location-summary').textContent=selected.length?`${selected.length} ausgewählt`:'Alle';scheduleSlideAutosave();});
 document.querySelector('#new-slide-title').addEventListener('input',()=>{pushEditorHistory();scheduleSlideAutosave();});
 
@@ -3348,7 +3525,7 @@ document.querySelector('#editor-layer-list').addEventListener('click', event => 
 });
 
 const propertyBindings = [
-  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', Number], ['property-color', 'color', value => value], ['property-event', 'event', value => value],
+  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', Number], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
   ['property-x', 'x', Number], ['property-y', 'y', Number], ['property-width', 'width', Number], ['property-height', 'height', Number], ['property-background', 'background', value => value],
@@ -3366,6 +3543,7 @@ propertyBindings.forEach(([id, property, convert]) => {
   const eventName = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
   input.addEventListener(eventName, () => {
     updateSelectedElement(property, convert(input.value, input));
+    if(id==='property-auto-font-size')document.querySelector('#property-font-size').disabled=input.checked;
     if(id==='property-ticker-duration')document.querySelector('#property-ticker-duration-label').textContent=`${input.value} Sekunden je Durchlauf · weniger ist schneller`;
   });
 });
@@ -3440,7 +3618,7 @@ function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium fü
     scheduleSlideAutosave({ immediate: true, successMessage: 'Medium wurde hinzugefügt und die Slide gespeichert.' });
   });
   state.mediaTypeFilter = typeFilter;
-  document.querySelector('#media-dialog-title').textContent = typeFilter === 'video' ? 'Video aus Mediendatenbank' : typeFilter === 'image' ? 'Bild aus Mediendatenbank' : 'Mediendatenbank';
+  document.querySelector('#media-dialog-title').textContent = typeFilter === 'video' ? 'Video aus Mediendatenbank' : ['image','image-only'].includes(typeFilter) ? 'Bild aus Mediendatenbank' : 'Mediendatenbank';
   document.querySelector('#media-dialog-context').textContent = `${context}. Neue Dateien werden hier hochgeladen und zentral gespeichert.`;
   renderMediaBrowser('media', true);
   document.querySelector('#media-dialog').showModal();
@@ -3458,7 +3636,7 @@ function renderMediaBrowser(prefix, selectionMode = false) {
   const folder = state.mediaFolders.find(item => item.id === activeId);
   document.querySelector(`#${prefix}-breadcrumb`).textContent = trash ? 'Papierkorb' : folder ? `Mediendatenbank / ${folder.name}` : 'Alle Medien';
   const query = document.querySelector(`#${prefix}-search`).value.trim().toLowerCase(), typeFilter = isPage ? state.mediaPageTypeFilter : state.mediaTypeFilter;
-  const assets = state.mediaAssets.filter(asset => Boolean(asset.deletedAt) === trash && (!activeId || asset.folderId === activeId) && (!typeFilter || asset.type === typeFilter || (typeFilter === 'image' && asset.type === 'icon')) && (!query || asset.name.toLowerCase().includes(query)));
+  const assets = state.mediaAssets.filter(asset => Boolean(asset.deletedAt) === trash && (!activeId || asset.folderId === activeId) && (!typeFilter || asset.type === typeFilter || (typeFilter === 'image' && asset.type === 'icon') || (typeFilter === 'image-only' && asset.type === 'image')) && (!query || asset.name.toLowerCase().includes(query)));
   const grid = document.querySelector(`#${prefix}-asset-grid`);
   grid.innerHTML = assets.map(asset => {
     const typeLabel = asset.metadata?.system ? 'Systemdatei' : asset.type === 'video' ? `Video${asset.metadata?.trimEnd ? ` · ${Number(asset.metadata.trimStart || 0).toFixed(1)}–${Number(asset.metadata.trimEnd).toFixed(1)} s` : ''}` : asset.type === 'icon' ? 'Vektorgrafik' : 'Bild';
@@ -3569,7 +3747,7 @@ async function persistActiveChannel() {
   const channel = activeChannel();
   if (!channel) return null;
   state.playlist = state.playlist.map((entry, index) => ({ ...entry, duration: Math.max(3, Number(document.querySelector(`[data-duration-index="${index}"]`)?.value || entry.duration)), transition: document.querySelector(`[data-transition-index="${index}"]`)?.value || entry.transition || 'inherit' }));
-  const payload = { name: channel.name, description: channel.description, eventId: channel.eventId, status: channel.status, orientation: document.querySelector('#channel-orientation').value, defaultTransition: document.querySelector('#channel-transition').value, repeatEnabled: document.querySelector('#channel-repeat').checked, items: state.playlist.map(entry => ({ slideId: entry.slideId, durationSeconds: Number(entry.duration), transition: entry.transition || 'inherit' })) };
+  const payload = { name: channel.name, description: channel.description, eventId: channel.eventId,tags:scopedTags(channel.tags||[]),locationIds:channel.locationIds||[], status: channel.status, orientation: document.querySelector('#channel-orientation').value, defaultTransition: document.querySelector('#channel-transition').value, repeatEnabled: document.querySelector('#channel-repeat').checked, items: state.playlist.map(entry => ({ slideId: entry.slideId, durationSeconds: Number(entry.duration), transition: entry.transition || 'inherit' })) };
   const result = await apiRequest(`/api/channels/${channel.id}`, { method: 'PUT', body: JSON.stringify(payload) });
   const index = state.channels.findIndex(item => item.id === result.channel.id);
   if (index >= 0) state.channels[index] = result.channel;
@@ -3607,6 +3785,9 @@ function openChannelEditor(channel = null) {
   document.querySelector('#channel-dialog-title').textContent = channel ? 'Kanal bearbeiten' : 'Kanal anlegen';
   document.querySelector('#channel-name').value = channel?.name || '';
   document.querySelector('#channel-description').value = channel?.description || '';
+  document.querySelector('#channel-tags').value=scopedTags(channel?.tags||[]).join(', ');
+  const selectedLocations=new Set(channel?.locationIds||[]),locationOptions=document.querySelector('#channel-location-options');
+  locationOptions.innerHTML=state.locations.length?state.locations.map(location=>`<label><input type="checkbox" value="${escapeHtml(location.id)}" ${selectedLocations.has(location.id)?'checked':''}> ${escapeHtml(location.name)}</label>`).join(''):'<p class="property-note">Noch keine Standorte vorhanden.</p>';
   document.querySelector('#channel-event').value = channel?.eventId || '';
   document.querySelector('#channel-status').value = channel?.status || 'draft';
   document.querySelector('#archive-channel-button').hidden = !channel || state.currentUser?.role === 'viewer';
@@ -3619,7 +3800,7 @@ document.querySelector('#channel-form').addEventListener('submit', async event =
   event.preventDefault();
   const id = document.querySelector('#channel-edit-id').value;
   const current = id ? state.channels.find(channel => channel.id === id) : null;
-  const payload = { name: document.querySelector('#channel-name').value.trim(), description: document.querySelector('#channel-description').value.trim() || undefined, eventId: document.querySelector('#channel-event').value || undefined, status: document.querySelector('#channel-status').value, orientation: current?.orientation || 'auto', defaultTransition: current?.defaultTransition || 'fade', repeatEnabled: current?.repeatEnabled ?? true, items: current?.items || [] };
+  const payload = { name: document.querySelector('#channel-name').value.trim(), description: document.querySelector('#channel-description').value.trim() || undefined,tags:scopedTags(tagInput(document.querySelector('#channel-tags').value)),locationIds:[...document.querySelectorAll('#channel-location-options input:checked')].map(input=>input.value), eventId: document.querySelector('#channel-event').value || undefined, status: document.querySelector('#channel-status').value, orientation: current?.orientation || 'auto', defaultTransition: current?.defaultTransition || 'fade', repeatEnabled: current?.repeatEnabled ?? true, items: current?.items || [] };
   try {
     const result = await apiRequest(id ? `/api/channels/${id}` : '/api/channels', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
     channelDialog.close();
