@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
 
 final readonly class UpdateManager
 {
-    private const VERSION = '3.1.3';
+    private const VERSION = '3.2.1';
 
     public function __construct(
         private ConnectionPool $connectionPool,
@@ -23,7 +23,7 @@ final readonly class UpdateManager
     }
 
     /** @return array<string,mixed> */
-    public function status(): array
+    public function status(bool $refreshIfStale = false): array
     {
         $stored = [];
         try {
@@ -33,7 +33,7 @@ final readonly class UpdateManager
         } catch (\Throwable) {
             $stored = [];
         }
-        return array_merge([
+        $status = array_merge([
             'installedVersion' => self::VERSION,
             'availableVersion' => null,
             'updateAvailable' => false,
@@ -41,12 +41,17 @@ final readonly class UpdateManager
             'releaseNotes' => '',
             'releaseNotesUrl' => null,
             'compatible' => true,
-            'canInstall' => $this->isComposerInstallation(),
+            'canInstall' => false,
             'installationMode' => $this->isComposerInstallation() ? 'composer' : 'classic',
             'lastError' => null,
             'stagedVersion' => null,
             'restartRequired' => false,
         ], is_array($stored) ? $stored : [], ['installedVersion' => self::VERSION]);
+        if ($refreshIfStale) {
+            $checkedAt = isset($status['checkedAt']) ? strtotime((string)$status['checkedAt']) : false;
+            if ($checkedAt === false || $checkedAt < time() - 86400) return $this->check();
+        }
+        return $status;
     }
 
     /** @return array<string,mixed> */
@@ -62,7 +67,7 @@ final readonly class UpdateManager
                 if ($url->getHost() === 'api.github.com') {
                     $headers += ['Authorization' => 'Bearer ' . $token, 'X-GitHub-Api-Version' => '2022-11-28'];
                     $headers['Accept'] = 'application/vnd.github.raw+json';
-                } else {
+                } elseif (!in_array($url->getHost(), ['github.com', 'raw.githubusercontent.com'], true)) {
                     $headers['X-Kiosky-License'] = $token;
                 }
             }
@@ -76,6 +81,10 @@ final readonly class UpdateManager
             $manifest = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
             $this->validateManifest($manifest);
             $available = version_compare((string)$manifest['version'], self::VERSION, '>');
+            $composerInstall = $this->isComposerInstallation();
+            $packageAvailable = $available && $composerInstall
+                ? $this->composerVersionAvailable((string)$manifest['version'])
+                : false;
             return $this->save(array_merge($status, [
                 'availableVersion' => (string)$manifest['version'],
                 'updateAvailable' => $available,
@@ -83,11 +92,13 @@ final readonly class UpdateManager
                 'releaseNotes' => (string)($manifest['release_notes'] ?? ''),
                 'releaseNotesUrl' => isset($manifest['release_notes_url']) ? (string)$manifest['release_notes_url'] : null,
                 'compatible' => true,
-                'canInstall' => $available && $this->isComposerInstallation(),
-                'installationMode' => $this->isComposerInstallation() ? 'composer' : 'classic',
-                'lastError' => $available && !$this->isComposerInstallation()
-                    ? 'One-Click-Updates benötigen eine Composer-Installation. Die Update-Prüfung funktioniert weiterhin.'
-                    : null,
+                'canInstall' => $available && $composerInstall && $packageAvailable,
+                'installationMode' => $composerInstall ? 'composer' : 'classic',
+                'lastError' => $available && !$composerInstall
+                    ? 'One-Click-Updates benötigen eine Composer-Installation. Das Classic-ZIP kann im TYPO3 Extension Manager installiert werden.'
+                    : ($available && !$packageAvailable
+                        ? 'Release ' . (string)$manifest['version'] . ' ist im konfigurierten Composer-Repository noch nicht verfügbar.'
+                        : null),
             ]));
         } catch (\Throwable $error) {
             return $this->save(array_merge($status, [
@@ -105,6 +116,7 @@ final readonly class UpdateManager
         $status = $this->check();
         if (!$status['updateAvailable']) return $status;
         if (!$this->isComposerInstallation()) throw new RuntimeException('One-Click-Updates sind nur in Composer-basierten TYPO3-Installationen verfügbar.');
+        if (!$status['canInstall']) throw new RuntimeException((string)($status['lastError'] ?: 'Das Composer-Paket ist noch nicht installierbar.'));
 
         $configuration = $this->configuration();
         $project = Environment::getProjectPath();
@@ -115,10 +127,15 @@ final readonly class UpdateManager
         copy($composerJson, $backup . '/composer.json');
         if (is_file($composerLock)) copy($composerLock, $backup . '/composer.lock');
 
-        $composer = trim((string)($configuration['updateComposerBinary'] ?? 'composer')) ?: 'composer';
-        if (!preg_match('/^[A-Za-z0-9._\/\\\\:-]+$/', $composer)) throw new RuntimeException('Der konfigurierte Composer-Pfad ist ungültig.');
+        $composer = $this->composerBinary($configuration);
+        $composerEnvironment = $this->composerEnvironment($configuration);
+        $targetVersion = (string)$status['availableVersion'];
         try {
-            $this->run([$composer, 'update', 'casesound/kiosky', '--with-dependencies', '--no-interaction', '--no-progress', '--prefer-dist'], $project, 900);
+            $this->run([$composer, 'update', 'casesound/kiosky', '--with-all-dependencies', '--no-interaction', '--no-progress', '--prefer-dist'], $project, 900, $composerEnvironment);
+            $installedVersion = $this->installedComposerVersion($composer, $project, $composerEnvironment);
+            if ($installedVersion !== $targetVersion) {
+                throw new RuntimeException('Composer installierte ' . ($installedVersion ?: 'keine Version') . ' statt ' . $targetVersion . '. Bitte den Versionsbereich in composer.json prüfen.');
+            }
             $typo3 = $project . '/vendor/bin/typo3';
             if (!is_file($typo3)) throw new RuntimeException('TYPO3-Konsolenprogramm wurde nicht gefunden.');
             $this->run([PHP_BINARY, $typo3, 'extension:setup', '--extension=kiosky'], $project, 300);
@@ -126,7 +143,12 @@ final readonly class UpdateManager
         } catch (\Throwable $error) {
             copy($backup . '/composer.json', $composerJson);
             if (is_file($backup . '/composer.lock')) copy($backup . '/composer.lock', $composerLock);
-            throw new RuntimeException('Update fehlgeschlagen; Composer-Dateien wurden wiederhergestellt. ' . $error->getMessage(), 0, $error);
+            try {
+                $this->run([$composer, 'install', '--no-interaction', '--no-progress', '--prefer-dist'], $project, 900, $composerEnvironment);
+            } catch (\Throwable $rollbackError) {
+                throw new RuntimeException('Update und automatische Wiederherstellung sind fehlgeschlagen. Sicherung: ' . $backup . '. ' . $error->getMessage() . ' Rollback: ' . $rollbackError->getMessage(), 0, $error);
+            }
+            throw new RuntimeException('Update fehlgeschlagen; Composer-Dateien und installierte Pakete wurden wiederhergestellt. ' . $error->getMessage(), 0, $error);
         }
         return $this->save(array_merge($status, [
             'updateAvailable' => false,
@@ -134,6 +156,7 @@ final readonly class UpdateManager
             'lastError' => null,
             'restartRequired' => false,
             'installedAt' => (new \DateTimeImmutable())->format(DATE_ATOM),
+            'installedVersion' => $targetVersion,
             'backupDirectory' => $backup,
         ]));
     }
@@ -153,6 +176,7 @@ final readonly class UpdateManager
         }
         if (($manifest['compatibility']['api_version'] ?? '1') !== '1') throw new RuntimeException('Dieses Update benötigt eine nicht unterstützte Kiosky-API.');
         if (version_compare($version, self::VERSION, '<')) throw new RuntimeException('Ein Downgrade wird nicht automatisch installiert.');
+        if (!str_starts_with((string)($component['download_url'] ?? ''), 'https://')) throw new RuntimeException('Das TYPO3-Release besitzt keine sichere Download-Adresse.');
     }
 
     /** @return array<string,mixed> */
@@ -176,12 +200,75 @@ final readonly class UpdateManager
             && is_file(Environment::getProjectPath() . '/vendor/bin/typo3');
     }
 
-    /** @param list<string> $command */
-    private function run(array $command, string $workingDirectory, int $timeout): void
+    /** @param array<string,mixed> $configuration */
+    private function composerBinary(array $configuration): string
     {
-        $process = new Process($command, $workingDirectory, null, null, $timeout);
+        $composer = trim((string)($configuration['updateComposerBinary'] ?? 'composer')) ?: 'composer';
+        if (!preg_match('/^[A-Za-z0-9._\/\\\\:-]+$/', $composer)) throw new RuntimeException('Der konfigurierte Composer-Pfad ist ungültig.');
+        return $composer;
+    }
+
+    /** @param array<string,mixed> $configuration @return array<string,string>|null */
+    private function composerEnvironment(array $configuration): ?array
+    {
+        $token = trim((string)($configuration['updateAccessToken'] ?? ''));
+        if ($token === '') return null;
+        $auth = [];
+        $configured = getenv('COMPOSER_AUTH');
+        if (is_string($configured) && $configured !== '') {
+            try {
+                $decoded = json_decode($configured, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) $auth = $decoded;
+            } catch (\Throwable) {
+                $auth = [];
+            }
+        }
+        $auth['github-oauth']['github.com'] = $token;
+        return ['COMPOSER_AUTH' => json_encode($auth, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)];
+    }
+
+    private function composerVersionAvailable(string $version): bool
+    {
+        try {
+            $project = Environment::getProjectPath();
+            $configuration = $this->configuration();
+            $composer = $this->composerBinary($configuration);
+            $process = $this->process([$composer, 'show', 'casesound/kiosky', '--all', '--format=json', '--no-interaction'], $project, 120, $this->composerEnvironment($configuration));
+            $data = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+            $versions = is_array($data['versions'] ?? null) ? $data['versions'] : [];
+            return in_array($version, array_map(fn(mixed $item): string => $this->normalizeComposerVersion($item), $versions), true);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /** @param array<string,string>|null $environment */
+    private function installedComposerVersion(string $composer, string $project, ?array $environment): string
+    {
+        $process = $this->process([$composer, 'show', 'casesound/kiosky', '--format=json', '--no-interaction'], $project, 120, $environment);
+        $data = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+        $versions = is_array($data['versions'] ?? null) ? $data['versions'] : [];
+        return $this->normalizeComposerVersion($versions[0] ?? '');
+    }
+
+    private function normalizeComposerVersion(mixed $version): string
+    {
+        return (string)preg_replace('/^\*?\s*v?/', '', trim((string)$version));
+    }
+
+    /** @param list<string> $command @param array<string,string>|null $environment */
+    private function run(array $command, string $workingDirectory, int $timeout, ?array $environment = null): void
+    {
+        $this->process($command, $workingDirectory, $timeout, $environment);
+    }
+
+    /** @param list<string> $command @param array<string,string>|null $environment */
+    private function process(array $command, string $workingDirectory, int $timeout, ?array $environment = null): Process
+    {
+        $process = new Process($command, $workingDirectory, $environment, null, $timeout);
         $process->run();
         if (!$process->isSuccessful()) throw new RuntimeException(trim($process->getErrorOutput() ?: $process->getOutput()) ?: 'Externer Update-Schritt fehlgeschlagen.');
+        return $process;
     }
 
     /** @param array<string,mixed> $status @return array<string,mixed> */

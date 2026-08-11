@@ -29,6 +29,14 @@ CREATE TABLE be_users (
   tx_kiosky_role varchar(32) NOT NULL default ''
 );
 
+CREATE TABLE tt_content (
+  tx_kiosky_calendar_title varchar(120) NOT NULL default '',
+  tx_kiosky_upcoming_title varchar(120) NOT NULL default '',
+  tx_kiosky_upcoming_count int(11) unsigned NOT NULL default '10',
+  tx_kiosky_show_search smallint(5) unsigned NOT NULL default '1',
+  tx_kiosky_show_upcoming smallint(5) unsigned NOT NULL default '1'
+);
+
 CREATE TABLE tx_kiosky_domain_model_location (
   uid int(11) unsigned NOT NULL auto_increment,
   pid int(11) unsigned NOT NULL default '0',

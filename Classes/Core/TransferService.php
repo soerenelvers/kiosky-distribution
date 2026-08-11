@@ -24,6 +24,7 @@ final class TransferService
                 'navigationOrder' => $state['navigationOrder'] ?? [],
                 'scheduleTargetOrder' => $state['scheduleTargetOrder'] ?? [],
                 'titleExclusions' => $state['titleExclusions'] ?? [],
+                'publicCalendarSettings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? []),
             ];
         }
         if (in_array('events', $included, true)) {
@@ -183,6 +184,7 @@ final class TransferService
             if (is_array($settings['navigationOrder'] ?? null)) $state['navigationOrder'] = array_values(array_map('strval', $settings['navigationOrder']));
             if (is_array($settings['scheduleTargetOrder'] ?? null)) $state['scheduleTargetOrder'] = array_values(array_map('strval', $settings['scheduleTargetOrder']));
             if (is_array($settings['titleExclusions'] ?? null)) $state['titleExclusions'] = array_values(array_map('strval', $settings['titleExclusions']));
+            if (is_array($settings['publicCalendarSettings'] ?? null)) $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings($settings['publicCalendarSettings']);
         }
         if (isset($sections['integrations']) && is_array($sections['integrations'])) {
             $integrations = $sections['integrations'];

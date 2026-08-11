@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "3.1.3",
-  "released_at": "2026-08-01T16:16:23.361Z",
+  "version": "3.2.1",
+  "released_at": "2026-08-11T04:39:44.550Z",
   "channel": "stable",
-  "release_notes": "## [3.1.3] - 2026-08-01\n\n### Changed\n\n- „Funktionen & Hilfe“ dokumentiert sämtliche aktuellen Arbeitsbereiche mit\n  ausführlichen Schritt-für-Schritt-Anleitungen für Ersteinrichtung,\n  Veranstaltungsimport, Medien, Slides, Vorlagen, Kanäle, Zeitplanung,\n  Werbeautomatik, Betrieb und Updates.\n- Die Player-Hilfe beschreibt Browser-, Windows-, Linux- und macOS-Player,\n  direkte zugeordnete Launcher sowie die vollständige Kopplung eines Universal\n  Players per sechsstelligen Code.\n- Die interaktive Tour führt in sechs aktualisierten Stationen vom Programmdatum\n  über Gestaltung und Planung bis zum gekoppelten Player und überwachten Betrieb.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.1.3",
+  "release_notes": "## [3.2.1] - 2026-08-11\n\n### Added\n\n- WordPress-Administratoren können Stable-Updates zusätzlich zur nativen\n  Pluginverwaltung direkt unter „Kiosky > Updates“ prüfen und installieren.\n- Stable-Releases durchlaufen echte Upgrade-Tests von der vorherigen Version in\n  WordPress sowie TYPO3 Classic und Composer für TYPO3 13 und 14.\n\n### Changed\n\n- TYPO3 prüft beim Öffnen des Kiosky-Backends automatisch auf neue Releases,\n  sobald die letzte Prüfung älter als 24 Stunden ist.\n- Die Release-Pipeline veröffentlicht Composer-Tag, Stable-Manifest und\n  GitHub-Release erst nach erfolgreichen Paket- und Upgrade-Prüfungen.\n- TYPO3 bietet One-Click-Updates nur an, wenn die exakte Release-Version im\n  privaten Composer-Repository erreichbar ist, und stellt bei Fehlern auch den\n  Vendor-Stand wieder her.\n\n### Security\n\n- WordPress verifiziert jedes Update-ZIP gegen die SHA-256-Prüfsumme des\n  unveränderlichen Stable-Manifests.\n- TYPO3 übergibt den privaten Lesetoken ausschließlich als `COMPOSER_AUTH` an\n  die Composer-Kindprozesse; Zugangsdaten erscheinen nicht in der Kommandozeile.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.2.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.1.3",
+    "core_version": "3.2.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.1.3",
-    "typo3_extension_version": "3.1.3"
+    "wordpress_plugin_version": "3.2.1",
+    "typo3_extension_version": "3.2.1"
   },
   "components": {
     "core": {
-      "version": "3.1.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.1.3.zip?ref=v3.1.3",
-      "sha256": "95da3b9325fa3e46e3396b1ccc61593a1bf604f24d5e3354ea6641b022ca50ed"
+      "version": "3.2.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.2.1.zip?ref=v3.2.1",
+      "sha256": "19d503f8a992bfd506537c73f1ef093e5ccd9e77d43720203bb32162ee93a27a"
     },
     "standalone": {
-      "version": "3.1.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.1.3.zip?ref=v3.1.3",
-      "sha256": "95da3b9325fa3e46e3396b1ccc61593a1bf604f24d5e3354ea6641b022ca50ed"
+      "version": "3.2.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.2.1.zip?ref=v3.2.1",
+      "sha256": "19d503f8a992bfd506537c73f1ef093e5ccd9e77d43720203bb32162ee93a27a"
     },
     "wordpress": {
-      "version": "3.1.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.1.3.zip?ref=v3.1.3",
-      "sha256": "b29a6cd53a04d02138937446ccf99ad83966762982f3850292b9d3f75d3233ba",
+      "version": "3.2.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.2.1.zip?ref=v3.2.1",
+      "sha256": "4dcb49ea9a6aa917f655b4db93a9b84dbb4d18ef315e573a375faa09b9acd5f8",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
-      "tested_up_to": "6.8"
+      "tested_up_to": "7.0"
     },
     "typo3": {
-      "version": "3.1.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.1.3.zip?ref=v3.1.3",
-      "sha256": "a2185738a08868c1a573a3ea510726ed4dc953673c7463e257bac2c8e49a9cf2",
+      "version": "3.2.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.2.1.zip?ref=v3.2.1",
+      "sha256": "58391a749d4289303e1a75a487ef4fa030215adeab49f5bd1c28a0b63e563f25",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

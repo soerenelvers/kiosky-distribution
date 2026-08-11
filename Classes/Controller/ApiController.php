@@ -52,7 +52,7 @@ final readonly class ApiController
             }
             try {
                 $update = match ([$request->getMethod(), $apiPath]) {
-                    ['GET', '/api/updates/status'] => $this->updateManager->status(),
+                    ['GET', '/api/updates/status'] => $this->updateManager->status(true),
                     ['POST', '/api/updates/check'] => $this->updateManager->check(),
                     ['POST', '/api/updates/install'] => $this->updateManager->install(),
                     default => null,

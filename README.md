@@ -37,3 +37,11 @@ it is used, configure `externalApiKey`. New display endpoints live under
 
 The player overview is available at `/player`; `/kiosky-player-center/` is retained
 as a compatibility alias.
+
+## Website-Veranstaltungskalender
+
+Im Seitenmodul steht das Inhaltselement **Kiosky Veranstaltungskalender** zur
+Verfügung. Es zeigt ausschließlich freigegebene Kiosky-Veranstaltungen und erbt
+Schrift, Farben und Grundgestaltung des TYPO3-Sitepackages. Suche, Monats-, Jahres-
+und Tagesnavigation sowie die Liste der nächsten Veranstaltungen sind enthalten.
+Die zentrale Kiosky-Konfiguration kann pro Inhaltselement überschrieben werden.

@@ -13,3 +13,6 @@ services:
 
   Kiosky\Kiosky\Controller\ApiController:
     tags: ['backend.controller']
+
+  Kiosky\Kiosky\ContentObject\PublicEventCalendarContentObject:
+    public: true

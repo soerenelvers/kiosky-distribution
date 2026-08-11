@@ -366,6 +366,7 @@ if (playerSlug) {
 const cmsIntegrated = kioskyRuntime.platform === 'wordpress';
 const cmsManagedServices = kioskyRuntime.platform !== 'standalone';
 if (cmsIntegrated) document.body.classList.add('cms-integrated', 'cms-wordpress');
+if (!cmsManagedServices) document.querySelectorAll('[data-settings-open="calendar"],[data-settings-detail="calendar"]').forEach(element => { element.hidden = true; });
 if (cmsManagedServices) {
   document.body.classList.add('cms-managed-services');
   document.querySelectorAll('[data-view="media"], [data-view="users"]').forEach(element => { element.hidden = true; });
@@ -492,7 +493,7 @@ function setView(view) {
     loadEasyJobConfiguration();
     loadApiUsers();
   }
-  if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();}
+  if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();if(cmsManagedServices)loadPublicCalendarSettings();}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
   if (['channels','advertising'].includes(view)) loadContent();
@@ -507,7 +508,7 @@ function setView(view) {
 function renderUpdates(update) {
   document.querySelector('#update-installed-version').textContent=update.installedVersion||'–';
   document.querySelector('#update-available-version').textContent=update.availableVersion||'–';
-  document.querySelector('#update-installation-mode').textContent=update.installationMode==='composer'?'Composer-Installation':'Standalone-Installation';
+  document.querySelector('#update-installation-mode').textContent=update.installationMode==='composer'?'TYPO3 Composer':update.installationMode==='classic'?'TYPO3 Classic':update.installationMode==='wordpress'?'WordPress-Plugin':'Standalone-Installation';
   document.querySelector('#update-checked-at').textContent=update.checkedAt?`Geprüft ${new Date(update.checkedAt).toLocaleString('de-DE')}`:'Noch nicht geprüft';
   const label=document.querySelector('#update-state-label');
   label.textContent=update.updateAvailable?'Update verfügbar':'Aktuell';
@@ -525,7 +526,7 @@ function renderUpdates(update) {
   install.disabled=!update.updateAvailable||!update.canInstall;
   document.querySelector('#update-install-note').textContent=update.restartRequired
     ? 'Das Update wurde vorbereitet. Kiosky wird neu gestartet.'
-    : update.canInstall?'Paketprüfung, Sicherung, Migration und Cache-Leerung laufen automatisch.':'Diese Installationsart unterstützt kein One-Click-Update.';
+    : update.canInstall?'Paketprüfung, Sicherung, Migration und Cache-Leerung laufen automatisch.':'Für diese Installation ist kein One-Click-Update verfügbar.';
   const badge=document.querySelector('#update-nav-badge');
   badge.hidden=!update.updateAvailable;
 }
@@ -543,7 +544,7 @@ document.querySelector('#update-check')?.addEventListener('click',async event=>{
   try{await loadUpdates(true);}finally{event.currentTarget.disabled=false;}
 });
 document.querySelector('#update-install')?.addEventListener('click',async event=>{
-  if(!confirm('Kiosky jetzt sichern und aktualisieren? Während des Neustarts ist das Backend kurzzeitig nicht erreichbar.'))return;
+  if(!confirm('Kiosky jetzt prüfen, sichern und aktualisieren? Das Backend kann währenddessen kurzzeitig nicht erreichbar sein.'))return;
   event.currentTarget.disabled=true;
   try{
     const result=await apiRequest('/api/updates/install',{method:'POST',body:'{}'});
@@ -595,6 +596,7 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
   if (state.view !== 'settings') setView('settings');
   showSettingsLevel(level);
   if(level==='advertising')loadAdvertisingSettings();
+  if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
 }));
 document.querySelectorAll('[data-settings-anchor]').forEach(button => button.addEventListener('click', () => {
   const target = document.getElementById(button.dataset.settingsAnchor);
@@ -1428,6 +1430,32 @@ async function loadFeatureSettings(){
   try{const result=await apiRequest('/api/settings/features');applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
   catch(error){showToast(error.message);return null;}
 }
+
+async function loadPublicCalendarSettings(){
+  if(!cmsManagedServices)return null;
+  try{
+    const result=await apiRequest('/api/settings/public-calendar'),settings=result.settings||{};
+    document.querySelector('#public-calendar-title').value=settings.title||'Veranstaltungskalender';
+    document.querySelector('#public-calendar-upcoming-title').value=settings.upcomingTitle||'Nächste Veranstaltungen';
+    document.querySelector('#public-calendar-upcoming-count').value=settings.upcomingCount||10;
+    document.querySelector('#public-calendar-show-search').checked=settings.showSearch!==false;
+    document.querySelector('#public-calendar-show-upcoming').checked=settings.showUpcoming!==false;
+    return result;
+  }catch(error){showToast(error.message);return null;}
+}
+
+document.querySelector('#public-calendar-settings-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const payload={
+    title:document.querySelector('#public-calendar-title').value.trim(),
+    upcomingTitle:document.querySelector('#public-calendar-upcoming-title').value.trim(),
+    upcomingCount:Number(document.querySelector('#public-calendar-upcoming-count').value),
+    showSearch:document.querySelector('#public-calendar-show-search').checked,
+    showUpcoming:document.querySelector('#public-calendar-show-upcoming').checked,
+  };
+  try{await apiRequest('/api/settings/public-calendar',{method:'PUT',body:JSON.stringify(payload)});showToast('Website-Kalender wurde gespeichert.');}
+  catch(error){showToast(error.message);}
+});
 
 const moduleSwitchingList=document.querySelector('#module-switching-list');
 moduleSwitchingList.addEventListener('change',event=>{if(event.target.matches('[data-feature-setting]'))state.featureSettings={...(state.featureSettings||{}),[event.target.dataset.featureSetting]:event.target.checked};});

@@ -19,6 +19,15 @@ beziehungsweise `COMPOSER_AUTH`, nicht im Projekt-Repository gespeichert.
 Jeder unveränderliche Release-Tag enthält ein vollständiges installierbares
 TYPO3-Paket; Composer erkennt die Tags als Paketversionen.
 
+Im Kiosky-Modul unter **Updates** wird eine neue Version erst installierbar, wenn
+Composer genau den im Stable-Manifest genannten Tag auflösen kann. Nach dem Update
+prüft Kiosky die tatsächlich installierte Version. Bei einem Fehler werden
+`composer.json`, `composer.lock` und der Vendor-Stand automatisch zurückgesetzt.
+Der in der Extension-Konfiguration gesetzte `updateAccessToken` wird dem
+Composer-Kindprozess als `COMPOSER_AUTH` bereitgestellt. Dadurch funktioniert der
+Backend-Updateweg auch dann, wenn der Webserver-Benutzer nicht das globale
+Composer-Home des Administrators verwendet.
+
 Für verwaltete Installationen steht `scripts/deploy-typo3-update.sh` bereit. Es
 verlangt `KIOSKI_TYPO3_PROJECT_DIR`, protokolliert die Version, unterstützt
 optionale Backup- und Wartungsbefehle, führt Composer und TYPO3 `extension:setup`

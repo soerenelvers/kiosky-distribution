@@ -76,6 +76,12 @@ final class Api
         if ($path === '/api/auth/me' && $method === 'GET') return $this->ok(['user' => $this->user()]);
         if ($path === '/api/auth/logout' && $method === 'POST') return $this->ok(['ok' => true]);
         if ($path === '/api/auth/password' && $method === 'POST') throw new RuntimeException('Passwörter werden vom CMS verwaltet.', 409);
+        if ($path === '/api/public/calendar' && $method === 'GET') {
+            return $this->ok([
+                'data' => PublicEventCalendar::events($state),
+                'settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? []),
+            ]);
+        }
         if ($path === '/api/users' && $method === 'GET') return $this->ok(['data' => [$this->user()]]);
         if ($path === '/api/users/invitations' && $method === 'GET') return $this->ok(['data' => []]);
         if ($path === '/api/api-users' && $method === 'GET') return $this->ok(['data' => []]);
@@ -651,6 +657,13 @@ final class Api
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
             return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $state['navigationOrder']], true);
+        }
+        if ($path === '/api/settings/public-calendar' && $method === 'GET') {
+            return $this->ok(['settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? [])]);
+        }
+        if ($path === '/api/settings/public-calendar' && $method === 'PUT') {
+            $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings($body);
+            return $this->ok(['settings' => $state['publicCalendarSettings']], true);
         }
 
         throw new RuntimeException('API-Endpunkt wurde nicht gefunden.', 404);
@@ -1844,6 +1857,7 @@ final class Api
             'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
             'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
             'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users'],
+            'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,
             'activeEventSource' => null,
             'portableUsers' => [], 'portableApiUsers' => [],
             'titleExclusions' => [],

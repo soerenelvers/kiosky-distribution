@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.1.3-20260801161623%2B86d6ece6">
+  <link rel="stylesheet" href="styles.css?v=3.2.1-20260811043944%2Ba91a7598">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -685,7 +685,7 @@
       <section class="view" data-view-panel="settings">
         <header class="settings-header" aria-label="Einstellungsnavigation">
           <div class="settings-header-title"><div class="settings-header-icon" aria-hidden="true">⚙</div><div><p class="eyebrow">Systemverwaltung</p><strong>Einstellungen</strong></div></div>
-          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-settings-open="advertising">Werbung</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-settings-open="advertising">Werbung</button><button type="button" data-settings-open="calendar">Website-Kalender</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
         </header>
         <div class="settings-overview" data-settings-overview>
           <div class="section-heading"><div><p class="eyebrow">Alle Bereiche</p><h2>Was möchtest du einstellen?</h2><p>Wähle einen Bereich. Über den Kopfbereich und „Zurück“ kannst du jederzeit zwischen den Ebenen wechseln.</p></div></div>
@@ -693,6 +693,7 @@
             <button class="panel settings-destination" type="button" data-settings-open="modules"><span>▦</span><strong>Module &amp; Navigation</strong><small>Sichtbarkeit und Reihenfolge der Arbeitsbereiche festlegen.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="editor"><span>◇</span><strong>Slide-Editor</strong><small>Verfügbare Gestaltungselemente zentral auswählen.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="advertising"><span>▤</span><strong>Werbung</strong><small>Automatische Werbeslides und den Werbekanal konfigurieren.</small><i>Öffnen →</i></button>
+            <button class="panel settings-destination" type="button" data-settings-open="calendar"><span>▦</span><strong>Website-Kalender</strong><small>Gästekalender und Liste der nächsten Veranstaltungen konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-view-link="integrations"><span>⇄</span><strong>Schnittstellen</strong><small>CrewBrain, easyjob, externe API und Datentransfer verwalten.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-view-link="users"><span>◎</span><strong>Benutzer &amp; Rollen</strong><small>Konten, Rollen und Standortzugriffe verwalten.</small><i>Öffnen →</i></button>
           </div>
@@ -732,6 +733,21 @@
             <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Nur aktivierte Arten erzeugen Werbung. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
             <div class="advertising-summary" id="advertising-summary">Noch nicht geladen.</div>
             <div class="dialog-actions"><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
+          </form>
+        </div>
+        <div class="settings-detail" data-settings-detail="calendar" hidden>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Website-Kalender</p><h2>Öffentlicher Veranstaltungskalender</h2><p>Legt die Standardausgabe für WordPress und TYPO3 fest. Das Website-Theme bestimmt Schrift, Farben und Erscheinungsbild.</p></div></div>
+          <form class="panel feature-settings-panel" id="public-calendar-settings-form">
+            <div class="panel-header"><div><p class="eyebrow">CMS-Einbindung</p><h2>Kalender für Gäste</h2><p>Freigegebene Veranstaltungen werden automatisch bereitgestellt. Entwürfe und interne Notizen bleiben unsichtbar.</p></div><span class="tag blue">Theme-neutral</span></div>
+            <div class="config-form-grid">
+              <label class="form-field"><span>Kalenderüberschrift</span><input id="public-calendar-title" maxlength="120" value="Veranstaltungskalender"></label>
+              <label class="form-field"><span>Überschrift der Terminliste</span><input id="public-calendar-upcoming-title" maxlength="120" value="Nächste Veranstaltungen"></label>
+              <label class="form-field"><span>Nächste Veranstaltungen</span><input id="public-calendar-upcoming-count" type="number" min="1" max="50" value="10"></label>
+              <label class="toggle-label"><input id="public-calendar-show-search" type="checkbox" checked> Volltextsuche anzeigen</label>
+              <label class="toggle-label"><input id="public-calendar-show-upcoming" type="checkbox" checked> Terminliste neben dem Kalender anzeigen</label>
+            </div>
+            <p class="property-note">WordPress: Shortcode <code>[kiosky_event_calendar]</code>. TYPO3: Inhaltselement „Kiosky Veranstaltungskalender“. Werte können an der jeweiligen Einbindung überschrieben werden.</p>
+            <div class="dialog-actions"><button class="button button-primary" type="submit">Kalender-Einstellungen speichern</button></div>
           </form>
         </div>
       </section>
@@ -1496,7 +1512,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.1.3-20260801161623%2B86d6ece6"></script>
-  <script src="app.js?v=3.1.3-20260801161623%2B86d6ece6"></script>
+  <script src="runtime-config.js?v=3.2.1-20260811043944%2Ba91a7598"></script>
+  <script src="app.js?v=3.2.1-20260811043944%2Ba91a7598"></script>
 </body>
 </html>
