@@ -49,3 +49,12 @@ Die zentrale Kiosky-Konfiguration kann pro Inhaltselement überschrieben werden.
 ## Externe Gebäudeautomation und Integrationen
 
 Die External Control API läuft unter `/kiosky-api/v1`. Unter **Schnittstellen → Externe API** werden eigene Maschinenzugänge angelegt und widerrufen; die Oberfläche zeigt die vollständige Basisadresse an. Die Clients senden `Authorization: Bearer <Schlüssel>` oder `X-API-Key`. Ein TYPO3-Backend-Login ist für Maschinenzugänge nicht erforderlich. Der bisherige Konfigurationsschlüssel `externalApiKey` und der Query-Einstieg `/kiosky-api/?path=/api/v1` bleiben unterstützt. Die API ist für aktive Schlüssel verfügbar und verweigert den Zugriff ohne gültige Authentifizierung.
+
+## Einrichtung und Integrationen
+
+[Einrichtungsanleitung](Documentation/Einrichtung.md) für Updates und GitHub-Tokens,
+transparente Lauftexte, native CMS-Medien, externe API und Home Assistant.
+
+Aktuelle [Release-Ergänzungen](release-notes.md) und die öffentliche
+[HACS-Integration](https://github.com/soerenelvers/hacs-kiosky) besitzen eigene
+Dokumentation. HACS benötigt einen Kiosky-API-Schlüssel statt des GitHub-Update-Tokens.
