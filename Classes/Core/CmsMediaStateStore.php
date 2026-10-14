@@ -12,14 +12,16 @@ final class CmsMediaStateStore implements StateStore
     private array $references = [];
     private array $legacyMedia = [];
 
-    public function __construct(private readonly StateStore $store, private readonly MediaLibrary $media, private readonly bool $migrate = true) {}
+    public function __construct(private readonly StateStore $store, private readonly MediaLibrary $media, private readonly bool $migrate = true, private readonly bool $hydrateMedia = true) {}
 
     public function load(): array
     {
         $this->references = [];
         $state = $this->store->load();
-        $this->snapshot = $this->media->read();
         $this->legacyMedia = array_intersect_key($state, array_flip(['mediaFolders','mediaAssets']));
+        // Machine control requests need stored content IDs, not a full CMS file inventory.
+        if (!$this->hydrateMedia) return $state;
+        $this->snapshot = $this->media->read();
         $legacyFolders = $state['mediaFolders'] ?? [];
         $legacyAssets = $state['mediaAssets'] ?? [];
         $state['mediaFolders'] = $this->merge($this->snapshot['folders'], $legacyFolders);

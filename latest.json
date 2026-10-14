@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "3.3.0",
-  "released_at": "2026-10-14T20:27:44.659Z",
+  "version": "3.3.1",
+  "released_at": "2026-10-14T21:30:19.175Z",
   "channel": "stable",
-  "release_notes": "## [3.3.0] – 2026-10-14\n\n- Element-Hintergründe können im gemeinsamen Editor ausdrücklich transparent gesetzt werden. Lauftexte bleiben sichtbar, darunterliegende Bilder, Videos und andere Inhalte scheinen durch; die Einstellung bleibt in Vorschau, Player, Vorlagen und Exporten erhalten.\n- WordPress nutzt seine native Mediathek: vorhandene Anhänge stehen in Kiosky bereit, Uploads und Bildbearbeitungen werden als Anhänge mit CMS-Metadaten gespeichert. Medienordner werden als hierarchische Attachment-Taxonomie geführt.\n- TYPO3 nutzt die File Abstraction Layer (FAL), öffentliche Dateispeicher und native Ordner. Kiosky-Metadaten einschließlich Videozuschnitt und Papierkorbstatus liegen am CMS-Dateidatensatz.\n- Bestehende Kiosky-Medien werden beim ersten Zugriff mit Bearbeitungsberechtigung in die CMS-Medienverwaltung übernommen. Medien-IDs und URLs in Slides, Vorlagen und Einstellungen werden angepasst; der separate Medienkatalog wird danach aus dem Kiosky-State entfernt. Fehlgeschlagene Übernahmen behalten die Quelldaten für einen erneuten Versuch.\n- CMS-Dateiberechtigungen werden berücksichtigt; bestehende Medienverweise werden beim Laden anhand ihrer CMS-ID aktualisiert. Uploads werden anhand des tatsächlichen Dateiinhalts geprüft, SVGs auf passive Inhalte beschränkt.\n- Neue Migrationstests sowie Medien-Smoke-Tests für echte WordPress- und TYPO3-Installationen prüfen Upload, Bearbeitung, Papierkorb, Wiederherstellung und endgültiges Löschen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.0",
+  "release_notes": "## [3.3.1] – 2026-10-14\n\n- Externe API-Zugänge lassen sich jetzt auch im WordPress-Plugin und in der TYPO3-Extension unter Schnittstellen → Externe API anlegen, auflisten und sofort widerrufen. Schlüssel werden einmal ausgegeben und ausschließlich gehasht gespeichert; die letzte Nutzung wird angezeigt.\n- Gebäudeautomation und externe Integrationen nutzen in allen Varianten Bearer-Authentifizierung oder X-API-Key ohne CMS-Anmeldung. Die CMS-Zugänge sind auf die External Control API beschränkt; die Zugangsverwaltung bleibt Administratoren vorbehalten.\n- WordPress erhält den öffentlichen Einstieg `/wp-json/kiosky/v1/control`, TYPO3 `/kiosky-api/v1`. Die Oberfläche zeigt die vollständige Basisadresse und passende Dokumentationslinks. Bestehende Query-Endpunkte, WordPress-Anwendungspasswörter und der bisherige TYPO3-Konfigurationsschlüssel bleiben kompatibel.\n- Widerruf und Registrierung von API-Zugängen bleiben auch bei parallelen Zugriffen erhalten. Veraltete CMS-Schreibstände werden abgewiesen; externe Kontrollanfragen werden bei solchen Konflikten mit erneuter Authentifizierung wiederholt.\n- Externe CMS-Anfragen erhalten Request-IDs, begrenzte JSON-Payloads und nachvollziehbare API-Akteure im Audit-Log. Kontrollanfragen müssen keine vollständige CMS-Medienbibliothek oder Benutzerliste laden.\n- CMS-Statusfilter, Zeitfenster bei Preset-Zuweisungen und das Ablösen vorheriger externer Warnungen entsprechen der gemeinsamen API. Zeitlich begrenzte Webhook-Warnungen werden im CMS-Player nur während ihres Gültigkeitsfensters angezeigt.\n- Neue HTTP-, Berechtigungs- und Transporttests prüfen Schlüsselverwaltung, Ablehnung ungültiger/widerrufener Schlüssel, Ressourcenabfragen, Kanal-/Slide-Zuweisungen, Presets, Webhooks und Warnungen bis zur Player-Ausgabe in Standalone, WordPress und TYPO3 13/14.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.3.0",
+    "core_version": "3.3.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.3.0",
-    "typo3_extension_version": "3.3.0"
+    "wordpress_plugin_version": "3.3.1",
+    "typo3_extension_version": "3.3.1"
   },
   "components": {
     "core": {
-      "version": "3.3.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.0.zip?ref=v3.3.0",
-      "sha256": "186bb1201127b31073cb534a0512d0f41e1203f55c8da96680848dcbd4b17fa4"
+      "version": "3.3.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.1.zip?ref=v3.3.1",
+      "sha256": "ee4713f0bb7fc829ed8fbbf394f9553ed2f63ede6e420d408d12f0c09c95ee0e"
     },
     "standalone": {
-      "version": "3.3.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.0.zip?ref=v3.3.0",
-      "sha256": "186bb1201127b31073cb534a0512d0f41e1203f55c8da96680848dcbd4b17fa4"
+      "version": "3.3.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.1.zip?ref=v3.3.1",
+      "sha256": "ee4713f0bb7fc829ed8fbbf394f9553ed2f63ede6e420d408d12f0c09c95ee0e"
     },
     "wordpress": {
-      "version": "3.3.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.0.zip?ref=v3.3.0",
-      "sha256": "96f05fc5362122a504c8c1bae23531fcbc066a0ea717c87ea94278866b21a4cd",
+      "version": "3.3.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.1.zip?ref=v3.3.1",
+      "sha256": "8d1403ceca72ef2fc07e130c3c5ba66376f9b61279f0910b8d222dd4b1aae4e1",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.3.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.0.zip?ref=v3.3.0",
-      "sha256": "c25ae98e2f97797d46c6931f130812b4cd5f0d2c187a1d990edf2ac57d494ff3",
+      "version": "3.3.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.1.zip?ref=v3.3.1",
+      "sha256": "0e03db67d67e972ba8e73adb7c23cd7016b74fa1735aadcd8ac52db434008b49",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

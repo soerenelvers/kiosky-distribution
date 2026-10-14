@@ -45,3 +45,7 @@ Verfügung. Es zeigt ausschließlich freigegebene Kiosky-Veranstaltungen und erb
 Schrift, Farben und Grundgestaltung des TYPO3-Sitepackages. Suche, Monats-, Jahres-
 und Tagesnavigation sowie die Liste der nächsten Veranstaltungen sind enthalten.
 Die zentrale Kiosky-Konfiguration kann pro Inhaltselement überschrieben werden.
+
+## Externe Gebäudeautomation und Integrationen
+
+Die External Control API läuft unter `/kiosky-api/v1`. Unter **Schnittstellen → Externe API** werden eigene Maschinenzugänge angelegt und widerrufen; die Oberfläche zeigt die vollständige Basisadresse an. Die Clients senden `Authorization: Bearer <Schlüssel>` oder `X-API-Key`. Ein TYPO3-Backend-Login ist für Maschinenzugänge nicht erforderlich. Der bisherige Konfigurationsschlüssel `externalApiKey` und der Query-Einstieg `/kiosky-api/?path=/api/v1` bleiben unterstützt. Die API ist für aktive Schlüssel verfügbar und verweigert den Zugriff ohne gültige Authentifizierung.

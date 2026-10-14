@@ -23,11 +23,11 @@ final readonly class ApiFactory
     }
 
     /** @param array{id:string,name:string,email:string,role:string} $identity */
-    public function create(array $identity): Api
+    public function create(array $identity, bool $external = false): Api
     {
         $secret = (string)($GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] ?? '');
         $crypto = new Crypto($secret);
-        $backendUsers = $this->connectionPool->getConnectionForTable('be_users')->fetchAllAssociative(
+        $backendUsers = $external ? [] : $this->connectionPool->getConnectionForTable('be_users')->fetchAllAssociative(
             'SELECT uid, username, realName, email, admin, disable, tx_kiosky_role FROM be_users WHERE deleted = 0 ORDER BY username'
         );
         $portableUsers = array_map(static function (array $user): array {
@@ -46,9 +46,9 @@ final readonly class ApiFactory
             ];
         }, $backendUsers);
         return new Api(
-            new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, ($identity['role'] ?? 'viewer') !== 'viewer'),
+            new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.3.0',
+            '3.3.1',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),

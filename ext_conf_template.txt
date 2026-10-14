@@ -1,4 +1,4 @@
-# cat=Kiosky/API; type=string; label=Externer API-Schlüssel: Langer, zufälliger Schlüssel für die Kiosky External Control API. Der Client sendet ihn im HTTP-Header X-API-Key.
+# cat=Kiosky/API; type=string; label=Externer API-Schlüssel: Bisheriger globaler Schlüssel für die External Control API. Neue Zugänge unter Schnittstellen > Externe API anlegen; Clients senden Bearer oder X-API-Key.
 externalApiKey =
 
 # cat=Kiosky/Updates; type=string; label=Update-Manifest: HTTPS-Adresse des Release-Manifests.

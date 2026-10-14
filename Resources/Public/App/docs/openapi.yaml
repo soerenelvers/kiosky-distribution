@@ -5,6 +5,11 @@ info:
   description: Externe Steuerung von Displayinhalten, Sicherheitswarnungen und Betriebspresets.
 servers:
   - url: /api/v1
+    description: Standalone
+  - url: /wp-json/kiosky/v1/control
+    description: WordPress-Plugin (sprechende Permalinks)
+  - url: /kiosky-api/v1
+    description: TYPO3-Extension
 security:
   - bearerAuth: []
   - apiKeyAuth: []

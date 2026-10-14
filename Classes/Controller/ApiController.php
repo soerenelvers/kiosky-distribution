@@ -64,7 +64,7 @@ final readonly class ApiController
                 return new JsonResponse(['error' => ['code' => 'UPDATE_FAILED', 'message' => $error->getMessage()]], 422);
             }
         }
-        if ((str_starts_with($apiPath, '/api/integrations/') || str_starts_with($apiPath, '/api/v1'))
+        if ((str_starts_with($apiPath, '/api/integrations/') || str_starts_with($apiPath, '/api/api-users') || str_starts_with($apiPath, '/api/v1'))
             && !$this->permissions->isGranted(PermissionService::MANAGE_SETTINGS, $backendUser)) {
             return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Schnittstellen dürfen nur von TYPO3-Administratoren verwaltet werden.']], 403);
         }

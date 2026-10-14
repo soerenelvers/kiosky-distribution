@@ -19,6 +19,8 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
     private const CONTENT_TYPES = [
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
+        'md' => 'text/plain; charset=utf-8',
+        'yaml' => 'application/yaml; charset=utf-8',
         'json' => 'application/json; charset=utf-8',
         'html' => 'text/html; charset=utf-8',
         'svg' => 'image/svg+xml',
@@ -41,6 +43,8 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $path = '/' . ltrim($request->getUri()->getPath(), '/');
+        $sitePath = $request->getAttribute('normalizedParams')?->getSitePath() ?? '/';
+        if ($sitePath !== '/' && str_starts_with($path,$sitePath)) $path = '/' . ltrim(substr($path,strlen($sitePath)),'/');
         if (!str_starts_with($path, self::PREFIX)) {
             return $handler->handle($request);
         }

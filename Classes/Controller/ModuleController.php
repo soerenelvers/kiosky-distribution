@@ -26,7 +26,7 @@ final readonly class ModuleController
     {
         $this->permissions->require(PermissionService::VIEW);
         $apiEndpoint = (string)$this->uriBuilder->buildUriFromRoute('ajax_kiosky_api');
-        $baseUrl = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority();
+        $baseUrl = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($request->getAttribute('normalizedParams')?->getSitePath() ?? '/', '/');
         $html = $this->renderer->render(
             'typo3',
             $apiEndpoint,

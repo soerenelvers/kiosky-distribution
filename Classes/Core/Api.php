@@ -24,7 +24,7 @@ final class Api
     }
 
     /** @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>} */
-    public function handle(string $method, string $path, array $body = [], string $playerKey = ''): array
+    public function handle(string $method, string $path, array $body = [], string $playerKey = '', int $attempt = 0): array
     {
         try {
             $method = strtoupper($method);
@@ -41,11 +41,38 @@ final class Api
             }
             return [$result[0], $result[1]];
         } catch (Throwable $error) {
+            if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
             $status = $error instanceof RuntimeException ? max(400, min(599, $error->getCode() ?: 422)) : 500;
             return [$status, ['error' => [
-                'code' => $status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : 'INVALID_REQUEST'),
+                'code' => $status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST')),
                 'message' => $error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.',
             ]]];
+        }
+    }
+
+    /** Only the External Control API is exposed to machine credentials. */
+    public function handleExternal(string $method, string $path, array $body, string $token, string $legacyKey = '', string $requestId = '', string $ipAddress = '', int $attempt = 0): array
+    {
+        $normalized = (string)(parse_url($path, PHP_URL_PATH) ?: '');
+        if ($normalized !== '/api/v1' && !str_starts_with($normalized,'/api/v1/')) return [403,['error'=>['code'=>'API_SCOPE_FORBIDDEN','message'=>'Dieser API-Zugang darf ausschließlich die External Control API unter /api/v1 verwenden.']]];
+        if ($token === '' || strlen($token) > 512 || (!str_starts_with($token,'kiosky_') && ($legacyKey === '' || !hash_equals($legacyKey,$token)))) return [401,['error'=>['code'=>'UNAUTHORIZED','message'=>'Der API-Schlüssel fehlt oder ist ungültig.']]];
+        try {
+            $state = $this->state();
+            $user = ApiAccess::authenticate($state,$token);
+            $legacy = !$user && $legacyKey !== '' && $token !== '' && hash_equals($legacyKey,$token);
+            if (!$user && !$legacy) return [401,['error'=>['code'=>'UNAUTHORIZED','message'=>'Der API-Schlüssel fehlt, ist ungültig oder wurde widerrufen.']]];
+            if ($user) $this->store->save($state);
+            $identity = ['id'=>$user['id'] ?? 'cms:legacy-api','name'=>$user['name'] ?? 'Externe API','email'=>'','role'=>'admin','actorType'=>'api_key','requestId'=>$requestId,'ipAddress'=>$ipAddress];
+            $api = new self($this->store,$identity,$this->version,$this->crewBrain,$this->dwd,$this->easyJob,$this->platformUsers,$this->platform);
+            $result = $api->handle($method,$path,$body);
+            if ($result[0] === 503 && ($result[1]['error']['code'] ?? '') === 'STATE_CONFLICT' && $attempt < 2) return $this->handleExternal($method,$path,$body,$token,$legacyKey,$requestId,$ipAddress,$attempt+1);
+            return $result;
+        } catch (Throwable $error) {
+            if ($error instanceof StateConflict) {
+                if ($attempt < 2) return $this->handleExternal($method,$path,$body,$token,$legacyKey,$requestId,$ipAddress,$attempt+1);
+                return [503,['error'=>['code'=>'API_BUSY','message'=>'Parallele Änderungen. Bitte die Anfrage wiederholen.']]];
+            }
+            return [500,['error'=>['code'=>'API_UNAVAILABLE','message'=>'Die externe API konnte die Anfrage nicht verarbeiten.']]];
         }
     }
 
@@ -85,7 +112,6 @@ final class Api
         }
         if ($path === '/api/users' && $method === 'GET') return $this->ok(['data' => [$this->user()]]);
         if ($path === '/api/users/invitations' && $method === 'GET') return $this->ok(['data' => []]);
-        if ($path === '/api/api-users' && $method === 'GET') return $this->ok(['data' => []]);
         if ($path === '/api/audit-logs' && $method === 'GET') return $this->ok(['data' => array_reverse($state['audit'])]);
         if ($path === '/api/player-pairings' && $method === 'POST') {
             $alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -116,6 +142,25 @@ final class Api
         }
 
         $this->assertRolePermission($method, $path);
+
+        if ($path === '/api/api-users') {
+            if ($method === 'GET') return $this->ok(['data'=>array_reverse(array_map([ApiAccess::class,'publicUser'],$state['apiUsers']))]);
+            if ($method === 'POST') {
+                $created = ApiAccess::create($state,$body,(string)$this->identity['id']);
+                $this->audit($state,'api_user.created',$created['apiUser']['id']);
+                return $this->created($created);
+            }
+        }
+        if (preg_match('#^/api/api-users/([^/]+)$#',$path,$match) && $method === 'DELETE') {
+            $id = rawurldecode($match[1]);
+            $user = $this->required($state['apiUsers'],$id,'API-Benutzer');
+            if ($user['status'] !== 'active') throw new RuntimeException('Aktiver API-Benutzer wurde nicht gefunden.',404);
+            $user['status'] = 'revoked';
+            $user['revokedAt'] = $user['updatedAt'] = $this->now();
+            $state['apiUsers'][$this->index($state['apiUsers'],$id)] = $user;
+            $this->audit($state,'api_user.revoked',$id);
+            return $this->ok(['apiUser'=>ApiAccess::publicUser($user)],true);
+        }
 
         if ($path === '/api/content-transfer/export' && in_array($method, ['GET', 'POST'], true)) {
             $requested = is_array($body['sections'] ?? null) ? array_values(array_map('strval', $body['sections'])) : [];
@@ -1096,7 +1141,15 @@ final class Api
             }
             return $this->ok(['channel' => $this->saveRecord($state, 'channels', array_replace($channel, ['items' => $mapped]), $id)], true);
         }
-        if ($path === '/api/v1/assignments' && $method === 'GET') return $this->ok(['data' => $state['assignments']]);
+        if ($path === '/api/v1/assignments' && $method === 'GET') {
+            $at = !empty($body['activeAt']) ? strtotime($this->externalDate($body['activeAt'],'activeAt')) : null;
+            $data = array_values(array_filter($state['assignments'], static fn(array $item): bool =>
+                (empty($body['targetType']) || $item['target']['type'] === $body['targetType'])
+                && (empty($body['targetId']) || $item['target']['id'] === $body['targetId'])
+                && ($at === null || ((empty($item['startsAt']) || strtotime($item['startsAt']) <= $at) && (empty($item['expiresAt']) || strtotime($item['expiresAt']) > $at)))
+            ));
+            return $this->ok(['data'=>$data]);
+        }
         if ($path === '/api/v1/assignments' && in_array($method, ['POST', 'PUT'], true)) {
             $assignment = $this->saveAssignment($state, $body);
             return $method === 'POST' ? $this->created(['assignment' => $assignment]) : $this->ok(['assignment' => $assignment], true);
@@ -1128,11 +1181,12 @@ final class Api
             $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
             $targets = $this->externalTargets($body['targets'] ?? $config['targets'] ?? []);
             if (!$targets) throw new RuntimeException('Mindestens ein Ziel ist erforderlich.');
+            foreach ($targets as $target) $this->assertExternalTarget($state,$target);
             $type = (string)($preset['type'] ?? 'channel');
             if ($type === 'channel') {
                 $channelId = (string)($body['channelId'] ?? $preset['channelId'] ?? $config['channelId'] ?? '');
                 $result = ['action' => 'channel_assigned', 'assignments' => array_map(
-                    fn(array $target): array => $this->saveAssignment($state, ['target' => $target, 'content' => ['type' => 'channel', 'id' => $channelId], 'priority' => $body['priority'] ?? 100]),
+                    fn(array $target): array => $this->saveAssignment($state, array_replace($body, ['target' => $target, 'content' => ['type' => 'channel', 'id' => $channelId]])),
                     $targets
                 )];
             } elseif ($type === 'emergency') {
@@ -1147,7 +1201,7 @@ final class Api
             $state['presetExecutions'] = array_slice($state['presetExecutions'], -100);
             return $this->created(['execution' => $execution]);
         }
-        if ($path === '/api/v1/preset-executions' && $method === 'GET') return $this->ok(['data' => array_reverse($state['presetExecutions'])]);
+        if ($path === '/api/v1/preset-executions' && $method === 'GET') return $this->ok(['data' => array_values(array_filter(array_reverse($state['presetExecutions']),static fn(array $item): bool => empty($body['presetId']) || $item['presetId'] === $body['presetId']))]);
         if ($path === '/api/v1/presets/status' && $method === 'GET') return $this->ok(['activeAssignments' => $this->activeAssignments($state), 'executions' => array_reverse($state['presetExecutions'])]);
         if ($path === '/api/v1/presets/stop' && $method === 'POST') {
             $targets = $this->externalTargets($body['targets'] ?? []);
@@ -1257,8 +1311,12 @@ final class Api
         $title = trim((string)($input['title'] ?? ''));
         $instructions = trim((string)($input['instructions'] ?? $input['message'] ?? ''));
         if ($title === '' || $instructions === '') throw new RuntimeException('Titel und Anweisungen sind erforderlich.');
+        $start = $this->externalDate($input['startsAt'] ?? null,'startsAt');
+        $end = $this->externalDate($input['endsAt'] ?? null,'endsAt');
+        if ($start && $end && strtotime($end) <= strtotime($start)) throw new RuntimeException('endsAt muss nach startsAt liegen.',422);
+        if ($publish && in_array($source,['external_api','external_preset'],true)) $this->endExternalWarnings($state);
         return $this->saveRecord($state, 'warnings', [
-            'source' => $source,
+            'source' => $source, 'startsAt' => $start, 'endsAt' => $end,
             'warningType' => (string)($input['warningType'] ?? $input['type'] ?? 'custom'),
             'severity' => (int)($input['severity'] ?? 5),
             'title' => $title, 'description' => (string)($input['description'] ?? ''),
@@ -1331,7 +1389,7 @@ final class Api
         foreach ($display['groupIds'] ?? [] as $groupId) $targets[] = 'group:' . $groupId;
         if (!empty($display['locationId'])) $targets[] = 'location:' . $display['locationId'];
         if ($matrixLayout) $targets[] = 'matrix:' . $matrixLayout['id'];
-        $warning = $this->first(array_reverse($state['warnings']), fn(array $item): bool => ($item['status'] ?? '') === 'active' && count(array_intersect($targets, $item['targets'] ?? [])) > 0);
+        $warning = $this->first(array_reverse($state['warnings']), fn(array $item): bool => ($item['status'] ?? '') === 'active' && (empty($item['startsAt']) || strtotime($item['startsAt']) <= time()) && (empty($item['endsAt']) || strtotime($item['endsAt']) > time()) && count(array_intersect($targets, $item['targets'] ?? [])) > 0);
         $emergency = $warning ? [
             'id' => $warning['id'], 'type' => $warning['warningType'] ?? 'info', 'title' => $warning['title'] ?? '',
             'message' => $warning['instructions'] ?? ($warning['description'] ?? ''), 'description' => $warning['description'] ?? '',
@@ -1810,7 +1868,7 @@ final class Api
     /** @param array<string,mixed> $state */
     private function audit(array &$state, string $action, string $entityId): void
     {
-        $state['audit'][] = ['id' => $this->uuid(), 'actorType' => 'cms_user', 'actorId' => $this->identity['id'], 'action' => $action, 'entityId' => $entityId, 'createdAt' => $this->now()];
+        $state['audit'][] = ['id' => $this->uuid(), 'actorType' => $this->identity['actorType'] ?? 'cms_user', 'actorId' => $this->identity['id'], 'action' => $action, 'entityId' => $entityId, 'requestId' => $this->identity['requestId'] ?? null, 'ipAddress' => $this->identity['ipAddress'] ?? null, 'createdAt' => $this->now()];
         $state['audit'] = array_slice($state['audit'], -500);
     }
 
@@ -1860,7 +1918,7 @@ final class Api
             'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users'],
             'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,
             'activeEventSource' => null,
-            'portableUsers' => [], 'portableApiUsers' => [],
+            'portableUsers' => [], 'portableApiUsers' => [], 'apiUsers' => [],
             'titleExclusions' => [],
             'warningTemplates' => [[
                 'id' => 'warning-template-info', 'name' => 'Wichtige Information', 'warningType' => 'info',

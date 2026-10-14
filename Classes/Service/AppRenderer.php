@@ -21,7 +21,10 @@ final readonly class AppRenderer
         $indexPath = GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/index.html');
         if (!$indexPath || !is_readable($indexPath)) throw new RuntimeException('Die Kiosky-Oberfläche fehlt in der Extension.');
         $assetBase = $this->assetBaseUrl($request);
+        $sitePath = $request->getAttribute('normalizedParams')?->getSitePath() ?? '/';
+        $externalBase = $request->getUri()->getScheme().'://'.$request->getUri()->getAuthority().rtrim($sitePath,'/').'/kiosky-api/v1';
         $meta = $this->meta('kiosky-platform', $platform)
+            . $this->meta('kiosky-external-api-base-url', $externalBase)
             . $this->meta('kiosky-api-endpoint', $apiEndpoint)
             . $this->meta('kiosky-asset-base-url', rtrim($assetBase, '/'))
             . $this->meta('kiosky-player-base-url', $playerBaseUrl)
@@ -59,7 +62,7 @@ final readonly class AppRenderer
     private function assetBaseUrl(ServerRequestInterface $request): string
     {
         return $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority()
-            . '/kiosky-assets/';
+            . rtrim($request->getAttribute('normalizedParams')?->getSitePath() ?? '/', '/') . '/kiosky-assets/';
     }
 
     private function rewriteAppAssetUrls(string $html, string $assetBase): string

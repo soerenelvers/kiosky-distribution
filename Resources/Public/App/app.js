@@ -3,6 +3,7 @@ const kioskyRuntime = Object.freeze({
   platform: 'standalone',
   apiBaseUrl: '',
   apiEndpoint: '',
+  externalApiBaseUrl: '',
   assetBaseUrl: '',
   playerBaseUrl: '',
   requestHeaders: {},
@@ -1956,6 +1957,9 @@ document.querySelector('#crewbrain-import-selected').addEventListener('click', a
 });
 
 // External API users
+const externalApiBase = new URL(kioskyRuntime.externalApiBaseUrl || apiUrl('/api/v1'), window.location.href).toString();
+document.querySelector('#external-api-base-url').value = externalApiBase;
+document.querySelectorAll('a[href="/docs/external-api.md"],a[href="/docs/openapi.yaml"]').forEach(link => { link.href = assetUrl(link.getAttribute('href')); });
 function renderApiUsers() {
   const active = state.apiUsers.filter(user => user.status === 'active');
   document.querySelector('#api-user-count').textContent = `${active.length} aktiv · ${state.apiUsers.length} insgesamt`;

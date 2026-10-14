@@ -8,6 +8,7 @@
     platform: meta('kiosky-platform') || 'standalone',
     apiBaseUrl: meta('kiosky-api-base-url'),
     apiEndpoint: meta('kiosky-api-endpoint'),
+    externalApiBaseUrl: meta('kiosky-external-api-base-url'),
     assetBaseUrl: meta('kiosky-asset-base-url'),
     playerBaseUrl: meta('kiosky-player-base-url'),
     playerCenterUrl: meta('kiosky-player-center-url'),

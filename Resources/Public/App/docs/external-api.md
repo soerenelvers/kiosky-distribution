@@ -14,14 +14,37 @@ Authorization: Bearer <API-BENUTZERSCHLÜSSEL>
 
 Alternativ wird `X-API-Key` unterstützt. Der globale `KIOSKY_ADMIN_API_KEY` bleibt als administrativer Systemschlüssel verfügbar, sollte für neue Integrationen aber nicht verwendet werden. API-Benutzer können in der Oberfläche jederzeit widerrufen werden. Schlüssel gehören ausschließlich in einen Secret Store, nie in Browsercode oder URLs. TLS/HTTPS ist im produktiven Betrieb verpflichtend. Jede Änderung wird mit Akteur, Request-ID, Quell-IP, Ziel und Aktion im Audit-Log protokolliert. Antworten enthalten `X-Request-ID`; diese Kennung sollte das aufrufende System in seinem Log speichern.
 
-In der WordPress-Ausgabe lautet der Einstieg
-`/wp-json/kiosky/v1/api?path=/api/v1`. Die Authentifizierung erfolgt mit einem
-WordPress-Administrator und einem
-[WordPress-Anwendungspasswort](https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/).
-In TYPO3 lautet der Einstieg `/kiosky-api/?path=/api/v1`; dort wird der in den
-Extension-Einstellungen hinterlegte `externalApiKey` als Header `X-API-Key`
-gesendet. In beiden CMS-Ausgaben sind die `/api/v1`-Schreibzugriffe ausschließlich
-administrativ freigegeben.
+## Betrieb als Standalone, WordPress-Plugin oder TYPO3-Extension
+
+Ab Kiosky 3.3.1 lassen sich in **allen drei Varianten** unter **Schnittstellen → Externe API → API-Zugänge** eigene Maschinenzugänge anlegen und widerrufen. Das Anlegen eines aktiven Zugangs schaltet den externen Zugriff frei. Dafür ist kein CMS-Login, Cookie oder CMS-Nonce im aufrufenden Automationssystem erforderlich. Die Oberfläche zeigt die tatsächlich verwendete externe API-Basisadresse an; dort steht auch die plattformgerecht verlinkte Dokumentation.
+
+| Variante | Externe API-Basisadresse (Beispiel) |
+| --- | --- |
+| Standalone | `https://kiosky.example/api/v1` |
+| WordPress | `https://website.example/wp-json/kiosky/v1/control` |
+| TYPO3 | `https://website.example/kiosky-api/v1` |
+
+An diese Basisadresse wird der Ressourcenpfad angehängt, beispielsweise `/displays`, `/assignments` oder `/presets/{id}/execute`. Alle folgenden Beispiele mit `/api/v1` verwenden den Standalone-Präfix; die Ressourcen und JSON-Daten sind in den CMS-Ausgaben identisch. Bei Installationen in Unterverzeichnissen oder WordPress ohne sprechende Permalinks die in Kiosky angezeigte Basisadresse verwenden.
+
+Beispiel für WordPress:
+
+```sh
+curl --fail-with-body 'https://website.example/wp-json/kiosky/v1/control/displays' \
+  --header "Authorization: Bearer $KIOSKY_API_TOKEN"
+```
+
+Beispiel für TYPO3:
+
+```sh
+curl --fail-with-body 'https://website.example/kiosky-api/v1/displays' \
+  --header "X-API-Key: $KIOSKY_API_TOKEN"
+```
+
+`KIOSKY_API_TOKEN` ist hier der in **Kiosky** erzeugte Maschinenzugang, kein GitHub-Update-Token. Pro Integration einen eigenen Zugang anlegen. Die Schlüssel werden einmal angezeigt, nur als SHA-256-Hash gespeichert und können sofort widerrufen werden. In der Zugangsübersicht ist die letzte Verwendung sichtbar; die CMS-Ausgaben aktualisieren diesen Zeitstempel höchstens einmal pro Minute, damit häufige Statusabfragen keine unnötigen Schreibzugriffe verursachen. Erstellen, Auflisten und Widerrufen von Zugängen bleibt CMS-/Kiosky-Administratoren vorbehalten. Maschinenzugänge erhalten ausschließlich Zugriff auf die External Control API, nicht auf Benutzerverwaltung, Einstellungen, Medien oder Updates.
+
+Bestehende CMS-Integrationen funktionieren weiterhin: WordPress unterstützt den Einstieg `/wp-json/kiosky/v1/api?path=/api/v1/displays` sowie die bisherige Anmeldung eines berechtigten Administrators mit einem WordPress-Anwendungspasswort. TYPO3 unterstützt `/kiosky-api/?path=/api/v1/displays` und den bisherigen Extension-Konfigurationsschlüssel `externalApiKey`; dieser kann mit `X-API-Key` oder Bearer-Authentifizierung gesendet werden. Neue Integrationen sollen die einzeln widerrufbaren API-Zugänge verwenden.
+
+Fehlende, ungültige oder widerrufene Schlüssel liefern HTTP **401**. Administrationszugriffe mit einem Maschinenzugang werden abgewiesen; im Standalone/Core-Gateway mit **403**, an geschützten CMS-Verwaltungsrouten entsprechend der CMS-Authentifizierung. Nicht unterstützte Ressourcen liefern **404**, ungültige JSON-Anfragen **400**, zu große Anfragen **413**. Schreibzugriffe werden unter der Identität des Maschinenzugangs und mit Request-ID im Audit-Log protokolliert. Die HTTP-Antworten des externen CMS-Gateways enthalten `X-Request-ID` und `Cache-Control: no-store`.
 
 ## Grundregeln
 
