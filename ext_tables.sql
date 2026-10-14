@@ -415,3 +415,7 @@ CREATE TABLE tx_kiosky_domain_model_externaldatasource (
   PRIMARY KEY (uid),
   KEY parent (pid)
 );
+
+CREATE TABLE sys_file_metadata (
+    tx_kiosky_data text
+);

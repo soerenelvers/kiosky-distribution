@@ -18,6 +18,7 @@ final readonly class ApiFactory
         private Typo3StateStore $store,
         private Typo3HttpClient $http,
         private ConnectionPool $connectionPool,
+        private Typo3MediaLibrary $media,
     ) {
     }
 
@@ -45,9 +46,9 @@ final readonly class ApiFactory
             ];
         }, $backendUsers);
         return new Api(
-            $this->store,
+            new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, ($identity['role'] ?? 'viewer') !== 'viewer'),
             $identity,
-            '3.2.1',
+            '3.3.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),

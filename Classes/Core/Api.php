@@ -37,6 +37,7 @@ final class Api
             if ($result[2]) {
                 $state['updatedAt'] = $this->now();
                 $this->store->save($state);
+                if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
             }
             return [$result[0], $result[1]];
         } catch (Throwable $error) {
