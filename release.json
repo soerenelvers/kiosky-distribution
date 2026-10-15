@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "3.3.1",
-  "released_at": "2026-10-14T21:30:19.175Z",
+  "version": "3.3.2",
+  "released_at": "2026-10-15T03:59:08.231Z",
   "channel": "stable",
-  "release_notes": "## [3.3.1] – 2026-10-14\n\n- Externe API-Zugänge lassen sich jetzt auch im WordPress-Plugin und in der TYPO3-Extension unter Schnittstellen → Externe API anlegen, auflisten und sofort widerrufen. Schlüssel werden einmal ausgegeben und ausschließlich gehasht gespeichert; die letzte Nutzung wird angezeigt.\n- Gebäudeautomation und externe Integrationen nutzen in allen Varianten Bearer-Authentifizierung oder X-API-Key ohne CMS-Anmeldung. Die CMS-Zugänge sind auf die External Control API beschränkt; die Zugangsverwaltung bleibt Administratoren vorbehalten.\n- WordPress erhält den öffentlichen Einstieg `/wp-json/kiosky/v1/control`, TYPO3 `/kiosky-api/v1`. Die Oberfläche zeigt die vollständige Basisadresse und passende Dokumentationslinks. Bestehende Query-Endpunkte, WordPress-Anwendungspasswörter und der bisherige TYPO3-Konfigurationsschlüssel bleiben kompatibel.\n- Widerruf und Registrierung von API-Zugängen bleiben auch bei parallelen Zugriffen erhalten. Veraltete CMS-Schreibstände werden abgewiesen; externe Kontrollanfragen werden bei solchen Konflikten mit erneuter Authentifizierung wiederholt.\n- Externe CMS-Anfragen erhalten Request-IDs, begrenzte JSON-Payloads und nachvollziehbare API-Akteure im Audit-Log. Kontrollanfragen müssen keine vollständige CMS-Medienbibliothek oder Benutzerliste laden.\n- CMS-Statusfilter, Zeitfenster bei Preset-Zuweisungen und das Ablösen vorheriger externer Warnungen entsprechen der gemeinsamen API. Zeitlich begrenzte Webhook-Warnungen werden im CMS-Player nur während ihres Gültigkeitsfensters angezeigt.\n- Neue HTTP-, Berechtigungs- und Transporttests prüfen Schlüsselverwaltung, Ablehnung ungültiger/widerrufener Schlüssel, Ressourcenabfragen, Kanal-/Slide-Zuweisungen, Presets, Webhooks und Warnungen bis zur Player-Ausgabe in Standalone, WordPress und TYPO3 13/14.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.1",
+  "release_notes": "## [3.3.2] – 2026-10-15\n\n- Slides bieten im Editor eine Auswahl vorhandener Tags mit Checkboxen. Mehrere Tags lassen sich auswählen, entfernen und über ein Freitextfeld ergänzen.\n- In der Slide-Übersicht weist „Tags zuweisen“ mehreren ausgewählten Slides gemeinsame Tags zu. Vorhandene Tags, Inhalte, Standorte und Gültigkeitszeiträume bleiben erhalten; Teilfehler werden angezeigt und können erneut gespeichert werden.\n- Die Tag-Auswahl steht gemeinsam in Standalone, WordPress und TYPO3 sowie im Werbemodul zur Verfügung. Neue Tags erscheinen nach dem Speichern auch im Filter der Übersicht.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.2",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.3.1",
+    "core_version": "3.3.2",
     "api_version": "1",
-    "wordpress_plugin_version": "3.3.1",
-    "typo3_extension_version": "3.3.1"
+    "wordpress_plugin_version": "3.3.2",
+    "typo3_extension_version": "3.3.2"
   },
   "components": {
     "core": {
-      "version": "3.3.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.1.zip?ref=v3.3.1",
-      "sha256": "ee4713f0bb7fc829ed8fbbf394f9553ed2f63ede6e420d408d12f0c09c95ee0e"
+      "version": "3.3.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.2.zip?ref=v3.3.2",
+      "sha256": "eab5fb6ffa636b64364d1a69004141df7e125ab0567e377998f642a4be65da55"
     },
     "standalone": {
-      "version": "3.3.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.1.zip?ref=v3.3.1",
-      "sha256": "ee4713f0bb7fc829ed8fbbf394f9553ed2f63ede6e420d408d12f0c09c95ee0e"
+      "version": "3.3.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.2.zip?ref=v3.3.2",
+      "sha256": "eab5fb6ffa636b64364d1a69004141df7e125ab0567e377998f642a4be65da55"
     },
     "wordpress": {
-      "version": "3.3.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.1.zip?ref=v3.3.1",
-      "sha256": "8d1403ceca72ef2fc07e130c3c5ba66376f9b61279f0910b8d222dd4b1aae4e1",
+      "version": "3.3.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.2.zip?ref=v3.3.2",
+      "sha256": "89ee30f1255b8a8e1b4ee0cc1cadb91d5a388f6d87a60de736e90cd2f8dd7915",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.3.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.1.zip?ref=v3.3.1",
-      "sha256": "0e03db67d67e972ba8e73adb7c23cd7016b74fa1735aadcd8ac52db434008b49",
+      "version": "3.3.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.2.zip?ref=v3.3.2",
+      "sha256": "53cd524c5393d4484a097c12b39bab1498d80e46044721ec2deca39b69a8f778",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

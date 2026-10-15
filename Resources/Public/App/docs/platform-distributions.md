@@ -33,9 +33,10 @@ Benutzerverwaltung werden in WordPress ausgeblendet. Öffentliche Display-URLs
 verwenden `/kiosky-player/`.
 
 CrewBrain-Livetest, einmaliger Tokenabruf, Importvorschau, manueller Import und
-der tägliche automatische Import laufen über WordPress-HTTP und WP-Cron. Für die
-External Control API wird die WordPress REST API mit einem Administrator und
-einem WordPress-Anwendungspasswort verwendet.
+der tägliche automatische Import laufen über WordPress-HTTP und WP-Cron. Neue externe Integrationen verwenden eigene Kiosky-API-Zugänge unter
+**Schnittstellen → Externe API** und die Basisadresse
+`/wp-json/kiosky/v1/control` ohne CMS-Anmeldung. Der bisherige Weg mit einem
+Administrator und WordPress-Anwendungspasswort bleibt kompatibel.
 
 ### TYPO3
 
@@ -52,9 +53,10 @@ Für den automatischen CrewBrain-Import kann im TYPO3-Scheduler die Aufgabe
 **Kiosky: automatischer CrewBrain-Import** eingerichtet werden. Alternativ steht
 `vendor/bin/typo3 kiosky:crewbrain:sync` zur Verfügung.
 
-Für die External Control API wird in den Extension-Einstellungen ein langer
-`externalApiKey` hinterlegt. Anfragen gehen an
-`/kiosky-api/?path=/api/v1/...` und senden diesen Wert als Header `X-API-Key`.
+Neue externe Integrationen verwenden eigene Kiosky-API-Zugänge unter
+**Schnittstellen → Externe API** und `/kiosky-api/v1`. Bearer oder `X-API-Key`
+authentifizieren ohne TYPO3-Backend-Anmeldung. Der bisherige Konfigurationsschlüssel
+`externalApiKey` und Query-Einstieg bleiben kompatibel.
 
 ## Release
 
@@ -82,3 +84,11 @@ Zeitpläne, Player, Warnhinweise, DWD, CrewBrain und externe
 Steuerungszuweisungen. Anmeldung, Benutzerkonten und Medienverwaltung bleiben
 bewusst Aufgabe des jeweiligen CMS und werden nicht als zweite Kiosky-Verwaltung
 dupliziert.
+
+## Einrichtung, CMS-Medien und Home Assistant
+
+Die [Einrichtungsanleitung](setup-guide.md) führt durch Updates, transparente
+Lauftexte, native CMS-Medien, externe API-Zugänge und die öffentliche
+[HACS-Integration](https://github.com/soerenelvers/hacs-kiosky).
+WordPress nutzt seine Mediathek, TYPO3 FAL; die Standalone-App behält ihre eigene
+Medienbibliothek. Details zu API und Migration: [External Control API](external-api.md).

@@ -4,6 +4,14 @@ Die External Control API steuert Kiosky aus Leitstellen, Gebäudeautomation, Eve
 
 Die maschinenlesbare Spezifikation liegt in [`openapi.yaml`](./openapi.yaml). Nach dem Build werden beide Dateien außerdem unter `/docs/` ausgeliefert. `GET /api/v1` liefert die aktuellen Dokumentationspfade.
 
+## Einrichtung und Home Assistant
+
+Die [Einrichtungsanleitung](setup-guide.md#4-externe-api-für-gebäudeautomation-und-integrationen)
+erklärt Schlüsselanlage, plattformspezifische Adressen und Fehlerbehebung.
+Die öffentliche [HACS-Integration](https://github.com/soerenelvers/hacs-kiosky)
+unterstützt diese API ab Kiosky 3.3.1 mit Home Assistant ab 2026.3.0.
+Installation und Automationsbeispiele: [Home Assistant einrichten](setup-guide.md#5-home-assistant-über-hacs-einrichten).
+
 ## Authentifizierung und Sicherheit
 
 Alle Endpunkte außer `/api/health` benötigen einen gültigen Zugang. Empfohlen wird ein eigener API-Benutzer, der in Kiosky unter **Schnittstellen → API-Zugänge** angelegt wird. Der dabei erzeugte Schlüssel wird nur einmal angezeigt und ist ausschließlich für `/api/v1` berechtigt:

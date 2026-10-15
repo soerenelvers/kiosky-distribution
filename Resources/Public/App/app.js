@@ -2532,7 +2532,7 @@ function renderSlideLibrary() {
   selectAll.indeterminate = selectedVisible > 0 && selectedVisible < visibleSlides.length;
   selectAll.disabled = !visibleSlides.length;
   document.querySelector('#slide-selection-count').textContent = `${state.selectedSlides.size} ausgewählt`;
-  ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
+  ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive', 'slide-bulk-tags'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
   document.querySelector('#slide-bulk-delete').disabled = !state.selectedSlides.size || state.currentUser?.role !== 'admin';
   const canEditContent = state.currentUser?.role !== 'viewer';
   library.innerHTML = visibleSlides.map(slide => `
@@ -2585,7 +2585,8 @@ function slideUpdatePayload(slide, name) {
     status: slide.status,
     startsAt: slide.startsAt || undefined,
     endsAt: slide.endsAt || undefined,
-    tags: slide.tags || []
+    tags: slide.tags || [],
+    locationIds: slide.locationIds || []
   };
 }
 
@@ -2616,6 +2617,117 @@ async function bulkSlides(action) {
     showToast(action === 'rename' ? 'Slide-Namen wurden aktualisiert.' : 'Slide-Aktion wurde ausgeführt.');
   } catch (error) { showToast(error.message); }
 }
+// Shared tag picker for the editor and additive bulk assignments in every platform.
+function uniqueSlideTags(tags) {
+  const unique = new Map();
+  for (const raw of tags) {
+    const tag = String(raw).trim().slice(0, 80);
+    const key = tag.toLocaleLowerCase('de-DE');
+    if (tag && !unique.has(key)) unique.set(key, tag);
+  }
+  return [...unique.values()];
+}
+
+let slideTagPicker = null;
+function renderSlideTagOptions() {
+  const picker = slideTagPicker;
+  document.querySelector('#slide-tag-options').innerHTML = picker.available.length
+    ? picker.available.map(tag => `<label class="toggle-label"><input type="checkbox" value="${escapeHtml(tag)}" ${picker.selected.has(tag) ? 'checked' : ''}> <span>${escapeHtml(tag)}</span></label>`).join('')
+    : '<p class="property-note">Noch keine Tags vorhanden. Füge unten einen neuen Tag hinzu.</p>';
+}
+
+function openSlideTagPicker(mode) {
+  if (state.currentUser?.role === 'viewer') return;
+  const ids = mode === 'bulk' ? [...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)) : [];
+  if (mode === 'bulk' && !ids.length) return;
+  const selected = mode === 'editor' ? uniqueSlideTags(scopedTags(tagInput(document.querySelector('#slide-tags').value))) : [];
+  const available = uniqueSlideTags([...selected, ...scopedTags([...state.slides, ...state.channels].flatMap(item => item.tags || []))]).sort((a, b) => a.localeCompare(b, 'de'));
+  slideTagPicker = { mode, ids, available, selected: new Set(available.filter(tag => selected.some(value => value.toLocaleLowerCase('de-DE') === tag.toLocaleLowerCase('de-DE')))), saving: false };
+  document.querySelector('#slide-tags-title').textContent = mode === 'bulk' ? 'Tags zuweisen' : 'Tags auswählen';
+  document.querySelector('#slide-tags-description').textContent = mode === 'bulk'
+    ? `Tags zu ${ids.length} ausgewählten Slides hinzufügen. Bereits zugewiesene Tags bleiben erhalten.`
+    : 'Mehrere Tags auswählen oder neue Tags hinzufügen. Abgewählte Tags werden von dieser Slide entfernt.';
+  document.querySelector('#slide-new-tag').value = '';
+  document.querySelector('#slide-tags-message').textContent = '';
+  renderSlideTagOptions();
+  document.querySelector('#slide-tags-dialog').showModal();
+}
+
+function addSlidePickerTags() {
+  const input = document.querySelector('#slide-new-tag');
+  for (const tag of uniqueSlideTags(scopedTags(tagInput(input.value)))) {
+    const existing = slideTagPicker.available.find(value => value.toLocaleLowerCase('de-DE') === tag.toLocaleLowerCase('de-DE'));
+    if (!existing) slideTagPicker.available.push(tag);
+    slideTagPicker.selected.add(existing || tag);
+  }
+  slideTagPicker.available.sort((a, b) => a.localeCompare(b, 'de'));
+  input.value = '';
+  renderSlideTagOptions();
+}
+
+async function applySlidePickerTags(event) {
+  event.preventDefault();
+  const picker = slideTagPicker;
+  if (!picker || picker.saving) return;
+  addSlidePickerTags();
+  const tags = [...picker.selected];
+  const message = document.querySelector('#slide-tags-message');
+  message.textContent = '';
+  if (tags.length > 30) { message.textContent = 'Bitte höchstens 30 Tags auswählen.'; return; }
+  if (picker.mode === 'editor') {
+    document.querySelector('#slide-tags').value = tags.join(', ');
+    pushEditorHistory();
+    scheduleSlideAutosave();
+    document.querySelector('#slide-tags-dialog').close();
+    return;
+  }
+  if (!tags.length) { message.textContent = 'Bitte mindestens einen Tag auswählen oder hinzufügen.'; return; }
+  picker.saving = true;
+  message.textContent = 'Tags werden zugewiesen …';
+  const controls = [...document.querySelectorAll('#slide-tags-form input, #slide-tags-form button')];
+  controls.forEach(control => { control.disabled = true; });
+  let completed = 0;
+  try {
+    // Fetch current data so an older library snapshot cannot overwrite slide edits.
+    const result = await apiRequest('/api/slides');
+    const updates = picker.ids.map(id => {
+      const slide = (result.data || []).find(item => item.id === id);
+      if (!slide) throw new Error('Eine ausgewählte Slide ist nicht mehr verfügbar. Bitte Auswahl aktualisieren.');
+      const merged = uniqueSlideTags([...(slide.tags || []), ...tags]);
+      if (merged.length > 30) throw new Error(`„${slide.name}“ hätte mehr als 30 Tags. Bitte weniger Tags auswählen.`);
+      return { slide, merged };
+    });
+    for (const { slide, merged } of updates) {
+      await apiRequest(`/api/slides/${encodeURIComponent(slide.id)}`, { method: 'PUT', body: JSON.stringify({ ...slideUpdatePayload(slide, slide.name), tags: merged }) });
+      picker.ids = picker.ids.filter(id => id !== slide.id);
+      completed++;
+    }
+    document.querySelector('#slide-tags-dialog').close();
+    showToast(`Tags wurden ${completed} Slide${completed === 1 ? '' : 's'} zugewiesen.`);
+  } catch (error) {
+    message.textContent = `${completed ? `${completed} Slides gespeichert. ` : ''}${error.message}`;
+  } finally {
+    picker.saving = false;
+    controls.forEach(control => { control.disabled = false; });
+    await loadContent();
+  }
+}
+
+document.querySelector('#slide-select-tags').addEventListener('click', () => openSlideTagPicker('editor'));
+document.querySelector('#slide-bulk-tags').addEventListener('click', () => openSlideTagPicker('bulk'));
+document.querySelector('#slide-add-tag').addEventListener('click', addSlidePickerTags);
+document.querySelector('#slide-new-tag').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); addSlidePickerTags(); }
+});
+document.querySelector('#slide-tag-options').addEventListener('change', event => {
+  if (!event.target.matches('input[type="checkbox"]')) return;
+  event.target.checked ? slideTagPicker.selected.add(event.target.value) : slideTagPicker.selected.delete(event.target.value);
+});
+document.querySelector('#slide-tags-form').addEventListener('submit', applySlidePickerTags);
+document.querySelector('#slide-tags-dialog').addEventListener('cancel', event => {
+  if (slideTagPicker?.saving) event.preventDefault();
+});
+
 document.querySelector('#slide-bulk-rename').addEventListener('click', () => bulkSlides('rename'));
 document.querySelector('#slide-bulk-duplicate').addEventListener('click', () => bulkSlides('duplicate'));
 document.querySelector('#slide-bulk-archive').addEventListener('click', () => bulkSlides('archive'));
@@ -2818,6 +2930,7 @@ async function persistSlideEditor() {
   const index = state.slides.findIndex(slide => slide.id === uiSlide.id);
   if (index >= 0) state.slides[index] = uiSlide;
   else state.slides.unshift(uiSlide);
+  populateContentTagFilters();
   renderSlideLibrary();
   document.querySelector('#slide-count').textContent = scopedSlides().length;
   return uiSlide;
@@ -3509,7 +3622,7 @@ document.querySelectorAll('[data-command]').forEach(button => button.addEventLis
   if (editable) { editable.focus(); document.execCommand(button.dataset.command); }
 }));
 document.querySelectorAll('[data-align]').forEach(button => button.addEventListener('click', () => updateSelectedElement('align', button.dataset.align)));
-document.addEventListener('keydown',event=>{if(!slideDialog.open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
+document.addEventListener('keydown',event=>{if(!slideDialog.open||document.querySelector('#slide-tags-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
 document.querySelectorAll('[data-editor-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.editorAction;
   const element = selectedEditorElement();

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.3.1-20261014213018%2Bc631a548">
+  <link rel="stylesheet" href="styles.css?v=3.3.2-20261015035907%2B67ca0478">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -265,7 +265,7 @@
             <div class="slide-bulk-toolbar">
               <label class="table-check"><input id="slide-select-all" type="checkbox"> Alle sichtbaren Slides</label>
               <span id="slide-selection-count">0 ausgewählt</span>
-              <div class="slide-bulk-actions"><button class="button button-secondary" id="slide-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="slide-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="slide-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="slide-bulk-delete" type="button" disabled>Löschen</button></div>
+              <div class="slide-bulk-actions"><button class="button button-secondary" id="slide-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="slide-bulk-tags" type="button" disabled>Tags zuweisen</button><button class="button button-secondary" id="slide-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="slide-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="slide-bulk-delete" type="button" disabled>Löschen</button></div>
             </div>
             <p class="drag-hint">Slide in den Kanal ziehen oder über ＋ hinzufügen. Die Checkboxen dienen der Mehrfachauswahl.</p>
             <div class="slide-library" id="slide-library" aria-live="polite"></div>
@@ -1196,6 +1196,18 @@
     </form>
   </dialog>
 
+  <dialog id="slide-tags-dialog" aria-labelledby="slide-tags-title">
+    <form id="slide-tags-form" class="dialog-content">
+      <div class="dialog-heading"><div><p class="eyebrow">Slides</p><h2 id="slide-tags-title">Tags auswählen</h2></div></div>
+      <p id="slide-tags-description" class="property-note"></p>
+      <fieldset class="slide-tag-choices"><legend>Verfügbare Tags</legend><div id="slide-tag-options"></div></fieldset>
+      <label class="form-field"><span>Neue Tags (durch Komma getrennt)</span><input id="slide-new-tag" type="text" placeholder="z. B. Kultur, Intern"></label>
+      <button class="button button-secondary" id="slide-add-tag" type="button">Tag hinzufügen</button>
+      <p id="slide-tags-message" class="auth-message" role="status"></p>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="slide-tags-dialog">Abbrechen</button><button class="button button-primary" id="slide-tags-apply" type="submit">Übernehmen</button></div>
+    </form>
+  </dialog>
+
   <dialog id="slide-dialog" class="slide-editor-dialog">
     <div class="slide-editor-shell">
       <header class="slide-editor-header">
@@ -1204,7 +1216,7 @@
         <label class="editor-title-field"><span>Name</span><input id="new-slide-title" type="text" value="Neue Slide" aria-label="Name der Slide"></label>
         <label class="editor-title-field compact-field"><span>Format</span><select id="editor-ratio"><option value="auto">Automatisch / responsiv</option><option value="landscape">16:9 Querformat</option><option value="portrait">9:16 Hochformat</option></select></label>
         <label class="editor-title-field compact-field"><span>Veranstaltung</span><select id="slide-event"><option value="">Keine feste Veranstaltung</option></select></label>
-        <label class="editor-title-field compact-field"><span>Tags</span><input id="slide-tags" type="text" placeholder="z. B. Werbung, Kultur"></label>
+        <div class="editor-title-field compact-field"><label for="slide-tags">Tags</label><div class="slide-tag-input"><input id="slide-tags" type="text" placeholder="z. B. Kultur, Intern"><button class="button button-secondary" id="slide-select-tags" type="button">Auswählen</button></div></div>
         <label class="editor-title-field compact-field"><span>Status</span><select id="slide-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option></select></label>
         <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar ab <small>(optional)</small></span><input id="slide-starts-at" type="datetime-local" step="60"></label>
         <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar bis <small>(optional)</small></span><input id="slide-ends-at" type="datetime-local" step="60"></label>
@@ -1513,7 +1525,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.3.1-20261014213018%2Bc631a548"></script>
-  <script src="app.js?v=3.3.1-20261014213018%2Bc631a548"></script>
+  <script src="runtime-config.js?v=3.3.2-20261015035907%2B67ca0478"></script>
+  <script src="app.js?v=3.3.2-20261015035907%2B67ca0478"></script>
 </body>
 </html>

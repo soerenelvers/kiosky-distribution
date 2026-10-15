@@ -50,11 +50,15 @@ Die zentrale Kiosky-Konfiguration kann pro Inhaltselement überschrieben werden.
 
 Die External Control API läuft unter `/kiosky-api/v1`. Unter **Schnittstellen → Externe API** werden eigene Maschinenzugänge angelegt und widerrufen; die Oberfläche zeigt die vollständige Basisadresse an. Die Clients senden `Authorization: Bearer <Schlüssel>` oder `X-API-Key`. Ein TYPO3-Backend-Login ist für Maschinenzugänge nicht erforderlich. Der bisherige Konfigurationsschlüssel `externalApiKey` und der Query-Einstieg `/kiosky-api/?path=/api/v1` bleiben unterstützt. Die API ist für aktive Schlüssel verfügbar und verweigert den Zugriff ohne gültige Authentifizierung.
 
-## Einrichtung und Integrationen
+## Einrichtung und Home Assistant
 
-[Einrichtungsanleitung](Documentation/Einrichtung.md) für Updates und GitHub-Tokens,
-transparente Lauftexte, native CMS-Medien, externe API und Home Assistant.
+Die [Einrichtungsanleitung](Resources/Public/App/docs/setup-guide.md) im Paket
+beschreibt Updates, FAL-Medien, transparente Lauftexte und API-Zugänge.
+Öffentlich lesbar: [Einrichtung](https://github.com/soerenelvers/hacs-kiosky/blob/main/docs/kiosky-setup.md).
 
-Aktuelle [Release-Ergänzungen](release-notes.md) und die öffentliche
-[HACS-Integration](https://github.com/soerenelvers/hacs-kiosky) besitzen eigene
-Dokumentation. HACS benötigt einen Kiosky-API-Schlüssel statt des GitHub-Update-Tokens.
+Die [HACS-Integration](https://github.com/soerenelvers/hacs-kiosky) als
+benutzerdefiniertes Repository vom Typ **Integration** hinzufügen, herunterladen,
+Home Assistant neu starten und Kiosky unter **Geräte & Dienste** einrichten.
+Die angezeigte externe API-Basisadresse und einen eigenen Kiosky-API-Schlüssel
+verwenden, keinen GitHub-Update-Token. Voraussetzungen: Kiosky ab 3.3.1 und
+Home Assistant ab 2026.3.0.

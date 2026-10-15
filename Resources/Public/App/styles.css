@@ -1392,3 +1392,14 @@ body[data-user-role="viewer"] .schedule-lane-label { cursor: default; }
 .event-bulk-image-preview img { width:100%; height:100%; object-fit:cover; }
 .event-bulk-image strong { font-size:.72rem; }.event-bulk-image p { margin:5px 0 10px; color:var(--muted); font-size:.61rem; line-height:1.45; }
 @media(max-width:560px){.event-bulk-image{grid-template-columns:1fr}.event-bulk-image-preview{width:100%;height:140px}}
+
+/* Shared slide tag picker (Standalone, WordPress and TYPO3). */
+.slide-tag-input { display: flex; gap: 6px; align-items: center; }
+.slide-tag-input input { min-width: 0; }
+.slide-tag-input .button { padding: 8px 10px; flex-shrink: 0; }
+#slide-tags-dialog { width: min(560px, calc(100vw - 32px)); }
+.slide-tag-choices { margin: 18px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+#slide-tag-options { display: grid; gap: 10px; max-height: 35vh; overflow-y: auto; }
+#slide-tag-options .toggle-label { justify-content: flex-start; overflow-wrap: anywhere; }
+#slide-tag-options input { flex-shrink: 0; }
+body[data-user-role="viewer"] #slide-bulk-tags, body[data-user-role="viewer"] #slide-select-tags { display: none; }
