@@ -1423,3 +1423,6 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 .slide-editor-canvas,.player-layout-slide,.slide-thumb-surface { container-type:inline-size; --slide-font-reference:1920; }
 .slide-editor-canvas[data-ratio="portrait"],.player-layout-slide[data-render-orientation="portrait"],.slide-thumb-surface.is-portrait { --slide-font-reference:1080; }
 .warning-design-canvas,.emergency-design-layer { container-type:inline-size; --slide-font-reference:780; }
+/* Keep text options visible and clickable in narrow editor property panels. */
+.editor-properties .toggle-label,.warning-property-fields .toggle-label { align-items:flex-start; gap:8px; padding-top:10px; font-size:.72rem; line-height:1.4; white-space:normal; }
+.editor-properties .toggle-label input[type="checkbox"],.warning-property-fields .toggle-label input[type="checkbox"] { flex:0 0 16px; width:16px; min-width:16px; max-width:16px; height:16px; margin:1px 0 0; padding:0; }
