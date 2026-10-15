@@ -55,6 +55,15 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         return ['id'=>'fal:'.$file->getUid(),'name'=>($native['title']??'')?:$file->getName(),'src'=>(string)$file->getPublicUrl(),'type'=>str_starts_with($mime,'video/')?'video':($mime==='image/svg+xml'?'icon':(str_starts_with($mime,'image/')?'image':'file')),'folderId'=>$this->folderId($file->getParentFolder()),'metadata'=>array_replace($data,['cms'=>'typo3','cmsId'=>$file->getUid(),'mimeType'=>$mime,'size'=>$file->getSize(),'width'=>$native['width']??null,'height'=>$native['height']??null]),'deletedAt'=>$data['deletedAt']??null];
     }
 
+    public function exportAssetData(array $asset): string
+    {
+        if (!str_starts_with((string)$asset['id'],'fal:')) throw new RuntimeException('Ungültiges CMS-Medium.',422);
+        $file = $this->factory->getFileObject((int)substr($asset['id'],4));
+        if (!$file->checkActionPermission('read')) throw new RuntimeException('Keine Leseberechtigung für dieses TYPO3-Medium.',403);
+        if ($file->getSize()>20000000) throw new RuntimeException('Die Mediendatei ist größer als 20 MB.',422);
+        return 'data:'.$file->getMimeType().';base64,'.base64_encode($file->getContents());
+    }
+
     public function saveFolder(array $folder): array
     {
         if (str_starts_with($folder['id'],'fal-folder:')) {

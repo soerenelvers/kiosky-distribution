@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "product": "kioski",
-  "version": "3.3.2",
-  "released_at": "2026-10-15T03:59:08.231Z",
+  "version": "3.3.3",
+  "released_at": "2026-10-15T20:04:15.784Z",
   "channel": "stable",
-  "release_notes": "## [3.3.2] – 2026-10-15\n\n- Slides bieten im Editor eine Auswahl vorhandener Tags mit Checkboxen. Mehrere Tags lassen sich auswählen, entfernen und über ein Freitextfeld ergänzen.\n- In der Slide-Übersicht weist „Tags zuweisen“ mehreren ausgewählten Slides gemeinsame Tags zu. Vorhandene Tags, Inhalte, Standorte und Gültigkeitszeiträume bleiben erhalten; Teilfehler werden angezeigt und können erneut gespeichert werden.\n- Die Tag-Auswahl steht gemeinsam in Standalone, WordPress und TYPO3 sowie im Werbemodul zur Verfügung. Neue Tags erscheinen nach dem Speichern auch im Filter der Übersicht.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.2",
+  "release_notes": "## [3.3.3] – 2026-10-15\n\n- Ausgewählte Slides, einzelne Kanäle und Vorlagen lassen sich direkt in den jeweiligen Übersichten und im Slide-Editor als Inhaltspaket exportieren und mit Vorschau importieren. Auch Entwürfe und unfertige Kanäle bleiben erhalten.\n- Inhaltspakete nehmen nur benötigte Abhängigkeiten mit: Kanal-Slides, Veranstaltungsdaten, Layouts, Standorte und Medien. Eingebettete Dateien werden pro Paket dedupliziert; Bilder, Logos, Pfeile, Videos samt Zuschnitt und CMS-Dateianhänge werden zwischen Standalone, WordPress und TYPO3 übertragen.\n- Native CMS-Dateien werden eingebettet und beim Import mit neuen IDs in der Ziel-Medienverwaltung angelegt. Externe Webseiten und Medienlinks bleiben als externe Verweise erkennbar. Imports ergänzen Kopien und verändern keine bestehenden System-Einstellungen oder Benutzer.\n- Medienimporte lesen nicht mehr nach jeder Datei die komplette Medienbibliothek ein. Der Export verzichtet auf nicht benötigte Medien und die gesamte Versionshistorie.\n- Medien mit unterschiedlichen Trimm-, Zuschnitt- oder anderen Metadaten bleiben getrennte Einträge, auch wenn dieselbe Originaldatei verwendet wird.\n- Neue Vertrags-, Berechtigungs- und Übertragungstests sowie erweiterte native CMS-Smoke-Tests prüfen Inhaltspakete einschließlich Medien-Dateien und Verweisen.\n\n- WordPress und TYPO3 speichern die Sichtbarkeit und Reihenfolge des Werbemoduls zuverlässig und unterstützen jetzt auch Werbekonfiguration, automatische Werbeslides und Werbekanäle einschließlich Standardbildern.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +13,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.3.2",
+    "core_version": "3.3.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.3.2",
-    "typo3_extension_version": "3.3.2"
+    "wordpress_plugin_version": "3.3.3",
+    "typo3_extension_version": "3.3.3"
   },
   "components": {
     "core": {
-      "version": "3.3.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.2.zip?ref=v3.3.2",
-      "sha256": "eab5fb6ffa636b64364d1a69004141df7e125ab0567e377998f642a4be65da55"
+      "version": "3.3.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.3.zip?ref=v3.3.3",
+      "sha256": "7f5bab195ae3ba87c1c418f25c593d9f03537b84b89cd45ee136f0d4cf8b1e62"
     },
     "standalone": {
-      "version": "3.3.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.2.zip?ref=v3.3.2",
-      "sha256": "eab5fb6ffa636b64364d1a69004141df7e125ab0567e377998f642a4be65da55"
+      "version": "3.3.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-app-3.3.3.zip?ref=v3.3.3",
+      "sha256": "7f5bab195ae3ba87c1c418f25c593d9f03537b84b89cd45ee136f0d4cf8b1e62"
     },
     "wordpress": {
-      "version": "3.3.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.2.zip?ref=v3.3.2",
-      "sha256": "89ee30f1255b8a8e1b4ee0cc1cadb91d5a388f6d87a60de736e90cd2f8dd7915",
+      "version": "3.3.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski-wordpress-3.3.3.zip?ref=v3.3.3",
+      "sha256": "43572acf4be24a35e53109c625391d662a48cd43b3ca778a98675ca15fa5c142",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.3.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.2.zip?ref=v3.3.2",
-      "sha256": "53cd524c5393d4484a097c12b39bab1498d80e46044721ec2deca39b69a8f778",
+      "version": "3.3.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kioski_3.3.3.zip?ref=v3.3.3",
+      "sha256": "9d6ff83e595f2ecd706bb8c7add22171bf4656055553fab88f0ed75f183c4020",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

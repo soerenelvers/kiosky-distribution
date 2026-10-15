@@ -1,6 +1,6 @@
 /* Advanced designer, wayfinding template and media library */
 .editor-main { grid-template-columns:104px minmax(420px,1fr) minmax(330px,380px) !important; }
-.template-list-item { grid-template-columns:92px minmax(0,1fr) auto auto auto !important; }
+.template-list-item { grid-template-columns:92px minmax(0,1fr) repeat(4,auto) !important; }
 .canvas-element { transform-origin:center; }
 .canvas-rotate-handle { position:absolute; left:50%; top:3px; display:none; width:24px; height:24px; margin-left:-12px; border:0; border-radius:50%; color:#17201d; background:#fff; cursor:grab; box-shadow:0 2px 8px rgba(0,0,0,.18); }
 .canvas-element.is-selected .canvas-rotate-handle { display:block; }
@@ -1403,3 +1403,18 @@ body[data-user-role="viewer"] .schedule-lane-label { cursor: default; }
 #slide-tag-options .toggle-label { justify-content: flex-start; overflow-wrap: anywhere; }
 #slide-tag-options input { flex-shrink: 0; }
 body[data-user-role="viewer"] #slide-bulk-tags, body[data-user-role="viewer"] #slide-select-tags { display: none; }
+
+.content-package-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.content-package-actions .button { flex:1 1 auto; }
+body[data-user-role="viewer"] #slide-bulk-export,
+body[data-user-role="viewer"] #slide-editor-export,
+body[data-user-role="viewer"] #channel-export,
+body[data-user-role="viewer"] #templates-export,
+body[data-user-role="viewer"] [data-export-template-id],
+body[data-user-role="viewer"] [data-import-content-package] { display:none; }
+@media (max-width:780px) { .template-list-item { display:flex; flex-wrap:wrap; } .template-list-item > span { flex:1 1 160px; } }
+.slide-bulk-toolbar { grid-template-columns:minmax(0,1fr) auto; }
+.slide-bulk-actions { grid-column:1 / -1; justify-content:flex-start; }
+.slide-bulk-actions .button { flex:1 1 80px; }
+.template-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.media-file-preview { display:grid; place-items:center; height:100%; min-height:100px; color:var(--muted); font-weight:700; }

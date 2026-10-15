@@ -14,6 +14,13 @@ final class CmsMediaStateStore implements StateStore
 
     public function __construct(private readonly StateStore $store, private readonly MediaLibrary $media, private readonly bool $migrate = true, private readonly bool $hydrateMedia = true) {}
 
+    public function exportAssetData(array $asset): string
+    {
+        if (str_starts_with((string)($asset['src'] ?? ''),'data:')) return $asset['src'];
+        if (!method_exists($this->media,'exportAssetData')) throw new RuntimeException('Die CMS-Medienbibliothek unterstützt keinen Dateiexport.',422);
+        return $this->media->exportAssetData($asset);
+    }
+
     public function load(): array
     {
         $this->references = [];

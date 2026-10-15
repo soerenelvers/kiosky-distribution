@@ -1517,7 +1517,7 @@ function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#a
 document.querySelector('#advertising-event-types').addEventListener('change',event=>{if(event.target.matches('[data-advertising-event-type]'))renderAdvertisingTypeOptions(state.advertisingAvailableTypes,new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value)));});
 document.querySelector('#advertising-event-types').addEventListener('click',event=>{const select=event.target.closest('[data-advertising-type-media]'),remove=event.target.closest('[data-advertising-type-media-remove]');if(select){const type=select.dataset.advertisingTypeMedia;openMediaLibrary(asset=>{state.advertisingTypeDefaultMedia={...(state.advertisingTypeDefaultMedia||{}),[type]:asset.id};renderAdvertisingTypeOptions();},'image-only',`Standardbild für „${type}“ auswählen oder hochladen`);}if(remove){const type=remove.dataset.advertisingTypeMediaRemove;delete state.advertisingTypeDefaultMedia[type];renderAdvertisingTypeOptions();}});
 document.querySelector('#advertising-settings-form').addEventListener('submit',async event=>{event.preventDefault();try{const result=await apiRequest('/api/settings/advertising',{method:'PUT',body:JSON.stringify(advertisingPayload())});renderAdvertisingSettings(result);await loadContent();showToast('Werbung wurde gespeichert und synchronisiert.');}catch(error){showToast(error.message);}});
-document.querySelector('#advertising-sync').addEventListener('click',async event=>{event.currentTarget.disabled=true;try{const result=await apiRequest('/api/advertising/synchronize',{method:'POST',body:'{}'});renderAdvertisingSettings(result);await loadContent();showToast('Werbeslides und Werbekanal wurden synchronisiert.');}catch(error){showToast(error.message);}finally{event.currentTarget.disabled=false;}});
+document.querySelector('#advertising-sync').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;try{const result=await apiRequest('/api/advertising/synchronize',{method:'POST',body:'{}'});renderAdvertisingSettings(result);await loadContent();showToast('Werbeslides und Werbekanal wurden synchronisiert.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
 
 document.querySelector('[data-action="export-crewbrain-config"]').addEventListener('click', async event => {
   if (!window.confirm('Die JSON-Datei enthält den CrewBrain-Zugang im Klartext. Konfiguration jetzt exportieren?')) return;
@@ -1582,6 +1582,101 @@ crewbrainConfigImportFile.addEventListener('change', async event => {
   }
 });
 
+// Focused portable content packages. No system settings are transferred here.
+let pendingContentPackage = null;
+let contentPackageBusy = false;
+function contentPackageCounts(pkg) {
+  const sections = pkg.sections || {};
+  return [
+    ['Slides', sections.slides?.records], ['Kanäle', sections.channels?.records],
+    ['Vorlagen', sections.slides?.templates], ['Medien', sections.slides?.mediaAssets],
+    ['Veranstaltungen', sections.events?.records], ['Standorte', sections.displays?.locations]
+  ].filter(([, records]) => Array.isArray(records) && records.length).map(([label, records]) => `${records.length} ${label}`);
+}
+function showContentPackagePreview(pkg, filename) {
+  if (pkg?.format !== 'kiosky-content-package' || pkg?.version !== 1 || !pkg.sections || typeof pkg.sections !== 'object') throw new Error('Bitte ein Kiosky-Inhaltspaket für Slides, Kanäle oder Vorlagen auswählen.');
+  const counts = contentPackageCounts(pkg);
+  if (!counts.length) throw new Error('Das Inhaltspaket enthält keine Inhalte.');
+  pendingContentPackage = pkg;
+  document.querySelector('#content-package-source').textContent = `${filename} · Quelle: ${String(pkg.source?.platform || 'Kiosky')} ${String(pkg.source?.version || '')}`;
+  document.querySelector('#content-package-summary').innerHTML = counts.map(value => `<span>${escapeHtml(value)}</span>`).join('');
+  document.querySelector('#content-package-notices').textContent = Array.isArray(pkg.notices) ? pkg.notices.join(' ') : '';
+  document.querySelector('#content-package-message').textContent = '';
+  document.querySelector('#content-package-dialog').showModal();
+}
+async function exportContentPackage(selection, button) {
+  if (contentPackageBusy || state.currentUser?.role === 'viewer') return;
+  contentPackageBusy = true;
+  const label = button?.textContent;
+  if (button) { button.disabled = true; button.textContent = 'Export wird erstellt …'; }
+  try {
+    if (selection.channels?.includes(state.activeChannelId)) await flushChannelAutosave();
+    if (slideDialog.open && !state.editingTemplateId) await flushSlideAutosave();
+    const pkg = await apiRequest('/api/content-packages/export', { method: 'POST', body: JSON.stringify({ selection }) });
+    downloadTransferJson(pkg, `kiosky-inhalte-${new Date().toISOString().slice(0, 10)}.json`, true);
+    showToast(`Exportiert: ${contentPackageCounts(pkg).join(', ')}.${pkg.notices?.length ? ` ${pkg.notices.join(' ')}` : ''}`);
+  } catch (error) { showToast(error.message); }
+  finally { contentPackageBusy = false; if (button) { button.disabled = false; button.textContent = label; } }
+}
+document.querySelector('#slide-bulk-export').addEventListener('click', event => exportContentPackage({ slides: [...state.selectedSlides] }, event.currentTarget));
+document.querySelector('#channel-export').addEventListener('click', event => {
+  if (state.activeChannelId) exportContentPackage({ channels: [state.activeChannelId] }, event.currentTarget);
+});
+document.querySelector('#templates-export').addEventListener('click', event => exportContentPackage({ templates: state.templates.map(template => template.id) }, event.currentTarget));
+document.querySelector('#slide-editor-export').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  try {
+    if (state.editingTemplateId) {
+      const payload = slideEditorPayload();
+      if (!payload) throw new Error('Bitte einen Namen für die Vorlage eingeben.');
+      await apiRequest(`/api/templates/${encodeURIComponent(state.editingTemplateId)}`, { method: 'PUT', body: JSON.stringify({ name: payload.name, orientation: payload.orientation, status: 'active', document: payload.document, description: state.templates.find(template => template.id === state.editingTemplateId)?.description || '' }) });
+      await exportContentPackage({ templates: [state.editingTemplateId] }, button);
+    } else {
+      await flushSlideAutosave({ force: true, silent: true });
+      const id = document.querySelector('#slide-edit-id').value;
+      if (!id) throw new Error('Bitte die Slide zuerst benennen und speichern.');
+      await exportContentPackage({ slides: [id] }, button);
+    }
+  } catch (error) { showToast(error.message); }
+});
+document.querySelectorAll('[data-import-content-package]').forEach(button => button.addEventListener('click', () => {
+  if (contentPackageBusy || state.currentUser?.role === 'viewer') return;
+  const input = document.querySelector('#content-package-file'); input.value = ''; input.click();
+}));
+document.querySelector('#content-package-file').addEventListener('change', async event => {
+  const input = event.currentTarget;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    if (file.size > 250_000_000) throw new Error('Das Inhaltspaket ist größer als 250 MB. Bitte kleinere Pakete importieren.');
+    const pkg = JSON.parse(await file.text());
+    showContentPackagePreview(pkg, file.name);
+  } catch (error) { pendingContentPackage = null; showToast(error.message); }
+  finally { input.value = ''; }
+});
+document.querySelector('#content-package-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!pendingContentPackage || contentPackageBusy) return;
+  const button = event.currentTarget.querySelector('[type="submit"]');
+  const cancel = document.querySelector('#content-package-cancel');
+  contentPackageBusy = true; button.disabled = true; cancel.disabled = true; button.textContent = 'Import läuft …';
+  document.querySelector('#content-package-message').textContent = '';
+  try {
+    await flushChannelAutosave();
+    if (slideDialog.open && !state.editingTemplateId) await flushSlideAutosave();
+    const result = await apiRequest('/api/content-packages/import', { method: 'POST', body: JSON.stringify(pendingContentPackage) });
+    pendingContentPackage = null;
+    document.querySelector('#content-package-dialog').close();
+    await loadEvents();
+    await loadContent();
+    if (document.querySelector('#template-chooser-dialog').open) document.querySelector('#template-chooser-dialog').close();
+    showToast(`Importiert: ${Object.entries(result.imported.counts || {}).filter(([key, value]) => ['slides','channels','templates','mediaAssets'].includes(key) && Number(value)>0).map(([key,value]) => `${value} ${{slides:'Slides',channels:'Kanäle',templates:'Vorlagen',mediaAssets:'Medien'}[key]}`).join(', ')}.`);
+  } catch (error) { document.querySelector('#content-package-message').textContent = error.message; }
+  finally { contentPackageBusy = false; button.disabled = false; cancel.disabled = false; button.textContent = 'Jetzt importieren'; }
+});
+document.querySelector('#content-package-dialog').addEventListener('cancel', event => { if (contentPackageBusy) event.preventDefault(); });
+document.querySelector('#content-package-dialog').addEventListener('close', () => { pendingContentPackage = null; });
+
 const contentTransferFile = document.querySelector('#content-transfer-import-file');
 const contentTransferMessage = document.querySelector('#content-transfer-message');
 const contentTransferExportDialog = document.querySelector('#content-transfer-export-dialog');
@@ -1599,15 +1694,16 @@ function setContentTransferMessage(message, type = '') {
   contentTransferMessage.className = `connection-message${type ? ` is-${type}` : ''}`;
 }
 
-function downloadTransferJson(value, filename) {
-  const blobUrl = URL.createObjectURL(new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: 'application/json' }));
+function downloadTransferJson(value, filename, compact = false) {
+  const blobUrl = URL.createObjectURL(new Blob([`${JSON.stringify(value, null, compact ? 0 : 2)}\n`], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = blobUrl;
   link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(blobUrl);
+  // Give the browser time to acquire the Blob before releasing its memory.
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 function contentTransferRecordCount(payload, section) {
@@ -1658,16 +1754,20 @@ document.querySelector('[data-action="import-content-transfer"]').addEventListen
 });
 
 contentTransferFile.addEventListener('change', async event => {
-  const file = event.currentTarget.files?.[0];
+  const input = event.currentTarget;
+  const file = input.files?.[0];
   if (!file) return;
   if (file.size > 250_000_000) {
     setContentTransferMessage('Das Transferpaket ist größer als 250 MB und kann nicht importiert werden.', 'error');
-    event.currentTarget.value = '';
+    input.value = '';
     return;
   }
   try {
     try { pendingContentTransfer = JSON.parse(await file.text()); }
     catch { throw new Error('Die ausgewählte Datei enthält kein gültiges JSON.'); }
+    if (pendingContentTransfer?.format === 'kiosky-content-package') {
+      showContentPackagePreview(pendingContentTransfer, file.name); pendingContentTransfer = null; return;
+    }
     const portable = pendingContentTransfer?.format === 'kiosky-system-transfer' && pendingContentTransfer?.version === 2;
     const sections = portable ? pendingContentTransfer.includedSections || Object.keys(pendingContentTransfer.sections || {}) : ['slides', 'channels', 'displays'];
     if (!portable && pendingContentTransfer?.format !== 'kiosky-content-transfer') throw new Error('Die Datei ist kein unterstütztes Kiosky-Transferpaket.');
@@ -1684,7 +1784,7 @@ contentTransferFile.addEventListener('change', async event => {
     setContentTransferMessage(error.message, 'error');
     showToast(error.message);
   } finally {
-    event.currentTarget.value = '';
+    input.value = '';
   }
 });
 
@@ -2454,6 +2554,7 @@ function applyActiveChannel() {
   document.querySelector('#channel-orientation').value = channel?.orientation || 'auto';
   document.querySelector('#channel-repeat').checked = channel?.repeatEnabled ?? true;
   document.querySelectorAll('[data-action="duplicate-channel"], [data-action="edit-channel"], [data-action="save-channel"]').forEach(button => { button.disabled = !channel; });
+  document.querySelector('#channel-export').disabled = !channel;
   state.channelDirty = false;
   state.channelUndo = [];
   state.channelRedo = [];
@@ -2532,7 +2633,7 @@ function renderSlideLibrary() {
   selectAll.indeterminate = selectedVisible > 0 && selectedVisible < visibleSlides.length;
   selectAll.disabled = !visibleSlides.length;
   document.querySelector('#slide-selection-count').textContent = `${state.selectedSlides.size} ausgewählt`;
-  ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive', 'slide-bulk-tags'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
+  ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive', 'slide-bulk-tags', 'slide-bulk-export'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
   document.querySelector('#slide-bulk-delete').disabled = !state.selectedSlides.size || state.currentUser?.role !== 'admin';
   const canEditContent = state.currentUser?.role !== 'viewer';
   library.innerHTML = visibleSlides.map(slide => `
@@ -3622,7 +3723,7 @@ document.querySelectorAll('[data-command]').forEach(button => button.addEventLis
   if (editable) { editable.focus(); document.execCommand(button.dataset.command); }
 }));
 document.querySelectorAll('[data-align]').forEach(button => button.addEventListener('click', () => updateSelectedElement('align', button.dataset.align)));
-document.addEventListener('keydown',event=>{if(!slideDialog.open||document.querySelector('#slide-tags-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
+document.addEventListener('keydown',event=>{if(!slideDialog.open||document.querySelector('#slide-tags-dialog').open||document.querySelector('#content-package-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
 document.querySelectorAll('[data-editor-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.editorAction;
   const element = selectedEditorElement();
@@ -3790,12 +3891,12 @@ function renderMediaBrowser(prefix, selectionMode = false) {
   const folder = state.mediaFolders.find(item => item.id === activeId);
   document.querySelector(`#${prefix}-breadcrumb`).textContent = trash ? 'Papierkorb' : folder ? `Mediendatenbank / ${folder.name}` : 'Alle Medien';
   const query = document.querySelector(`#${prefix}-search`).value.trim().toLowerCase(), typeFilter = isPage ? state.mediaPageTypeFilter : state.mediaTypeFilter;
-  const assets = state.mediaAssets.filter(asset => Boolean(asset.deletedAt) === trash && (!activeId || asset.folderId === activeId) && (!typeFilter || asset.type === typeFilter || (typeFilter === 'image' && asset.type === 'icon') || (typeFilter === 'image-only' && asset.type === 'image')) && (!query || asset.name.toLowerCase().includes(query)));
+  const assets = state.mediaAssets.filter(asset => Boolean(asset.deletedAt) === trash && (!activeId || asset.folderId === activeId) && ((!typeFilter && (!selectionMode || asset.type !== 'file')) || asset.type === typeFilter || (typeFilter === 'image' && asset.type === 'icon') || (typeFilter === 'image-only' && asset.type === 'image')) && (!query || asset.name.toLowerCase().includes(query)));
   const grid = document.querySelector(`#${prefix}-asset-grid`);
   grid.innerHTML = assets.map(asset => {
-    const typeLabel = asset.metadata?.system ? 'Systemdatei' : asset.type === 'video' ? `Video${asset.metadata?.trimEnd ? ` · ${Number(asset.metadata.trimStart || 0).toFixed(1)}–${Number(asset.metadata.trimEnd).toFixed(1)} s` : ''}` : asset.type === 'icon' ? 'Vektorgrafik' : 'Bild';
+    const typeLabel = asset.metadata?.system ? 'Systemdatei' : asset.type === 'video' ? `Video${asset.metadata?.trimEnd ? ` · ${Number(asset.metadata.trimStart || 0).toFixed(1)}–${Number(asset.metadata.trimEnd).toFixed(1)} s` : ''}` : asset.type === 'icon' ? 'Vektorgrafik' : asset.type === 'file' ? 'Datei' : 'Bild';
     const actions = trash ? `<button type="button" data-restore-media="${escapeHtml(asset.id)}" title="Wiederherstellen">↶</button><button class="is-danger" type="button" data-purge-media="${escapeHtml(asset.id)}" title="Endgültig löschen">×</button>` : `${selectionMode ? `<button type="button" data-use-media="${escapeHtml(asset.id)}" title="In Slide verwenden">＋</button>` : ''}${asset.metadata?.system ? '' : `<button type="button" data-edit-media="${escapeHtml(asset.id)}" title="Bearbeiten">✎</button><button type="button" data-delete-media="${escapeHtml(asset.id)}" title="In den Papierkorb">♲</button>`}`;
-    return `<article class="media-asset"><div class="media-asset-preview">${asset.type === 'video' ? `<video src="${escapeHtml(asset.src)}" muted preload="metadata"></video><span class="media-duration">▶</span>` : `<img src="${escapeHtml(asset.src)}" alt="">`}</div><div class="media-asset-body"><strong title="${escapeHtml(asset.name)}">${escapeHtml(asset.name)}</strong><small>${typeLabel}</small><span class="media-asset-actions">${actions}</span></div></article>`;
+    return `<article class="media-asset"><div class="media-asset-preview">${asset.type === 'file' ? '<span class="media-file-preview">▤ Datei</span>' : asset.type === 'video' ? `<video src="${escapeHtml(asset.src)}" muted preload="metadata"></video><span class="media-duration">▶</span>` : `<img src="${escapeHtml(asset.src)}" alt="">`}</div><div class="media-asset-body"><strong title="${escapeHtml(asset.name)}">${escapeHtml(asset.name)}</strong><small>${typeLabel}</small><span class="media-asset-actions">${actions}</span></div></article>`;
   }).join('') || `<div class="media-empty">${trash ? 'Der Papierkorb ist leer.' : 'Noch keine Medien in diesem Ordner.<br>Lege Ordner an oder lade Bilder, Vektorgrafiken und Videos hoch.'}</div>`;
   tree.querySelectorAll('[data-media-folder]').forEach(button => button.addEventListener('click', () => { if (isPage) { state.activeMediaPageFolderId = button.dataset.mediaFolder || null; state.mediaPageTrash = false; } else state.activeMediaFolderId = button.dataset.mediaFolder || null; renderMediaBrowser(prefix, selectionMode); }));
   tree.querySelector('[data-media-trash]')?.addEventListener('click', () => { state.activeMediaPageFolderId = null; state.mediaPageTrash = true; renderMediaBrowser(prefix); });
@@ -3873,7 +3974,9 @@ document.querySelector('#delete-slide-button').addEventListener('click',async()=
 
 function renderTemplates() {
   const list=document.querySelector('#template-list'); if(!list)return;
-  list.innerHTML=state.templates.map(template=>`<div class="template-list-item">${slideThumb({type:'custom',ratio:template.orientation,elements:template.document.elements||[],settings:template.document.settings||{}})}<span><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(template.description||'Wiederverwendbares Slide-Layout')} · ${escapeHtml(orientationLabels[template.orientation]||'Querformat')}</small></span><button class="button button-secondary" type="button" data-use-template-id="${escapeHtml(template.id)}">Verwenden</button><button class="button button-secondary" type="button" data-edit-template-id="${escapeHtml(template.id)}">Frei bearbeiten</button><button class="icon-button" type="button" data-delete-template-id="${escapeHtml(template.id)}" aria-label="${escapeHtml(template.name)} archivieren">×</button></div>`).join('')||'<p class="property-note">Noch keine Vorlage gespeichert.</p>';
+  list.innerHTML=state.templates.map(template=>`<div class="template-list-item">${slideThumb({type:'custom',ratio:template.orientation,elements:template.document.elements||[],settings:template.document.settings||{}})}<span><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(template.description||'Wiederverwendbares Slide-Layout')} · ${escapeHtml(orientationLabels[template.orientation]||'Querformat')}</small></span><button class="button button-secondary" type="button" data-use-template-id="${escapeHtml(template.id)}">Verwenden</button><button class="button button-secondary" type="button" data-export-template-id="${escapeHtml(template.id)}">Exportieren</button><button class="button button-secondary" type="button" data-edit-template-id="${escapeHtml(template.id)}">Frei bearbeiten</button><button class="icon-button" type="button" data-delete-template-id="${escapeHtml(template.id)}" aria-label="${escapeHtml(template.name)} archivieren">×</button></div>`).join('')||'<p class="property-note">Noch keine Vorlage gespeichert.</p>';
+  document.querySelector('#templates-export').disabled = !state.templates.length;
+  list.querySelectorAll('[data-export-template-id]').forEach(button => button.addEventListener('click', () => exportContentPackage({ templates: [button.dataset.exportTemplateId] }, button)));
   list.querySelectorAll('[data-use-template-id]').forEach(button=>button.addEventListener('click',()=>{applyTemplate(button.dataset.useTemplateId);document.querySelector('#template-dialog').close();}));
   list.querySelectorAll('[data-edit-template-id]').forEach(button=>button.addEventListener('click',()=>{editTemplate(button.dataset.editTemplateId);document.querySelector('#template-dialog').close();}));
   list.querySelectorAll('[data-delete-template-id]').forEach(button=>button.addEventListener('click',async()=>{const template=state.templates.find(item=>item.id===button.dataset.deleteTemplateId);if(!template||!window.confirm(`Vorlage „${template.name}“ archivieren?`))return;try{await apiRequest(`/api/templates/${template.id}`,{method:'DELETE'});await loadContent();showToast('Vorlage wurde archiviert.');}catch(error){showToast(error.message);}}));

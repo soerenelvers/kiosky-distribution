@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.3.2-20261015035907%2B67ca0478">
+  <link rel="stylesheet" href="styles.css?v=3.3.3-20261015200415%2B45d476f1">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -261,11 +261,11 @@
               <select id="slide-filter" aria-label="Slide-Typ filtern"><option value="all">Alle Typen</option><option value="custom">Eigene Slides</option><option value="event">Veranstaltung</option><option value="text">Freitext</option><option value="image">Bild</option><option value="video">Video</option><option value="web">Website</option></select>
               <select id="slide-tag-filter" aria-label="Slides nach Tag filtern"><option value="">Alle Tags</option></select>
             </div>
-            <div class="template-toolbar"><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
+            <div class="template-toolbar"><button class="button button-secondary" type="button" data-import-content-package>⇩ Importieren</button><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
             <div class="slide-bulk-toolbar">
               <label class="table-check"><input id="slide-select-all" type="checkbox"> Alle sichtbaren Slides</label>
               <span id="slide-selection-count">0 ausgewählt</span>
-              <div class="slide-bulk-actions"><button class="button button-secondary" id="slide-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="slide-bulk-tags" type="button" disabled>Tags zuweisen</button><button class="button button-secondary" id="slide-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="slide-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="slide-bulk-delete" type="button" disabled>Löschen</button></div>
+              <div class="slide-bulk-actions"><button class="button button-secondary" id="slide-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="slide-bulk-export" type="button" disabled>Exportieren</button><button class="button button-secondary" id="slide-bulk-tags" type="button" disabled>Tags zuweisen</button><button class="button button-secondary" id="slide-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="slide-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="slide-bulk-delete" type="button" disabled>Löschen</button></div>
             </div>
             <p class="drag-hint">Slide in den Kanal ziehen oder über ＋ hinzufügen. Die Checkboxen dienen der Mehrfachauswahl.</p>
             <div class="slide-library" id="slide-library" aria-live="polite"></div>
@@ -285,7 +285,7 @@
             </div>
             <div class="channel-builder-layout">
               <aside class="channel-navigator" aria-label="Kanäle auswählen">
-                <div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
+                <div class="content-package-actions"><button class="button button-secondary" type="button" data-import-content-package>⇩ Kanal importieren</button><button class="button button-secondary" id="channel-export" type="button" disabled>⇧ Kanal exportieren</button></div><div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
                 <label class="search-field compact"><span>⌕</span><input id="channel-search" type="search" placeholder="Kanäle durchsuchen"></label>
                 <select id="channel-tag-filter" aria-label="Kanäle nach Tag filtern"><option value="">Alle Tags</option></select>
                 <div class="channel-list" id="channel-overview" role="listbox" aria-label="Kanalliste"></div>
@@ -1032,6 +1032,19 @@
     </main>
   </div>
 
+  <input id="content-package-file" type="file" accept=".json,application/json" hidden>
+  <dialog id="content-package-dialog" aria-labelledby="content-package-title">
+    <form id="content-package-form" class="dialog-content">
+      <p class="eyebrow">Slides · Kanäle · Vorlagen</p><h2 id="content-package-title">Inhaltspaket importieren</h2>
+      <p id="content-package-source"></p>
+      <div id="content-package-summary" class="transfer-import-summary"></div>
+      <p>Die Inhalte werden als neue Kopien angelegt. Vorhandene Inhalte bleiben erhalten. Benötigte Slides, Veranstaltungen und eingebettete Medien werden mit übernommen; auch Entwürfe bleiben erhalten.</p>
+      <p id="content-package-notices" class="property-note"></p>
+      <p id="content-package-message" class="auth-message" role="status"></p>
+      <div class="dialog-actions"><button class="button button-secondary" id="content-package-cancel" type="button" data-close-dialog="content-package-dialog">Abbrechen</button><button class="button button-primary" type="submit">Jetzt importieren</button></div>
+    </form>
+  </dialog>
+
   <dialog id="content-transfer-export-dialog" class="wide-dialog transfer-dialog">
     <form class="dialog-content" id="content-transfer-export-form">
       <button class="dialog-close" type="button" data-close-dialog="content-transfer-export-dialog" aria-label="Dialog schließen">×</button>
@@ -1222,7 +1235,7 @@
         <label class="editor-title-field compact-field slide-validity-field"><span>Sichtbar bis <small>(optional)</small></span><input id="slide-ends-at" type="datetime-local" step="60"></label>
         <details class="slide-location-field slide-validity-field"><summary>Standorte <small id="slide-location-summary">Alle</small></summary><div id="slide-location-options"></div></details>
         <button class="button button-secondary" type="button" data-editor-action="preview">▶ Vorschau</button>
-        <button class="button button-secondary" type="button" data-action="save-template">Als Vorlage</button>
+        <button class="button button-secondary" id="slide-editor-export" type="button">Exportieren</button><button class="button button-secondary" type="button" data-action="save-template">Als Vorlage</button>
         <button class="button button-secondary" type="button" id="duplicate-slide-button" hidden>Duplizieren</button>
         <button class="button button-secondary" type="button" id="archive-slide-button" hidden>Archivieren</button>
         <button class="button danger-action" type="button" id="delete-slide-button" hidden>Endgültig löschen</button>
@@ -1342,11 +1355,11 @@
   </dialog>
 
   <dialog id="template-dialog" class="wide-dialog">
-    <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="template-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Wiederverwendbare Layouts</p><h2>Slide-Vorlagen</h2><p>Vorlagen können verwendet, vollständig bearbeitet oder archiviert werden.</p><div id="template-list" class="template-list"></div></div>
+    <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="template-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Wiederverwendbare Layouts</p><h2>Slide-Vorlagen</h2><p>Vorlagen können verwendet, vollständig bearbeitet oder archiviert werden.</p><div class="content-package-actions"><button class="button button-secondary" type="button" data-import-content-package>⇩ Vorlagen importieren</button><button class="button button-secondary" id="templates-export" type="button">⇧ Alle Vorlagen exportieren</button></div><div id="template-list" class="template-list"></div></div>
   </dialog>
 
   <dialog id="template-chooser-dialog" class="wide-dialog">
-    <form class="dialog-content" id="template-chooser-form"><button class="dialog-close" type="button" data-close-dialog="template-chooser-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Neue Slide</p><h2>Vorlage auswählen</h2><p>Wähle das passende Layout aus und bestätige die Auswahl.</p><div id="template-chooser-list" class="template-choice-grid"></div><p class="auth-message" id="template-chooser-message" role="alert"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="template-chooser-dialog">Abbrechen</button><button class="button button-primary" type="submit">Auswahl bestätigen</button></div></form>
+    <form class="dialog-content" id="template-chooser-form"><button class="dialog-close" type="button" data-close-dialog="template-chooser-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Neue Slide</p><h2>Vorlage auswählen</h2><p>Wähle das passende Layout aus und bestätige die Auswahl.</p><button class="button button-secondary" type="button" data-import-content-package>⇩ Slide oder Vorlage importieren</button><div id="template-chooser-list" class="template-choice-grid"></div><p class="auth-message" id="template-chooser-message" role="alert"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="template-chooser-dialog">Abbrechen</button><button class="button button-primary" type="submit">Auswahl bestätigen</button></div></form>
   </dialog>
 
   <dialog id="slide-versions-dialog" class="wide-dialog">
@@ -1525,7 +1538,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.3.2-20261015035907%2B67ca0478"></script>
-  <script src="app.js?v=3.3.2-20261015035907%2B67ca0478"></script>
+  <script src="runtime-config.js?v=3.3.3-20261015200415%2B45d476f1"></script>
+  <script src="app.js?v=3.3.3-20261015200415%2B45d476f1"></script>
 </body>
 </html>

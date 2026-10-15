@@ -213,3 +213,12 @@ Der öffentliche HACS-Repository-Link erfordert keinen eigenen Kiosky-Distributi
 Die Kiosky-Pakete wurden mit automatisierten Tests und echten WordPress-/TYPO3-Installations- und Upgradeprüfungen geprüft. Die HACS-Integration wurde mit Home Assistant 2026.3 und 2026.10, HACS und hassfest validiert; direkte HTTP-Steuerung bis zum Player wurde in Standalone, WordPress sowie TYPO3 13/14 geprüft.
 
 Diese Anleitung ergänzt die bestehenden Releases nachträglich. Veröffentlichte Versions-Tags und Installationspakete bleiben unverändert. Ergänzungen an aktuellen Releasebeschreibungen und am veränderlichen Stable-Feed sind als Dokumentationsnachtrag zu verstehen, nicht als neue Programmversion.
+
+
+## Werbung in WordPress und TYPO3 (ab 3.3.3)
+
+Unter **Einstellungen → Module** steuert „Werbung“ die Sichtbarkeit des Reiters in der Seitenleiste. Die Einstellung speichern. Unter **Einstellungen → Werbung** wird davon getrennt die automatische Erzeugung aktiviert: Veranstaltungsarten auswählen, bei Bedarf Standardbilder, Vorlage und Standorte festlegen und speichern. Ohne passende zukünftige Veranstaltungen bleibt der automatische Werbekanal leer.
+
+Version 3.3.3 behebt die fehlende Speicherung der Werbe-Modulsichtbarkeit in den CMS-Versionen und ergänzt deren Werbekonfiguration und Generator. Vorher konnte insbesondere ein gespeicherter ausgeblendeter Zustand nicht über die Modulauswahl wieder aktiviert werden. Nach dem Update die Oberfläche neu laden und die Modulsichtbarkeit erneut speichern.
+
+Änderungen an Veranstaltungen und manuelle Synchronisierung aktualisieren die erzeugten Inhalte sofort. Zusätzlich aktualisiert der vorhandene WordPress-Cron beziehungsweise der eingerichtete TYPO3-Scheduler/Sync-Befehl aktivierte Werbung in Abständen von mindestens fünf Minuten. Unveränderte Inhalte erzeugen dabei keine zusätzlichen Slide-Versionen. Beim Deaktivieren werden automatisch erzeugte Slides archiviert und der automatische Kanal pausiert; manuell erstellte Werbeinhalte bleiben erhalten.

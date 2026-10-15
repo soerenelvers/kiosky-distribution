@@ -34,6 +34,7 @@ final class Api
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             $state = $this->state();
             $result = $this->route($state, $method, $path, $body, $playerKey);
+            if ($result[2] && preg_match('#^/api/(events|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
             if ($result[2]) {
                 $state['updatedAt'] = $this->now();
                 $this->store->save($state);
@@ -41,7 +42,7 @@ final class Api
             }
             return [$result[0], $result[1]];
         } catch (Throwable $error) {
-            if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
+            if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer|content-packages)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
             $status = $error instanceof RuntimeException ? max(400, min(599, $error->getCode() ?: 422)) : 500;
             return [$status, ['error' => [
                 'code' => $status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST')),
@@ -83,6 +84,11 @@ final class Api
         $summary = ($state['activeEventSource'] ?? null) === 'easyjob'
             ? $this->runAutomaticEasyJobImport($state)
             : $this->runAutomaticCrewBrainImport($state);
+        if (!empty($state['advertisingSettings']['enabled']) && ($summary['ran'] || strtotime((string)($state['advertisingLastSynchronizedAt'] ?? '')) < time() - 300)) {
+            $this->synchronizeAdvertising($state);
+            $summary['ran'] = true;
+            $summary['advertisingSynchronized'] = true;
+        }
         if ($summary['ran']) {
             $state['updatedAt'] = $this->now();
             $this->store->save($state);
@@ -160,6 +166,18 @@ final class Api
             $state['apiUsers'][$this->index($state['apiUsers'],$id)] = $user;
             $this->audit($state,'api_user.revoked',$id);
             return $this->ok(['apiUser'=>ApiAccess::publicUser($user)],true);
+        }
+
+        if ($path === '/api/content-packages/export' && $method === 'POST') {
+            $exportAsset = $this->store instanceof CmsMediaStateStore ? fn(array $asset): string => $this->store->exportAssetData($asset) : null;
+            $package = (new ContentPackage())->export($state,is_array($body['selection']??null)?$body['selection']:[],$this->platform,$this->version,$exportAsset);
+            $this->audit($state,'content_package.exported','content');
+            return $this->ok($package,true);
+        }
+        if ($path === '/api/content-packages/import' && $method === 'POST') {
+            $result = (new ContentPackage())->import($state,$body);
+            $this->audit($state,'content_package.imported','content');
+            return $this->ok(['imported'=>$result],true);
         }
 
         if ($path === '/api/content-transfer/export' && in_array($method, ['GET', 'POST'], true)) {
@@ -697,9 +715,18 @@ final class Api
             return [$summary['errors'] ? 207 : 200, ['summary' => $summary, 'results' => $results], true];
         }
 
+        if ($path === '/api/settings/advertising' && $method === 'GET') return $this->ok(AdvertisingService::status($state));
+        if ($path === '/api/settings/advertising' && $method === 'PUT') {
+            AdvertisingService::saveSettings($state,$body);
+            $status = $this->synchronizeAdvertising($state);
+            $this->audit($state,'advertising.settings.updated','advertising_settings');
+            return $this->ok($status,true);
+        }
+        if ($path === '/api/advertising/synchronize' && $method === 'POST') return $this->ok($this->synchronizeAdvertising($state),true);
+
         if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? [])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
-            $allowed = ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users', 'content', 'presets_warnings'];
+            $allowed = ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
             return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $state['navigationOrder']], true);
@@ -713,6 +740,13 @@ final class Api
         }
 
         throw new RuntimeException('API-Endpunkt wurde nicht gefunden.', 404);
+    }
+
+    private function synchronizeAdvertising(array &$state): array
+    {
+        return AdvertisingService::synchronize($state,
+            function(array $body, ?string $id) use (&$state): array { return $this->saveSlide($state,$body,$id); },
+            function(array $body, ?string $id) use (&$state): array { return $this->saveRecord($state,'channels',$body,$id); });
     }
 
     private function crewBrain(): CrewBrainService
@@ -732,7 +766,7 @@ final class Api
         $role = (string)($this->identity['role'] ?? 'viewer');
         if ($role === 'admin') return;
 
-        $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/v1'];
+        $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/advertising', '/api/v1'];
         if ($this->pathStartsWithAny($path, $adminOnly)) {
             throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
         }
@@ -747,7 +781,7 @@ final class Api
             return;
         }
 
-        $viewerBlocked = ['/api/media', '/api/presets', '/api/warning-templates', '/api/warnings', '/api/operations', '/api/dwd', '/api/trash'];
+        $viewerBlocked = ['/api/content-packages', '/api/media', '/api/presets', '/api/warning-templates', '/api/warnings', '/api/operations', '/api/dwd', '/api/trash'];
         if ($this->pathStartsWithAny($path, $viewerBlocked)) {
             throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
         }
@@ -1899,7 +1933,7 @@ final class Api
     /** @return array<int,string> */
     private function normalizeNavigationOrder(mixed $value): array
     {
-        $defaults = ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users'];
+        $defaults = ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'];
         $requested = is_array($value) ? array_values(array_filter(array_map('strval', $value), static fn(string $key): bool => in_array($key, $defaults, true))) : [];
         return array_values(array_unique(array_merge($requested, $defaults)));
     }
@@ -1914,8 +1948,8 @@ final class Api
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
             'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
-            'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
-            'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'media', 'schedule', 'operations', 'integrations', 'settings', 'users'],
+            'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'advertising' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'updates' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
+            'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'],
             'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,
             'activeEventSource' => null,
             'portableUsers' => [], 'portableApiUsers' => [], 'apiUsers' => [],

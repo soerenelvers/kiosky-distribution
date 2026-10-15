@@ -253,7 +253,7 @@ final class TransferService
             'eventId' => 'events', 'slideId' => 'slides', 'slideSourceId' => 'slides', 'channelId' => 'channels',
             'defaultChannelId' => 'channels', 'contentId' => null, 'locationId' => 'locations', 'displayId' => 'displays',
             'groupId' => 'groups', 'matrixId' => 'matrices', 'templateId' => 'templates', 'folderId' => 'mediaFolders',
-            'parentId' => 'mediaFolders', 'mediaAssetId' => 'mediaAssets', 'presetId' => 'presets', 'providerId' => null,
+            'parentId' => 'mediaFolders', 'locationIds' => 'locations', 'mediaAssetId' => 'mediaAssets', 'presetId' => 'presets', 'providerId' => null,
         ];
         if ($key === 'targetId') {
             foreach (['displays', 'groups', 'matrices', 'locations'] as $collection) if (isset($maps[$collection][$value])) return $maps[$collection][$value];
