@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.3.3-20261015200415%2B45d476f1">
+  <link rel="stylesheet" href="styles.css?v=3.3.4-20261015204515%2Ba80d84bd">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1301,7 +1301,9 @@
           <div id="element-properties" hidden>
             <div class="property-heading"><strong id="property-element-type">Text</strong><button type="button" data-editor-action="duplicate">⧉ Duplizieren</button></div>
             <label class="form-field" id="property-text-field" data-property-section="text"><span>Textinhalt</span><textarea id="property-text" rows="4"></textarea></label>
-            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftgröße</span><input id="property-font-size" type="number" min="6" max="240" value="42"></label><label class="form-field"><span>Farbe</span><input id="property-color" type="color" value="#ffffff"></label></div>
+            <div class="property-row" data-property-section="text"><label class="form-field"><span>Schriftgröße (pt)</span><input id="property-font-size" type="number" min="0.5" max="1000" step="0.01" value="42"></label><label class="form-field"><span>Farbe</span><input id="property-color" type="color" value="#ffffff"></label></div>
+            <label class="toggle-label" data-property-section="text"><input id="property-responsive-text" type="checkbox"> Responsive · Schrift proportional zur Slide skalieren</label>
+            <p class="property-note" data-property-section="text">Punktgröße im Entwurf (1920 × 1080 bzw. 1080 × 1920). Responsive erhält die Proportionen in Vorschau und Player – auch bei 4K.</p>
             <label class="toggle-label" data-property-section="text"><input id="property-auto-font-size" type="checkbox"> Schrift automatisch an das Textfeld anpassen</label>
             <label class="form-field" data-property-section="event"><span>Veranstaltung</span><select id="property-event"><option>Sommerkonzert</option><option>Jazz im Foyer</option><option>Kindertheater</option><option>Sinfonieorchester</option></select></label>
             <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
@@ -1420,8 +1422,9 @@
               <label class="form-field"><span>Inhalt / Icon</span><textarea id="warning-element-content" rows="3"></textarea></label>
               <label class="form-field warning-icon-field" hidden><span>Icon wählen</span><select id="warning-element-icon"><option>⚠</option><option>!</option><option>ℹ</option><option>🔥</option><option>☂</option><option>✚</option><option>⛔</option><option>✓</option><option>→</option><option>⌁</option></select></label>
               <div class="property-row"><label class="form-field"><span>X in %</span><input id="warning-element-x" type="number" min="0" max="100" step="0.1"></label><label class="form-field"><span>Y in %</span><input id="warning-element-y" type="number" min="0" max="100" step="0.1"></label></div>
-              <div class="property-row"><label class="form-field"><span>Breite in %</span><input id="warning-element-width" type="number" min="3" max="100" step="0.1"></label><label class="form-field"><span>Schriftgröße</span><input id="warning-element-size" type="number" min="12" max="180"></label></div>
+              <div class="property-row"><label class="form-field"><span>Breite in %</span><input id="warning-element-width" type="number" min="3" max="100" step="0.1"></label><label class="form-field"><span>Schriftgröße (pt)</span><input id="warning-element-size" type="number" min="0.5" max="1000" step="0.01"></label></div>
               <div class="property-row"><label class="form-field"><span>Textfarbe</span><input id="warning-element-color" type="color"></label><label class="form-field"><span>Ausrichtung</span><select id="warning-element-align"><option value="left">Links</option><option value="center">Mitte</option><option value="right">Rechts</option></select></label></div>
+              <label class="toggle-label"><input id="warning-element-responsive" type="checkbox"><span>Responsive · proportional zur Warnfläche</span></label>
               <label class="toggle-label"><input id="warning-element-bold" type="checkbox"><span>Fett darstellen</span></label>
               <button class="button button-secondary danger-action" id="delete-warning-element" type="button">Element löschen</button>
             </div>
@@ -1538,7 +1541,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.3.3-20261015200415%2B45d476f1"></script>
-  <script src="app.js?v=3.3.3-20261015200415%2B45d476f1"></script>
+  <script src="runtime-config.js?v=3.3.4-20261015204515%2Ba80d84bd"></script>
+  <script src="app.js?v=3.3.4-20261015204515%2Ba80d84bd"></script>
 </body>
 </html>

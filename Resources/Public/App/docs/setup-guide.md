@@ -222,3 +222,12 @@ Unter **Einstellungen → Module** steuert „Werbung“ die Sichtbarkeit des Re
 Version 3.3.3 behebt die fehlende Speicherung der Werbe-Modulsichtbarkeit in den CMS-Versionen und ergänzt deren Werbekonfiguration und Generator. Vorher konnte insbesondere ein gespeicherter ausgeblendeter Zustand nicht über die Modulauswahl wieder aktiviert werden. Nach dem Update die Oberfläche neu laden und die Modulsichtbarkeit erneut speichern.
 
 Änderungen an Veranstaltungen und manuelle Synchronisierung aktualisieren die erzeugten Inhalte sofort. Zusätzlich aktualisiert der vorhandene WordPress-Cron beziehungsweise der eingerichtete TYPO3-Scheduler/Sync-Befehl aktivierte Werbung in Abständen von mindestens fünf Minuten. Unveränderte Inhalte erzeugen dabei keine zusätzlichen Slide-Versionen. Beim Deaktivieren werden automatisch erzeugte Slides archiviert und der automatische Kanal pausiert; manuell erstellte Werbeinhalte bleiben erhalten.
+
+
+## Schriftgrößen und responsive Texte (ab 3.3.4)
+
+Alle Schriftgrößenfelder verwenden **Punkt (pt)**; 1 pt entspricht 96/72 CSS-Pixeln auf der Entwurfsfläche. Der Slide-Entwurf bezieht sich auf **1920 × 1080** im Querformat beziehungsweise **1080 × 1920** im Hochformat. Die verkleinerte Vorschau bildet diesen Entwurf proportional ab.
+
+Mit **Responsive** wächst die Schrift mit der tatsächlichen Breite der Slide. Beispielsweise erscheinen 48 pt im Querformat bei Full HD als 64 CSS-Pixel, bei 4K als 128 CSS-Pixel. Die Proportion zur Slide bleibt gleich. Ohne Responsive bleibt eine neue Punktgröße im Player unabhängig von der Auflösung konstant. **Schrift automatisch einpassen** passt zusätzlich den Text an sein Textfeld an; die verfügbare Maximalgröße skaliert bei responsiven Elementen mit.
+
+Die Option ist pro Textelement und pro Text-/Countdown-/Veranstaltungsfeld in Wegweisungs-Zellen verfügbar. Neue Elemente verwenden sie standardmäßig. Vorhandene Dokumente ohne Einheitenangabe werden weiterhin mit den alten Pixelwerten dargestellt; im Eigenschaftenfeld wird deren gleichwertige Punktgröße angezeigt. Erst das Bearbeiten der Größe speichert einen Punktwert. Vorlagen und Inhaltspakete übernehmen die Einstellung in allen Varianten.

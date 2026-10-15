@@ -143,7 +143,7 @@ final class AdvertisingService
     {
         return ['designOrientation'=>'landscape','settings'=>['background'=>['mode'=>'gradient','color1'=>'#17342b','color2'=>'#315b49','direction'=>'135deg'],'logo'=>['src'=>'','position'=>'top-left'],'clock'=>['enabled'=>false,'position'=>'bottom-right']],
             'elements'=>[['id'=>'advertising-image','type'=>'image','x'=>0,'y'=>0,'width'=>100,'height'=>100,'src'=>'','background'=>'#17342b','opacity'=>100,'padding'=>0,'radius'=>0],
-                ['id'=>'advertising-event','type'=>'event','x'=>8,'y'=>55,'width'=>84,'height'=>35,'background'=>'rgba(0,0,0,.58)','color'=>'#ffffff','fontSize'=>54,'autoFontSize'=>true,'align'=>'center','fontWeight'=>700,'padding'=>24,'radius'=>16]]];
+                ['id'=>'advertising-event','type'=>'event','x'=>8,'y'=>55,'width'=>84,'height'=>35,'background'=>'rgba(0,0,0,.58)','color'=>'#ffffff','fontSize'=>40.5,'fontSizeUnit'=>'pt','responsiveText'=>true,'autoFontSize'=>true,'align'=>'center','fontWeight'=>700,'padding'=>24,'radius'=>16]]];
     }
 
     private static function normalizeType(string $value): string

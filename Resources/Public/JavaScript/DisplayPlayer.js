@@ -64,6 +64,14 @@
     return node.innerHTML;
   }
 
+  function documentFontStyle(documentData) {
+    const size=Number(documentData.fontSize);
+    if(!Number.isFinite(size)||size<=0)return '';
+    const pixels=documentData.fontSizeUnit==='pt'?size*4/3:size;
+    const portrait=documentData.designOrientation==='portrait'||(!documentData.designOrientation&&content?.orientation==='portrait');
+    return documentData.responsiveText?`font-size:${pixels*100/(portrait?1080:1920)}vw`:`font-size:${pixels}px`;
+  }
+
   function render(item) {
     const documentData = item.document || {};
     const text = safeText(documentData.text || documentData.content || item.name);
@@ -76,7 +84,7 @@
     if (item.type === 'html') {
       return `<iframe sandbox srcdoc="${safeText(documentData.sanitizedHtml || '')}" style="border:0;width:100%;height:100%"></iframe>`;
     }
-    return `<section style="display:grid;place-items:center;width:100%;height:100%;font:clamp(2rem,6vw,7rem)/1.1 system-ui;text-align:center;padding:5vw;box-sizing:border-box">${text}</section>`;
+    return `<section style="display:grid;place-items:center;width:100%;height:100%;font:clamp(2rem,6vw,7rem)/1.1 system-ui;${documentFontStyle(documentData)};text-align:center;padding:5vw;box-sizing:border-box">${text}</section>`;
   }
 
   function play() {
@@ -104,7 +112,7 @@
     await request('heartbeat', {
       method: 'POST',
       body: JSON.stringify({
-        playerVersion: 'TYPO3 Web Player 3.3.3',
+        playerVersion: 'TYPO3 Web Player 3.3.4',
         viewport: {width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio || 1},
       }),
     }).catch(() => {});
