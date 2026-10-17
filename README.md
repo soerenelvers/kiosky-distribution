@@ -62,3 +62,12 @@ Home Assistant neu starten und Kiosky unter **Geräte & Dienste** einrichten.
 Die angezeigte externe API-Basisadresse und einen eigenen Kiosky-API-Schlüssel
 verwenden, keinen GitHub-Update-Token. Voraussetzungen: Kiosky ab 3.3.1 und
 Home Assistant ab 2026.3.0.
+
+## PDF-Handbuch
+
+Das [deutsche Kiosky-Handbuch für Version 3.3.5](docs/Kiosky_Handbuch_3.3.5_DE.pdf)
+enthält auf 20 Seiten die Funktionsübersicht, Bedienung, Installation, Updates,
+Datensicherung und Fehlerbehebung für Standalone, WordPress, TYPO3 und Home Assistant.
+Dokumentationsstand: 17. Oktober 2026; Home-Assistant-Integration 1.0.0.
+
+[PDF direkt herunterladen](https://github.com/soerenelvers/kiosky-distribution/raw/refs/heads/main/docs/Kiosky_Handbuch_3.3.5_DE.pdf).
