@@ -21,8 +21,8 @@ Tags auf `dev`, `develop` oder Feature-Branches brechen vor der Veröffentlichun
 ab. Branch-Pushes bauen keinen Release. Der lokale Build erstellt selbst weder Tag
 noch GitHub Release.
 
-Der Workflow erzeugt `kioski-app-VERSION.zip`, `kioski-wordpress-VERSION.zip`,
-`kioski_VERSION.zip`, `release.json`, `latest.json`,
+Der Workflow erzeugt `kiosky-app-VERSION.zip`, `kiosky-wordpress-VERSION.zip`,
+`kiosky_VERSION.zip`, `release.json`, `latest.json`,
 `SHA256SUMS.txt` und Release Notes. `workflow_dispatch` kann als Dry Run oder
 Build-only verwendet werden.
 

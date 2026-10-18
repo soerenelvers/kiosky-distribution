@@ -1,7 +1,7 @@
 # TYPO3-Updates
 
-Das TYPO3-ZIP `kioski_VERSION.zip` ist eine direkt im Classic-Mode-Extension-Manager
-installierbare Extension `kioski` und unterstützt TYPO3 13.4 oder 14 mit
+Das TYPO3-ZIP `kiosky_VERSION.zip` ist eine direkt im Classic-Mode-Extension-Manager
+installierbare Extension `kiosky` und unterstützt TYPO3 13.4 oder 14 mit
 PHP 8.2. Das Composer-Paket heißt `casesound/kiosky`.
 
 Nach Konfiguration des privaten Kiosky-Distributionsrepositories:
@@ -29,7 +29,7 @@ Backend-Updateweg auch dann, wenn der Webserver-Benutzer nicht das globale
 Composer-Home des Administrators verwendet.
 
 Für verwaltete Installationen steht `scripts/deploy-typo3-update.sh` bereit. Es
-verlangt `KIOSKI_TYPO3_PROJECT_DIR`, protokolliert die Version, unterstützt
+verlangt `KIOSKY_TYPO3_PROJECT_DIR`, protokolliert die Version, unterstützt
 optionale Backup- und Wartungsbefehle, führt Composer und TYPO3 `extension:setup`
 sowie `cache:flush` aus, prüft die erwartete Version und optional einen Health
 Check. Automatische Ausführung muss je Server ausdrücklich eingerichtet werden.
@@ -37,10 +37,10 @@ Check. Automatische Ausführung muss je Server ausdrücklich eingerichtet werden
 Plesk Scheduled Task:
 
 ```sh
-KIOSKI_TYPO3_PROJECT_DIR=/absoluter/projektpfad \
+KIOSKY_TYPO3_PROJECT_DIR=/absoluter/projektpfad \
 PHP_BIN=/opt/plesk/php/8.2/bin/php \
 COMPOSER_BIN=/usr/lib/plesk-9.0/composer.phar \
-/absoluter/kioski-pfad/scripts/deploy-typo3-update.sh
+/absoluter/kiosky-pfad/scripts/deploy-typo3-update.sh
 ```
 
 Pfad, Benutzer und Dateirechte müssen zur konkreten Subscription passen.

@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
 
 final readonly class UpdateManager
 {
-    private const VERSION = '3.3.5';
+    private const VERSION = '3.3.6';
 
     public function __construct(
         private ConnectionPool $connectionPool,
@@ -165,7 +165,7 @@ final readonly class UpdateManager
     public function validateManifest(array $manifest): void
     {
         $component = $manifest['components']['typo3'] ?? null;
-        if (($manifest['schema_version'] ?? null) !== 1 || ($manifest['product'] ?? null) !== 'kioski' || ($manifest['channel'] ?? null) !== 'stable') {
+        if (($manifest['schema_version'] ?? null) !== 1 || !in_array($manifest['product'] ?? null, ['kiosky', 'kioski'], true) || ($manifest['channel'] ?? null) !== 'stable') {
             throw new RuntimeException('Das Update-Manifest ist ungültig.');
         }
         $version = (string)($manifest['version'] ?? '');

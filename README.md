@@ -65,17 +65,5 @@ Home Assistant ab 2026.3.0.
 
 ## PDF-Handbuch
 
-Das [deutsche Kiosky-Handbuch für Version 3.3.5](docs/Kiosky_Handbuch_3.3.5_DE.pdf)
-enthält auf 21 Seiten die Funktionsübersicht, Bedienung, Installation, Updates,
-Datensicherung und Fehlerbehebung für Standalone, WordPress, TYPO3 und Home Assistant.
-Dokumentationsstand: 17. Oktober 2026; Home-Assistant-Integration 1.0.0.
-
-[PDF direkt herunterladen](https://github.com/soerenelvers/kiosky-distribution/raw/refs/heads/main/docs/Kiosky_Handbuch_3.3.5_DE.pdf).
-
-## Einheitliche Paketnamen neuer Releases
-
-Neue Pakete heißen `kiosky-app-VERSION.zip`, `kiosky-wordpress-VERSION.zip`
-und `kiosky_VERSION.zip`; neue Archivordner heißen `kiosky-app/` beziehungsweise `kiosky/`.
-Bereits veröffentlichte Releases behalten ihre ursprünglichen Dateien und Prüfsummen.
-Der einmalige manuelle Wechsel älterer Installationen ist im
-[Hinweis zu Paketnamen und Migration](docs/package-naming.md) beschrieben.
+[Deutsches Kiosky-Handbuch](https://github.com/soerenelvers/kiosky-distribution/blob/main/docs/Kiosky_Handbuch_3.3.5_DE.pdf)
+mit Funktionen, Installation, Betrieb und Updates. Neue Pakete verwenden die einheitliche Schreibweise `kiosky`.

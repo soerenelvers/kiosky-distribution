@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.3.5-20261015205315%2B6a6ba7fd">
+  <link rel="stylesheet" href="styles.css?v=3.3.6-20261018044503%2B448e755c">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -66,23 +66,23 @@
   <div class="app-shell" id="app-shell" hidden>
     <aside class="sidebar">
       <button class="sidebar-close" type="button" aria-label="Navigation schließen">×</button>
-      <a class="brand" href="#dashboard" aria-label="Kiosky Startseite">
+      <a class="brand" href="#dashboard" data-view-link="dashboard" aria-label="Kiosky Startseite">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
         <span>Kiosky</span>
       </a>
 
       <nav class="main-nav" id="main-navigation" aria-label="Hauptnavigation">
-        <button class="nav-item is-active" data-view="dashboard"><span class="nav-icon">⌂</span>Übersicht</button>
-        <button class="nav-item" data-view="events"><span class="nav-icon">◫</span>Veranstaltungen</button>
-        <button class="nav-item" data-view="displays"><span class="nav-icon">▣</span>Displays</button>
-        <button class="nav-item" data-view="channels"><span class="nav-icon">▤</span>Slides & Kanäle</button>
-        <button class="nav-item" data-view="advertising"><span class="nav-icon">◇</span>Werbung</button>
-        <button class="nav-item" data-view="media"><span class="nav-icon">▧</span>Mediendatenbank</button>
-        <button class="nav-item" data-view="schedule"><span class="nav-icon">▦</span>Zeitplanung</button>
-        <button class="nav-item" data-view="operations" data-feature-nav="presets_warnings"><span class="nav-icon">⌁</span>Presets & Warnhinweise</button>
-        <button class="nav-item admin-only" data-view="updates"><span class="nav-icon">↻</span>Updates <span class="update-nav-badge" id="update-nav-badge" hidden>Neu</span></button>
-        <button class="nav-item admin-only" data-view="settings"><span class="nav-icon">⚙</span>Einstellungen</button>
-        <button class="nav-item nav-help" data-view="features"><span class="nav-icon">?</span>Funktionen & Hilfe</button>
+        <button class="nav-item is-active" data-view="dashboard"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></span>Übersicht</button>
+        <button class="nav-item" data-view="events"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>Veranstaltungen</button>
+        <button class="nav-item" data-view="displays"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Displays</button>
+        <button class="nav-item" data-view="channels"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 21h12a2 2 0 0 0 2-2V7M8 7l5 3-5 3z"/></svg></span>Slides & Kanäle</button>
+        <button class="nav-item" data-view="advertising"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m3 10 15-6v16L3 14zM3 10v4M7 16l1 5h4l-2-4M21 8v8"/></svg></span>Werbung</button>
+        <button class="nav-item" data-view="media"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m21 15-6-6L3 21"/></svg></span>Mediendatenbank</button>
+        <button class="nav-item" data-view="schedule"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18M8 15h2M14 15h2M8 18h2"/></svg></span>Zeitplanung</button>
+        <button class="nav-item" data-view="operations" data-feature-nav="presets_warnings"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m12 3 10 18H2zM12 9v5M12 17h.01"/></svg></span>Presets & Warnhinweise</button>
+        <button class="nav-item admin-only" data-view="updates"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5M12 7v5l3 2"/></svg></span>Updates <span class="update-nav-badge" id="update-nav-badge" hidden>Neu</span></button>
+        <button class="nav-item admin-only" data-view="settings"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg></span>Einstellungen</button>
+        <button class="nav-item nav-help" data-view="features"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4M12 17h.01"/></svg></span>Funktionen & Hilfe</button>
       </nav>
 
       <div class="system-health">
@@ -108,7 +108,6 @@
           <h1 id="page-title">Willkommen</h1>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" type="button" aria-label="Benachrichtigungen">♢<span class="notification-dot"></span></button>
           <button class="button button-primary" type="button" data-action="new-event"><span>＋</span> Veranstaltung</button>
         </div>
       </header>
@@ -177,7 +176,7 @@
             <div class="quick-actions">
               <button type="button" data-view-link="channels"><span class="quick-icon violet">▤</span><span><strong>Kanal erstellen</strong><small>Slides zusammenstellen</small></span><span>›</span></button>
               <button type="button" data-view-link="displays"><span class="quick-icon green">▣</span><span><strong>Displays steuern</strong><small>Kanäle sofort wechseln</small></span><span>›</span></button>
-              <button type="button" data-preset="restaurant"><span class="quick-icon peach">⌑</span><span><strong>Restaurant-Preset</strong><small>Auf 3 Displays aktivieren</small></span><span>›</span></button>
+              <button type="button" data-preset="restaurant"><span class="quick-icon peach">⌑</span><span><strong>Restaurant-Preset</strong><small>Preset prüfen und aktivieren</small></span><span>›</span></button>
               <button type="button" class="warning-action" data-preset="evacuation"><span class="quick-icon red">!</span><span><strong>Evakuierung</strong><small>Sicherheitsmodus öffnen</small></span><span>›</span></button>
               <button type="button" data-view-link="features"><span class="quick-icon blue">?</span><span><strong>Kiosky entdecken</strong><small>Alle Funktionen im Überblick</small></span><span>›</span></button>
             </div>
@@ -1541,7 +1540,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.3.5-20261015205315%2B6a6ba7fd"></script>
-  <script src="app.js?v=3.3.5-20261015205315%2B6a6ba7fd"></script>
+  <script src="runtime-config.js?v=3.3.6-20261018044503%2B448e755c"></script>
+  <script src="app.js?v=3.3.6-20261018044503%2B448e755c"></script>
 </body>
 </html>

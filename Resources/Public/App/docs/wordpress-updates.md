@@ -1,7 +1,7 @@
 # WordPress-Updates
 
 Das Release-ZIP enthält ein direkt installierbares Plugin mit dem obersten Ordner
-`kioski/`. Nach Installation und Aktivierung bindet sich Kiosky in die native WordPress-
+`kiosky/`. Nach Installation und Aktivierung bindet sich Kiosky in die native WordPress-
 Updateprüfung ein. Erfolgreiche Abfragen von `latest.json` werden sechs Stunden
 zwischengespeichert; daraus entsteht kein eigener Sechs-Stunden-Zeitplan. Netzwerkfehler, Timeouts und ungültige Antworten werden ohne
 PHP-Fatal-Error ignoriert.
@@ -48,3 +48,5 @@ der Kiosky-Cache sofort umgehen. Alternativ **Dashboard → Aktualisierungen →
 Erneut prüfen** wählen. Ein frei einstellbares Prüfintervall gibt es in der
 normalen Oberfläche derzeit nicht. Automatische Installation ist separat pro
 Plugin aktivierbar.
+
+Für den einmaligen Wechsel alter Pluginordner und Updater siehe [Paketnamen und Migration](package-naming.md).

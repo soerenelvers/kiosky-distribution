@@ -10,9 +10,9 @@ freigegebene Release-Stände:
 - den installierbaren TYPO3-Paketinhalt an der Repository-Wurzel;
 - einen unveränderlichen Git-Tag pro Version.
 
-Die Repository-Variable `KIOSKI_DISTRIBUTION_REPOSITORY` enthält
+Die Repository-Variable `KIOSKY_DISTRIBUTION_REPOSITORY` enthält
 `soerenelvers/kiosky-distribution`. Das Secret
-`KIOSKI_DISTRIBUTION_SSH_KEY` ist ein schreibberechtigter Deploy-Key, der nur
+`KIOSKY_DISTRIBUTION_SSH_KEY` ist ein schreibberechtigter Deploy-Key, der nur
 dieses Distributionsrepository erreichen kann.
 
 `release.json` und `latest.json` enthalten Schema-Version, Kanal, Kompatibilität,
@@ -36,8 +36,8 @@ Bei einem späteren Betrieb dieses Dienstes werden Kundenlizenzen lokal mit
 geschützten Umgebungsvariablen erzeugt:
 
 ```sh
-KIOSKI_UPDATE_BASE_URL=https://updates.example.test \
-KIOSKI_UPDATE_ADMIN_TOKEN=... \
+KIOSKY_UPDATE_BASE_URL=https://updates.example.test \
+KIOSKY_UPDATE_ADMIN_TOKEN=... \
 pnpm license:create -- "Kundenname"
 ```
 

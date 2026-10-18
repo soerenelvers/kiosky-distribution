@@ -3,9 +3,9 @@
 Kiosky wird als ein Produkt mit gemeinsamen Oberflächen- und Domainquellen gepflegt.
 `pnpm build:platforms` erzeugt aus demselben Commit und derselben Versionsnummer:
 
-- `artifacts/kiosky-standalone-<version>.zip`
+- `artifacts/kiosky-app-<version>.zip`
 - `artifacts/kiosky-wordpress-<version>.zip`
-- `artifacts/kiosky-typo3-<version>.zip`
+- `artifacts/kiosky_<version>.zip`
 
 ## Laufzeiten
 
