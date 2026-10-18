@@ -1416,3 +1416,6 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
   html { scroll-behavior: auto; }
   .view, .app-shell, .sidebar, .nav-backdrop, .button, .nav-item, .mobile-menu, .feature-card, .tour-progress-track i { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+/* Standalone identity mappings must wrap long opaque provider IDs on mobile. */
+#zugangswerk-identities p { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; }
+#zugangswerk-identities code { min-width:0; max-width:100%; overflow-wrap:anywhere; white-space:normal; }

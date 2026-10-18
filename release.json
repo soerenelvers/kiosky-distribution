@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "4302bbb0b712b653e099573da67637a6a38c59a0",
+  "source_commit": "a9d12f5c5b0b05e051705b78f9051c65ce464705",
   "product": "kiosky",
-  "version": "3.3.9",
-  "released_at": "2026-10-18T10:06:15.010Z",
+  "version": "3.4.0",
+  "released_at": "2026-10-18T21:39:43.658Z",
   "channel": "stable",
-  "release_notes": "## [3.3.9] – 2026-10-18\n\n- WordPress fordert GitHub-Contents-Manifeste auch ohne Zugangstoken als Raw-JSON an. Öffentliche Update-Pakete benötigen keinen Token mehr; private Quellen verwenden weiterhin den konfigurierten Read-only-Token. Paket-Prüfsummen werden unverändert kontrolliert.\n- Die Installation über Kiosky Updates behält die vorherige Plugin-Aktivierung einschließlich Netzwerk-Aktivierung bei.\n- Der Manifest-Cache wird erneuert; nach einem abgeschlossenen Upgrade wird nur das eigene veraltete Update-Angebot entfernt.\n- Echte WordPress-Tests prüfen nun native Update-Erkennung und Installation über den Plugin-Upgrader, einschließlich tokenlosem Download, statt ausschließlich das ZIP direkt zu ersetzen. Ein bereits installierter alter Updater benötigt einmal das reparierte ZIP beziehungsweise die reparierte Updater-Datei.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.9",
+  "release_notes": "## [3.4.0] – 2026-10-18\n\n- Standalone erhält eine optionale, exklusive Zugangswerk-Anmeldung über den bestätigten OpenID-Connect-Issuer unter accounts.delevel.de. Einstellungen umfassen Client-Konfiguration, Redirect-URL, echten Verbindungstest und ausdrückliche Kontozuordnungen; Rollen und Standortrechte bleiben erhalten.\n- Aktivierung erfordert einen erfolgreich geprüften Administrator, beendet alle bisherigen Sitzungen und sperrt lokale Passwort-/Einladungswege. Kein automatischer Rückfall bei Provider-Ausfall. Maschinenzugänge bleiben auf die externe API begrenzt; Player bleiben nutzbar.\n- Verschlüsselte Secrets, Authorization Code Flow mit PKCE S256, State-/Nonce- und signierte Tokenprüfung, Schutz des letzten geprüften SSO-Administrators sowie dokumentierte lokale Wiederherstellung. OIDC-Laufzeit und ihre Lizenztexte werden im Standalone-ZIP gebündelt.\n- WordPress und TYPO3 verwenden unverändert ihre CMS-Benutzerverwaltung; die neue Einstellung wird dort nicht angeboten.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.4.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.3.9",
+    "core_version": "3.4.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.3.9",
-    "typo3_extension_version": "3.3.9"
+    "wordpress_plugin_version": "3.4.0",
+    "typo3_extension_version": "3.4.0"
   },
   "components": {
     "core": {
-      "version": "3.3.9",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.9.zip?ref=v3.3.9",
-      "sha256": "220aead3ffc777b67e9fa33c72ee857a32646998b0e2d1253da75a54b189989b"
+      "version": "3.4.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.4.0.zip?ref=v3.4.0",
+      "sha256": "a9f6dc9e6673644538e23e7128806bcdbc3d2476750e055fac784c6d4559f839"
     },
     "standalone": {
-      "version": "3.3.9",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.9.zip?ref=v3.3.9",
-      "sha256": "220aead3ffc777b67e9fa33c72ee857a32646998b0e2d1253da75a54b189989b"
+      "version": "3.4.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.4.0.zip?ref=v3.4.0",
+      "sha256": "a9f6dc9e6673644538e23e7128806bcdbc3d2476750e055fac784c6d4559f839"
     },
     "wordpress": {
-      "version": "3.3.9",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.3.9.zip?ref=v3.3.9",
-      "sha256": "ae12e26922e008ff559c97782757728bc19e6e7706cf54af2c85eee69fbb78de",
+      "version": "3.4.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.4.0.zip?ref=v3.4.0",
+      "sha256": "c3c647fd2e702a86a9941d98a4c31cf67693324eb8544277820968a6527b6554",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.3.9",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.3.9.zip?ref=v3.3.9",
-      "sha256": "9f31000de82913688716eb081164a9dc1c60c0abafdb4cc0de64235edd5e6746",
+      "version": "3.4.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.4.0.zip?ref=v3.4.0",
+      "sha256": "f066b630cf1099596108e6163702804400a37b0d7e3203d10d7119dde47b9642",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

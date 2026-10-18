@@ -1,6 +1,6 @@
-## [3.3.9] – 2026-10-18
+## [3.4.0] – 2026-10-18
 
-- WordPress fordert GitHub-Contents-Manifeste auch ohne Zugangstoken als Raw-JSON an. Öffentliche Update-Pakete benötigen keinen Token mehr; private Quellen verwenden weiterhin den konfigurierten Read-only-Token. Paket-Prüfsummen werden unverändert kontrolliert.
-- Die Installation über Kiosky Updates behält die vorherige Plugin-Aktivierung einschließlich Netzwerk-Aktivierung bei.
-- Der Manifest-Cache wird erneuert; nach einem abgeschlossenen Upgrade wird nur das eigene veraltete Update-Angebot entfernt.
-- Echte WordPress-Tests prüfen nun native Update-Erkennung und Installation über den Plugin-Upgrader, einschließlich tokenlosem Download, statt ausschließlich das ZIP direkt zu ersetzen. Ein bereits installierter alter Updater benötigt einmal das reparierte ZIP beziehungsweise die reparierte Updater-Datei.
+- Standalone erhält eine optionale, exklusive Zugangswerk-Anmeldung über den bestätigten OpenID-Connect-Issuer unter accounts.delevel.de. Einstellungen umfassen Client-Konfiguration, Redirect-URL, echten Verbindungstest und ausdrückliche Kontozuordnungen; Rollen und Standortrechte bleiben erhalten.
+- Aktivierung erfordert einen erfolgreich geprüften Administrator, beendet alle bisherigen Sitzungen und sperrt lokale Passwort-/Einladungswege. Kein automatischer Rückfall bei Provider-Ausfall. Maschinenzugänge bleiben auf die externe API begrenzt; Player bleiben nutzbar.
+- Verschlüsselte Secrets, Authorization Code Flow mit PKCE S256, State-/Nonce- und signierte Tokenprüfung, Schutz des letzten geprüften SSO-Administrators sowie dokumentierte lokale Wiederherstellung. OIDC-Laufzeit und ihre Lizenztexte werden im Standalone-ZIP gebündelt.
+- WordPress und TYPO3 verwenden unverändert ihre CMS-Benutzerverwaltung; die neue Einstellung wird dort nicht angeboten.

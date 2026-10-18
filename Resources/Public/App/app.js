@@ -386,6 +386,7 @@ if (playerSlug) {
 
 const cmsIntegrated = kioskyRuntime.platform === 'wordpress';
 const cmsManagedServices = kioskyRuntime.platform !== 'standalone';
+if (cmsManagedServices) document.querySelectorAll('[data-standalone-only]').forEach(element => element.remove());
 if (cmsIntegrated) document.body.classList.add('cms-integrated', 'cms-wordpress');
 if (!cmsManagedServices) document.querySelectorAll('[data-settings-open="calendar"],[data-settings-detail="calendar"]').forEach(element => { element.hidden = true; });
 if (cmsManagedServices) {
@@ -629,6 +630,7 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
   showSettingsLevel(level);
   if(level==='advertising')loadAdvertisingSettings();
   if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
+  if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
 }));
 document.querySelectorAll('[data-settings-anchor]').forEach(button => button.addEventListener('click', () => {
   const target = document.getElementById(button.dataset.settingsAnchor);
@@ -766,6 +768,7 @@ async function apiRequest(path, options = {}) {
   let result = null;
   try { result = await response.json(); } catch (error) { /* handled below */ }
   if (!response.ok) {
+    if (response.status === 401 && !cmsManagedServices && state.currentUser && !path.startsWith('/api/auth/')) await showLogin();
     const requestError = new Error(result?.error?.message || `Serveranfrage fehlgeschlagen (HTTP ${response.status}).`);
     requestError.code = result?.error?.code;
     requestError.status = response.status;
@@ -992,6 +995,10 @@ function showAuthMessage(id, message, success = false) {
 
 function applyCurrentUser(user) {
   state.currentUser = user;
+  const federated = !cmsManagedServices && user.authenticationProvider === 'zugangswerk';
+  document.querySelector('#change-password-form').hidden = federated;
+  if (document.querySelector('#zugangswerk-account')) document.querySelector('#zugangswerk-account').hidden = !federated;
+  document.querySelector('[data-action="invite-user"]').hidden = Boolean(state.zugangswerkEnabled);
   updateDashboardHeading();
   document.querySelector('#profile-name').textContent = user.displayName;
   document.querySelector('#profile-role').textContent = roleLabels[user.role];
@@ -1035,6 +1042,7 @@ async function showInvitation(token) {
     document.querySelector('#invite-form').dataset.token = token;
     showAuthMessage('invite-message', '');
   } catch (error) {
+    if (!cmsManagedServices && error.code === 'ZUGANGSWERK_REQUIRED') { await showLogin(); return; }
     showAuthMessage('invite-message', error.message);
     document.querySelector('#invite-form button[type="submit"]').disabled = true;
   }
@@ -1050,6 +1058,14 @@ async function showLogin() {
   document.querySelector('#auth-status-retry').hidden = true;
   try {
     const status = await apiRequest('/api/auth/setup-status');
+    state.zugangswerkEnabled = Boolean(status.zugangswerk);
+    if (!cmsManagedServices) {
+      document.querySelector('#login-form').hidden = state.zugangswerkEnabled;
+      document.querySelector('#zugangswerk-login').hidden = !state.zugangswerkEnabled;
+      document.querySelector('#auth-setup-check').hidden = state.zugangswerkEnabled;
+      document.querySelector('#login-description').textContent = state.zugangswerkEnabled ? 'Diese Installation erlaubt ausschließlich die Anmeldung über Zugangswerk.' : 'Mit deinem Kiosky-Konto anmelden.';
+      document.querySelector('#zugangswerk-login-message').textContent = new URLSearchParams(location.search).get('zugangswerk') === 'error' ? 'Die Zugangswerk-Anmeldung ist fehlgeschlagen. Bitte erneut versuchen oder die Administration kontaktieren. Es wurde kein lokaler Zugang freigegeben.' : '';
+    }
     setAuthView(status.needsSetup ? 'setup' : 'login');
   } catch (error) {
     document.querySelector('#auth-status-title').textContent = 'Einrichtung konnte nicht geladen werden';
@@ -1063,7 +1079,18 @@ async function initializeAuthentication() {
   if (invitationToken) { await showInvitation(invitationToken); return; }
   try {
     const result = await apiRequest('/api/auth/me');
+    state.zugangswerkEnabled = Boolean(result.zugangswerk);
     applyCurrentUser(result.user);
+    if (!cmsManagedServices && new URLSearchParams(location.search).get('zugangswerk') === 'linked') {
+      history.replaceState({}, '', '/#settings');
+      setView('settings'); showSettingsLevel('zugangswerk'); await loadZugangswerkSettings();
+      showAuthMessage('zugangswerk-message', 'Zugangswerk-Anmeldung erfolgreich. Dein Konto ist verknüpft; die exklusive Anmeldung kann jetzt aktiviert werden.', true);
+    }
+    if (!cmsManagedServices && new URLSearchParams(location.search).get('zugangswerk') === 'error' && result.user.role === 'admin') {
+      history.replaceState({}, '', '/#settings');
+      setView('settings'); showSettingsLevel('zugangswerk'); await loadZugangswerkSettings();
+      showAuthMessage('zugangswerk-message', 'Die Zugangswerk-Anmeldung konnte nicht bestätigt werden. Bitte Client-Konfiguration, Kontozuordnung und Serververbindung prüfen.');
+    }
   } catch (error) {
     await showLogin();
   }
@@ -1137,6 +1164,65 @@ document.querySelector('#change-password-form').addEventListener('submit', async
     showAuthMessage('account-message', 'Passwort wurde erfolgreich geändert.', true);
     setTimeout(() => document.querySelector('#account-dialog').close(), 900);
   } catch (error) { showAuthMessage('account-message', error.message); }
+});
+
+async function loadZugangswerkSettings() {
+  if (cmsManagedServices || state.currentUser?.role !== 'admin') return;
+  try {
+    const settings = await apiRequest('/api/settings/zugangswerk');
+    state.zugangswerkEnabled = settings.enabled;
+    document.querySelector('#zugangswerk-public-url').value = settings.publicUrl;
+    document.querySelector('#zugangswerk-client-id').value = settings.clientId;
+    document.querySelector('#zugangswerk-secret').value = '';
+    document.querySelector('#zugangswerk-secret').placeholder = settings.hasSecret ? 'Gespeichert; leer lassen zum Beibehalten' : 'Client-Secret hinterlegen';
+    document.querySelector('#zugangswerk-redirect').value = settings.redirectUri;
+    for (const id of ['zugangswerk-public-url', 'zugangswerk-client-id', 'zugangswerk-secret', 'zugangswerk-save']) document.getElementById(id).disabled = settings.enabled;
+    const toggle = document.querySelector('#zugangswerk-enabled');
+    toggle.checked = settings.enabled; toggle.disabled = !settings.enabled && !settings.canActivate;
+    document.querySelector('#zugangswerk-connect').disabled = !settings.hasSecret;
+    document.querySelector('#zugangswerk-user').innerHTML = settings.users.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.displayName)} (${escapeHtml(roleLabels[user.role])})</option>`).join('');
+    document.querySelector('#zugangswerk-identities').innerHTML = settings.identities.map(identity => {
+      const user = settings.users.find(user => user.id === identity.userId);
+      return `<p><strong>${escapeHtml(user?.displayName || identity.userId)}</strong> · <code>${escapeHtml(identity.subject)}</code> <button class="button button-secondary" type="button" data-unlink-zugangswerk="${escapeHtml(identity.userId)}">Zuordnung entfernen</button></p>`;
+    }).join('') || '<p class="property-note">Noch keine Konten zugeordnet.</p>';
+    showAuthMessage('zugangswerk-message', settings.enabled ? 'Aktiv: Ausschließlich Zugangswerk-Anmeldungen sind erlaubt.' : settings.canActivate ? 'Verbindung erfolgreich geprüft. Die exklusive Anmeldung kann aktiviert werden.' : 'Verbindung speichern und mit einem aktiven Administrator prüfen, bevor du Zugangswerk aktivierst.');
+  } catch (error) { showAuthMessage('zugangswerk-message', error.message); }
+}
+
+document.querySelector('#zugangswerk-public-url')?.addEventListener('input', event => {
+  try { document.querySelector('#zugangswerk-redirect').value = new URL(event.target.value).origin + '/api/auth/zugangswerk/callback'; } catch { document.querySelector('#zugangswerk-redirect').value = ''; }
+});
+document.querySelector('#zugangswerk-config-form')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    await apiRequest('/api/settings/zugangswerk', { method: 'PUT', body: JSON.stringify({ clientId: document.querySelector('#zugangswerk-client-id').value, clientSecret: document.querySelector('#zugangswerk-secret').value, publicUrl: document.querySelector('#zugangswerk-public-url').value }) });
+    await loadZugangswerkSettings();
+  } catch (error) { showAuthMessage('zugangswerk-message', error.message); }
+});
+document.querySelector('#zugangswerk-connect')?.addEventListener('click', async event => {
+  event.currentTarget.disabled = true;
+  try { const result = await apiRequest('/api/settings/zugangswerk/connect', { method: 'POST' }); location.assign(result.url); }
+  catch (error) { event.target.disabled = false; showAuthMessage('zugangswerk-message', error.message); }
+});
+document.querySelector('#zugangswerk-enabled')?.addEventListener('change', async event => {
+  const enabled = event.target.checked;
+  if (!confirm(enabled ? 'Ausschließlich Zugangswerk zulassen? Alle bestehenden Sitzungen werden beendet. Lokale Anmeldungen bleiben auch bei einer Zugangswerk-Störung gesperrt.' : 'Zugangswerk deaktivieren und die lokale Anmeldung wieder zulassen? Alle Sitzungen werden beendet.')) { event.target.checked = !enabled; return; }
+  event.target.disabled = true;
+  try { await apiRequest('/api/settings/zugangswerk/enabled', { method: 'PUT', body: JSON.stringify({ enabled }) }); location.assign('/'); }
+  catch (error) { await loadZugangswerkSettings(); showAuthMessage('zugangswerk-message', error.message); }
+});
+document.querySelector('#zugangswerk-identity-form')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    await apiRequest('/api/settings/zugangswerk/identities', { method: 'PUT', body: JSON.stringify({ userId: document.querySelector('#zugangswerk-user').value, subject: document.querySelector('#zugangswerk-subject').value }) });
+    document.querySelector('#zugangswerk-subject').value = ''; await loadZugangswerkSettings();
+  } catch (error) { showAuthMessage('zugangswerk-message', error.message); }
+});
+document.querySelector('#zugangswerk-identities')?.addEventListener('click', async event => {
+  const button = event.target.closest('[data-unlink-zugangswerk]');
+  if (!button || !confirm('Kontozuordnung entfernen und Sitzungen dieses Benutzers beenden?')) return;
+  try { await apiRequest('/api/settings/zugangswerk/identities', { method: 'DELETE', body: JSON.stringify({ userId: button.dataset.unlinkZugangswerk }) }); await loadZugangswerkSettings(); }
+  catch (error) { showAuthMessage('zugangswerk-message', error.message); }
 });
 
 // CrewBrain administration
@@ -2158,8 +2244,8 @@ function renderUsers() {
   document.querySelector('#active-user-count').textContent = String(activeUsers.length);
   document.querySelector('#admin-user-count').textContent = String(administrators.length);
   document.querySelector('#last-user-login').textContent = latestLogin ? formatUserDate(latestLogin.lastLoginAt) : '–';
-  const accounts = state.users.map(user => `<div class="user-table-row"><span class="user-identity"><i class="avatar">${escapeHtml(initials(user.displayName))}</i><span><strong>${escapeHtml(user.displayName)}</strong><small>@${escapeHtml(user.username)}${user.email ? ` · ${escapeHtml(user.email)}` : ''}</small></span></span><span><i class="role-badge ${escapeHtml(user.role)}">${escapeHtml(roleLabels[user.role])}</i></span><span>${escapeHtml(formatUserDate(user.lastLoginAt))}</span><span><i class="tag ${user.status === 'active' ? 'green' : 'muted'}">${user.status === 'active' ? 'Aktiv' : 'Deaktiviert'}</i>${user.mustChangePassword ? '<small>Passwortwechsel offen</small>' : ''}</span><span class="user-actions"><button type="button" data-edit-user="${escapeHtml(user.id)}">Bearbeiten</button>${user.id === state.currentUser.id ? '' : `<button type="button" data-toggle-user="${escapeHtml(user.id)}">${user.status === 'active' ? 'Deaktivieren' : 'Aktivieren'}</button><button type="button" data-delete-user="${escapeHtml(user.id)}">Löschen</button><button type="button" data-reset-user="${escapeHtml(user.id)}">Passwort</button>`}</span></div>`).join('');
-  const invitations = state.userInvitations.map(invitation => `<div class="user-table-row invitation-row"><span class="user-identity"><i class="avatar">✉</i><span><strong>${escapeHtml(invitation.email)}</strong><small>Einladung bis ${escapeHtml(formatUserDate(invitation.expiresAt))}</small></span></span><span><i class="role-badge ${escapeHtml(invitation.role)}">${escapeHtml(roleLabels[invitation.role])}</i></span><span>–</span><span><i class="tag ${invitation.status === 'active' ? 'blue' : 'muted'}">${invitation.status === 'active' ? 'Einladung offen' : 'Deaktiviert'}</i></span><span class="user-actions"><button type="button" data-toggle-invitation="${escapeHtml(invitation.id)}">${invitation.status === 'active' ? 'Deaktivieren' : 'Aktivieren'}</button><button type="button" data-delete-invitation="${escapeHtml(invitation.id)}">Löschen</button></span></div>`).join('');
+  const accounts = state.users.map(user => `<div class="user-table-row"><span class="user-identity"><i class="avatar">${escapeHtml(initials(user.displayName))}</i><span><strong>${escapeHtml(user.displayName)}</strong><small>@${escapeHtml(user.username)}${user.email ? ` · ${escapeHtml(user.email)}` : ''}</small></span></span><span><i class="role-badge ${escapeHtml(user.role)}">${escapeHtml(roleLabels[user.role])}</i></span><span>${escapeHtml(formatUserDate(user.lastLoginAt))}</span><span><i class="tag ${user.status === 'active' ? 'green' : 'muted'}">${user.status === 'active' ? 'Aktiv' : 'Deaktiviert'}</i>${user.mustChangePassword && !state.zugangswerkEnabled ? '<small>Passwortwechsel offen</small>' : ''}</span><span class="user-actions"><button type="button" data-edit-user="${escapeHtml(user.id)}">Bearbeiten</button>${user.id === state.currentUser.id ? '' : `<button type="button" data-toggle-user="${escapeHtml(user.id)}">${user.status === 'active' ? 'Deaktivieren' : 'Aktivieren'}</button><button type="button" data-delete-user="${escapeHtml(user.id)}">Löschen</button>${state.zugangswerkEnabled ? '' : `<button type="button" data-reset-user="${escapeHtml(user.id)}">Passwort</button>`}`}</span></div>`).join('');
+  const invitations = (state.zugangswerkEnabled ? [] : state.userInvitations).map(invitation => `<div class="user-table-row invitation-row"><span class="user-identity"><i class="avatar">✉</i><span><strong>${escapeHtml(invitation.email)}</strong><small>Einladung bis ${escapeHtml(formatUserDate(invitation.expiresAt))}</small></span></span><span><i class="role-badge ${escapeHtml(invitation.role)}">${escapeHtml(roleLabels[invitation.role])}</i></span><span>–</span><span><i class="tag ${invitation.status === 'active' ? 'blue' : 'muted'}">${invitation.status === 'active' ? 'Einladung offen' : 'Deaktiviert'}</i></span><span class="user-actions"><button type="button" data-toggle-invitation="${escapeHtml(invitation.id)}">${invitation.status === 'active' ? 'Deaktivieren' : 'Aktivieren'}</button><button type="button" data-delete-invitation="${escapeHtml(invitation.id)}">Löschen</button></span></div>`).join('');
   document.querySelector('#user-table').innerHTML = `<div class="user-table-row is-head"><span>Benutzer</span><span>Rolle</span><span>Letzte Anmeldung</span><span>Status</span><span></span></div>${accounts}${invitations || ''}` || '<div class="user-table-empty">Noch keine Benutzer vorhanden.</div>';
   renderUserLocationMatrix();
 }
@@ -2207,8 +2293,8 @@ function openUserDialog(user = null) {
   document.querySelector('#user-role').value = user?.role || 'editor';
   document.querySelector('#user-status').value = user?.status || 'active';
   document.querySelector('#user-status-field').hidden = !user;
-  document.querySelector('#user-password-field').hidden = Boolean(user);
-  document.querySelector('#user-password').required = !user;
+  document.querySelector('#user-password-field').hidden = Boolean(user) || Boolean(state.zugangswerkEnabled);
+  document.querySelector('#user-password').required = !user && !state.zugangswerkEnabled;
   document.querySelector('#user-dialog').showModal();
 }
 
