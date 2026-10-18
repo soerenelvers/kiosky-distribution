@@ -43,7 +43,7 @@
    ```
 
 4. Plesk wieder auf `production` setzen und **App neu starten** anklicken. Bei systemd oder einem anderen Prozessmanager den tatsächlich zuständigen Kiosky-Prozess neu starten.
-5. `https://DEINE-KIOSKY-DOMAIN/api/health` aufrufen: `version` muss der gewünschten Version, aktuell **3.3.8**, entsprechen. `buildCommit` muss zum bereitgestellten Commit passen. Die Sidebar zeigt dieselbe Build-Nummer.
+5. `https://DEINE-KIOSKY-DOMAIN/api/health` aufrufen: `version` muss der gewünschten Version laut Datei `VERSION` entsprechen. `buildCommit` muss zum bereitgestellten Commit passen. Die Sidebar zeigt dieselbe Build-Nummer.
 
 Ein Git-Pull allein verändert die laufende Anwendung nicht: Der Node-Prozess und die generierten Dateien in `dist/` und `public/` bleiben bis zu Build und Neustart alt. Diese erzeugten Verzeichnisse werden bewusst nicht in Git eingecheckt. `pnpm verify:standalone` erkennt eine abweichende Version, einen alten Commit, veraltetes HTML/JavaScript/CSS oder einen fehlenden kompilierten Server.
 

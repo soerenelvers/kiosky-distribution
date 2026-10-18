@@ -242,3 +242,19 @@ Alle Schriftgrößenfelder verwenden **Punkt (pt)**; 1 pt entspricht 96/72 CSS-P
 Mit **Responsive** wächst die Schrift mit der tatsächlichen Breite der Slide. Beispielsweise erscheinen 48 pt im Querformat bei Full HD als 64 CSS-Pixel, bei 4K als 128 CSS-Pixel. Die Proportion zur Slide bleibt gleich. Ohne Responsive bleibt eine neue Punktgröße im Player unabhängig von der Auflösung konstant. **Schrift automatisch einpassen** passt zusätzlich den Text an sein Textfeld an; die verfügbare Maximalgröße skaliert bei responsiven Elementen mit.
 
 Die Option ist pro Textelement und pro Text-/Countdown-/Veranstaltungsfeld in Wegweisungs-Zellen verfügbar. Neue Elemente verwenden sie standardmäßig. Vorhandene Dokumente ohne Einheitenangabe werden weiterhin mit den alten Pixelwerten dargestellt; im Eigenschaftenfeld wird deren gleichwertige Punktgröße angezeigt. Erst das Bearbeiten der Größe speichert einen Punktwert. Vorlagen und Inhaltspakete übernehmen die Einstellung in allen Varianten.
+
+## WordPress: Update-Suche ohne GitHub-Token (ab 3.3.9)
+
+Bis einschließlich 3.3.8 enthielt der WordPress-Updater zwei Fehler für die öffentliche GitHub-Distribution: Ohne Token wurde die GitHub-Dateimetadaten-Antwort statt des Raw-Manifests abgerufen, und der Paketdownload verlangte pauschal einen Token. Ab 3.3.9 ist Raw-Media unabhängig von einer Anmeldung korrekt gesetzt; öffentliche Downloads funktionieren ohne Token. Private Repositories benötigen weiterhin einen passenden Read-only-GitHub-Token. Prüfsummen bleiben verpflichtend.
+
+### Einmalige Reparatur einer betroffenen Installation
+
+Die Änderung eines GitHub-Releases allein kann den bereits installierten alten PHP-Updater nicht ersetzen. Ohne direkten Zugriff auf die WordPress-Installation muss der korrigierte Code einmal manuell bereitgestellt werden:
+
+1. Datenbank und Uploads sichern; den vorhandenen Pluginordner prüfen.
+2. Das offizielle `kiosky-wordpress-3.3.9.zip` aus dem GitHub-Release laden.
+3. Bei vorhandenem Ordner `wp-content/plugins/kiosky/` unter **Plugins → Installieren → Plugin hochladen** installieren und **installierte Version ersetzen** bestätigen. Das Plugin nicht deinstallieren; vorhandene Inhalte und Einstellungen beibehalten.
+4. Bei einem alten Ordner `kioski/` zuerst die sichere Ordnerumstellung aus [package-naming.md](package-naming.md#wordpress) durchführen. Keine zweite Kopie aktivieren und keine vorhandenen Verzeichnisse überschreiben. Wenn WordPress keinen Ersetzungsdialog anbietet, zuerst den Ordner prüfen.
+5. Danach unter **Dashboard → Aktualisierungen → Erneut prüfen** beziehungsweise **Kiosky → Updates → Prüfen** den Cache erneuern.
+
+Ein korrekt installierter Stand 3.3.9 bietet nicht dieselbe Version erneut an; erst eine neuere kompatible Stable-Version erscheint als Update. Ein eigener Update-Dienst ist für den GitHub-Pfad nicht erforderlich. Bei privaten Quellen den Token unter **Einstellungen → Kiosky Updates** hinterlegen.
