@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
+  "source_commit": "9f2031fd4ca72a1e27478fe9e46dfeaa087cb6c2",
   "product": "kiosky",
-  "version": "3.3.6",
-  "released_at": "2026-10-18T04:45:03.395Z",
+  "version": "3.3.8",
+  "released_at": "2026-10-18T05:36:58.632Z",
   "channel": "stable",
-  "release_notes": "## [3.3.6] – 2026-10-18\n\n- Blaue gemeinsame Verwaltungsoberfläche mit einheitlichen Navigationssymbolen, klaren Fokusmarkierungen und aufgeräumten Karten.\n- Funktionslosen Benachrichtigungsknopf entfernt, Statusanzeigen und Logo-Navigation korrigiert; alle übrigen Bedienelemente und gespeicherten Inhalte bleiben erhalten.\n- Sicherheitsaktualisierungen der Entwicklungs-Unterabhängigkeiten brace-expansion und js-yaml.\n\n- Neue Paketdateien, Archivordner, Manifest-Produktnamen und dokumentierte Einstellungen verwenden einheitlich Kiosky beziehungsweise `kiosky`/`KIOSKY_`.\n- Aktualisierte Updater akzeptieren historische Updateeingaben weiterhin; der geschützte Update-Dienst verwendet die tatsächlichen Dateinamen aus den Release-Manifests.\n- Der einmalige manuelle Wechsel älterer Updater und WordPress-Pluginordner ist unter `docs/package-naming.md` dokumentiert. Bestehende Releases bleiben unverändert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.6",
+  "release_notes": "## [3.3.8] – 2026-10-18\n\n- Standalone-Git-Installationen erhalten ohne eigene Konfiguration das stabile GitHub-Update-Manifest; explizite Einstellungen und Paket-Metadaten behalten Vorrang.\n- Neue Befehle `deploy:standalone` und `verify:standalone` bauen nach Git-Pull reproduzierbar und erkennen alte Versionen, Commits, Frontend-Dateien sowie fehlende Server-Builds. Dokumentation verwendet main und verlangt Build plus Prozessneustart.\n- Manueller Eigentümer-Release mit bestehender Distribution ergänzt: Die exakte main-SHA muss zunächst vollständige CI einschließlich Sicherheitsprüfung bestehen; Pakete und reale CMS-Upgrades werden vor Veröffentlichung geprüft.\n- Sicherheitsabhängigkeiten des optionalen Update-Dienstes aktualisiert; dessen Build und Tests werden zusätzlich in der CI geprüft.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.3.8",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -13,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.3.6",
+    "core_version": "3.3.8",
     "api_version": "1",
-    "wordpress_plugin_version": "3.3.6",
-    "typo3_extension_version": "3.3.6"
+    "wordpress_plugin_version": "3.3.8",
+    "typo3_extension_version": "3.3.8"
   },
   "components": {
     "core": {
-      "version": "3.3.6",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.6.zip?ref=v3.3.6",
-      "sha256": "8abb96a56c5c661d9beae1e3e14754049e4a4480e6cd31b28421f4004aeb2f9b"
+      "version": "3.3.8",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.8.zip?ref=v3.3.8",
+      "sha256": "e0a1954643277f52d0d835bb05610d2f3dccea4cf452a68c8a48ee9e64d3c69e"
     },
     "standalone": {
-      "version": "3.3.6",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.6.zip?ref=v3.3.6",
-      "sha256": "8abb96a56c5c661d9beae1e3e14754049e4a4480e6cd31b28421f4004aeb2f9b"
+      "version": "3.3.8",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.3.8.zip?ref=v3.3.8",
+      "sha256": "e0a1954643277f52d0d835bb05610d2f3dccea4cf452a68c8a48ee9e64d3c69e"
     },
     "wordpress": {
-      "version": "3.3.6",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.3.6.zip?ref=v3.3.6",
-      "sha256": "f2a27180ab4702feece507f12c13bf2f0bbf871e1f1d9ed226a899a2d415e9f5",
+      "version": "3.3.8",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.3.8.zip?ref=v3.3.8",
+      "sha256": "c592c1edad9b9f71a0605d1eaf628ef9e4e71ffde27527e68afa83d33f67c7c2",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.3.6",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.3.6.zip?ref=v3.3.6",
-      "sha256": "760275c34483e9334158e8f4c7b7402fad096862ff99b7f2c760d34812260db0",
+      "version": "3.3.8",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.3.8.zip?ref=v3.3.8",
+      "sha256": "3de374238ca399deeb2c13efb3738b96071d81dad6b6ea8b12534f235f549105",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

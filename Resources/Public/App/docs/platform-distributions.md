@@ -60,7 +60,7 @@ authentifizieren ohne TYPO3-Backend-Anmeldung. Der bisherige Konfigurationsschl�
 
 ## Release
 
-1. Version in `package.json` setzen.
+1. Version mit `node scripts/set-version.mjs <version>` zentral setzen und Changelog ergänzen.
 2. `pnpm test` und `pnpm test:php` ausführen.
 3. `pnpm build:platforms` ausführen.
 4. PHP-Syntax der CMS-Pakete prüfen.
@@ -68,13 +68,9 @@ authentifizieren ohne TYPO3-Backend-Anmeldung. Der bisherige Konfigurationsschl�
 
 ## Downloads über GitHub
 
-Bei jedem Push auf `dev` oder `main` baut die GitHub Action
-**Installierbare Pakete** automatisch alle drei ZIP-Dateien. Sie stehen im
-zugehörigen Workflow-Lauf unter **Actions → Installierbare Pakete → Artifacts**
-für 90 Tage zum Download bereit.
+Der Branch **main** enthält die gemeinsame aktuelle Quelle. Die CI baut und prüft die drei Plattform-Pakete. Stable-Pakete stehen dauerhaft unter **Releases**; die Distribution enthält zusätzlich `latest.json` und alle drei ZIPs. Ein Git-Server benötigt nach dem Pull einen Build und Prozessneustart, siehe [Plesk/Git-Bereitstellung](plesk.md).
 
-Wird ein Versions-Tag wie `v1.2.0` gepusht, veröffentlicht die Action die ZIPs
-zusätzlich dauerhaft unter **Releases**.
+Die automatische App-basierte Veröffentlichung bleibt bis zur getrennten Einrichtung deaktiviert. Für ausdrücklich beauftragte Veröffentlichungen gibt es **Kiosky owner-approved release** (`manual-release.yml`): manueller Start auf `main`, Modus `publish`, Bestätigung `PUBLISH KIOSKY`. Dieser prüft zunächst die erfolgreiche vollständige CI derselben SHA und verwendet danach den bestehenden Installations-/Upgrade-Test- und Veröffentlichungsablauf. Ein Tag-Push allein löst keine Veröffentlichung aus.
 
 ## CMS-Integration
 

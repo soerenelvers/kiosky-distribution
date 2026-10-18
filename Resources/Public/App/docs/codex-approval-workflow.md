@@ -1,3 +1,27 @@
+# Eigentümerfreigabe und Übergang zur vorgeschlagenen Automatisierung
+
+Der nachfolgende manuelle Ablauf wurde durch PR #17 eingeführt. Der neue
+[CI/CD-Entwurf](ci-cd.md) schlägt dessen Ablösung durch geprüfte App-Workflows vor,
+aktiviert sie aber nicht. Codex darf diesen Draft weder zusammenführen noch
+Releases auslösen oder Repositoryeinstellungen ändern.
+
+Bis zur ausdrücklichen dauerhaften Freigabe bleibt die neue Automatisierung mit
+`KIOSKY_CICD_ENABLED=false` gesperrt. Das Environment `release` sollte für die
+Erstfreigabe einen Eigentümer-Reviewer verlangen. Der bisherige manuelle
+`workflow_dispatch`-Publishpfad wird vom Entwurf entfernt, damit nach einem späteren
+Merge kein zweiter, großzügiger berechtigter Veröffentlichungsweg parallel besteht.
+Die historischen Befehle unten sind danach keine aktuellen Bedienanweisungen.
+
+Vollautomatischer Betrieb setzt eine separate Eigentümerentscheidung über die in
+`docs/ci-cd.md` dokumentierten Branchregeln, App-Rechte, Secrets und die spätere
+Entfernung des einzelnen Deployment-Reviewers voraus. Ein grüner CI-Lauf oder ein
+Label allein stellt diese Entscheidung nicht dar. Fehlen technisch erzwingbare
+Branch-/Environment-Regeln im verwendeten GitHub-Plan, nicht aktivieren.
+
+---
+
+## Historische manuelle Richtlinie aus PR #17
+
 # Kiosky manual approvals
 
 ## Pull requests
