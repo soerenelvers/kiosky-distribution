@@ -88,3 +88,9 @@ Lauftexte, native CMS-Medien, externe API-Zugänge und die öffentliche
 [HACS-Integration](https://github.com/soerenelvers/hacs-kiosky).
 WordPress nutzt seine Mediathek, TYPO3 FAL; die Standalone-App behält ihre eigene
 Medienbibliothek. Details zu API und Migration: [External Control API](external-api.md).
+
+## Speisekarten
+
+Alle drei Ausgaben enthalten Speisekarten-Slides und den geschützten Einstieg
+`/speisekarten`. Rechte, Kartenzuweisung und CMS-Anmeldung beschreibt die
+[Speisekarten-Anleitung](speisekarten.md).

@@ -21,6 +21,7 @@ const apiUrl = path => {
   requested.searchParams.forEach((value, key) => endpoint.searchParams.append(key, value));
   return endpoint.toString();
 };
+document.querySelector('a[href="/speisekarten"]')?.setAttribute('href', kioskyRuntime.playerBaseUrl ? new URL('../speisekarten', kioskyRuntime.playerBaseUrl).href : '/speisekarten');
 const assetUrl = path => runtimeUrl(kioskyRuntime.assetBaseUrl, path);
 
 function qrElementPayload(element = {}) {
@@ -995,6 +996,7 @@ function showAuthMessage(id, message, success = false) {
 
 function applyCurrentUser(user) {
   state.currentUser = user;
+  if (!cmsManagedServices && !user.mustChangePassword && sessionStorage.getItem('kiosky-menu-return') === '1') { sessionStorage.removeItem('kiosky-menu-return'); location.assign('/speisekarten'); return; }
   const federated = !cmsManagedServices && user.authenticationProvider === 'zugangswerk';
   document.querySelector('#change-password-form').hidden = federated;
   if (document.querySelector('#zugangswerk-account')) document.querySelector('#zugangswerk-account').hidden = !federated;
@@ -1159,6 +1161,7 @@ document.querySelector('#change-password-form').addEventListener('submit', async
   try {
     const result = await apiRequest('/api/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword: document.querySelector('#current-password').value, newPassword }) });
     state.currentUser = result.user;
+    if (!cmsManagedServices && sessionStorage.getItem('kiosky-menu-return') === '1') { sessionStorage.removeItem('kiosky-menu-return'); location.assign('/speisekarten'); return; }
     document.querySelector('#account-dialog-close').hidden = false;
     form.reset();
     showAuthMessage('account-message', 'Passwort wurde erfolgreich geändert.', true);

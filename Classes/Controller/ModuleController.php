@@ -27,6 +27,9 @@ final readonly class ModuleController
         $this->permissions->require(PermissionService::VIEW);
         $apiEndpoint = (string)$this->uriBuilder->buildUriFromRoute('ajax_kiosky_api');
         $baseUrl = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($request->getAttribute('normalizedParams')?->getSitePath() ?? '/', '/');
+        if (($request->getQueryParams()['menus'] ?? '') === '1') {
+            return new HtmlResponse($this->renderer->renderMenus($apiEndpoint,$request),200,['Cache-Control'=>'private, no-store']);
+        }
         $html = $this->renderer->render(
             'typo3',
             $apiEndpoint,

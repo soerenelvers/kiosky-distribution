@@ -34,6 +34,15 @@ final readonly class AppRenderer
         return str_replace('<head>', '<head>' . $meta, $html);
     }
 
+    public function renderMenus(string $apiEndpoint, ServerRequestInterface $request): string
+    {
+        $file = GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/menus.html');
+        if (!$file || !is_readable($file)) throw new RuntimeException('Der Speisekarten-Editor fehlt.');
+        $base = htmlspecialchars($this->assetBaseUrl($request),ENT_QUOTES);
+        $html = str_replace(['href="menus.css','src="runtime-config.js','src="menus.js'],['href="'.$base.'menus.css','src="'.$base.'runtime-config.js','src="'.$base.'menus.js'],(string)file_get_contents($file));
+        return str_replace('<head>','<head>'.$this->meta('kiosky-platform','typo3').$this->meta('kiosky-api-endpoint',$apiEndpoint),$html);
+    }
+
     public function renderPlayerPortal(
         string $page,
         string $apiEndpoint,

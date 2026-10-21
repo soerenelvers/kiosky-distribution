@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "a9d12f5c5b0b05e051705b78f9051c65ce464705",
+  "source_commit": "8fcacd45f86c7672b17fe65b20f44b7b5774c32e",
   "product": "kiosky",
-  "version": "3.4.0",
-  "released_at": "2026-10-18T21:39:43.658Z",
+  "version": "3.5.0",
+  "released_at": "2026-10-21T11:55:49.583Z",
   "channel": "stable",
-  "release_notes": "## [3.4.0] – 2026-10-18\n\n- Standalone erhält eine optionale, exklusive Zugangswerk-Anmeldung über den bestätigten OpenID-Connect-Issuer unter accounts.delevel.de. Einstellungen umfassen Client-Konfiguration, Redirect-URL, echten Verbindungstest und ausdrückliche Kontozuordnungen; Rollen und Standortrechte bleiben erhalten.\n- Aktivierung erfordert einen erfolgreich geprüften Administrator, beendet alle bisherigen Sitzungen und sperrt lokale Passwort-/Einladungswege. Kein automatischer Rückfall bei Provider-Ausfall. Maschinenzugänge bleiben auf die externe API begrenzt; Player bleiben nutzbar.\n- Verschlüsselte Secrets, Authorization Code Flow mit PKCE S256, State-/Nonce- und signierte Tokenprüfung, Schutz des letzten geprüften SSO-Administrators sowie dokumentierte lokale Wiederherstellung. OIDC-Laufzeit und ihre Lizenztexte werden im Standalone-ZIP gebündelt.\n- WordPress und TYPO3 verwenden unverändert ihre CMS-Benutzerverwaltung; die neue Einstellung wird dort nicht angeboten.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.4.0",
+  "release_notes": "## [3.5.0] – 2026-10-21\n\n- Speisekarten-Slides für Standalone, WordPress und TYPO3: drei Vorlagen in Hoch- und Querformat, einfacher Inhaltseditor unter `/speisekarten`, bis zu acht Speisen je Slide mit Beschreibung und Preis.\n- Separates Bearbeitungsrecht und explizite Kartenzuweisungen über bestehende Benutzerkonten; serverseitige Zugriffskontrolle, sofortiger Rechteentzug, Schutz vor fremden Karten, CSRF und veralteten Bearbeitungsständen.\n- Küchen ändern ausschließlich Inhalte. Layout, Veröffentlichung, Kanäle, Standortrechte und Zeitplanung bleiben in der bestehenden Verwaltung. Änderungen sind versioniert und werden durch bestehende Player synchronisiert.\n- Standalone übernimmt die exklusive Zugangswerk-Anmeldung; CMS-Ausgaben nutzen ihre native Anmeldung und Sitzungs-/Anfrageprüfung. Additive Migration und dokumentierte Einrichtung, Grenzen und Wiederherstellung.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.5.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.4.0",
+    "core_version": "3.5.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.4.0",
-    "typo3_extension_version": "3.4.0"
+    "wordpress_plugin_version": "3.5.0",
+    "typo3_extension_version": "3.5.0"
   },
   "components": {
     "core": {
-      "version": "3.4.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.4.0.zip?ref=v3.4.0",
-      "sha256": "a9f6dc9e6673644538e23e7128806bcdbc3d2476750e055fac784c6d4559f839"
+      "version": "3.5.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.5.0.zip?ref=v3.5.0",
+      "sha256": "75b537d66a4a9869859815c6b93527207fe41769aeff3be6f0b262e6d9ab0d9e"
     },
     "standalone": {
-      "version": "3.4.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.4.0.zip?ref=v3.4.0",
-      "sha256": "a9f6dc9e6673644538e23e7128806bcdbc3d2476750e055fac784c6d4559f839"
+      "version": "3.5.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.5.0.zip?ref=v3.5.0",
+      "sha256": "75b537d66a4a9869859815c6b93527207fe41769aeff3be6f0b262e6d9ab0d9e"
     },
     "wordpress": {
-      "version": "3.4.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.4.0.zip?ref=v3.4.0",
-      "sha256": "c3c647fd2e702a86a9941d98a4c31cf67693324eb8544277820968a6527b6554",
+      "version": "3.5.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.5.0.zip?ref=v3.5.0",
+      "sha256": "84d59ce80bdaed65351897c3d4990f894698bfcb193340720c2607953a29c11f",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.4.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.4.0.zip?ref=v3.4.0",
-      "sha256": "f066b630cf1099596108e6163702804400a37b0d7e3203d10d7119dde47b9642",
+      "version": "3.5.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.5.0.zip?ref=v3.5.0",
+      "sha256": "bb7bfb10b71105d184e840cfd897bd4f70007134abc224e08959d4226d706c8c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

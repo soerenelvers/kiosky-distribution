@@ -99,6 +99,7 @@ final class Api
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
     private function route(array &$state, string $method, string $path, array $body, string $playerKey): array
     {
+        if ($path === '/api/menus' || str_starts_with($path, '/api/menus/')) return $this->menus($state,$method,$path,$body);
         if ($path === '/api/v1' || str_starts_with($path, '/api/v1/')) {
             $this->assertRolePermission($method, $path);
             return $this->externalApi($state, $method, $path, $body);
@@ -759,6 +760,46 @@ final class Api
     {
         if (!$this->easyJob) throw new RuntimeException('Der easyjob-HTTP-Dienst ist in dieser CMS-Ausgabe nicht verfügbar.', 503);
         return $this->easyJob;
+    }
+
+    /** Menu access is independent of broad content-editing permissions. */
+    private function menus(array &$state, string $method, string $path, array $body): array
+    {
+        $id = (string)$this->identity['id'];
+        if (($this->identity['actorType'] ?? '') === 'api_key' || !preg_match('/^(wp|typo3):[1-9][0-9]*$/', $id)) throw new RuntimeException('Eine CMS-Benutzeranmeldung ist erforderlich.',403);
+        $admin = ($this->identity['role'] ?? '') === 'admin';
+        $access = $state['menuAccess'][$id] ?? [];
+        $live = array_values(array_filter($this->active($state['slides']),static fn(array $slide): bool => isset($slide['document']['menu'])));
+        $allowed = array_values(array_filter($live,static fn(array $slide): bool => $admin || (!empty($access['enabled']) && in_array($slide['id'],$access['slideIds'] ?? [],true))));
+        if ($path === '/api/menus/access') {
+            if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten-Rechte vergeben.',403);
+            if ($method === 'GET') return $this->ok(['data'=>array_map(static fn(array $user): array => ['id'=>$user['id'],'displayName'=>$user['displayName'],'enabled'=>(bool)($state['menuAccess'][$user['id']]['enabled'] ?? false),'slideIds'=>$state['menuAccess'][$user['id']]['slideIds'] ?? []],$this->platformUsers)]);
+            if ($method === 'PUT') {
+                if (!is_string($body['userId'] ?? null) || !is_bool($body['enabled'] ?? null) || !is_array($body['slideIds'] ?? null) || !in_array($body['userId'],array_column($this->platformUsers,'id'),true)) throw new RuntimeException('Ungültige Benutzerzuweisung.',422);
+                foreach ($body['slideIds'] as $slideId) if (!is_string($slideId) || !in_array($slideId,array_column($live,'id'),true)) throw new RuntimeException('Ungültige Kartenzuweisung.',422);
+                $state['menuAccess'][$body['userId']] = ['enabled'=>$body['enabled'],'slideIds'=>array_values(array_unique($body['slideIds']))];
+                $this->audit($state,'menu.access.updated',$body['userId']);
+                return $this->ok(['ok'=>true],true);
+            }
+        }
+        if (!$admin && empty($access['enabled'])) throw new RuntimeException('Das Speisekarten-Recht fehlt. Bitte die Administration kontaktieren.',403);
+        if ($path === '/api/menus' && $method === 'GET') return $this->ok(['data'=>$allowed,'admin'=>$admin]);
+        if ($path === '/api/menus' && $method === 'POST') {
+            if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten anlegen.',403);
+            if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true) || !is_array($body['document'] ?? null) || strlen(json_encode($body['document'])) > 80000) throw new RuntimeException('Name, Format oder Vorlage ist ungültig.',422);
+            $slide = $this->saveSlide($state,['name'=>trim($body['name']),'orientation'=>$body['orientation'],'type'=>'custom','status'=>'draft','tags'=>['Speisekarte'],'document'=>MenuContent::document($body['document'],MenuContent::validate($body['menu'] ?? null))]);
+            return $this->created(['slide'=>$slide]);
+        }
+        if (preg_match('#^/api/menus/([^/]+)$#',$path,$match) && $method === 'PUT') {
+            $slide = $this->required($allowed,rawurldecode($match[1]),'Zugewiesene Speisekarte');
+            if (array_diff(array_keys($body),['menu','version'])) throw new RuntimeException('Nur Inhalte dürfen geändert werden.',422);
+            if (($body['version'] ?? null) !== $slide['currentVersion']) throw new RuntimeException('Die Karte wurde zwischenzeitlich geändert. Bitte neu laden und Änderungen vergleichen.',409);
+            $slide['document'] = MenuContent::document($slide['document'],MenuContent::validate($body['menu'] ?? null));
+            $updated = $this->saveSlide($state,$slide,$slide['id']);
+            $this->audit($state,'menu.content.updated',$slide['id']);
+            return $this->ok(['slide'=>$updated],true);
+        }
+        throw new RuntimeException('Speisekarten-Endpunkt wurde nicht gefunden.',404);
     }
 
     private function assertRolePermission(string $method, string $path): void
@@ -1776,6 +1817,7 @@ final class Api
     private function saveSlide(array &$state, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state['slides'], $id, 'Slide') : null;
+        if (isset($current['document']['menu']) && !isset($body['document']['menu'])) $body['document']['menu'] = $current['document']['menu'];
         $version = (int)($current['currentVersion'] ?? 0) + 1;
         $orientation = (string)($body['orientation'] ?? 'landscape');
         $body += ['width' => $orientation === 'portrait' ? 1080 : 1920, 'height' => $orientation === 'portrait' ? 1920 : 1080, 'status' => 'draft'];
@@ -1944,7 +1986,7 @@ final class Api
         $now = $this->now();
         return [
             'schemaVersion' => 1, 'createdAt' => $now, 'updatedAt' => $now,
-            'events' => [], 'eventSchedules' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
+            'menuAccess' => [], 'events' => [], 'eventSchedules' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
             'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],

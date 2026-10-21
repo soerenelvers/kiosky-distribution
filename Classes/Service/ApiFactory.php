@@ -36,6 +36,7 @@ final readonly class ApiFactory
                 ? 'admin'
                 : (in_array($configured, ['editor', 'event_editor', 'display_operator'], true) ? 'editor' : 'viewer');
             return [
+                'id' => 'typo3:' . $user['uid'],
                 'email' => (string)($user['email'] ?: $user['username'] . '@users.kiosky.invalid'),
                 'username' => (string)$user['username'],
                 'displayName' => (string)($user['realName'] ?: $user['username']),
@@ -48,7 +49,7 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.4.0',
+            '3.5.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),

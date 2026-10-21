@@ -1,6 +1,6 @@
-## [3.4.0] – 2026-10-18
+## [3.5.0] – 2026-10-21
 
-- Standalone erhält eine optionale, exklusive Zugangswerk-Anmeldung über den bestätigten OpenID-Connect-Issuer unter accounts.delevel.de. Einstellungen umfassen Client-Konfiguration, Redirect-URL, echten Verbindungstest und ausdrückliche Kontozuordnungen; Rollen und Standortrechte bleiben erhalten.
-- Aktivierung erfordert einen erfolgreich geprüften Administrator, beendet alle bisherigen Sitzungen und sperrt lokale Passwort-/Einladungswege. Kein automatischer Rückfall bei Provider-Ausfall. Maschinenzugänge bleiben auf die externe API begrenzt; Player bleiben nutzbar.
-- Verschlüsselte Secrets, Authorization Code Flow mit PKCE S256, State-/Nonce- und signierte Tokenprüfung, Schutz des letzten geprüften SSO-Administrators sowie dokumentierte lokale Wiederherstellung. OIDC-Laufzeit und ihre Lizenztexte werden im Standalone-ZIP gebündelt.
-- WordPress und TYPO3 verwenden unverändert ihre CMS-Benutzerverwaltung; die neue Einstellung wird dort nicht angeboten.
+- Speisekarten-Slides für Standalone, WordPress und TYPO3: drei Vorlagen in Hoch- und Querformat, einfacher Inhaltseditor unter `/speisekarten`, bis zu acht Speisen je Slide mit Beschreibung und Preis.
+- Separates Bearbeitungsrecht und explizite Kartenzuweisungen über bestehende Benutzerkonten; serverseitige Zugriffskontrolle, sofortiger Rechteentzug, Schutz vor fremden Karten, CSRF und veralteten Bearbeitungsständen.
+- Küchen ändern ausschließlich Inhalte. Layout, Veröffentlichung, Kanäle, Standortrechte und Zeitplanung bleiben in der bestehenden Verwaltung. Änderungen sind versioniert und werden durch bestehende Player synchronisiert.
+- Standalone übernimmt die exklusive Zugangswerk-Anmeldung; CMS-Ausgaben nutzen ihre native Anmeldung und Sitzungs-/Anfrageprüfung. Additive Migration und dokumentierte Einrichtung, Grenzen und Wiederherstellung.

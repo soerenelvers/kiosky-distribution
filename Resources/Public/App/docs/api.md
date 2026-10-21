@@ -293,3 +293,31 @@ Authorization: Bearer <KIOSKY_ADMIN_API_KEY>
 ```
 
 Konfigurationsänderungen, Verbindungstests und Importvorschauen werden protokolliert. Zugangsdaten und vollständige CrewBrain-Payloads werden nicht in das Audit-Log geschrieben.
+
+## Speisekarten (ab 3.5.0)
+
+Nur interaktive Benutzeranmeldung; Standalone-Sitzung einschließlich exklusivem
+Zugangswerk beziehungsweise native CMS-Anmeldung mit vorhandener CSRF-Prüfung.
+CMS-Ausgaben verwenden ihren bestehenden API-Transport mit `path`-Parameter.
+
+- `GET /api/menus`: zugewiesene, nicht gelöschte Speisekarten-Slides (`data`)
+  und `admin`. Eigenes Speisekarten-Recht erforderlich; Administratoren dürfen
+  alle in ihrem Standortbereich verfügbaren Karten verwalten.
+- `PUT /api/menus/:slideId`: ausschließlich `{version, menu}`. `version` muss
+  `currentVersion` entsprechen, sonst HTTP 409. `menu` enthält `title`, `subtitle`,
+  `footer` und `items: [{name, description, price}]`. Maximal acht Speisen;
+  Zeichenlimits 60/90/120 beziehungsweise 50/90/16. Preis ist leer oder eine
+  positive Dezimalzahl mit optionalem Euro-Zeichen. Unbekannte Inhaltsfelder,
+  fremde und gelöschte Karten werden abgewiesen.
+- `POST /api/menus`: nur Administration. `{name, orientation, document, menu}`
+  legt einen neuen Entwurfs-Slide an. `document.elements` muss alle 27
+  `menuField`-Textfelder der Speisekartenvorlage enthalten.
+- `GET /api/menus/access`: nur Administration; vorhandene Benutzer mit `id`,
+  `displayName`, `enabled` und `slideIds`.
+- `PUT /api/menus/access`: nur Administration; `{userId, enabled, slideIds}`
+  ersetzt Recht und Kartenzuweisung unmittelbar. `enabled` ist ein Boolean,
+  `slideIds` eine Liste gültiger Speisekarten-Slide-IDs.
+
+Bestehende Rollen, Status und Veröffentlichungswege bleiben erhalten. Das
+Speisekarten-Recht ist eine zusätzliche, auf Inhaltsänderungen begrenzte
+Berechtigung. Einrichtung und Rollback: [Speisekarten](speisekarten.md).

@@ -30,6 +30,10 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         if ($sitePath !== '/' && str_starts_with($uriPath,$sitePath)) $uriPath = substr($uriPath,strlen($sitePath));
         $path = '/' . trim($uriPath, '/') . '/';
         $base = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($sitePath,'/');
+        if ($path === '/speisekarten/') {
+            $uriBuilder = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
+            return new \TYPO3\CMS\Core\Http\RedirectResponse((string)$uriBuilder->buildUriFromRoute('web_kiosky',['menus'=>'1']),303,['Cache-Control'=>'no-store']);
+        }
         if ($path === '/kiosky-player/') {
             return new HtmlResponse($this->renderer->render('typo3', $base . '/kiosky-api/', $base . '/kiosky-player/', $request), 200, ['Cache-Control' => 'no-store']);
         }
