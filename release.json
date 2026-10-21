@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "ee78189fdd66df8ba43c3fdbbcfd396e37dcb091",
+  "source_commit": "a06c6adb8df32d840abab79ee0d1ce27cf7654d3",
   "product": "kiosky",
-  "version": "3.6.0",
-  "released_at": "2026-10-21T12:41:00.964Z",
+  "version": "3.6.1",
+  "released_at": "2026-10-21T13:26:41.747Z",
   "channel": "stable",
-  "release_notes": "## [3.6.0] – 2026-10-21\n\n- Speisekarten werden ein eigenes Modul in Navigation und Einstellungen aller drei Plattformen. Ein gemeinsamer Schalter unter „Module“ und „Speisekarten“ blendet den Arbeitsbereich aus und sperrt den Küchen-Editor samt API, ohne Karten, Rechte oder bestehende Ausspielungen zu löschen.\n- Zentral konfigurierbare Standardvorlage, Ausrichtung, Titel, Untertitel und Fußzeile für neue Karten. Kartenanlage und Rechte-/Kartenzuweisung sind direkt unter Einstellungen → Speisekarten verfügbar; der Arbeitsbereich enthält den einfachen Inhaltseditor.\n- Gemeinsame, voneinander abgegrenzte Editorkomponenten in Verwaltung und Küchenansicht; WordPress erhält einen nativen Speisekarten-Menüpunkt. Bestehende Zugangswerk-/CMS-Anmeldung, Standortrechte, Versionierung, Player und die Adresse `/speisekarten` bleiben erhalten.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.6.0",
+  "release_notes": "## [3.6.1] – 2026-10-21\n\n- Die Kanalvorschau zeigt in Standalone, WordPress und TYPO3 den aktuellen Bearbeitungsstand statt eines fest eingebauten Demo-Bilds. Der gemeinsame Player-Renderer stellt reale Slides, Medien, Veranstaltungsfelder, Speisekarten und responsive Layouts dar.\n- Zeitgesteuerte Rotation mit individuellen Laufzeiten, Kanal-/Slide-Übergängen, Wiederholung und aktuellen Gültigkeitszeiträumen. Pause, Zurück, Weiter und Neustart; beim Schließen werden Timer und eingebettete Medien beendet.\n- Authentifizierte Aktualisierung der Vorschauinhalte ohne zusätzliches Display, öffentliche Vorschauadresse oder Änderung der Live-Ausspielung. Keine Datenbankmigration.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.6.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.6.0",
+    "core_version": "3.6.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.6.0",
-    "typo3_extension_version": "3.6.0"
+    "wordpress_plugin_version": "3.6.1",
+    "typo3_extension_version": "3.6.1"
   },
   "components": {
     "core": {
-      "version": "3.6.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.0.zip?ref=v3.6.0",
-      "sha256": "3a7b3abc97b96450d9bbed0299c8a6f4d16d142f5adb7fc4b98ed66732b6544c"
+      "version": "3.6.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.1.zip?ref=v3.6.1",
+      "sha256": "cdcfa40241f6cc1fefd8a59609c860f894922a0b28b9f433b6fa4318de7dd6dd"
     },
     "standalone": {
-      "version": "3.6.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.0.zip?ref=v3.6.0",
-      "sha256": "3a7b3abc97b96450d9bbed0299c8a6f4d16d142f5adb7fc4b98ed66732b6544c"
+      "version": "3.6.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.1.zip?ref=v3.6.1",
+      "sha256": "cdcfa40241f6cc1fefd8a59609c860f894922a0b28b9f433b6fa4318de7dd6dd"
     },
     "wordpress": {
-      "version": "3.6.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.6.0.zip?ref=v3.6.0",
-      "sha256": "2ddb8373c34f46da3b067c231415015e48264645b532675843f3b4741d6cc15a",
+      "version": "3.6.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.6.1.zip?ref=v3.6.1",
+      "sha256": "0567785b429e45b8ded88b073fb457f632ee3ef36cd69b140a0f9b8124d7f149",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.6.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.6.0.zip?ref=v3.6.0",
-      "sha256": "76fa389ea98b04b11a6ccf1807b161dd8e54c4246a0084e8bbcb922b4f381067",
+      "version": "3.6.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.6.1.zip?ref=v3.6.1",
+      "sha256": "5a1b558fee676825f5cff208f1d674ad32355a035246966cb76c7cadcb59a271",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

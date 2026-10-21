@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.6.0-20261021124100%2Bee78189f">
+  <link rel="stylesheet" href="styles.css?v=3.6.1-20261021132641%2Ba06c6adb">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -305,7 +305,7 @@
                 <div class="playlist-head"><strong>Abspielreihenfolge</strong><span>↕ Ziehen zum Sortieren</span></div>
                 <div class="channel-playlist" id="channel-playlist" aria-label="Slides im Kanal"></div>
                 <button class="playlist-drop" id="playlist-drop" type="button">＋ Slide hier ablegen</button>
-                <div class="builder-footer"><span><strong>Vorschau:</strong> Querformat · 1920 × 1080</span><span class="autosave-status" id="channel-autosave-status" data-state="idle" aria-live="polite">Autosave aktiv</span><button class="button button-secondary" type="button" data-action="preview-channel">▶ Kanalvorschau</button><span class="history-actions" aria-label="Bearbeitungsverlauf"><button class="history-button" id="channel-undo-button" type="button" title="Schritt zurück" aria-label="Schritt zurück" disabled>↶</button><button class="history-button" id="channel-redo-button" type="button" title="Schritt vorwärts" aria-label="Schritt vorwärts" disabled>↷</button></span><button class="button button-primary" type="button" data-action="save-channel">Jetzt speichern</button></div>
+                <div class="builder-footer"><span id="channel-preview-format"><strong>Vorschau:</strong> Querformat · 1920 × 1080</span><span class="autosave-status" id="channel-autosave-status" data-state="idle" aria-live="polite">Autosave aktiv</span><button class="button button-secondary" type="button" data-action="preview-channel">▶ Kanalvorschau</button><span class="history-actions" aria-label="Bearbeitungsverlauf"><button class="history-button" id="channel-undo-button" type="button" title="Schritt zurück" aria-label="Schritt zurück" disabled>↶</button><button class="history-button" id="channel-redo-button" type="button" title="Schritt vorwärts" aria-label="Schritt vorwärts" disabled>↷</button></span><button class="button button-primary" type="button" data-action="save-channel">Jetzt speichern</button></div>
               </div>
             </div>
           </article>
@@ -1573,12 +1573,27 @@
     </form>
   </dialog>
 
-  <dialog id="preview-dialog" class="preview-dialog">
+  <dialog id="preview-dialog" class="preview-dialog" aria-labelledby="channel-preview-title">
     <form method="dialog" class="dialog-content preview-content">
       <button class="dialog-close" value="cancel" aria-label="Vorschau schließen">×</button>
       <p class="eyebrow">Kanalvorschau</p>
-      <div class="channel-preview-screen"><span>KIOSKY · HEUTE</span><div><small>GROSSER SAAL</small><strong>Sommerkonzert</strong><p>Einlass 18:30 · Beginn 19:30</p></div></div>
-      <div class="preview-controls"><button class="button button-secondary" value="cancel">Vorschau schließen</button><span id="preview-slide-count">4 Slides im Kanal</span></div>
+      <h2 id="channel-preview-title">Kanalvorschau</h2>
+      <div id="channel-preview-viewport" class="channel-preview-viewport">
+        <div id="channel-preview-stage" class="display-player channel-preview-stage">
+          <div class="player-brand">KIOSKY</div>
+          <div class="player-matrix-canvas"><section id="channel-preview-slide" class="player-layout-slide"></section></div>
+          <div class="player-status"><span>Kanalvorschau</span><span class="slide-clock"></span></div>
+        </div>
+      </div>
+      <div class="preview-controls" role="group" aria-label="Vorschau steuern">
+        <button class="button button-secondary" type="button" data-channel-preview-control="previous">Zurück</button>
+        <button class="button button-secondary" type="button" data-channel-preview-control="pause">Pause</button>
+        <button class="button button-secondary" type="button" data-channel-preview-control="next">Weiter</button>
+        <button class="button button-secondary" type="button" data-channel-preview-control="restart">Von vorn</button>
+        <button class="button button-secondary" value="cancel">Schließen</button>
+      </div>
+      <p id="preview-slide-count" class="preview-playback-status" role="status" aria-live="off"></p>
+      <p class="preview-note">Aktueller Bearbeitungsstand mit Slide-Laufzeiten, Übergängen und Wiederholung. Gültigkeitszeiträume werden berücksichtigt. Display-Zeitpläne, Standortfilter, Matrixausschnitte und Warnmeldungen gehören zur jeweiligen Display-Vorschau.</p>
     </form>
   </dialog>
 
@@ -1595,7 +1610,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.6.0-20261021124100%2Bee78189f"></script>
-  <script src="app.js?v=3.6.0-20261021124100%2Bee78189f"></script>
+  <script src="runtime-config.js?v=3.6.1-20261021132641%2Ba06c6adb"></script>
+  <script src="app.js?v=3.6.1-20261021132641%2Ba06c6adb"></script>
 </body>
 </html>
