@@ -31,6 +31,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         $path = '/' . trim($uriPath, '/') . '/';
         $base = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($sitePath,'/');
         if ($path === '/speisekarten/') {
+            if (is_string($request->getQueryParams()['freigabe'] ?? null) && $request->getQueryParams()['freigabe']!=='') return new HtmlResponse($this->renderer->renderMenus($base.'/kiosky-api/',$request),200,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer']);
             $uriBuilder = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
             return new \TYPO3\CMS\Core\Http\RedirectResponse((string)$uriBuilder->buildUriFromRoute('web_kiosky',['menus'=>'1']),303,['Cache-Control'=>'no-store']);
         }
@@ -46,6 +47,16 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         $directExternal = preg_match('#^/kiosky-api/v1(?:/|$)#', $path) === 1;
         if ($path !== '/kiosky-api/' && !$directExternal) return $handler->handle($request);
         $apiPath = $directExternal ? '/api/v1' . rtrim(substr($path,strlen('/kiosky-api/v1')),'/') : (string)($request->getQueryParams()['path'] ?? '');
+        if (preg_match('#^/api/menu-share/(session|menus(?:/[^/]+)?)$#',$apiPath)) {
+            $raw=(string)$request->getBody();
+            if (strlen($raw)>3000000) return new JsonResponse(['error'=>['message'=>'Anfrage zu groß.']],413);
+            $body=json_decode($raw,true);
+            if ($raw!=='' && !is_array($body)) return new JsonResponse(['error'=>['message'=>'Ungültiges JSON.']],400);
+            $header=$request->getHeaderLine('Authorization');$token=str_starts_with($header,'Bearer ')?substr($header,7):'';
+            $api=$this->apiFactory->create(['id'=>'menu-share','name'=>'Speisekarten-Freigabe','email'=>'','role'=>'viewer','ipAddress'=>(string)($request->getServerParams()['REMOTE_ADDR'] ?? '')],true);
+            [$status,$payload]=$api->handle($request->getMethod(),$apiPath,$body ?? [],$token);
+            return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer']);
+        }
         $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
         $isExternal = $apiPath === '/api/v1' || str_starts_with($apiPath, '/api/v1/');
         if (!$isPlayer && !$isExternal) {

@@ -1,5 +1,6 @@
-## [3.6.1] – 2026-10-21
+## [3.7.0] – 2026-10-21
 
-- Die Kanalvorschau zeigt in Standalone, WordPress und TYPO3 den aktuellen Bearbeitungsstand statt eines fest eingebauten Demo-Bilds. Der gemeinsame Player-Renderer stellt reale Slides, Medien, Veranstaltungsfelder, Speisekarten und responsive Layouts dar.
-- Zeitgesteuerte Rotation mit individuellen Laufzeiten, Kanal-/Slide-Übergängen, Wiederholung und aktuellen Gültigkeitszeiträumen. Pause, Zurück, Weiter und Neustart; beim Schließen werden Timer und eingebettete Medien beendet.
-- Authentifizierte Aktualisierung der Vorschauinhalte ohne zusätzliches Display, öffentliche Vorschauadresse oder Änderung der Live-Ausspielung. Keine Datenbankmigration.
+- Eigene Speisekarten-Vorlagen im vorhandenen Slide-Editor gestalten, als Standard wählen und für neue Karten nutzen; vollständige Inhaltsfeld-Zuordnungen werden beim Speichern geprüft.
+- Optionaler Passwort-Link zu ausdrücklich freigegebenen Karteninhalten in allen drei Plattformen. Kein Benutzer-/Verwaltungszugang; auch bei exklusivem Zugangswerk zulässig. Gesalzene Passwort-Hashes, zeitlich begrenzte Sitzungen, Fehlversuchssperre und sofortiger Widerruf bei Änderungen.
+- Mehrseitige PDFs lokal im Browser als Speisekarten-Slides importieren und zugewiesene PDF-Seiten im Inhaltseditor ersetzen. Entwürfe, Layout, Kanalzuweisungen und Versionsschutz bleiben erhalten; keine externe Konvertierung oder OCR.
+- Gemeinsame Umsetzung für Standalone, WordPress und TYPO3; additive Einstellungen ohne neue Datenbankmigration.

@@ -19,6 +19,8 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
     private const CONTENT_TYPES = [
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
+        'mjs' => 'text/javascript; charset=utf-8',
+        'wasm' => 'application/wasm',
         'md' => 'text/plain; charset=utf-8',
         'yaml' => 'application/yaml; charset=utf-8',
         'json' => 'application/json; charset=utf-8',

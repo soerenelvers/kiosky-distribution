@@ -99,6 +99,12 @@ final class Api
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
     private function route(array &$state, string $method, string $path, array $body, string $playerKey): array
     {
+        if ($path === '/api/menu-share/session' && $method === 'POST') return MenuShare::login($state,$body,(string)($this->identity['ipAddress'] ?? 'unknown'));
+        if (($path === '/api/menu-share/menus' && $method === 'GET') || (preg_match('#^/api/menu-share/menus/[^/]+$#',$path) && $method === 'PUT')) {
+            $ids=MenuShare::authorize($state,$playerKey);
+            return $this->menus($state,$method,str_replace('/api/menu-share/menus','/api/menus',$path),$body,$ids);
+        }
+        if (str_starts_with($path,'/api/menu-share/')) throw new RuntimeException('Speisekarten-Endpunkt wurde nicht gefunden.',404);
         if ($path === '/api/menus' || str_starts_with($path, '/api/menus/')) return $this->menus($state,$method,$path,$body);
         if ($path === '/api/v1' || str_starts_with($path, '/api/v1/')) {
             $this->assertRolePermission($method, $path);
@@ -330,6 +336,11 @@ final class Api
             }
         }
 
+        if (str_starts_with($path,'/api/templates/') && $method!=='GET') {
+            $template=$this->required($state['templates'],rawurldecode(substr($path,15)),'Vorlage');
+            if (($template['document']['menuTemplate'] ?? false)===true || !empty($body['document']['menuTemplate'])) throw new RuntimeException('Speisekarten-Vorlagen bitte im Speisekarten-Modul speichern.',403);
+        }
+        if ($path === '/api/templates' && $method==='POST' && !empty($body['document']['menuTemplate'])) throw new RuntimeException('Speisekarten-Vorlagen bitte im Speisekarten-Modul anlegen.',422);
         if ($path === '/api/templates') return $this->collectionRoute($state, $method, 'templates', 'template', $body);
         if (preg_match('#^/api/templates/([^/]+)$#', $path, $match)) return $this->itemRoute($state, $method, 'templates', 'template', rawurldecode($match[1]), $body);
 
@@ -725,12 +736,22 @@ final class Api
         }
         if ($path === '/api/advertising/synchronize' && $method === 'POST') return $this->ok($this->synchronizeAdvertising($state),true);
 
+        if ($path === '/api/settings/menu-share' && $method === 'GET') return $this->ok(MenuShare::publicConfig($state));
+        if ($path === '/api/settings/menu-share' && $method === 'PUT') {
+            $result=MenuShare::save($state,$body);$this->audit($state,'menu.share.updated','menu_share');return $this->ok($result,true);
+        }
         if ($path === '/api/settings/menus' && $method === 'GET') return $this->ok(['settings'=>MenuContent::settings($state['menuSettings'] ?? []),'enabled'=>($state['featureSettings']['menus'] ?? true) !== false]);
-        if ($path === '/api/settings/menus' && $method === 'PUT') { $state['menuSettings'] = MenuContent::settings($body); $this->audit($state,'menu.settings.updated','menu_settings'); return $this->ok(['settings'=>$state['menuSettings'],'enabled'=>($state['featureSettings']['menus'] ?? true) !== false],true); }
+        if ($path === '/api/settings/menus' && $method === 'PUT') { $settings=MenuContent::settings($body);
+            if (str_starts_with($settings['defaultTemplate'],'template:')) {
+                $template=$this->required($this->active($state['templates']),substr($settings['defaultTemplate'],9),'Speisekarten-Vorlage');
+                if (($template['document']['menuTemplate'] ?? false)!==true) throw new RuntimeException('Die Speisekarten-Vorlage ist nicht verfügbar.',422);
+            }
+            $state['menuSettings'] = $settings; $this->audit($state,'menu.settings.updated','menu_settings'); return $this->ok(['settings'=>$state['menuSettings'],'enabled'=>($state['featureSettings']['menus'] ?? true) !== false],true); }
         if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
             $allowed = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
+            if (($body['menus'] ?? null)===false && isset($state['menuShare'])) $state['menuShare']['secret']=bin2hex(random_bytes(32));
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
             return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $state['navigationOrder']], true);
         }
@@ -765,15 +786,34 @@ final class Api
     }
 
     /** Menu access is independent of broad content-editing permissions. */
-    private function menus(array &$state, string $method, string $path, array $body): array
+    private function menus(array &$state, string $method, string $path, array $body, ?array $sharedSlideIds = null): array
     {
         if (($state['featureSettings']['menus'] ?? true) === false) throw new RuntimeException('Das Speisekarten-Modul ist ausgeschaltet. Die Administration kann es in den Einstellungen wieder aktivieren.',503);
         $id = (string)$this->identity['id'];
-        if (($this->identity['actorType'] ?? '') === 'api_key' || !preg_match('/^(wp|typo3):[1-9][0-9]*$/', $id)) throw new RuntimeException('Eine CMS-Benutzeranmeldung ist erforderlich.',403);
-        $admin = ($this->identity['role'] ?? '') === 'admin';
-        $access = $state['menuAccess'][$id] ?? [];
-        $live = array_values(array_filter($this->active($state['slides']),static fn(array $slide): bool => isset($slide['document']['menu'])));
+        if ($sharedSlideIds === null && (($this->identity['actorType'] ?? '') === 'api_key' || !preg_match('/^(wp|typo3):[1-9][0-9]*$/', $id))) throw new RuntimeException('Eine CMS-Benutzeranmeldung ist erforderlich.',403);
+        $admin = $sharedSlideIds === null && ($this->identity['role'] ?? '') === 'admin';
+        $access = $sharedSlideIds !== null ? ['enabled'=>true,'slideIds'=>$sharedSlideIds] : ($state['menuAccess'][$id] ?? []);
+        $live = array_values(array_filter($this->active($state['slides']),static fn(array $slide): bool => (isset($slide['document']['menu']) || isset($slide['document']['menuPdf']))));
         $allowed = array_values(array_filter($live,static fn(array $slide): bool => $admin || (!empty($access['enabled']) && in_array($slide['id'],$access['slideIds'] ?? [],true))));
+        if (preg_match('#^/api/menus/templates(?:/([^/]+))?$#',$path,$templateMatch)) {
+            if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Vorlagen bearbeiten.',403);
+            $templateId = isset($templateMatch[1]) ? rawurldecode($templateMatch[1]) : null;
+            $templates = array_values(array_filter($this->active($state['templates']), static fn(array $item): bool => ($item['document']['menuTemplate'] ?? false) === true));
+            if ($templateId) $this->required($templates,$templateId,'Speisekarten-Vorlage');
+            if ($method === 'GET' && !$templateId) return $this->ok(['data'=>$templates]);
+            if ($method === 'DELETE' && $templateId) {
+                $index = $this->index($state['templates'],$templateId); $state['templates'][$index]['status'] = 'archived';
+                return $this->ok(['ok'=>true],true);
+            }
+            if (($method === 'POST' && !$templateId) || ($method === 'PUT' && $templateId)) {
+                if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true)) throw new RuntimeException('Name oder Format ist ungültig.',422);
+                MenuContent::validateTemplate($body['document'] ?? null);
+                $template = $this->saveRecord($state,'templates',['name'=>trim($body['name']),'orientation'=>$body['orientation'],'status'=>'active','description'=>'Speisekarten-Vorlage','document'=>array_replace($body['document'],['menuTemplate'=>true])],$templateId);
+                $this->audit($state,'menu.template.saved',$template['id']);
+                return [$templateId ? 200 : 201,['template'=>$template],true];
+            }
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
         if ($path === '/api/menus/access') {
             if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten-Rechte vergeben.',403);
             if ($method === 'GET') return $this->ok(['data'=>array_map(static fn(array $user): array => ['id'=>$user['id'],'displayName'=>$user['displayName'],'enabled'=>(bool)($state['menuAccess'][$user['id']]['enabled'] ?? false),'slideIds'=>$state['menuAccess'][$user['id']]['slideIds'] ?? []],$this->platformUsers)]);
@@ -786,7 +826,13 @@ final class Api
             }
         }
         if (!$admin && empty($access['enabled'])) throw new RuntimeException('Das Speisekarten-Recht fehlt. Bitte die Administration kontaktieren.',403);
-        if ($path === '/api/menus' && $method === 'GET') return $this->ok(['data'=>$allowed,'admin'=>$admin,'settings'=>MenuContent::settings($state['menuSettings'] ?? [])]);
+        if ($path === '/api/menus' && $method === 'GET') return $this->ok(['data'=>$allowed,'admin'=>$admin,'settings'=>MenuContent::settings($state['menuSettings'] ?? []),'templates'=>$admin ? array_values(array_filter($this->active($state['templates']),static fn(array $item): bool => ($item['document']['menuTemplate'] ?? false) === true)) : []]);
+        if ($path === '/api/menus/pdf' && $method === 'POST') {
+            if (!$admin) throw new RuntimeException('Nur Administratoren dürfen PDF-Speisekarten importieren.',403);
+            if (array_diff(array_keys($body),['name','orientation','pdfPage']) || !is_string($body['name'] ?? null) || trim($body['name'])==='' || strlen($body['name'])>100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true)) throw new RuntimeException('Ungültiger PDF-Import.',422);
+            $slide=$this->saveSlide($state,['name'=>trim($body['name']),'orientation'=>$body['orientation'],'type'=>'custom','status'=>'draft','tags'=>['Speisekarte','PDF'],'document'=>MenuContent::pdfDocument($body['pdfPage'] ?? null,$body['orientation'])]);
+            return $this->created(['slide'=>$slide]);
+        }
         if ($path === '/api/menus' && $method === 'POST') {
             if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten anlegen.',403);
             if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true) || !is_array($body['document'] ?? null) || strlen(json_encode($body['document'])) > 80000) throw new RuntimeException('Name, Format oder Vorlage ist ungültig.',422);
@@ -795,9 +841,9 @@ final class Api
         }
         if (preg_match('#^/api/menus/([^/]+)$#',$path,$match) && $method === 'PUT') {
             $slide = $this->required($allowed,rawurldecode($match[1]),'Zugewiesene Speisekarte');
-            if (array_diff(array_keys($body),['menu','version'])) throw new RuntimeException('Nur Inhalte dürfen geändert werden.',422);
+            if (array_diff(array_keys($body),isset($slide['document']['menuPdf'])?['pdfPage','version']:['menu','version'])) throw new RuntimeException('Nur Inhalte dürfen geändert werden.',422);
             if (($body['version'] ?? null) !== $slide['currentVersion']) throw new RuntimeException('Die Karte wurde zwischenzeitlich geändert. Bitte neu laden und Änderungen vergleichen.',409);
-            $slide['document'] = MenuContent::document($slide['document'],MenuContent::validate($body['menu'] ?? null));
+            $slide['document'] = isset($slide['document']['menuPdf']) ? MenuContent::pdfDocument($body['pdfPage'] ?? null,$slide['orientation'],$slide['document']) : MenuContent::document($slide['document'],MenuContent::validate($body['menu'] ?? null));
             $updated = $this->saveSlide($state,$slide,$slide['id']);
             $this->audit($state,'menu.content.updated',$slide['id']);
             return $this->ok(['slide'=>$updated],true);
@@ -1821,6 +1867,7 @@ final class Api
     private function saveSlide(array &$state, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state['slides'], $id, 'Slide') : null;
+        if (isset($current['document']['menuPdf']) && !isset($body['document']['menuPdf'])) $body['document']['menuPdf']=$current['document']['menuPdf'];
         if (isset($current['document']['menu']) && !isset($body['document']['menu'])) $body['document']['menu'] = $current['document']['menu'];
         $version = (int)($current['currentVersion'] ?? 0) + 1;
         $orientation = (string)($body['orientation'] ?? 'landscape');

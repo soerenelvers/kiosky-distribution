@@ -11,6 +11,7 @@
     externalApiBaseUrl: meta('kiosky-external-api-base-url'),
     assetBaseUrl: meta('kiosky-asset-base-url'),
     playerBaseUrl: meta('kiosky-player-base-url'),
+    menuBaseUrl: meta('kiosky-menu-base-url'),
     playerCenterUrl: meta('kiosky-player-center-url'),
     initialView: meta('kiosky-initial-view'),
     requestHeaders,

@@ -1647,17 +1647,21 @@ async function mountMenuModule(id,mode){
     root.classList.add('menu-app','is-embedded');
     root.replaceChildren(...[...template.children].filter(node=>node.tagName!=='SCRIPT').map(node=>node.cloneNode(true)));
     root.querySelectorAll('[id]').forEach(node=>{node.dataset.menuId=node.id;node.removeAttribute('id');});
-    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode});
+    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode,onChanged:async()=>{await loadContent();await loadMenuShareSettings();},editTemplate:async template=>{await loadContent();editTemplate(template.id);}});
   })();
   try{return await root.menuLoading;}catch(error){root.textContent=error.message;showToast(error.message);}finally{root.menuLoading=null;}
 }
 async function loadMenuModuleSettings(){
   const form=document.querySelector('#menu-module-settings-form');form.inert=true;
   try{
-    const result=await apiRequest('/api/settings/menus'),settings=result.settings;
+    const [result,templateResult]=await Promise.all([apiRequest('/api/settings/menus'),apiRequest('/api/templates')]),settings=result.settings;
+    const own=(templateResult.data||[]).filter(item=>item.document?.menuTemplate===true);
+    document.querySelector('#menu-default-template').innerHTML='<option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option>'+own.map(item=>`<option value="template:${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+    if(settings.defaultTemplate?.startsWith('template:')&&!own.some(item=>`template:${item.id}`===settings.defaultTemplate))document.querySelector('#menu-default-template').add(new Option('Gespeicherte Vorlage nicht mehr verfügbar',settings.defaultTemplate));
     document.querySelector('#menu-module-enabled').checked=result.enabled;
     for(const [key,id] of Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}))document.querySelector(`#menu-default-${id}`).value=settings[key];
     await mountMenuModule('menu-module-management-root','manage');
+    await loadMenuShareSettings();
   }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{form.inert=false;}
 }
 document.querySelector('#menu-module-settings-form').addEventListener('submit',async event=>{
@@ -1670,6 +1674,31 @@ document.querySelector('#menu-module-settings-form').addEventListener('submit',a
     await mountMenuModule('menu-module-management-root','manage');
     showAuthMessage('menu-module-settings-message','Speisekarten-Einstellungen wurden gespeichert.',true);
   }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{button.disabled=false;form.inert=false;}
+});
+
+function menuShareUrl(shareId){
+  if(!shareId)return '';
+  const fallback=kioskyRuntime.playerBaseUrl?new URL('../speisekarten',new URL(kioskyRuntime.playerBaseUrl,location.href)):new URL('speisekarten',location.href);
+  const url=new URL(kioskyRuntime.menuBaseUrl||fallback,location.href);url.search='';url.hash='';url.searchParams.set('freigabe',shareId);return url.href;
+}
+async function loadMenuShareSettings(){
+  const [share,cards]=await Promise.all([apiRequest('/api/settings/menu-share'),apiRequest('/api/slides')]);
+  document.querySelector('#menu-share-enabled').checked=share.enabled;
+  document.querySelector('#menu-share-password').value='';
+  document.querySelector('#menu-share-password-status').textContent=share.hasPassword?'Ein Freigabepasswort ist gesetzt.':'Noch kein Freigabepasswort gesetzt.';
+  document.querySelector('#menu-share-cards').innerHTML=(cards.data||[]).filter(slide=>slide.document?.menu||slide.document?.menuPdf).map(slide=>`<label class="toggle-label"><input type="checkbox" value="${escapeHtml(slide.id)}" ${share.slideIds.includes(slide.id)?'checked':''}>${escapeHtml(slide.name)}</label>`).join('')||'<p>Zuerst eine Speisekarte anlegen.</p>';
+  const url=menuShareUrl(share.shareId);document.querySelector('#menu-share-url').value=url;
+  document.querySelector('#menu-share-copy').disabled=!url;
+  const open=document.querySelector('#menu-share-open');open.hidden=!url;open.href=url||'#';
+}
+let menuShareResetPending=false;
+document.querySelector('#menu-share-reset').addEventListener('click',()=>{menuShareResetPending=true;showAuthMessage('menu-share-message','Beim nächsten Speichern wird ein neuer Link erzeugt; der bisherige Link wird ungültig.');});
+document.querySelector('#menu-share-copy').addEventListener('click',async()=>{await copyText(document.querySelector('#menu-share-url').value);showToast('Speisekarten-Link kopiert.');});
+document.querySelector('#menu-share-settings-form').addEventListener('submit',async event=>{
+  event.preventDefault();const form=event.currentTarget;form.inert=true;
+  try{await apiRequest('/api/settings/menu-share',{method:'PUT',body:JSON.stringify({enabled:document.querySelector('#menu-share-enabled').checked,password:document.querySelector('#menu-share-password').value,slideIds:[...document.querySelectorAll('#menu-share-cards input:checked')].map(input=>input.value),resetLink:menuShareResetPending})});
+    menuShareResetPending=false;await loadMenuShareSettings();showAuthMessage('menu-share-message','Freigabe gespeichert. Bestehende Freigabesitzungen wurden beendet.',true);
+  }catch(error){showAuthMessage('menu-share-message',error.message);}finally{document.querySelector('#menu-share-password').value='';form.inert=false;}
 });
 
 function renderAdvertisingSettings(status){
@@ -1815,7 +1844,9 @@ document.querySelector('#slide-editor-export').addEventListener('click', async e
     if (state.editingTemplateId) {
       const payload = slideEditorPayload();
       if (!payload) throw new Error('Bitte einen Namen für die Vorlage eingeben.');
-      await apiRequest(`/api/templates/${encodeURIComponent(state.editingTemplateId)}`, { method: 'PUT', body: JSON.stringify({ name: payload.name, orientation: payload.orientation, status: 'active', document: payload.document, description: state.templates.find(template => template.id === state.editingTemplateId)?.description || '' }) });
+      const current=state.templates.find(template=>template.id===state.editingTemplateId);
+      if(current?.document?.menuTemplate)payload.document.menuTemplate=true;
+      await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${encodeURIComponent(state.editingTemplateId)}`:`/api/templates/${encodeURIComponent(state.editingTemplateId)}`, { method: 'PUT', body: JSON.stringify({ name: payload.name, orientation: payload.orientation, status: 'active', document: payload.document, description: current?.description || '' }) });
       await exportContentPackage({ templates: [state.editingTemplateId] }, button);
     } else {
       await flushSlideAutosave({ force: true, silent: true });
@@ -4187,7 +4218,7 @@ function renderTemplates() {
   list.querySelectorAll('[data-export-template-id]').forEach(button => button.addEventListener('click', () => exportContentPackage({ templates: [button.dataset.exportTemplateId] }, button)));
   list.querySelectorAll('[data-use-template-id]').forEach(button=>button.addEventListener('click',()=>{applyTemplate(button.dataset.useTemplateId);document.querySelector('#template-dialog').close();}));
   list.querySelectorAll('[data-edit-template-id]').forEach(button=>button.addEventListener('click',()=>{editTemplate(button.dataset.editTemplateId);document.querySelector('#template-dialog').close();}));
-  list.querySelectorAll('[data-delete-template-id]').forEach(button=>button.addEventListener('click',async()=>{const template=state.templates.find(item=>item.id===button.dataset.deleteTemplateId);if(!template||!window.confirm(`Vorlage „${template.name}“ archivieren?`))return;try{await apiRequest(`/api/templates/${template.id}`,{method:'DELETE'});await loadContent();showToast('Vorlage wurde archiviert.');}catch(error){showToast(error.message);}}));
+  list.querySelectorAll('[data-delete-template-id]').forEach(button=>button.addEventListener('click',async()=>{const template=state.templates.find(item=>item.id===button.dataset.deleteTemplateId);if(!template||!window.confirm(`Vorlage „${template.name}“ archivieren?`))return;try{await apiRequest(template.document?.menuTemplate?`/api/menus/templates/${template.id}`:`/api/templates/${template.id}`,{method:'DELETE'});await loadContent();showToast('Vorlage wurde archiviert.');}catch(error){showToast(error.message);}}));
 }
 function loadTemplateElements(template){state.editorElements=structuredClone(template.document.elements||[]).map(element=>({...element,...(element.type==='wayfinding'?{background:'transparent',logo:{src:'',position:'top-left'},clock:{enabled:false,position:'bottom-right'}}:{}),id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`}));state.editorSlideSettings={...defaultSlideSettings(),...(structuredClone(template.document.settings||{})),background:{...defaultSlideSettings().background,...(structuredClone(template.document.settings?.background||{}))},logo:{...defaultSlideSettings().logo,...(structuredClone(template.document.settings?.logo||{}))},clock:{...defaultSlideSettings().clock,...(structuredClone(template.document.settings?.clock||{}))}};state.selectedEditorElementId=state.editorElements[0]?.id||null;document.querySelector('#editor-ratio').value=template.orientation;applyEditorOrientation(template.orientation,template.document.designOrientation);renderEditorCanvas();}
 function applyTemplate(id){const template=state.templates.find(item=>item.id===id);if(!template){openSlideEditor();return;}openSlideEditor();loadTemplateElements(template);scheduleSlideAutosave({immediate:true,successMessage:`Vorlage „${template.name}“ wurde geladen und als Slide gespeichert.`});}
@@ -4197,7 +4228,7 @@ document.querySelector('[data-action="blank-slide"]').addEventListener('click',(
 document.querySelector('[data-action="use-template"]').addEventListener('click',openTemplateChooser);
 document.querySelector('#template-chooser-form').addEventListener('submit',event=>{event.preventDefault();const selected=document.querySelector('input[name="template-choice"]:checked');if(!selected){showAuthMessage('template-chooser-message','Bitte wähle eine Vorlage aus.');return;}document.querySelector('#template-chooser-dialog').close();selected.value==='__blank'?openSlideEditor():applyTemplate(selected.value);});
 document.querySelector('[data-action="manage-templates"]').addEventListener('click',()=>{renderTemplates();document.querySelector('#template-dialog').showModal();});
-document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{designOrientation:state.editorAutoDesignOrientation,settings:structuredClone(state.editorSlideSettings),elements:structuredClone(state.editorElements)}};try{await apiRequest(current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
+document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{...(current?.document?.menuTemplate?{menuTemplate:true}:{}),designOrientation:state.editorAutoDesignOrientation,settings:structuredClone(state.editorSlideSettings),elements:structuredClone(state.editorElements)}};try{await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${current.id}`:current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();if(current?.document?.menuTemplate)await loadMenuModuleSettings();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
 
 ['channel-transition', 'channel-orientation', 'channel-repeat'].forEach(id => document.querySelector(`#${id}`).addEventListener('change', () => {
   updateChannelPreviewFormat();

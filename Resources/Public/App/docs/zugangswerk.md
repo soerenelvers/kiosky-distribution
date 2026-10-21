@@ -115,3 +115,12 @@ mit dem produktiven Zugangswerk-Client setzt dessen Client-ID, Client-Secret und
 registrierte Redirect-URI voraus und wird durch den Verbindungstest in der
 jeweiligen Installation geprüft. Produktive Zugangsdaten gehören in die
 Einstellungen, nicht in Git oder Chat.
+
+## Gesonderte Speisekarten-Freigabe ab 3.7.0
+
+Die ausdrücklich in **Einstellungen → Speisekarten** aktivierte Passwortfreigabe
+ist auf Betreiberwunsch auch bei exklusivem Zugangswerk verfügbar. Dies ist kein
+Benutzerkonto und kein Verwaltungszugang: Die getrennte API erlaubt nur Inhalte
+der ausgewählten Karten, einschließlich PDF-Seitenaustausch. Sie akzeptiert keine
+Vorlagen-, Veröffentlichungs- oder Rechteänderungen. Normale lokale Anmeldungen
+bleiben gesperrt. Einrichtung und Widerruf: [Speisekarten](speisekarten.md).

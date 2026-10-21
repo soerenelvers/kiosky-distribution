@@ -11,13 +11,36 @@ final class MenuContent
     {
         if (array_diff(array_keys($input),array_keys(self::DEFAULT_SETTINGS))) throw new RuntimeException('Unbekannte Speisekarten-Einstellung.',422);
         $settings = array_replace(self::DEFAULT_SETTINGS,$input);
-        if (!in_array($settings['defaultTemplate'],['blue','light','dark'],true) || !in_array($settings['defaultOrientation'],['portrait','landscape'],true)) throw new RuntimeException('Vorlage oder Format ist ungültig.',422);
+        if ((!is_string($settings['defaultTemplate']) || (!in_array($settings['defaultTemplate'],['blue','light','dark'],true) && !preg_match('/^template:[a-zA-Z0-9-]{16,64}$/',$settings['defaultTemplate']))) || !in_array($settings['defaultOrientation'],['portrait','landscape'],true)) throw new RuntimeException('Vorlage oder Format ist ungültig.',422);
         foreach (['defaultTitle'=>60,'defaultSubtitle'=>90,'defaultFooter'=>120] as $field=>$max) {
             $value = $settings[$field];
             if (!is_string($value) || preg_match('/[\x00-\x1f\x7f]/u',$value) || preg_match_all('/./us',$value) > $max || ($field === 'defaultTitle' && trim($value) === '')) throw new RuntimeException('Die Standardtexte sind ungültig oder zu lang.',422);
             $settings[$field] = trim($value);
         }
         return $settings;
+    }
+
+    public static function pdfDocument(mixed $page,string $orientation,?array $existing=null): array
+    {
+        if (!is_array($page) || array_diff(array_keys($page),['src','fileName','pageNumber','pageCount']) || !is_string($page['fileName'] ?? null) || strlen($page['fileName'])>640 || preg_match('/[\x00-\x1f\x7f]/',$page['fileName']) || !is_int($page['pageNumber'] ?? null) || !is_int($page['pageCount'] ?? null) || $page['pageNumber']<1 || $page['pageCount']>20 || $page['pageNumber']>$page['pageCount']) throw new RuntimeException('Ungültige PDF-Seitenangaben.',422);
+        $src=$page['src'] ?? null;
+        if (!is_string($src) || strlen($src)>2800000 || !preg_match('#^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$#D',$src)) throw new RuntimeException('Ungültiges PDF-Seitenbild.',422);
+        $image=base64_decode(substr($src,23),true);$size=$image!==false?@getimagesizefromstring($image):false;
+        if (!$size || $size[2]!==IMAGETYPE_JPEG || $size[0]!==($orientation==='portrait'?1080:1920) || $size[1]!==($orientation==='portrait'?1920:1080)) throw new RuntimeException('PDF-Seitenbild hat ein ungültiges Format.',422);
+        $metadata=array_intersect_key($page,array_flip(['fileName','pageNumber','pageCount']));
+        if ($existing!==null) {
+            $found=false;
+            foreach ($existing['elements'] ?? [] as $index=>$element) if (($element['menuPdfImage'] ?? false)===true) {$existing['elements'][$index]['src']=$src;$found=true;}
+            if (!$found) throw new RuntimeException('PDF-Bildfeld fehlt in der Karte.',422);
+            $existing['menuPdf']=$metadata;return $existing;
+        }
+        return ['menuPdf'=>$metadata,'designOrientation'=>$orientation,'settings'=>['background'=>['mode'=>'color','color1'=>'#ffffff'],'clock'=>['enabled'=>false],'logo'=>['enabled'=>false]],'elements'=>[['id'=>'menu-pdf-image','type'=>'image','menuPdfImage'=>true,'x'=>0,'y'=>0,'width'=>100,'height'=>100,'src'=>$src,'opacity'=>100,'rotation'=>0]]];
+    }
+
+    public static function validateTemplate(mixed $document): void
+    {
+        if (!is_array($document) || strlen(json_encode($document)) > 80000) throw new RuntimeException('Ungültige Speisekarten-Vorlage.',422);
+        self::document($document,['title'=>'Speisekarte','subtitle'=>'','footer'=>'','items'=>[]]);
     }
 
     public static function validate(mixed $value): array

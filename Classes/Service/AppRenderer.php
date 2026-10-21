@@ -27,6 +27,7 @@ final readonly class AppRenderer
             . $this->meta('kiosky-external-api-base-url', $externalBase)
             . $this->meta('kiosky-api-endpoint', $apiEndpoint)
             . $this->meta('kiosky-asset-base-url', rtrim($assetBase, '/'))
+            . $this->meta('kiosky-menu-base-url', rtrim(dirname(rtrim($playerBaseUrl,'/')),'/').'/speisekarten')
             . $this->meta('kiosky-player-base-url', $playerBaseUrl)
             . $this->meta('kiosky-player-center-url', rtrim(dirname(rtrim($playerBaseUrl, '/')), '/') . '/kiosky-player-center/')
             . ($nonce !== '' ? $this->meta('kiosky-request-header-typo3-nonce', $nonce) : '');
@@ -40,7 +41,7 @@ final readonly class AppRenderer
         if (!$file || !is_readable($file)) throw new RuntimeException('Der Speisekarten-Editor fehlt.');
         $base = htmlspecialchars($this->assetBaseUrl($request),ENT_QUOTES);
         $html = str_replace(['href="menus.css','src="runtime-config.js','src="menus.js'],['href="'.$base.'menus.css','src="'.$base.'runtime-config.js','src="'.$base.'menus.js'],(string)file_get_contents($file));
-        return str_replace('<head>','<head>'.$this->meta('kiosky-platform','typo3').$this->meta('kiosky-api-endpoint',$apiEndpoint),$html);
+        return str_replace('<head>','<head>'.$this->meta('kiosky-platform','typo3').$this->meta('kiosky-api-endpoint',$apiEndpoint).$this->meta('kiosky-asset-base-url',rtrim($this->assetBaseUrl($request),'/')),$html);
     }
 
     public function renderPlayerPortal(
