@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "8fcacd45f86c7672b17fe65b20f44b7b5774c32e",
+  "source_commit": "ee78189fdd66df8ba43c3fdbbcfd396e37dcb091",
   "product": "kiosky",
-  "version": "3.5.0",
-  "released_at": "2026-10-21T11:55:49.583Z",
+  "version": "3.6.0",
+  "released_at": "2026-10-21T12:41:00.964Z",
   "channel": "stable",
-  "release_notes": "## [3.5.0] – 2026-10-21\n\n- Speisekarten-Slides für Standalone, WordPress und TYPO3: drei Vorlagen in Hoch- und Querformat, einfacher Inhaltseditor unter `/speisekarten`, bis zu acht Speisen je Slide mit Beschreibung und Preis.\n- Separates Bearbeitungsrecht und explizite Kartenzuweisungen über bestehende Benutzerkonten; serverseitige Zugriffskontrolle, sofortiger Rechteentzug, Schutz vor fremden Karten, CSRF und veralteten Bearbeitungsständen.\n- Küchen ändern ausschließlich Inhalte. Layout, Veröffentlichung, Kanäle, Standortrechte und Zeitplanung bleiben in der bestehenden Verwaltung. Änderungen sind versioniert und werden durch bestehende Player synchronisiert.\n- Standalone übernimmt die exklusive Zugangswerk-Anmeldung; CMS-Ausgaben nutzen ihre native Anmeldung und Sitzungs-/Anfrageprüfung. Additive Migration und dokumentierte Einrichtung, Grenzen und Wiederherstellung.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.5.0",
+  "release_notes": "## [3.6.0] – 2026-10-21\n\n- Speisekarten werden ein eigenes Modul in Navigation und Einstellungen aller drei Plattformen. Ein gemeinsamer Schalter unter „Module“ und „Speisekarten“ blendet den Arbeitsbereich aus und sperrt den Küchen-Editor samt API, ohne Karten, Rechte oder bestehende Ausspielungen zu löschen.\n- Zentral konfigurierbare Standardvorlage, Ausrichtung, Titel, Untertitel und Fußzeile für neue Karten. Kartenanlage und Rechte-/Kartenzuweisung sind direkt unter Einstellungen → Speisekarten verfügbar; der Arbeitsbereich enthält den einfachen Inhaltseditor.\n- Gemeinsame, voneinander abgegrenzte Editorkomponenten in Verwaltung und Küchenansicht; WordPress erhält einen nativen Speisekarten-Menüpunkt. Bestehende Zugangswerk-/CMS-Anmeldung, Standortrechte, Versionierung, Player und die Adresse `/speisekarten` bleiben erhalten.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.6.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.5.0",
+    "core_version": "3.6.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.5.0",
-    "typo3_extension_version": "3.5.0"
+    "wordpress_plugin_version": "3.6.0",
+    "typo3_extension_version": "3.6.0"
   },
   "components": {
     "core": {
-      "version": "3.5.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.5.0.zip?ref=v3.5.0",
-      "sha256": "75b537d66a4a9869859815c6b93527207fe41769aeff3be6f0b262e6d9ab0d9e"
+      "version": "3.6.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.0.zip?ref=v3.6.0",
+      "sha256": "3a7b3abc97b96450d9bbed0299c8a6f4d16d142f5adb7fc4b98ed66732b6544c"
     },
     "standalone": {
-      "version": "3.5.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.5.0.zip?ref=v3.5.0",
-      "sha256": "75b537d66a4a9869859815c6b93527207fe41769aeff3be6f0b262e6d9ab0d9e"
+      "version": "3.6.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.6.0.zip?ref=v3.6.0",
+      "sha256": "3a7b3abc97b96450d9bbed0299c8a6f4d16d142f5adb7fc4b98ed66732b6544c"
     },
     "wordpress": {
-      "version": "3.5.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.5.0.zip?ref=v3.5.0",
-      "sha256": "84d59ce80bdaed65351897c3d4990f894698bfcb193340720c2607953a29c11f",
+      "version": "3.6.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.6.0.zip?ref=v3.6.0",
+      "sha256": "2ddb8373c34f46da3b067c231415015e48264645b532675843f3b4741d6cc15a",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.5.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.5.0.zip?ref=v3.5.0",
-      "sha256": "bb7bfb10b71105d184e840cfd897bd4f70007134abc224e08959d4226d706c8c",
+      "version": "3.6.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.6.0.zip?ref=v3.6.0",
+      "sha256": "76fa389ea98b04b11a6ccf1807b161dd8e54c4246a0084e8bbcb922b4f381067",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

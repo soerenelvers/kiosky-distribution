@@ -1,13 +1,21 @@
 /* Shared content-only menu editor. Authentication and authorization stay server-side. */
 (() => {
 'use strict';
-const runtime=window.KioskyRuntime||{},$=selector=>document.querySelector(selector);
+function mount(root,options={}) {
+const runtime=options.runtime||window.KioskyRuntime||{};
+const scoped=selector=>selector.replace(/#([\w-]+)/g,'[data-menu-id="$1"]');
+const $=selector=>root.querySelector(selector)||root.querySelector(scoped(selector));
+const $$=selector=>root.querySelectorAll(root.classList.contains('is-embedded')?scoped(selector):selector);
+if(root.menuEditor)return root.menuEditor;
+let settings={defaultTemplate:'blue',defaultOrientation:'landscape',defaultTitle:'Speisekarte',defaultSubtitle:'Frisch für Sie zubereitet',defaultFooter:'Alle Preise in Euro.'};
+const editorOnly=options.mode==='editor',managementOnly=options.mode==='manage';
+if(managementOnly)root.querySelector('.workspace').hidden=true;
 let cards=[],accounts=[],current=null,dirty=false,busy=false;
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function setBusy(value){busy=value;$('#admin').inert=value;$('#editor').inert=value;$('#reload').disabled=value;}
 function message(text,error=false){$('#message').textContent=text;$('#message').classList.toggle('error',error);}
 async function api(path,method='GET',body){
-  let url=path;
+  let url=runtime.apiBaseUrl?`${String(runtime.apiBaseUrl).replace(/\/+$/,'')}/${path.replace(/^\/+/, '')}`:path;
   if(runtime.apiEndpoint){const endpoint=new URL(runtime.apiEndpoint,location.href);endpoint.searchParams.set('path',path);url=endpoint.href;}
   const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json',...(runtime.requestHeaders||{})},...(body?{body:JSON.stringify(body)}:{})});
   const result=await response.json();
@@ -58,12 +66,12 @@ async function load(){
   if(dirty&&!confirm('Ungespeicherte Änderungen verwerfen und neu laden?'))return;
   setBusy(true);
   try{
-    const result=await api('/api/menus');cards=result.data;$('#login').hidden=true;$('#admin').hidden=!result.admin;
+    const result=await api('/api/menus');cards=result.data;$('#login').hidden=true;$('#admin').hidden=!result.admin||editorOnly;settings={...settings,...result.settings};$('#create [name=template]').value=settings.defaultTemplate;$('#create [name=orientation]').value=settings.defaultOrientation;
     $('#cards').innerHTML=cards.map(card=>`<button type="button" data-id="${esc(card.id)}">${esc(card.name)}</button>`).join('');
-    if(result.admin){accounts=(await api('/api/menus/access')).data;const selected=$('#access-user').value;$('#access-user').innerHTML=accounts.map(account=>`<option value="${esc(account.id)}">${esc(account.displayName)}</option>`).join('');if(accounts.some(account=>account.id===selected))$('#access-user').value=selected;assignment();}
+    if(result.admin&&!editorOnly){accounts=(await api('/api/menus/access')).data;const selected=$('#access-user').value;$('#access-user').innerHTML=accounts.map(account=>`<option value="${esc(account.id)}">${esc(account.displayName)}</option>`).join('');if(accounts.some(account=>account.id===selected))$('#access-user').value=selected;assignment();}
     const selected=current?.id;dirty=false;select(cards.some(card=>card.id===selected)?selected:cards[0]?.id);
-    message(cards.length?'Karte auswählen, Inhalte bearbeiten und speichern.':'Keine Karten zugewiesen. Bitte die Administration kontaktieren.');
-  }catch(error){message(error.message,true);}finally{setBusy(false);}
+    message(managementOnly?'Karten anlegen und Bearbeitungsrechte konfigurieren.':cards.length?'Karte auswählen, Inhalte bearbeiten und speichern.':'Keine Karten zugewiesen. Bitte die Administration kontaktieren.');
+  }catch(error){if(!dirty){cards=[];current=null;$('#cards').replaceChildren();$('#editor').hidden=true;$('#admin').hidden=true;}message(error.message,true);}finally{setBusy(false);}
 }
 $('#cards').onclick=event=>{const button=event.target.closest('[data-id]');if(button)select(button.dataset.id);};
 $('#content').oninput=()=>{dirty=true;preview();};
@@ -71,11 +79,16 @@ $('#items').onclick=event=>{const button=event.target.closest('button');if(!butt
 $('#add').onclick=()=>{const items=read().items;if(items.length<8){items.push({name:'',description:'',price:''});dirty=true;rows(items);$('#items').lastElementChild.querySelector('input').focus();}};
 $('#discard').onclick=()=>{if(dirty&&!confirm('Ungespeicherte Änderungen verwerfen?'))return;dirty=false;select(current?.id);};
 $('#content').onsubmit=async event=>{event.preventDefault();if(busy||!current)return;setBusy(true);const button=event.submitter;button.disabled=true;try{const result=await api(`/api/menus/${encodeURIComponent(current.id)}`,'PUT',{version:current.currentVersion,menu:read()});cards=cards.map(card=>card.id===result.slide.id?result.slide:card);dirty=false;select(result.slide.id);message('Gespeichert. Aktive Player übernehmen die Änderung bei der nächsten Synchronisierung.');}catch(error){message(error.message,true);}finally{setBusy(false);button.disabled=false;}};
-$('#create').onsubmit=async event=>{event.preventDefault();if(busy)return;const createForm=event.currentTarget;setBusy(true);try{const form=new FormData(createForm),orientation=form.get('orientation');await api('/api/menus','POST',{name:form.get('name'),orientation,document:template(form.get('template'),orientation),menu:{title:'Speisekarte',subtitle:'Frisch für Sie zubereitet',footer:'Alle Preise in Euro.',items:[{name:'Gericht des Tages',description:'Beschreibung und Hinweise',price:'12,50 €'}]}});createForm.reset();setBusy(false);await load();}catch(error){message(error.message,true);}finally{setBusy(false);}};
+$('#create').onsubmit=async event=>{event.preventDefault();if(busy)return;const createForm=event.currentTarget;setBusy(true);try{const form=new FormData(createForm),orientation=form.get('orientation');await api('/api/menus','POST',{name:form.get('name'),orientation,document:template(form.get('template'),orientation),menu:{title:settings.defaultTitle,subtitle:settings.defaultSubtitle,footer:settings.defaultFooter,items:[{name:'Gericht des Tages',description:'Beschreibung und Hinweise',price:'12,50 €'}]}});createForm.reset();setBusy(false);await load();}catch(error){message(error.message,true);}finally{setBusy(false);}};
 $('#access-user').onchange=assignment;
-$('#access').onsubmit=async event=>{event.preventDefault();if(busy)return;setBusy(true);try{const payload={userId:$('#access-user').value,enabled:$('#access-enabled').checked,slideIds:[...document.querySelectorAll('#assignments input:checked')].map(input=>input.value)};await api('/api/menus/access','PUT',payload);Object.assign(accounts.find(account=>account.id===payload.userId),payload);message('Speisekarten-Rechte gespeichert.');}catch(error){message(error.message,true);}finally{setBusy(false);}};
+$('#access').onsubmit=async event=>{event.preventDefault();if(busy)return;setBusy(true);try{const payload={userId:$('#access-user').value,enabled:$('#access-enabled').checked,slideIds:[...$$('#assignments input:checked')].map(input=>input.value)};await api('/api/menus/access','PUT',payload);Object.assign(accounts.find(account=>account.id===payload.userId),payload);message('Speisekarten-Rechte gespeichert.');}catch(error){message(error.message,true);}finally{setBusy(false);}};
 $('#reload').onclick=load;addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 if(runtime.platform&&runtime.platform!=='standalone')$('#login a').textContent='CMS-Anmeldung erneuern und /speisekarten erneut öffnen';
-else $('#login a').onclick=()=>sessionStorage.setItem('kiosky-menu-return','1');
+else $('#login a').onclick=()=>{try{sessionStorage.setItem('kiosky-menu-return','1');}catch{}};
+root.menuEditor={reload:load,isDirty:()=>dirty};
 load();
+return root.menuEditor;
+}
+window.KioskyMenus={mount};
+if(document.body.classList.contains('menu-app'))mount(document.body);
 })();

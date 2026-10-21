@@ -725,9 +725,11 @@ final class Api
         }
         if ($path === '/api/advertising/synchronize' && $method === 'POST') return $this->ok($this->synchronizeAdvertising($state),true);
 
-        if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? [])]);
+        if ($path === '/api/settings/menus' && $method === 'GET') return $this->ok(['settings'=>MenuContent::settings($state['menuSettings'] ?? []),'enabled'=>($state['featureSettings']['menus'] ?? true) !== false]);
+        if ($path === '/api/settings/menus' && $method === 'PUT') { $state['menuSettings'] = MenuContent::settings($body); $this->audit($state,'menu.settings.updated','menu_settings'); return $this->ok(['settings'=>$state['menuSettings'],'enabled'=>($state['featureSettings']['menus'] ?? true) !== false],true); }
+        if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
-            $allowed = ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
+            $allowed = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
             return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $state['navigationOrder']], true);
@@ -765,6 +767,7 @@ final class Api
     /** Menu access is independent of broad content-editing permissions. */
     private function menus(array &$state, string $method, string $path, array $body): array
     {
+        if (($state['featureSettings']['menus'] ?? true) === false) throw new RuntimeException('Das Speisekarten-Modul ist ausgeschaltet. Die Administration kann es in den Einstellungen wieder aktivieren.',503);
         $id = (string)$this->identity['id'];
         if (($this->identity['actorType'] ?? '') === 'api_key' || !preg_match('/^(wp|typo3):[1-9][0-9]*$/', $id)) throw new RuntimeException('Eine CMS-Benutzeranmeldung ist erforderlich.',403);
         $admin = ($this->identity['role'] ?? '') === 'admin';
@@ -783,7 +786,7 @@ final class Api
             }
         }
         if (!$admin && empty($access['enabled'])) throw new RuntimeException('Das Speisekarten-Recht fehlt. Bitte die Administration kontaktieren.',403);
-        if ($path === '/api/menus' && $method === 'GET') return $this->ok(['data'=>$allowed,'admin'=>$admin]);
+        if ($path === '/api/menus' && $method === 'GET') return $this->ok(['data'=>$allowed,'admin'=>$admin,'settings'=>MenuContent::settings($state['menuSettings'] ?? [])]);
         if ($path === '/api/menus' && $method === 'POST') {
             if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten anlegen.',403);
             if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true) || !is_array($body['document'] ?? null) || strlen(json_encode($body['document'])) > 80000) throw new RuntimeException('Name, Format oder Vorlage ist ungültig.',422);
@@ -806,6 +809,7 @@ final class Api
     {
         $role = (string)($this->identity['role'] ?? 'viewer');
         if ($role === 'admin') return;
+        if ($path === '/api/settings/features' && $method === 'GET') return;
 
         $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/advertising', '/api/v1'];
         if ($this->pathStartsWithAny($path, $adminOnly)) {
@@ -1975,7 +1979,7 @@ final class Api
     /** @return array<int,string> */
     private function normalizeNavigationOrder(mixed $value): array
     {
-        $defaults = ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'];
+        $defaults = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'];
         $requested = is_array($value) ? array_values(array_filter(array_map('strval', $value), static fn(string $key): bool => in_array($key, $defaults, true))) : [];
         return array_values(array_unique(array_merge($requested, $defaults)));
     }
@@ -1990,8 +1994,8 @@ final class Api
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
             'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
-            'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'advertising' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'updates' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
-            'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'],
+            'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'menus' => true, 'advertising' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'updates' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
+            'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'],
             'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,
             'activeEventSource' => null,
             'portableUsers' => [], 'portableApiUsers' => [], 'apiUsers' => [],

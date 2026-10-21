@@ -321,3 +321,22 @@ CMS-Ausgaben verwenden ihren bestehenden API-Transport mit `path`-Parameter.
 Bestehende Rollen, Status und Veröffentlichungswege bleiben erhalten. Das
 Speisekarten-Recht ist eine zusätzliche, auf Inhaltsänderungen begrenzte
 Berechtigung. Einrichtung und Rollback: [Speisekarten](speisekarten.md).
+
+
+### Speisekarten-Modul (ab 3.6.0)
+
+- `GET /api/settings/menus`: nur Administration; `{enabled, settings}` mit
+  `defaultTemplate` (`blue`, `light`, `dark`), `defaultOrientation` (`landscape`,
+  `portrait`), `defaultTitle`, `defaultSubtitle` und `defaultFooter`.
+- `PUT /api/settings/menus`: nur Administration; diese fünf Vorgaben speichern.
+  Texte haben dieselben Zeichenlimits wie Karteninhalte. Unbekannte Einstellungen,
+  ungültige Vorlagen/Formate und leere Standardtitel werden abgelehnt. Die
+  Vorgaben gelten für die Erstellung neuer Karten, nicht für bestehende Slides.
+- `PUT /api/settings/features` mit `{menus: true|false}` aktiviert/deaktiviert das
+  Modul. `GET /api/settings/features` ist für angemeldete Benutzer lesbar und
+  liefert zusätzlich `menuAccess` für die persönliche Navigation; Schreibrechte
+  bleiben auf Administratoren beschränkt.
+
+Ausgeschaltet geben `/api/menus` und seine Unterrouten HTTP 503 mit einer
+verständlichen Modul-Meldung zurück. Einstellungen bleiben erreichbar. Karten,
+Zuweisungen und geplante Player-Ausspielungen werden nicht entfernt.

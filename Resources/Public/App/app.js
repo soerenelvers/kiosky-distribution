@@ -21,7 +21,6 @@ const apiUrl = path => {
   requested.searchParams.forEach((value, key) => endpoint.searchParams.append(key, value));
   return endpoint.toString();
 };
-document.querySelector('a[href="/speisekarten"]')?.setAttribute('href', kioskyRuntime.playerBaseUrl ? new URL('../speisekarten', kioskyRuntime.playerBaseUrl).href : '/speisekarten');
 const assetUrl = path => runtimeUrl(kioskyRuntime.assetBaseUrl, path);
 
 function qrElementPayload(element = {}) {
@@ -425,6 +424,7 @@ const pageMeta = {
   dashboard: ['Willkommen', ''],
   events: ['Veranstaltungen', 'Programm und Veröffentlichung'],
   displays: ['Displays', 'Digital Signage im Haus'],
+  menus: ['Speisekarten', 'Karten und Inhalte für Küche und Restaurant'],
   channels: ['Slides & Kanäle', 'Content und Abspielreihenfolge'],
   advertising: ['Werbung', 'Werbeslides und standortbezogene Werbekanäle'],
   media: ['Mediendatenbank', 'Zentrale Bilder, Vektoren und Videos'],
@@ -521,6 +521,7 @@ function setView(view) {
     loadApiUsers();
   }
   if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();if(cmsManagedServices)loadPublicCalendarSettings();}
+  if (view === 'menus') mountMenuModule('menu-module-root','editor');
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
   if (['channels','advertising'].includes(view)) loadContent();
@@ -627,8 +628,12 @@ document.querySelectorAll('[data-settings-home]').forEach(button => button.addEv
 }));
 document.querySelectorAll('[data-settings-open]').forEach(button => button.addEventListener('click', () => {
   const level = button.dataset.settingsOpen;
-  if (state.view !== 'settings') setView('settings');
+  if (state.view !== 'settings') {
+    if(state.currentUser?.role==='admin')history.replaceState(null,'','#settings');
+    setView('settings');
+  }
   showSettingsLevel(level);
+  if(level==='menus')loadMenuModuleSettings();
   if(level==='advertising')loadAdvertisingSettings();
   if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
   if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
@@ -1489,6 +1494,7 @@ const navigationModules=[
   {view:'events',label:'Veranstaltungen',icon:'◫',description:'Programm, Termine und Veröffentlichungsdaten.'},
   {view:'displays',label:'Displays',icon:'▣',description:'Displays, Gruppen, Matrizen und Standorte.'},
   {view:'channels',label:'Slides & Kanäle',icon:'▤',description:'Slide-Editor, Bibliothek und Abspielkanäle.'},
+  {view:'menus',label:'Speisekarten',icon:'▤',description:'Karten, Vorlagen und Inhaltseditor für Küche und Restaurant.'},
   {view:'advertising',label:'Werbung',icon:'◇',description:'Werbeslides und standortbezogene Werbekanäle.'},
   {view:'media',label:'Mediendatenbank',icon:'▧',description:'Bilder, Videos, Vektoren und Ordner.'},
   {view:'schedule',label:'Zeitplanung',icon:'▦',description:'Tages- und Wochenplanung für alle Ziele.'},
@@ -1512,6 +1518,7 @@ function moduleEnabled(view,settings=state.featureSettings||{}){
 
 function navigationViewAvailable(view){
   if(!pageMeta[view])return false;
+  if(view==='menus'&&state.currentUser?.role!=='admin'&&state.menuAccess===false)return false;
   if(!['integrations','users'].includes(view)&&!moduleEnabled(view))return false;
   if(cmsManagedServices&&['media','users'].includes(view))return false;
   if(['integrations','updates','settings','users'].includes(view)&&state.currentUser?.role!=='admin')return false;
@@ -1536,7 +1543,7 @@ function applyNavigationConfig(settings={},order=[]){
 
 function renderModuleSwitching(){
   const list=document.querySelector('#module-switching-list'),order=normalizedNavigationOrder(state.navigationOrder);
-  list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''}><span>In Seitenleiste anzeigen</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
+  list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''}><span>${view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
 const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
@@ -1548,7 +1555,7 @@ function renderEditorElementSettings(){
 }
 
 async function loadFeatureSettings(){
-  try{const result=await apiRequest('/api/settings/features');applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
+  try{const result=await apiRequest('/api/settings/features');state.menuAccess=Boolean(result.menuAccess);applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
   catch(error){showToast(error.message);return null;}
 }
 
@@ -1604,6 +1611,51 @@ document.querySelector('#editor-element-settings-form').addEventListener('submit
   event.preventDefault();const editorSettings=Object.fromEntries([...document.querySelectorAll('[data-editor-element-setting]')].map(input=>[`editor_${input.dataset.editorElementSetting}`,input.checked]));
   try{const result=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify(editorSettings)});applyNavigationConfig(result.data||{...state.featureSettings,...editorSettings},result.navigationOrder||state.navigationOrder);renderEditorElementSettings();showToast('Die verfügbaren Slide-Editor-Elemente wurden gespeichert.');}
   catch(error){showToast(error.message);}
+});
+
+
+let menuAssetsPromise;
+async function mountMenuModule(id,mode){
+  const root=document.getElementById(id);
+  if(!root)return;
+  if(root.menuEditor){await root.menuEditor.reload();return root.menuEditor;}
+  if(root.menuLoading)return root.menuLoading;
+  root.menuLoading=(async()=>{
+    if(!menuAssetsPromise)menuAssetsPromise=(async()=>{
+      const version=new URL(document.querySelector('script[src*="app.js"]').src).searchParams.get('v')||String(Date.now());
+      const css=document.createElement('link');css.rel='stylesheet';css.href=assetUrl(`/menus.css?v=${encodeURIComponent(version)}`);document.head.append(css);
+      await import(assetUrl(`/menus.js?v=${encodeURIComponent(version)}`));
+      const response=await fetch(assetUrl(`/menus.html?v=${encodeURIComponent(version)}`));
+      if(!response.ok)throw new Error('Der Speisekarten-Editor konnte nicht geladen werden.');
+      return new DOMParser().parseFromString(await response.text(),'text/html').body;
+    })().catch(error=>{menuAssetsPromise=null;throw error;});
+    const template=await menuAssetsPromise;
+    root.classList.add('menu-app','is-embedded');
+    root.replaceChildren(...[...template.children].filter(node=>node.tagName!=='SCRIPT').map(node=>node.cloneNode(true)));
+    root.querySelectorAll('[id]').forEach(node=>{node.dataset.menuId=node.id;node.removeAttribute('id');});
+    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode});
+  })();
+  try{return await root.menuLoading;}catch(error){root.textContent=error.message;showToast(error.message);}finally{root.menuLoading=null;}
+}
+async function loadMenuModuleSettings(){
+  const form=document.querySelector('#menu-module-settings-form');form.inert=true;
+  try{
+    const result=await apiRequest('/api/settings/menus'),settings=result.settings;
+    document.querySelector('#menu-module-enabled').checked=result.enabled;
+    for(const [key,id] of Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}))document.querySelector(`#menu-default-${id}`).value=settings[key];
+    await mountMenuModule('menu-module-management-root','manage');
+  }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{form.inert=false;}
+}
+document.querySelector('#menu-module-settings-form').addEventListener('submit',async event=>{
+  event.preventDefault();const button=event.submitter,form=event.currentTarget,enabled=document.querySelector('#menu-module-enabled').checked;button.disabled=true;form.inert=true;
+  try{
+    const settings=Object.fromEntries(Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}).map(([key,id])=>[key,document.querySelector(`#menu-default-${id}`).value]));
+    await apiRequest('/api/settings/menus',{method:'PUT',body:JSON.stringify(settings)});
+    const features=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify({menus:enabled})});
+    applyNavigationConfig(features.data,features.navigationOrder);
+    await mountMenuModule('menu-module-management-root','manage');
+    showAuthMessage('menu-module-settings-message','Speisekarten-Einstellungen wurden gespeichert.',true);
+  }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{button.disabled=false;form.inert=false;}
 });
 
 function renderAdvertisingSettings(status){

@@ -6,6 +6,20 @@ use RuntimeException;
 
 final class MenuContent
 {
+    public const DEFAULT_SETTINGS = ['defaultTemplate'=>'blue','defaultOrientation'=>'landscape','defaultTitle'=>'Speisekarte','defaultSubtitle'=>'Frisch für Sie zubereitet','defaultFooter'=>'Alle Preise in Euro.'];
+    public static function settings(array $input): array
+    {
+        if (array_diff(array_keys($input),array_keys(self::DEFAULT_SETTINGS))) throw new RuntimeException('Unbekannte Speisekarten-Einstellung.',422);
+        $settings = array_replace(self::DEFAULT_SETTINGS,$input);
+        if (!in_array($settings['defaultTemplate'],['blue','light','dark'],true) || !in_array($settings['defaultOrientation'],['portrait','landscape'],true)) throw new RuntimeException('Vorlage oder Format ist ungültig.',422);
+        foreach (['defaultTitle'=>60,'defaultSubtitle'=>90,'defaultFooter'=>120] as $field=>$max) {
+            $value = $settings[$field];
+            if (!is_string($value) || preg_match('/[\x00-\x1f\x7f]/u',$value) || preg_match_all('/./us',$value) > $max || ($field === 'defaultTitle' && trim($value) === '')) throw new RuntimeException('Die Standardtexte sind ungültig oder zu lang.',422);
+            $settings[$field] = trim($value);
+        }
+        return $settings;
+    }
+
     public static function validate(mixed $value): array
     {
         if (!is_array($value) || array_diff(array_keys($value),['title','subtitle','footer','items'])) throw new RuntimeException('Ungültige Speisekartenfelder.',422);

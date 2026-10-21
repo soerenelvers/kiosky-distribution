@@ -1,20 +1,28 @@
 # Speisekarten-Slides
 
-Ab Kiosky 3.5.0 in Standalone, WordPress und TYPO3. Einstieg:
+Ab Kiosky 3.5.0 in Standalone, WordPress und TYPO3; seit 3.6.0 als eigenes
+**Speisekarten-Modul** in Navigation und Einstellungen. Einstieg:
 `https://deine-kiosky-adresse/speisekarten` (bei Unterverzeichnissen entsprechend
-unterhalb der Installation). Unter **Slides & Kanäle → Speisekarten** führt ein
-Link zum Editor.
+unterhalb der Installation). Der Arbeitsbereich **Speisekarten** öffnet den Inhaltseditor direkt in Kiosky.
+Die eigenständige Küchenadresse `/speisekarten` bleibt ebenfalls erhalten.
 
 ## Einrichtung durch die Administration
 
-1. Mit dem vorhandenen Administrator-Konto anmelden und `/speisekarten` öffnen.
-2. **Neue Speisekarte anlegen**: internen Namen, Vorlage und Format wählen.
+1. Mit dem vorhandenen Administrator-Konto **Einstellungen → Speisekarten** öffnen.
+   **Speisekarten-Modul aktivieren** ein- oder ausschalten. Der gleiche Schalter
+   steht unter **Einstellungen → Module**; dort lässt sich auch die Reihenfolge
+   in der Kiosky-Navigation ändern.
+2. Standardvorlage, Standardformat, Titel, Untertitel und Fußzeile festlegen und
+   **Speisekarten-Einstellungen speichern** wählen. Diese Vorgaben gelten nur für
+   neue Karten; vorhandene Karten werden nicht umgeschrieben.
+3. Im selben Einstellungsbereich unter **Karten und Berechtigungen → Neue Speisekarte
+   anlegen** internen Namen, Vorlage und Format wählen.
    Enthalten sind **Blau · Klar**, **Hell · Bistro** und **Dunkel · Abendkarte**,
    jeweils für Hoch- und Querformat.
-3. Neue Karten werden als normale Slides mit dem Tag **Speisekarte** und Status
+4. Neue Karten werden als normale Slides mit dem Tag **Speisekarte** und Status
    **Entwurf** angelegt. In der normalen Slide-Verwaltung Layout und Status
    einstellen, einem Kanal hinzufügen und wie gewohnt zeitlich planen.
-4. Unter **Speisekarten-Rechte und Zuweisung** ein vorhandenes Benutzerkonto
+5. Unter **Speisekarten-Rechte und Zuweisung** ein vorhandenes Benutzerkonto
    auswählen, **Speisekarten bearbeiten erlauben** aktivieren und die zulässigen
    Karten markieren. **Rechte speichern** übernimmt die Zuweisung sofort.
 
@@ -28,6 +36,21 @@ Ein erteiltes Recht ohne ausgewählte Karte erlaubt keine Kartenbearbeitung.
 WordPress verwendet vorhandene Benutzer mit `kiosky_access`, TYPO3 vorhandene
 Backendbenutzer mit Kiosky-Rolle und Zugriff auf das Modul **System → Kiosky**.
 Die Rechteverwaltung legt keine zweite CMS-Benutzerdatenbank an.
+
+## Ein- und Ausschalten
+
+Bei bestehenden Installationen ist das Modul zunächst eingeschaltet. Ausschalten
+blendet den Arbeitsbereich aus und sperrt die Inhalts- und Zuweisungs-API sowie
+neue Bearbeitung über `/speisekarten` auch für Administratoren. Die Konfiguration
+bleibt in den Einstellungen erreichbar. Vorhandene Karten, Vorgaben und
+Benutzerzuweisungen bleiben gespeichert; bereits geplante Slides werden weiterhin
+abgespielt. Nach Wiederaktivierung sind dieselben Daten und Rechte wieder nutzbar.
+Geöffnete Küchen-Editoren melden die Sperre spätestens bei der nächsten Anfrage;
+offene lokale Texte werden nicht automatisch gespeichert.
+
+In WordPress erscheint bei aktiviertem Modul und vorhandenem Speisekarten-Recht
+zusätzlich der native Untermenüpunkt **Kiosky → Speisekarten**. Die gemeinsamen
+Oberflächen verwenden dieselben Einstellungen in allen drei Plattformen.
 
 ## Tägliche Bearbeitung
 
@@ -87,7 +110,10 @@ ausgewählt; nachträgliche Gestaltung erfolgt im normalen Slide-Editor.
 Vor Änderungen Datenbank beziehungsweise CMS-Kiosky-Zustand sichern. Standalone
 legt mit Migration `036_menu_access.sql` ausschließlich eine neue Tabelle für
 Recht und Kartenzuweisungen an; CMS-Ausgaben ergänzen ihren bestehenden Zustand
-um `menuAccess`. Bestehende Slides werden nicht konvertiert. Inhaltsänderungen
+um `menuAccess`. Seit 3.6.0 liegen die Modulvorgaben in Standalone unter dem
+Integrationseinstellungs-Schlüssel `menu_settings`, im CMS-Zustand unter
+`menuSettings`; der gemeinsame Modulschalter heißt `menus`. Es ist dafür keine
+zusätzliche Datenbankmigration nötig. Bestehende Slides werden nicht konvertiert. Inhaltsänderungen
 lassen sich über die vorhandene Slide-Versionsverwaltung zurücksetzen.
 
 Beim Export eines Slides bleiben die Kartendaten und das Layout enthalten.

@@ -71,7 +71,7 @@ final readonly class ApiController
         $api = $this->apiFactory->create($identity);
         $query = $request->getQueryParams();
         unset($query['path']);
-        if ($apiPath === '/api/menus' || str_starts_with($apiPath,'/api/menus/')) $query = [];
+        if ($apiPath === '/api/settings/menus' || $apiPath === '/api/menus' || str_starts_with($apiPath,'/api/menus/')) $query = [];
         [$status, $payload] = $api->handle(
             $request->getMethod(),
             $apiPath,
