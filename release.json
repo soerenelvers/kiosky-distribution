@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "0e4b0cfbbb9d9493d3254c8078024c585d891ca0",
+  "source_commit": "e80730ed37ed09b68284a62335c135167f540779",
   "product": "kiosky",
-  "version": "3.8.2",
-  "released_at": "2026-10-22T17:55:50.107Z",
+  "version": "3.8.3",
+  "released_at": "2026-10-22T18:31:07.484Z",
   "channel": "stable",
-  "release_notes": "## [3.8.2] – 2026-10-22\n\n- PDF-Weblink-Abonnements wieder direkt im Hauptmenü unter Speisekarten anzeigen und laden. Automatische Slides, eigener Kanal, Tags und einstellbarer Abgleich (Standard 15 Minuten) bleiben vollständig verfügbar. Der zusätzliche Zugang über Einstellungen → Module bleibt erhalten; Küchen- und Passwortzugänge erhalten keine Abonnementverwaltung.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.8.2",
+  "release_notes": "## [3.8.3] – 2026-10-22\n\n- PDF-Speisekarten im Webplayer und in der Kanalvorschau proportional und vollständig einpassen, auch bei abweichenden Fensterproportionen und Responsive-Ausrichtung. Gilt ohne Neuimport auch für bestehende PDF-Slides; normale Bilder behalten ihre bisherige Darstellung.\n- Freie Flächen bei weißen Standardhintergründen aus der dominanten PDF-Seitenrandfarbe ableiten; vielfältige Ränder erhalten einen gemittelten passenden Farbton. Individuelle Hintergrundfarben, Bilder und Verläufe bleiben erhalten. Die Speisekarten-Vorschau nutzt dieselbe Farbermittlung.\n- Neue abonnierte PDF-Seiten nutzen den ganzen Bildrahmen. Bestehende individuell gestaltete Rahmen und Inhalte werden beim Abgleich weiterhin erhalten.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.8.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.8.2",
+    "core_version": "3.8.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.8.2",
-    "typo3_extension_version": "3.8.2"
+    "wordpress_plugin_version": "3.8.3",
+    "typo3_extension_version": "3.8.3"
   },
   "components": {
     "core": {
-      "version": "3.8.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.2.zip?ref=v3.8.2",
-      "sha256": "d144e0bd04deb83ff0d2384235c15c9c7cd32522acb2406ed1c7304ac0c96bde"
+      "version": "3.8.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.3.zip?ref=v3.8.3",
+      "sha256": "e48edc138de57dffaaf5ad6f0e45f3185251d6f03666b3e1ec976c4838dd4f03"
     },
     "standalone": {
-      "version": "3.8.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.2.zip?ref=v3.8.2",
-      "sha256": "d144e0bd04deb83ff0d2384235c15c9c7cd32522acb2406ed1c7304ac0c96bde"
+      "version": "3.8.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.3.zip?ref=v3.8.3",
+      "sha256": "e48edc138de57dffaaf5ad6f0e45f3185251d6f03666b3e1ec976c4838dd4f03"
     },
     "wordpress": {
-      "version": "3.8.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.8.2.zip?ref=v3.8.2",
-      "sha256": "1368c8932bada0d9cdc7cffd8f0b232d02ad6a39a68359e6f62fb4fecd49a690",
+      "version": "3.8.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.8.3.zip?ref=v3.8.3",
+      "sha256": "7f6c181f1d16d39436bf226b55f6d4e636c9437113ec77e0f60c8672f26e8215",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.8.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.8.2.zip?ref=v3.8.2",
-      "sha256": "8f25415254b021bb2ac860a00431f858258c6777580f30b5797bc7cd64195b0f",
+      "version": "3.8.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.8.3.zip?ref=v3.8.3",
+      "sha256": "f7120bc261e415ac479e929d2fcd282cf5f230c623bb0e379c36750043d306fc",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

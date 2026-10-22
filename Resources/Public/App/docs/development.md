@@ -55,7 +55,7 @@ Die Demo-Instanz wird nur lesend verwendet. Die aktuelle Umsetzung ruft ausschli
 
 Nach `pnpm build` kann `python tests/menu-web-browser-smoke.py` den vollständigen
 Ablauf im **Hauptmenü → Speisekarten** prüfen. Erforderlich sind Chromium unter
-`/usr/bin/chromium`, Python mit Playwright und ReportLab, OpenSSL und Poppler.
+`/usr/bin/chromium`, Python mit Playwright, ReportLab und Pillow, OpenSSL und Poppler.
 `KIOSKY_BROWSER_PLATFORM=wordpress` beziehungsweise `typo3` prüft zusätzlich die
 CMS-Transportvarianten der gemeinsamen Oberfläche gegen den isolierten Testserver;
 die nativen CMS-Installationen werden separat in CI geprüft. Mit
@@ -69,3 +69,8 @@ Mobilansicht. Er greift weder auf Kundendaten noch auf externe PDF-Server zu.
 Der Netzwerkadapter liegt ausschließlich unter `tests/fixtures` und wird nur vom
 Testprozess geladen. Der gesonderte Kücheneditor darf die Abo-Verwaltung weiterhin
 nicht anzeigen. Der zusätzliche Zugang über die Moduleinstellungen bleibt geprüft.
+
+Die PDF-Player-Prüfung verwendet farbige Eckmarken und kontrolliert anhand echter
+Screenshot-Pixel die Sichtbarkeit aller vier Seitenecken in Querformat, Hochformat,
+Quadrat und einem sehr breiten Fenster. Sie prüft außerdem bestehende PDF-Rahmen,
+responsive Slides, aus dem PDF ermittelte Randfarben und manuelle Hintergrundfarben.

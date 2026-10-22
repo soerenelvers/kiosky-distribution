@@ -433,3 +433,25 @@ Die Netzprüfung öffentlicher PDF-Adressen unterscheidet nun öffentliche
 IPv6-Hostingnetze (beispielsweise `2001:8d8:…`) von reservierten Teilnetzen.
 Private, lokale, Dokumentations- und Übergangsnetze bleiben gesperrt; die Prüfung
 wird bei jeder Weiterleitung und DNS-Auflösung weiterhin angewendet.
+
+
+## PDF-Seiten im responsiven Player (ab 3.8.3)
+
+Der Player und die Kanalvorschau passen jede PDF-Seite proportional und zentriert
+in ihren Bildrahmen ein. Auch schmale, quadratische oder besonders breite Fenster
+zeigen die gesamte Seite. Freie Flächen sind dabei beabsichtigt; die Seite wird
+weder beschnitten noch verzerrt. Neue PDF-Weblink-Slides verwenden einen Rahmen
+über die gesamte Slide. Vorhandene und selbst gestaltete Rahmen bleiben erhalten.
+Diese Darstellung gilt für bestehende PDF-Slides sofort nach dem Player-Update,
+ohne ein neues Abonnement oder eine Änderung der PDF-Datei zu verlangen.
+
+Bei weißem Standardhintergrund ermittelt der Browser aus dem lokal importierten
+Seitenbild eine passende Randfarbe. Gleichmäßige Seiten übernehmen die dominante
+Randfarbe, beispielsweise Creme oder Dunkelblau. Bei sehr unterschiedlichen
+Randfarben wird ein gemittelter Farbton verwendet. Eine exakte semantische
+Farberkennung ist bei Fotos oder mehrfarbigen Randgestaltungen nicht möglich.
+Bewusst gewählte nichtweiße Hintergrundfarben, Bilder und Verläufe bleiben
+unverändert. Die Speisekarten-Vorschau verwendet dieselbe Ermittlung.
+Es werden ausschließlich die vorhandenen lokalen PDF-Seitenbilder ausgewertet;
+keine Übertragung an einen externen Bilddienst. Ist die Auswertung nicht möglich,
+bleibt der vorhandene Hintergrund erhalten.

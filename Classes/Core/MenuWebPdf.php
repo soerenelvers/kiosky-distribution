@@ -99,9 +99,8 @@ final class MenuWebPdf
     }
     public static function document(array $page,string $fileName,int $pageNumber,int $pageCount,?array $existing=null): array
     {
-        $orientation=$existing['designOrientation'] ?? ($page['height']>$page['width']?'portrait':'landscape');$ratio=$orientation==='portrait'?1080/1920:1920/1080;
-        $width=min(100,$page['width']/$page['height']/$ratio*100);$height=min(100,$page['height']/$page['width']*$ratio*100);
-        $element=['id'=>'menu-pdf-image','type'=>'image','menuPdfImage'=>true,'x'=>(100-$width)/2,'y'=>(100-$height)/2,'width'=>$width,'height'=>$height,'src'=>$page['src'],'opacity'=>100,'rotation'=>0];
+        $orientation=$existing['designOrientation'] ?? ($page['height']>$page['width']?'portrait':'landscape');
+        $element=['id'=>'menu-pdf-image','type'=>'image','menuPdfImage'=>true,'x'=>0,'y'=>0,'width'=>100,'height'=>100,'src'=>$page['src'],'opacity'=>100,'rotation'=>0];
         if($existing && !array_filter($existing['elements'] ?? [],static fn(array $e): bool=>!empty($e['menuPdfImage'])))throw new RuntimeException('Das PDF-Bildfeld einer abonnierten Slide fehlt. Bitte wiederherstellen.',422);
         return array_replace($existing ?? [],['menuPdf'=>['fileName'=>$fileName,'pageNumber'=>$pageNumber,'pageCount'=>$pageCount],'designOrientation'=>$orientation,'settings'=>$existing['settings'] ?? ['background'=>['mode'=>'color','color1'=>'#ffffff'],'clock'=>['enabled'=>false],'logo'=>['enabled'=>false]],'elements'=>$existing?array_map(static fn(array $e): array=>!empty($e['menuPdfImage'])?array_replace($e,['src'=>$page['src']]):$e,$existing['elements']):[$element]]);
     }

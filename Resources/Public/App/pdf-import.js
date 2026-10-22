@@ -25,3 +25,32 @@ export async function openMenuPdf(file) {
     return {orientation:format,pdfPage:{src,fileName:file.name.slice(0,160),pageNumber:number,pageCount:pdf.numPages}};
   }};
 }
+
+
+/** Dominant border color; varied/photo borders fall back to their average. */
+export function pdfEdgeBackground(pixels,width,height) {
+  if(width<1||height<1||pixels.length!==width*height*4)return '#ffffff';
+  const bins=new Map(),edge=Math.max(1,Math.floor(Math.min(width,height)/16)),all=[0,0,0,0];
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    if(x>=edge&&y>=edge&&x<width-edge&&y<height-edge)continue;
+    const i=(y*width+x)*4;if(pixels[i+3]<128)continue;
+    const rgb=[pixels[i],pixels[i+1],pixels[i+2]],key=rgb.map(v=>Math.floor(v/32)).join(','),bin=bins.get(key)||[0,0,0,0];
+    for(let c=0;c<3;c++){bin[c]+=rgb[c];all[c]+=rgb[c];}bin[3]++;all[3]++;bins.set(key,bin);
+  }
+  if(!all[3])return '#ffffff';
+  const dominant=[...bins.values()].sort((a,b)=>b[3]-a[3])[0],chosen=dominant[3]>=all[3]/4?dominant:all;
+  return '#'+chosen.slice(0,3).map(value=>Math.round(value/chosen[3]).toString(16).padStart(2,'0')).join('');
+}
+
+/** Read only local rasterized PDF pages. Explicit custom backgrounds are preserved. */
+export async function applyPdfPageBackground(image,target,background={},active=()=>true) {
+  const color=String(background.color1||'#ffffff').toLowerCase();
+  if((background.mode&&background.mode!=='color')||!['#fff','#ffffff','white'].includes(color)||!image?.src?.startsWith('data:image/jpeg;base64,'))return null;
+  try{
+    await image.decode();if(!active())return null;
+    const canvas=image.ownerDocument.createElement('canvas');canvas.width=canvas.height=32;
+    const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)return null;
+    context.drawImage(image,0,0,32,32);const selected=pdfEdgeBackground(context.getImageData(0,0,32,32).data,32,32);
+    if(!active())return null;target.style.backgroundColor=selected;target.dataset.pdfBackground=selected;return selected;
+  }catch{return null;}
+}
