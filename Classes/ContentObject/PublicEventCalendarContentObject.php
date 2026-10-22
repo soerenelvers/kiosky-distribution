@@ -30,6 +30,7 @@ final class PublicEventCalendarContentObject
         $record = is_array($this->contentObjectRenderer?->data ?? null) ? $this->contentObjectRenderer->data : [];
         $this->pageRenderer->addCssFile('EXT:kiosky/Resources/Public/EventCalendar/calendar.css');
         $this->pageRenderer->addJsFooterFile('EXT:kiosky/Resources/Public/EventCalendar/calendar.js');
+        if(\Kiosky\Core\LicenseClient::managed()){$license=new \Kiosky\Core\LicenseClient(new \Kiosky\Core\Crypto((string)($GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] ?? '')));if(!$license->allows($this->store->load(),'events'))return '';}
         return PublicEventCalendar::render($this->store->load(), [
             'title' => (string)($record['tx_kiosky_calendar_title'] ?? ''),
             'upcomingTitle' => (string)($record['tx_kiosky_upcoming_title'] ?? ''),

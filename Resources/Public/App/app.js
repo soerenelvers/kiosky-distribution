@@ -420,7 +420,7 @@ async function renderDisplayPlayer(slug) {
   const emergencyDesignMarkup=documentData=>{const elements=Array.isArray(documentData?.layout?.elements)?documentData.layout.elements:[];if(!elements.length)return'';return`<div class="emergency-design-layer">${elements.map(element=>{const x=Math.max(0,Math.min(100,Number(element.x||0))),y=Math.max(0,Math.min(100,Number(element.y||0))),width=Math.max(3,Math.min(100,Number(element.width||30))),fontSize=Math.max(12,Math.min(180,Number(element.fontSize||32))),content=escapeHtml(String(element.text||'')),color=/^#[0-9a-f]{6}$/i.test(String(element.color||''))?element.color:'#ffffff',style=`left:${x}%;top:${y}%;width:${width}%;color:${color};${textFontStyle(element,32,`${fontSize/7.8}vw`)};text-align:${['left','center','right'].includes(element.align)?element.align:'left'};font-weight:${element.bold?800:400}`;return`<div class="emergency-design-element ${element.type==='icon'?'is-icon':''}" style="${style}">${content}</div>`;}).join('')}</div>`;};
   const applyEmergency=()=>{const alert=playerState?.emergency,overlay=document.querySelector('#player-emergency'),ticker=document.querySelector('#player-emergency-ticker'),tickerText=document.querySelector('#player-emergency-ticker-text');if(!overlay)return;overlay.hidden=!alert;if(alert){const labels={evacuation:'EVAKUIERUNG',weather:'UNWETTERWARNUNG',severe_weather:'UNWETTERWARNUNG',security:'SICHERHEITSHINWEIS',technical:'TECHNISCHE STÖRUNG',power_outage:'STROMAUSFALL',fire:'BRANDALARM',medical:'MEDIZINISCHER NOTFALL',all_clear:'ENTWARNUNG',info:'WICHTIGE INFORMATION'},documentData=alert.document||{},tickerValue=String(documentData.ticker||'').trim(),design=emergencyDesignMarkup(documentData);overlay.style.background=documentData.backgroundColor||'';overlay.style.color=documentData.textColor||'';overlay.classList.toggle('has-custom-design',Boolean(design));overlay.querySelector('.emergency-design-layer')?.remove();if(design)overlay.insertAdjacentHTML('afterbegin',design);document.querySelector('#player-emergency-type').textContent=labels[alert.type]||String(alert.type||labels.info).toUpperCase();document.querySelector('#player-emergency-title').textContent=alert.title;document.querySelector('#player-emergency-message').textContent=alert.message;if(ticker&&tickerText){tickerText.textContent=tickerValue;ticker.hidden=!tickerValue;}}else{overlay.classList.remove('has-custom-design');overlay.querySelector('.emergency-design-layer')?.remove();if(ticker&&tickerText){tickerText.textContent='';ticker.hidden=true;}}};
   const showItem=(item,animate=true,elapsedMs=0)=>{currentItem=item;const slide=document.querySelector('#player-slide');slide.dataset.transition=item.transition==='inherit'?(playerState.channel?.defaultTransition||'fade'):item.transition;renderPlayerItem(item,animate,elapsedMs);heartbeat(item);};
-  const showNext=(forceRender=false)=>{const items=playerState?.slides||[];if(!items.length){currentItem=null;index=0;document.querySelector('#player-slide').classList.add('is-visible');document.querySelector('#player-slide').innerHTML='<div class="player-empty-channel"><strong>Willkommen</strong><p>Noch kein Inhalt zugewiesen.</p></div>';return;}if(items.length===1){clearTimeout(timer);const item=items[0];if(forceRender||currentItem?.slide?.id!==item.slide?.id)showItem(item,false);index=1;return;}if(forceRender){index=1;showItem(items[0],false);timer=setTimeout(showNext,Math.max(3,Number(items[0].durationSeconds||12))*1000);return;}const item=items[index%items.length],slide=document.querySelector('#player-slide');slide.classList.remove('is-visible');clearTimeout(timer);timer=setTimeout(()=>{showItem(item);index+=1;timer=setTimeout(showNext,Math.max(3,Number(item.durationSeconds||12))*1000);},220);};
+  const showNext=(forceRender=false)=>{const items=playerState?.slides||[];if(!items.length){currentItem=null;index=0;document.querySelector('#player-slide').classList.add('is-visible');document.querySelector('#player-slide').innerHTML=playerState?.licenseBlocked?'<div class="player-empty-channel"><strong>Lizenzfreigabe fehlt</strong><p>Bitte die Lizenz dieser Installation prüfen.</p></div>':'<div class="player-empty-channel"><strong>Willkommen</strong><p>Noch kein Inhalt zugewiesen.</p></div>';return;}if(items.length===1){clearTimeout(timer);const item=items[0];if(forceRender||currentItem?.slide?.id!==item.slide?.id)showItem(item,false);index=1;return;}if(forceRender){index=1;showItem(items[0],false);timer=setTimeout(showNext,Math.max(3,Number(items[0].durationSeconds||12))*1000);return;}const item=items[index%items.length],slide=document.querySelector('#player-slide');slide.classList.remove('is-visible');clearTimeout(timer);timer=setTimeout(()=>{showItem(item);index+=1;timer=setTimeout(showNext,Math.max(3,Number(item.durationSeconds||12))*1000);},220);};
   const synchronizedPosition=()=>{const items=playerState?.slides||[],sync=playerState?.playbackSync;if(!items.length||!sync)return null;const durations=items.map(item=>Math.max(3,Number(item.durationSeconds||12))*1000),cycleMs=durations.reduce((sum,value)=>sum+value,0),nowMs=Date.now()+serverClockOffsetMs,cycleElapsed=((nowMs-Number(playbackEpochMs??sync.epochMs))%cycleMs+cycleMs)%cycleMs;let cursor=0;for(let position=0;position<durations.length;position+=1){const end=cursor+durations[position];if(cycleElapsed<end)return{index:position,elapsedMs:cycleElapsed-cursor,remainingMs:end-cycleElapsed,boundaryAtMs:nowMs+end-cycleElapsed};cursor=end;}return{index:0,elapsedMs:0,remainingMs:durations[0],boundaryAtMs:nowMs+durations[0]};};
   const startSynchronizedPlayback=(forceRender=false)=>{clearTimeout(timer);const items=playerState?.slides||[];if(items.length===1){const item=items[0];if(forceRender||currentMatrixIndex!==0||currentItem?.slide?.id!==item.slide?.id)showItem(item,false);currentMatrixIndex=0;return;}const position=synchronizedPosition();if(!position){showNext(forceRender);return;}const item=items[position.index],changed=currentMatrixIndex!==position.index;if(forceRender||changed){currentMatrixIndex=position.index;showItem(item,!forceRender&&position.elapsedMs<450,position.elapsedMs);}const fadeAtMs=position.boundaryAtMs-220,tillFade=fadeAtMs-(Date.now()+serverClockOffsetMs);timer=setTimeout(()=>{document.querySelector('#player-slide')?.classList.remove('is-visible');const tillBoundary=Math.max(0,position.boundaryAtMs-(Date.now()+serverClockOffsetMs));timer=setTimeout(()=>{const next=synchronizedPosition();if(!next)return;currentMatrixIndex=next.index;showItem(items[next.index],true,next.elapsedMs);startSynchronizedPlayback(false);},tillBoundary);},Math.max(0,tillFade));};
   const startPlayback=(forceRender=false)=>{
@@ -591,11 +591,11 @@ function setView(view) {
   if (view === 'integrations') {
     loadIntegrationSources();
     loadTitleExclusions();
-    if (!state.crewbrainConfigLoaded) loadCrewBrainConfiguration();
-    loadEasyJobConfiguration();
-    loadApiUsers();
+    if (licenseAllows('crewbrain')&&!state.crewbrainConfigLoaded) loadCrewBrainConfiguration();
+    if(licenseAllows('easyjob'))loadEasyJobConfiguration();
+    if(licenseAllows('api'))loadApiUsers();
   }
-  if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();if(cmsManagedServices)loadPublicCalendarSettings();}
+  if(view==='settings'){showSettingsLevel();loadFeatureSettings();if(licenseAllows('advertising'))loadAdvertisingSettings();if(cmsManagedServices&&licenseAllows('events'))loadPublicCalendarSettings();}
   if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin')loadMenuModuleSettings();}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
@@ -672,7 +672,7 @@ function renderDisplayStatus(displays) {
   label.parentElement.dataset.status = online > 0 ? 'active' : 'inactive';
 }
 
-async function loadDashboard(){try{const [eventsResult,displaysResult,channelsResult,schedulesResult]=await Promise.all([apiRequest('/api/events'),apiRequest('/api/displays'),apiRequest('/api/channels'),apiRequest('/api/schedules')]);const events=eventsResult.data||[],displays=displaysResult.data||[],channels=channelsResult.data||[],schedules=schedulesResult.data||[];renderDisplayStatus(displays);document.querySelector('#dashboard-event-count').textContent=events.length;const online=displays.filter(display=>display.online).length;document.querySelector('#dashboard-display-count').innerHTML=`${online} <small>/ ${displays.length}</small>`;document.querySelector('#dashboard-display-note').textContent=displays.length?`${online} Player aktuell online`:'Noch keine Displays angelegt';document.querySelector('#dashboard-channel-count').textContent=channels.filter(channel=>channel.status==='published').length;const future=schedules.filter(entry=>entry.status==='published'&&new Date(entry.startsAt)>new Date()).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)),next=future[0],soon=future.filter(entry=>new Date(entry.startsAt)-Date.now()<=2*3600000).length;document.querySelector('#dashboard-next-time').textContent=next?new Date(next.startsAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';document.querySelector('#dashboard-next-note').textContent=next?`${next.channelName} · ${next.targetType==='group'?'Display-Gruppe':next.targetType==='matrix'?'Matrix-Display':'Display'}`:'Noch kein Wechsel geplant';const landscapes=displays.filter(display=>display.orientation==='landscape'),portraits=displays.filter(display=>display.orientation==='portrait');document.querySelector('#dashboard-landscape-count').textContent=`${landscapes.length} Querformat`;document.querySelector('#dashboard-landscape-note').textContent=landscapes.length?`${landscapes.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-portrait-count').textContent=`${portraits.length} Hochformat`;document.querySelector('#dashboard-portrait-note').textContent=portraits.length?`${portraits.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-change-count').textContent=soon?`${soon} geplante Wechsel`:'Keine geplanten Wechsel';document.querySelector('#dashboard-event-list').innerHTML=events.slice(0,5).map(event=>`<div class="event-row"><time>${escapeHtml(eventTimeInput(event.eventStart)||'–')}</time><span class="event-line coral"></span><div><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.room||event.venue||'Ort offen')}${eventTimeInput(event.admissionStart)?` · Einlass ${escapeHtml(eventTimeInput(event.admissionStart))}`:''}</small></div><span class="tag ${eventStatusTones[event.status]||'muted'}">${escapeHtml(eventStatusLabels[event.status]||event.status)}</span></div>`).join('')||'<p class="property-note">Noch keine Veranstaltungen vorhanden.</p>';}catch(error){showToast(error.message);}}
+async function loadDashboard(){try{const [eventsResult,displaysResult,channelsResult,schedulesResult]=await Promise.all([licensedRead('/api/events'),licensedRead('/api/displays'),licensedRead('/api/channels'),licensedRead('/api/schedules')]);const events=eventsResult.data||[],displays=displaysResult.data||[],channels=channelsResult.data||[],schedules=schedulesResult.data||[];renderDisplayStatus(displays);document.querySelector('#dashboard-event-count').textContent=events.length;const online=displays.filter(display=>display.online).length;document.querySelector('#dashboard-display-count').innerHTML=`${online} <small>/ ${displays.length}</small>`;document.querySelector('#dashboard-display-note').textContent=displays.length?`${online} Player aktuell online`:'Noch keine Displays angelegt';document.querySelector('#dashboard-channel-count').textContent=channels.filter(channel=>channel.status==='published').length;const future=schedules.filter(entry=>entry.status==='published'&&new Date(entry.startsAt)>new Date()).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)),next=future[0],soon=future.filter(entry=>new Date(entry.startsAt)-Date.now()<=2*3600000).length;document.querySelector('#dashboard-next-time').textContent=next?new Date(next.startsAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';document.querySelector('#dashboard-next-note').textContent=next?`${next.channelName} · ${next.targetType==='group'?'Display-Gruppe':next.targetType==='matrix'?'Matrix-Display':'Display'}`:'Noch kein Wechsel geplant';const landscapes=displays.filter(display=>display.orientation==='landscape'),portraits=displays.filter(display=>display.orientation==='portrait');document.querySelector('#dashboard-landscape-count').textContent=`${landscapes.length} Querformat`;document.querySelector('#dashboard-landscape-note').textContent=landscapes.length?`${landscapes.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-portrait-count').textContent=`${portraits.length} Hochformat`;document.querySelector('#dashboard-portrait-note').textContent=portraits.length?`${portraits.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-change-count').textContent=soon?`${soon} geplante Wechsel`:'Keine geplanten Wechsel';document.querySelector('#dashboard-event-list').innerHTML=events.slice(0,5).map(event=>`<div class="event-row"><time>${escapeHtml(eventTimeInput(event.eventStart)||'–')}</time><span class="event-line coral"></span><div><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.room||event.venue||'Ort offen')}${eventTimeInput(event.admissionStart)?` · Einlass ${escapeHtml(eventTimeInput(event.admissionStart))}`:''}</small></div><span class="tag ${eventStatusTones[event.status]||'muted'}">${escapeHtml(eventStatusLabels[event.status]||event.status)}</span></div>`).join('')||'<p class="property-note">Noch keine Veranstaltungen vorhanden.</p>';}catch(error){showToast(error.message);}}
 
 function showToast(message) {
   clearTimeout(toastTimer);
@@ -708,7 +708,8 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
     setView('settings');
   }
   showSettingsLevel(level);
-  if(level==='modules')loadMenuModuleSettings(true);
+  if(level==='modules'&&licenseAllows('menus'))loadMenuModuleSettings(true);
+  if(level==='licensing')loadLicensing();
   if(level==='advertising')loadAdvertisingSettings();
   if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
   if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
@@ -905,7 +906,7 @@ function renderEvents() {
 
 async function loadEvents() {
   try {
-    const result = await apiRequest('/api/events');
+    const result = await licensedRead('/api/events');
     state.events = result.data || [];
     renderEvents();
   } catch (error) { showToast(error.message); }
@@ -1074,8 +1075,10 @@ function showAuthMessage(id, message, success = false) {
   element.classList.toggle('is-success', success);
 }
 
-function applyCurrentUser(user) {
+async function applyCurrentUser(user) {
+  const requestedView = kioskyRuntime.initialView || window.location.hash.slice(1);
   state.currentUser = user;
+  await loadFeatureSettings();
   if (!cmsManagedServices && !user.mustChangePassword && sessionStorage.getItem('kiosky-menu-return') === '1') { sessionStorage.removeItem('kiosky-menu-return'); location.assign('/speisekarten'); return; }
   const federated = !cmsManagedServices && user.authenticationProvider === 'zugangswerk';
   document.querySelector('#change-password-form').hidden = federated;
@@ -1095,8 +1098,7 @@ function applyCurrentUser(user) {
   applyNavigationConfig(state.featureSettings || {}, state.navigationOrder || []);
   document.querySelector('#auth-screen').hidden = true;
   document.querySelector('#app-shell').hidden = false;
-  if(user.role==='admin'){loadIntegrationSources();loadUpdates();}
-  const requestedView = kioskyRuntime.initialView || window.location.hash.slice(1);
+  if(user.role==='admin'){if(licenseAllows('integrations'))loadIntegrationSources();if(licenseAllows('updates'))loadUpdates();}
   setView(pageMeta[requestedView] ? requestedView : 'dashboard');
   loadFeatureSettings();
   if (user.mustChangePassword) {
@@ -1162,7 +1164,7 @@ async function initializeAuthentication() {
   try {
     const result = await apiRequest('/api/auth/me');
     state.zugangswerkEnabled = Boolean(result.zugangswerk);
-    applyCurrentUser(result.user);
+    await applyCurrentUser(result.user);
     if (!cmsManagedServices && new URLSearchParams(location.search).get('zugangswerk') === 'linked') {
       history.replaceState({}, '', '/#settings');
       setView('settings'); showSettingsLevel('zugangswerk'); await loadZugangswerkSettings();
@@ -1188,7 +1190,7 @@ document.querySelector('#login-form').addEventListener('submit', async event => 
     const result = await apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify({ identifier: document.querySelector('#login-email').value, password: document.querySelector('#login-password').value }) });
     form.reset();
     showAuthMessage('login-message', '');
-    applyCurrentUser(result.user);
+    await applyCurrentUser(result.user);
   } catch (error) {
     showAuthMessage('login-message', error.message);
   } finally { button.disabled = false; }
@@ -1202,7 +1204,7 @@ document.querySelector('#invite-form').addEventListener('submit', async event =>
   try {
     const result = await apiRequest(`/api/auth/invitations/${encodeURIComponent(form.dataset.token)}`, { method: 'POST', body: JSON.stringify({ displayName: document.querySelector('#invite-name').value, username: document.querySelector('#invite-username').value, password }) });
     window.history.replaceState({}, '', window.location.pathname);
-    form.reset(); applyCurrentUser(result.user); showToast('Dein Kiosky-Konto ist eingerichtet.');
+    form.reset(); await applyCurrentUser(result.user); showToast('Dein Kiosky-Konto ist eingerichtet.');
   } catch (error) { showAuthMessage('invite-message', error.message); button.disabled = false; }
 });
 
@@ -1219,7 +1221,7 @@ document.querySelector('#setup-form').addEventListener('submit', async event => 
   try {
     const result = await apiRequest('/api/auth/setup', { method: 'POST', body: JSON.stringify({ displayName: document.querySelector('#setup-name').value, email: document.querySelector('#setup-email').value, password }) });
     form.reset();
-    applyCurrentUser(result.user);
+    await applyCurrentUser(result.user);
   } catch (error) {
     showAuthMessage('setup-message', error.message);
   } finally { button.disabled = false; }
@@ -1586,13 +1588,19 @@ function normalizedNavigationOrder(order){
 }
 
 function moduleEnabled(view,settings=state.featureSettings||{}){
+  if(view==='settings')return true;
   if(typeof settings[view]==='boolean')return settings[view];
   const legacyKey=legacyFeatureViewMap[view];
   return legacyKey?settings[legacyKey]!==false:true;
 }
 
+function licenseAllows(module){return ['settings','users'].includes(module)||!state.licensedModules||state.licensedModules.includes(module);}
+function licenseModuleForFeature(key){return key==='content'||key.startsWith('editor_')?'channels':key==='presets_warnings'?'operations':key;}
+async function licensedRead(path,empty={data:[]}){const match=path.match(/^\/api\/(slides|templates|channels|media|locations|displays|events|schedules|presets|warning-templates)/);const module=match?({slides:'channels',templates:'channels',locations:'displays',schedules:'schedule',presets:'operations','warning-templates':'operations'}[match[1]]||match[1]):null;return module&&!licenseAllows(module)?empty:apiRequest(path);}
+
 function navigationViewAvailable(view){
   if(!pageMeta[view])return false;
+  if(view!=='settings'&&view!=='users'&&!licenseAllows(licenseModuleForFeature(view)))return false;
   if(view==='menus'&&state.currentUser?.role!=='admin'&&state.menuAccess===false)return false;
   if(!['integrations','users'].includes(view)&&!moduleEnabled(view))return false;
   if(cmsManagedServices&&['media','users'].includes(view))return false;
@@ -1611,6 +1619,7 @@ function applyNavigationConfig(settings={},order=[]){
   const navigation=document.querySelector('#main-navigation'),help=navigation.querySelector('.nav-help');
   state.navigationOrder.forEach(view=>{const item=navigation.querySelector(`.nav-item[data-view="${CSS.escape(view)}"]`);if(item)navigation.insertBefore(item,help);});
   navigation.querySelectorAll('.nav-item[data-view]').forEach(item=>{if(item.classList.contains('nav-help'))return;item.hidden=!navigationViewAvailable(item.dataset.view);});
+  for(const button of document.querySelectorAll('[data-settings-open]')){const module={editor:'channels',advertising:'advertising',calendar:'events'}[button.dataset.settingsOpen];if(module){button.disabled=!licenseAllows(module);button.title=button.disabled?'Nicht durch die Lizenz freigeschaltet':'';}}
   applyEditorElementVisibility();
   const editingHiddenSettings=state.view==='settings'&&state.currentUser?.role==='admin';
   if(state.currentUser&&state.view&&!navigationViewAvailable(state.view)&&!editingHiddenSettings)setView(firstAvailableNavigationView());
@@ -1618,7 +1627,7 @@ function applyNavigationConfig(settings={},order=[]){
 
 function renderModuleSwitching(){
   const list=document.querySelector('#module-switching-list'),order=normalizedNavigationOrder(state.navigationOrder);
-  list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''}><span>${view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
+  list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''} ${!licenseAllows(licenseModuleForFeature(view))?'disabled':''}><span>${!licenseAllows(licenseModuleForFeature(view))?'Nicht lizenziert':view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
 const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
@@ -1626,11 +1635,11 @@ function editorElementEnabled(type,settings=state.featureSettings||{}){return se
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
   const list=document.querySelector('#editor-element-settings');if(!list)return;
-  list.innerHTML=Object.entries(editorElementLabels).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
+  list.innerHTML=Object.entries(editorElementLabels).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
 }
 
 async function loadFeatureSettings(){
-  try{const result=await apiRequest('/api/settings/features');state.menuAccess=Boolean(result.menuAccess);applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
+  try{const result=await apiRequest('/api/settings/features');state.licensedModules=result.licensedModules||null;state.menuAccess=Boolean(result.menuAccess);applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
   catch(error){showToast(error.message);return null;}
 }
 
@@ -1678,12 +1687,12 @@ moduleSwitchingList.addEventListener('drop',event=>{
   order.splice(Math.max(0,target+(after?1:0)),0,moving);state.navigationOrder=order;renderModuleSwitching();
 });
 document.querySelector('#feature-settings-form').addEventListener('submit',async event=>{
-  event.preventDefault();const features=Object.fromEntries([...document.querySelectorAll('[data-feature-setting]')].map(input=>[input.dataset.featureSetting,input.checked])),payload={...features,navigationOrder:normalizedNavigationOrder(state.navigationOrder)};
+  event.preventDefault();const features=Object.fromEntries([...document.querySelectorAll('[data-feature-setting]')].filter(input=>!input.disabled).map(input=>[input.dataset.featureSetting,input.checked])),payload={...features,navigationOrder:normalizedNavigationOrder(state.navigationOrder)};
   try{const result=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify(payload)});applyNavigationConfig(result.data||features,result.navigationOrder||payload.navigationOrder);renderModuleSwitching();showToast('Modul-Sichtbarkeit und Reihenfolge wurden gespeichert.');}
   catch(error){showToast(error.message);}
 });
 document.querySelector('#editor-element-settings-form').addEventListener('submit',async event=>{
-  event.preventDefault();const editorSettings=Object.fromEntries([...document.querySelectorAll('[data-editor-element-setting]')].map(input=>[`editor_${input.dataset.editorElementSetting}`,input.checked]));
+  event.preventDefault();const editorSettings=Object.fromEntries([...document.querySelectorAll('[data-editor-element-setting]')].filter(input=>!input.disabled).map(input=>[`editor_${input.dataset.editorElementSetting}`,input.checked]));
   try{const result=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify(editorSettings)});applyNavigationConfig(result.data||{...state.featureSettings,...editorSettings},result.navigationOrder||state.navigationOrder);renderEditorElementSettings();showToast('Die verfügbaren Slide-Editor-Elemente wurden gespeichert.');}
   catch(error){showToast(error.message);}
 });
@@ -1708,14 +1717,14 @@ async function mountMenuModule(id,mode){
     root.classList.add('menu-app','is-embedded');
     root.replaceChildren(...[...template.children].filter(node=>node.tagName!=='SCRIPT').map(node=>node.cloneNode(true)));
     root.querySelectorAll('[id]').forEach(node=>{node.dataset.menuId=node.id;node.removeAttribute('id');});
-    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode,onChanged:async()=>{await loadContent();await loadMenuShareSettings();},editTemplate:async template=>{await loadContent();editTemplate(template.id);await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();},editSlide:async card=>{await loadContent();openSlideEditor(slideForUi(card),{menuCard:true});await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();}});
+    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode,onChanged:async()=>{await loadContent();await loadMenuShareSettings();},editTemplate:async template=>{await loadContent();state.templates=[...state.templates.filter(item=>item.id!==template.id),template];editTemplate(template.id);await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();},editSlide:async card=>{await loadContent();state.slides=[...state.slides.filter(item=>item.id!==card.id),slideForUi(card)];openSlideEditor(slideForUi(card),{menuCard:true});await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();}});
   })();
   try{return await root.menuLoading;}catch(error){root.textContent=error.message;showToast(error.message);}finally{root.menuLoading=null;}
 }
 async function loadMenuModuleSettings(loadLinks=false){
   const form=document.querySelector('#menu-module-settings-form');form.inert=true;
   try{
-    const [result,templateResult]=await Promise.all([apiRequest('/api/settings/menus'),apiRequest('/api/templates')]),settings=result.settings;
+    const [result,templateResult]=await Promise.all([apiRequest('/api/settings/menus'),licenseAllows('channels')?apiRequest('/api/templates'):apiRequest('/api/menus/templates')]),settings=result.settings;
     const own=(templateResult.data||[]).filter(item=>item.document?.menuTemplate===true);
     document.querySelector('#menu-default-template').innerHTML='<option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option>'+own.map(item=>`<option value="template:${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
     if(settings.defaultTemplate?.startsWith('template:')&&!own.some(item=>`template:${item.id}`===settings.defaultTemplate))document.querySelector('#menu-default-template').add(new Option('Gespeicherte Vorlage nicht mehr verfügbar',settings.defaultTemplate));
@@ -1739,7 +1748,7 @@ function menuShareUrl(shareId){
   const url=new URL(kioskyRuntime.menuBaseUrl||fallback,location.href);url.search='';url.hash='';url.searchParams.set('freigabe',shareId);return url.href;
 }
 async function loadMenuShareSettings(){
-  const [share,cards]=await Promise.all([apiRequest('/api/settings/menu-share'),apiRequest('/api/slides')]);
+  const [share,cards]=await Promise.all([apiRequest('/api/settings/menu-share'),licensedRead('/api/slides')]);
   document.querySelector('#menu-share-enabled').checked=share.enabled;
   document.querySelector('#menu-share-password').value='';
   document.querySelector('#menu-share-password-status').textContent=share.hasPassword?'Ein Freigabepasswort ist gesetzt.':'Noch kein Freigabepasswort gesetzt.';
@@ -1779,7 +1788,7 @@ function renderAdvertisingSettings(status){
 }
 async function loadAdvertisingSettings(){
   if(!document.querySelector('#advertising-settings-form'))return;
-  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),apiRequest('/api/templates'),apiRequest('/api/locations'),apiRequest('/api/media')]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Integrierte Werbevorlage</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
+  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),licensedRead('/api/templates'),licensedRead('/api/locations'),licensedRead('/api/media',{folders:[],assets:[]})]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Integrierte Werbevorlage</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
 }
 function renderAdvertisingTypeOptions(types=state.advertisingAvailableTypes||[],selected=new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value))){
   const list=document.querySelector('#advertising-event-types');if(!list)return;
@@ -2417,7 +2426,7 @@ function renderUserLocationMatrix(){
 async function loadUsers() {
   if (state.currentUser?.role !== 'admin') return;
   try {
-    const [result, invitationResult, locationResult] = await Promise.all([apiRequest('/api/users'), apiRequest('/api/users/invitations'), apiRequest('/api/locations')]);
+    const [result, invitationResult, locationResult] = await Promise.all([apiRequest('/api/users'), apiRequest('/api/users/invitations'), licensedRead('/api/locations')]);
     state.users = result.data;
     state.userInvitations = invitationResult.data || [];
     state.locations=locationResult.data||[];
@@ -2851,8 +2860,8 @@ function applyActiveChannel() {
 
 async function loadContent(preferredChannelId = state.activeChannelId) {
   try {
-    const mediaRequest = state.currentUser?.role === 'viewer' ? Promise.resolve({ folders: [], assets: [] }) : apiRequest('/api/media');
-    const [slidesResult, channelsResult, templatesResult, mediaResult, locationResult] = await Promise.all([apiRequest('/api/slides'), apiRequest('/api/channels'), apiRequest('/api/templates'), mediaRequest, apiRequest('/api/locations'), state.events.length ? Promise.resolve() : loadEvents()]);
+    const mediaRequest = state.currentUser?.role === 'viewer' ? Promise.resolve({ folders: [], assets: [] }) : licensedRead('/api/media',{folders:[],assets:[]});
+    const [slidesResult, channelsResult, templatesResult, mediaResult, locationResult] = await Promise.all([licensedRead('/api/slides'), licensedRead('/api/channels'), licensedRead('/api/templates'), mediaRequest, licensedRead('/api/locations'), state.events.length ? Promise.resolve() : loadEvents()]);
     state.mediaFolders = mediaResult.folders || [];
     state.mediaAssets = mediaResult.assets || [];
     state.locations = locationResult.data || [];
@@ -3074,7 +3083,7 @@ async function applySlidePickerTags(event) {
   let completed = 0;
   try {
     // Fetch current data so an older library snapshot cannot overwrite slide edits.
-    const result = await apiRequest('/api/slides');
+    const result = await licensedRead('/api/slides');
     const updates = picker.ids.map(id => {
       const slide = (result.data || []).find(item => item.id === id);
       if (!slide) throw new Error('Eine ausgewählte Slide ist nicht mehr verfügbar. Bitte Auswahl aktualisieren.');
@@ -4211,7 +4220,7 @@ function renderMediaBrowser(prefix, selectionMode = false) {
 }
 function renderMediaLibrary() { renderMediaBrowser('media', true); renderMediaBrowser('media-page'); }
 async function refreshMedia() {
-  const result = await apiRequest('/api/media');
+  const result = await licensedRead('/api/media',{folders:[],assets:[]});
   state.mediaFolders = result.folders || [];
   state.mediaAssets = result.assets || [];
   state.editorElements = hydrateMediaReferences(state.editorElements);
@@ -4482,7 +4491,7 @@ async function openChannelPreview() {
   document.querySelectorAll('[data-channel-preview-control]').forEach(control=>{control.disabled=true;});
   if(!dialog.open)dialog.showModal();
   try{
-    const [slides,events]=await Promise.all([apiRequest('/api/slides'),apiRequest('/api/events')]);
+    const [slides,events]=await Promise.all([licensedRead('/api/slides'),licensedRead('/api/events')]);
     if(generation!==channelPreviewGeneration||!dialog.open)return;
     channelPreviewSession={channel,slides:(slides.data||[]).map(slide=>({...slide,document:hydrateMediaReferences(slide.document||{})})),events:events.data||[],elapsedMs:0,startedAt:performance.now(),paused:false,signature:null,renderKey:null};
     const observer=new ResizeObserver(scaleChannelPreview);channelPreviewSession.resizeObserver=observer;
@@ -4532,7 +4541,7 @@ function playerUrl(displayOrSlug) {
 }
 
 state.locations=[];state.matrices=[];state.trash=[];state.displayPage=1;
-async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([apiRequest('/api/displays'),apiRequest('/api/display-groups'),apiRequest('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${state.channels.map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
+async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${state.channels.map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
 
 function displayTheme(channel) {
   if (channel === 'Restaurant') return 'restaurant';
@@ -4821,7 +4830,7 @@ function positionScheduleWeekPicker(){
   const preferredTop=rect.bottom+gap,top=preferredTop+picker.offsetHeight<=window.innerHeight-12?preferredTop:Math.max(12,rect.top-picker.offsetHeight-gap);
   picker.style.left=`${left}px`;picker.style.top=`${top}px`;
 }
-async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([apiRequest('/api/schedules'),apiRequest('/api/schedule-target-order')]);state.scheduleEntries=result.data||[];state.scheduleTargetOrder=order.data||[];renderScheduleContents();updateWeekNavigation();renderSchedule();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
+async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);state.scheduleEntries=result.data||[];state.scheduleTargetOrder=order.data||[];renderScheduleContents();updateWeekNavigation();renderSchedule();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
 function renderScheduleContents(){const list=document.querySelector('#schedule-content-list'),query=document.querySelector('#schedule-content-search').value.trim().toLowerCase(),showChannels=document.querySelector('#schedule-show-channels').checked,showSlides=document.querySelector('#schedule-show-slides').checked;const channels=showChannels?state.channels.filter(item=>!query||`${item.name} ${item.description||''}`.toLowerCase().includes(query)).map(channel=>`<button draggable="true" data-schedule-content="channel:${escapeHtml(channel.id)}" data-content-type="${channel.eventId?'event':'default'}"><i class="content-swatch ${channel.eventId?'coral':'blue'}"></i><span><strong>${escapeHtml(channel.name)}</strong><small>${channel.eventId?'Eventkanal':'Kanal'} · ${channel.items.length} Slides</small></span><b>⠿</b></button>`):[];const slides=showSlides?state.slides.filter(item=>!query||`${item.title} ${item.meta}`.toLowerCase().includes(query)).map(slide=>`<button draggable="true" data-schedule-content="slide:${escapeHtml(slide.id)}" data-content-type="slide"><i class="content-swatch green"></i><span><strong>${escapeHtml(slide.title)}</strong><small>Einzelne Slide · ${escapeHtml(slideTypeLabels[slide.type]||slide.type)}</small></span><b>⠿</b></button>`):[];list.innerHTML=[...channels,...slides].join('')||'<p class="property-note">Keine passenden Kanäle oder Slides gefunden.</p>';list.querySelectorAll('[data-schedule-content]').forEach(button=>{button.classList.toggle('is-selected',button.dataset.scheduleContent===state.selectedScheduleContent);button.addEventListener('click',()=>{state.selectedScheduleContent=button.dataset.scheduleContent;renderScheduleContents();document.querySelector('#schedule-drag-hint').textContent=`„${button.querySelector('strong').textContent}“ gewählt – jetzt ${state.scheduleView==='week'?'einen Tag':'eine Uhrzeit'} anklicken.`;});button.addEventListener('dragstart',event=>{state.selectedScheduleContent=button.dataset.scheduleContent;event.dataTransfer.setData('application/x-kiosky-schedule',button.dataset.scheduleContent);button.classList.add('dragging');});button.addEventListener('dragend',()=>button.classList.remove('dragging'));});}
 ['schedule-show-channels','schedule-show-slides'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',renderScheduleContents));document.querySelector('#schedule-content-search').addEventListener('input',renderScheduleContents);
 
@@ -5238,7 +5247,7 @@ const emergencyTypeLabels = { evacuation:'EVAKUIERUNG',weather:'UNWETTERWARNUNG'
 
 state.activeEmergency=null;state.activeWarning=null;state.presets=[];state.warningTemplates=[];state.warnings=[];
 function warningTargetMarkup(selectedValues=[]){const selected=new Set(selectedValues);return`<label><input type="checkbox" value="global" ${selected.has('global')?'checked':''}><span><strong>Alle Displays</strong><small>Globaler Warnhinweis</small></span></label><details open><summary>Standorte</summary>${state.locations.map(location=>`<label><input type="checkbox" value="location:${escapeHtml(location.id)}" ${selected.has(`location:${location.id}`)?'checked':''}><span><strong>${escapeHtml(location.name)}</strong><small>${location.displayCount} Displays · ${escapeHtml(location.warningAreaCode||'keine DWD-Kennung')}</small></span></label>`).join('')||'<p class="property-note">Keine Standorte vorhanden.</p>'}</details><details><summary>Display-Gruppen</summary>${state.groups.map(group=>`<label><input type="checkbox" value="group:${escapeHtml(group.id)}" ${selected.has(`group:${group.id}`)||selected.has(group.id)?'checked':''}><span><strong>${escapeHtml(group.name)}</strong><small>${group.displayIds.length} Displays</small></span></label>`).join('')}</details><details><summary>Matrix-Displays</summary>${state.matrices.map(matrix=>`<label><input type="checkbox" value="matrix:${escapeHtml(matrix.id)}" ${selected.has(`matrix:${matrix.id}`)?'checked':''}><span><strong>${escapeHtml(matrix.name)}</strong><small>${matrix.members.length} Displays</small></span></label>`).join('')}</details><details><summary>Einzelne Displays</summary>${state.displays.map(display=>`<label><input type="checkbox" value="display:${escapeHtml(display.id)}" ${selected.has(`display:${display.id}`)?'checked':''}><span><strong>${escapeHtml(display.name)}</strong><small>${display.orientation==='portrait'?'Hochformat':'Querformat'}</small></span></label>`).join('')}</details>`;}
-async function loadOperations(){try{if(!state.locations.length||!state.matrices.length)await loadDisplays();const [result,presets,templates]=await Promise.all([apiRequest('/api/operations'),apiRequest('/api/presets'),apiRequest('/api/warning-templates')]);state.displays=result.displays||[];state.activeEmergency=result.emergency||null;state.warnings=result.warnings||[];state.activeWarning=state.warnings.find(item=>item.status==='active')||null;state.presets=presets.data||[];state.warningTemplates=templates.data||[];if(!state.channels.length)await loadContent();renderOperations();renderPresets();renderWarningTemplates();renderDwdLocationOptions();}catch(error){showToast(error.message);}}
+async function loadOperations(){try{if(!state.locations.length||!state.matrices.length)await loadDisplays();const [result,presets,templates]=await Promise.all([apiRequest('/api/operations'),licensedRead('/api/presets'),licensedRead('/api/warning-templates')]);state.displays=result.displays||[];state.activeEmergency=result.emergency||null;state.warnings=result.warnings||[];state.activeWarning=state.warnings.find(item=>item.status==='active')||null;state.presets=presets.data||[];state.warningTemplates=templates.data||[];if(!state.channels.length)await loadContent();renderOperations();renderPresets();renderWarningTemplates();renderDwdLocationOptions();}catch(error){showToast(error.message);}}
 function presetTargets(){return[...document.querySelectorAll('#preset-target-options input:checked')].map(input=>input.value);}
 function renderPresets(){const grid=document.querySelector('#preset-grid');if(!grid)return;grid.innerHTML=state.presets.map(preset=>{const channelUpdates=preset.config?.channelUpdates?.length||0,assignments=preset.config?.assignments?.length||0;return`<article><span class="preset-symbol">${preset.type==='emergency'?'!':preset.type==='reset'?'↺':'▶'}</span><div><strong>${escapeHtml(preset.name)}</strong><small>${preset.type==='emergency'?`${escapeHtml(emergencyTypeLabels[preset.config.warningType||preset.config.type]||'Warnhinweis')} · ${(preset.config.targets||[]).length} Ziele`:`${channelUpdates} Kanalzustände · ${assignments} Ausspielungen`}</small></div><button class="button ${preset.type==='emergency'?'emergency-button':'button-primary'}" type="button" data-execute-preset="${escapeHtml(preset.id)}">${preset.type==='emergency'?'Jetzt auslösen':'Preset aufrufen'}</button><div class="preset-card-actions"><button class="icon-button" type="button" data-rename-preset="${escapeHtml(preset.id)}" title="Preset umbenennen" aria-label="Preset umbenennen">✎</button><button class="icon-button" type="button" data-duplicate-preset="${escapeHtml(preset.id)}" title="Preset duplizieren" aria-label="Preset duplizieren">⧉</button><button class="icon-button danger-action" type="button" data-delete-preset="${escapeHtml(preset.id)}" title="Preset löschen" aria-label="Preset löschen">⌫</button></div></article>`;}).join('')||'<p class="property-note">Noch keine Presets vorhanden.</p>';grid.querySelectorAll('[data-execute-preset]').forEach(button=>button.addEventListener('click',async()=>{const preset=state.presets.find(item=>item.id===button.dataset.executePreset);if(!confirm(`Preset „${preset.name}“ jetzt ausführen?`))return;button.disabled=true;try{await apiRequest(`/api/presets/${preset.id}/execute`,{method:'POST',body:'{}'});await Promise.all([loadOperations(),loadContent(),loadDisplays()]);showToast(`Preset „${preset.name}“ wurde ausgeführt.`);}catch(error){showToast(error.message);}finally{button.disabled=false;}}));grid.querySelectorAll('[data-rename-preset]').forEach(button=>button.addEventListener('click',()=>renamePreset(button.dataset.renamePreset)));grid.querySelectorAll('[data-duplicate-preset]').forEach(button=>button.addEventListener('click',()=>duplicatePreset(button.dataset.duplicatePreset)));grid.querySelectorAll('[data-delete-preset]').forEach(button=>button.addEventListener('click',()=>deletePreset(button.dataset.deletePreset)));}
 const presetDialog=document.querySelector('#preset-dialog');
@@ -5461,4 +5470,27 @@ setInterval(() => {
 }, 1000);
 
 initializeAuthentication();
+const licenseModuleLabels={dashboard:'Übersicht',events:'Veranstaltungen',channels:'Slides und Kanäle',menus:'Speisekarten',advertising:'Werbung',media:'Mediendatenbank',displays:'Displays',schedule:'Zeitplanung',operations:'Presets und Warnhinweise',integrations:'Schnittstellen',easyjob:'Easyjob',crewbrain:'CrewBrain',api:'Externe API',updates:'Updates'};
+let licenseRegistry=null,editingLicense=null;
+const licenseTime=value=>value?new Date(value).toLocaleString('de-DE'):'Noch kein Abgleich';
+function renderLicenseEditor(license=null){editingLicense=license;const form=document.querySelector('#license-create-form');form.reset();form.elements.label.value=license?.label||'';form.elements.seats.value=license?.seats||1;form.elements.revoked.checked=!!license?.revoked;document.querySelector('#license-edit-heading').textContent=license?'Lizenz bearbeiten':'Lizenz erstellen';document.querySelector('#license-module-options').innerHTML=Object.entries(licenseModuleLabels).map(([key,label])=>`<label class="toggle-label"><input type="checkbox" name="module" value="${key}" ${!license||license.modules.includes(key)?'checked':''}>${escapeHtml(label)}</label>`).join('');}
+async function loadLicensing(){
+ try{const result=await apiRequest('/api/settings/licensing');document.querySelector('#license-status').textContent=result.mode==='master'?'Dieser Standalone-Server ist die zentrale Lizenzverwaltung.':result.mode==='staged'?'Übergangsbetrieb: Lizenzpflicht ist noch nicht serverseitig eingerichtet. Bestehende Funktionen bleiben verfügbar.':`${result.hasLicenseKey?'Lizenz hinterlegt':'Keine Lizenz aktiviert'} · Letzter Erfolg: ${licenseTime(result.lastSuccess)}`;
+  document.querySelector('#license-authority').textContent=result.serverUrl?`Lizenzserver: ${result.serverUrl} · Schlüssel-Fingerabdruck: ${result.fingerprint||'Konfiguration ungültig'}`:'Für verwaltete Installationen KIOSKY_LICENSE_SERVER_URL und KIOSKY_LICENSE_PUBLIC_KEY serverseitig hinterlegen. Diese Vertrauensbasis kann hier nicht geändert werden.';
+  document.querySelector('#license-client-form').inert=!result.configured||result.mode==='master';document.querySelector('#license-client-form [name=name]').value=result.name;document.querySelector('#license-grants').textContent='Freigegeben: '+(result.modules.map(key=>licenseModuleLabels[key]||key).join(', ')||'Keine Module');
+  const masterSetup=document.querySelector('#license-master-setup');if(masterSetup)masterSetup.hidden=!result.masterAvailable||result.mode==='master'||cmsManagedServices;document.querySelector('#license-master').hidden=result.mode!=='master';
+  showAuthMessage('license-message',result.error||'Lizenzstatus geladen.',!result.error);
+  if(result.mode==='master')await loadLicenseRegistry();
+ }catch(error){showAuthMessage('license-message',error.message);}
+}
+async function loadLicenseRegistry(){
+ licenseRegistry=await apiRequest('/api/settings/licensing/master');document.querySelector('#license-public-key').value=licenseRegistry.publicKey;
+ document.querySelector('#license-registry').innerHTML=licenseRegistry.licenses.map(license=>`<details class="license-record"><summary>${escapeHtml(license.label)} · ${license.revoked?'Gesperrt':'Aktiv'} · ${license.instances.filter(i=>!i.revoked).length}/${license.seats} Installationen</summary><p>${license.modules.map(key=>escapeHtml(licenseModuleLabels[key]||key)).join(', ')||'Keine Module'}</p><p>Schlüsselkennung: ${escapeHtml(license.prefix)}…</p><button type="button" class="button button-secondary" data-license-edit="${escapeHtml(license.id)}">Lizenz bearbeiten</button><div class="license-instance-list">${license.instances.map(instance=>`<article><strong>${escapeHtml(instance.name)}</strong><p>${escapeHtml(instance.url)}</p><p>${escapeHtml(instance.platform)} · Kiosky ${escapeHtml(instance.version)} · ${instance.revoked?'Gesperrt':'Aktiv'}</p><p>Letzter Abgleich: ${escapeHtml(licenseTime(instance.lastSeen))}</p><small>Instanz-ID: ${escapeHtml(instance.id)}</small><button type="button" class="button button-secondary" data-license-instance="${escapeHtml(instance.id)}" data-license-id="${escapeHtml(license.id)}" data-revoked="${!instance.revoked}">${instance.revoked?'Instanz freigeben':'Instanz sperren'}</button></article>`).join('')||'<p>Noch keine Installation registriert.</p>'}</div></details>`).join('')||'<p>Noch keine Lizenzen angelegt.</p>';
+ if(!editingLicense)renderLicenseEditor();
+}
+document.querySelector('#license-client-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=event.submitter;button.disabled=true;try{const input={name:form.elements.name.value,...(form.elements.licenseKey.value?{licenseKey:form.elements.licenseKey.value}:{})};const result=await apiRequest('/api/settings/licensing/sync',{method:'POST',body:JSON.stringify(input)});await loadFeatureSettings();await loadLicensing();showAuthMessage('license-message',result.error||'Signierte Lizenzfreigabe gespeichert.',!result.error);}catch(error){showAuthMessage('license-message',error.message);}finally{form.elements.licenseKey.value='';button.disabled=false;}});
+document.querySelector('#license-master-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=event.submitter;button.disabled=true;try{await apiRequest('/api/settings/licensing/master/activate',{method:'POST',body:JSON.stringify({masterKey:form.elements.masterKey.value})});await loadFeatureSettings();await loadLicensing();showAuthMessage('license-message','Zentrale Lizenzverwaltung aktiviert.',true);}catch(error){showAuthMessage('license-message',error.message);}finally{form.elements.masterKey.value='';button.disabled=false;}});
+document.querySelector('#license-create-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,button=event.submitter;button.disabled=true;try{const modules=[...form.querySelectorAll('[name=module]:checked')].map(input=>input.value),input={label:form.elements.label.value,seats:Number(form.elements.seats.value),modules,revoked:form.elements.revoked.checked,...(editingLicense?{revision:editingLicense.revision}:{})};const result=await apiRequest('/api/settings/licensing/master/licenses'+(editingLicense?'/'+encodeURIComponent(editingLicense.id):''),{method:editingLicense?'PUT':'POST',body:JSON.stringify(input)});editingLicense=null;await loadLicenseRegistry();renderLicenseEditor();if(result.licenseKey){document.querySelector('#license-new-key').hidden=false;document.querySelector('#license-new-key-value').value=result.licenseKey;}showAuthMessage('license-message',result.licenseKey?'Lizenz erstellt. Den einmalig angezeigten Schlüssel jetzt kopieren.':'Lizenz aktualisiert. Instanzen übernehmen die Änderung beim nächsten erfolgreichen Abgleich.',true);}catch(error){showAuthMessage('license-message',error.message);}finally{button.disabled=false;}});
+document.querySelector('#license-new').addEventListener('click',()=>{renderLicenseEditor();document.querySelector('#license-new-key-value').value='';document.querySelector('#license-new-key').hidden=true;});
+document.querySelector('#license-registry').addEventListener('click',async event=>{const edit=event.target.closest('[data-license-edit]');if(edit){const license=licenseRegistry.licenses.find(item=>item.id===edit.dataset.licenseEdit);renderLicenseEditor(license);document.querySelector('#license-create-form').scrollIntoView({behavior:'smooth',block:'start'});return;}const button=event.target.closest('[data-license-instance]');if(!button)return;if(button.dataset.revoked==='true'&&!confirm('Diese Instanz sperren? Nach dem nächsten erfolgreichen Lizenzabgleich wird auch ihre Ausspielung gesperrt.'))return;button.disabled=true;try{await apiRequest('/api/settings/licensing/master/instance',{method:'PUT',body:JSON.stringify({licenseId:button.dataset.licenseId,instanceId:button.dataset.licenseInstance,revoked:button.dataset.revoked==='true'})});await loadLicenseRegistry();showAuthMessage('license-message','Instanzfreigabe aktualisiert.',true);}catch(error){showAuthMessage('license-message',error.message);}finally{button.disabled=false;}});
 })();

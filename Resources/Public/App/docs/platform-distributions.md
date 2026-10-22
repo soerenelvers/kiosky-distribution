@@ -16,6 +16,9 @@ Kiosky wird als ein Produkt mit gemeinsamen Oberflächen- und Domainquellen gepf
   TYPO3-Backendbenutzer und lokale Speicherung über Doctrine DBAL.
 
 WordPress und TYPO3 benötigen keinen Kiosky-Standalone- oder Node.js-Server.
+Bei eingerichteter zentraler Modul-Lizenzierung beziehen sie ihre signierten
+Freigaben von der Standalone-Masterinstanz. Offlinefreigaben bleiben erhalten;
+Einrichtung und Scheduler sind in [Lizenzverwaltung](licensing.md) beschrieben.
 
 Der gemeinsame JavaScript-Player, Editor und API-Vertrag werden bei jedem Build in
 alle Ausgaben übernommen. Der PHP-Domainkern unter `platforms/php-core` wird

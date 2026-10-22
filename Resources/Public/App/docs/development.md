@@ -32,6 +32,11 @@ Ohne API-Schlüssel bleibt die Einladung nutzbar und die Oberfläche zeigt einen
 
 ## Qualitätssicherung
 
+Die zentrale Lizenzverwaltung, der gestufte Rollout und der isolierte
+HTTPS-Browsertest sind in [licensing.md](licensing.md) beschrieben. Lizenzdaten
+gehören nicht in gewöhnliche Inhaltsübertragungen; Clients behalten bei
+Netzausfall den letzten signierten Zustand, einschließlich bestätigter Sperren.
+
 - `pnpm lint` – strikte TypeScript-Prüfung
 - `pnpm test` – Build und Tests
 - `pnpm build` – Produktionsbuild

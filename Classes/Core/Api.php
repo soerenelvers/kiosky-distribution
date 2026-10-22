@@ -7,6 +7,8 @@ namespace Kiosky\Core;
 use RuntimeException;
 use Throwable;
 
+require_once __DIR__.'/LicenseClient.php';
+
 final class Api
 {
     /** @param array{id:string,name:string,email:string,role:string} $identity */
@@ -21,6 +23,7 @@ final class Api
         private readonly array $platformUsers = [],
         private readonly string $platform = 'cms',
         private readonly ?MenuSubscriptions $menuSubscriptions = null,
+        private readonly ?LicenseClient $licenseClient = null,
     ) {
     }
 
@@ -35,6 +38,7 @@ final class Api
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             $state = $this->state();
             $result = $this->route($state, $method, $path, $body, $playerKey);
+            if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
             if ($result[2] && preg_match('#^/api/(events|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
             if ($result[2]) {
                 $state['updatedAt'] = $this->now();
@@ -65,7 +69,7 @@ final class Api
             if (!$user && !$legacy) return [401,['error'=>['code'=>'UNAUTHORIZED','message'=>'Der API-Schlüssel fehlt, ist ungültig oder wurde widerrufen.']]];
             if ($user) $this->store->save($state);
             $identity = ['id'=>$user['id'] ?? 'cms:legacy-api','name'=>$user['name'] ?? 'Externe API','email'=>'','role'=>'admin','actorType'=>'api_key','requestId'=>$requestId,'ipAddress'=>$ipAddress];
-            $api = new self($this->store,$identity,$this->version,$this->crewBrain,$this->dwd,$this->easyJob,$this->platformUsers,$this->platform);
+            $api = new self($this->store,$identity,$this->version,$this->crewBrain,$this->dwd,$this->easyJob,$this->platformUsers,$this->platform,$this->menuSubscriptions,$this->licenseClient);
             $result = $api->handle($method,$path,$body);
             if ($result[0] === 503 && ($result[1]['error']['code'] ?? '') === 'STATE_CONFLICT' && $attempt < 2) return $this->handleExternal($method,$path,$body,$token,$legacyKey,$requestId,$ipAddress,$attempt+1);
             return $result;
@@ -82,17 +86,19 @@ final class Api
     public function runScheduledTasks(): array
     {
         $state = $this->state();
+        $licenseChanged=$this->license()->runDue($state);
         $summary = ($state['activeEventSource'] ?? null) === 'easyjob'
             ? $this->runAutomaticEasyJobImport($state)
             : $this->runAutomaticCrewBrainImport($state);
-        if (!empty($state['advertisingSettings']['enabled']) && ($summary['ran'] || strtotime((string)($state['advertisingLastSynchronizedAt'] ?? '')) < time() - 300)) {
+        if ($this->license()->allows($state,'advertising') && !empty($state['advertisingSettings']['enabled']) && ($summary['ran'] || strtotime((string)($state['advertisingLastSynchronizedAt'] ?? '')) < time() - 300)) {
             $this->synchronizeAdvertising($state);
             $summary['ran'] = true;
             $summary['advertisingSynchronized'] = true;
         }
-        $menuChecks=($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
+        $menuChecks=$this->license()->allows($state,'menus')?($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
             function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
-            function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);});
+            function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);}):0;
+        if($licenseChanged)$summary['ran']=true;
         if($menuChecks){$summary['ran']=true;$summary['menuChecks']=$menuChecks;}
         if ($summary['ran']) {
             $state['updatedAt'] = $this->now();
@@ -105,16 +111,30 @@ final class Api
     public function runMenuSubscriptions(): array
     {
         $state=$this->state();
+        $licenseChanged=$this->license()->runDue($state);
+        if(!$this->license()->allows($state,'menus')){if($licenseChanged)$this->store->save($state);return ['ran'=>false,'menuChecks'=>0];}
         $count=($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
             function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
             function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);});
-        if($count){$state['updatedAt']=$this->now();$this->store->save($state);}
+        if($count||$licenseChanged){$state['updatedAt']=$this->now();$this->store->save($state);}
         return ['ran'=>$count>0,'menuChecks'=>$count];
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
     private function route(array &$state, string $method, string $path, array $body, string $playerKey): array
     {
+        $this->license()->assertPath($state,$path);
+        if(str_starts_with($path,'/api/settings/licensing')){
+            $this->assertRolePermission($method,$path);
+            if(($this->identity['actorType'] ?? '')==='api_key')throw new RuntimeException('Benutzeranmeldung erforderlich.',403);
+            if($path==='/api/settings/licensing'&&$method==='GET')return $this->ok($this->license()->status($state));
+            if($path==='/api/settings/licensing/sync'&&$method==='POST'){
+                $this->license()->initialize($state);$this->store->save($state);
+                $status=$this->license()->synchronize($state,$body);$this->audit($state,'licensing.synchronized','licensing');return $this->ok($status,true);
+            }
+            throw new RuntimeException('Die zentrale Lizenzverwaltung steht ausschließlich in Standalone bereit.',404);
+        }
+
         if ($path === '/api/menu-share/session' && $method === 'POST') return MenuShare::login($state,$body,(string)($this->identity['ipAddress'] ?? 'unknown'));
         if (($path === '/api/menu-share/menus' && $method === 'GET') || (preg_match('#^/api/menu-share/menus/[^/]+$#',$path) && $method === 'PUT')) {
             $ids=MenuShare::authorize($state,$playerKey);
@@ -765,13 +785,14 @@ final class Api
                 if (($template['document']['menuTemplate'] ?? false)!==true) throw new RuntimeException('Die Speisekarten-Vorlage ist nicht verfügbar.',422);
             }
             $state['menuSettings'] = $settings; $this->audit($state,'menu.settings.updated','menu_settings'); return $this->ok(['settings'=>$state['menuSettings'],'enabled'=>($state['featureSettings']['menus'] ?? true) !== false],true); }
-        if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
+        if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $this->license()->features($state),'licensedModules'=>$this->license()->grants($state), 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
             $allowed = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
+            foreach($allowed as $key){$module=LicenseClient::feature($key);if(($body[$key] ?? null)===true&&$module&&!$this->license()->allows($state,$module))throw new RuntimeException('Dieses Modul ist nicht lizenziert.',403);}
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             if (($body['menus'] ?? null)===false && isset($state['menuShare'])) $state['menuShare']['secret']=bin2hex(random_bytes(32));
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
-            return $this->ok(['data' => $state['featureSettings'], 'navigationOrder' => $state['navigationOrder']], true);
+            return $this->ok(['data' => $this->license()->features($state),'licensedModules'=>$this->license()->grants($state), 'navigationOrder' => $state['navigationOrder']], true);
         }
         if ($path === '/api/settings/public-calendar' && $method === 'GET') {
             return $this->ok(['settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? [])]);
@@ -786,6 +807,7 @@ final class Api
 
     private function synchronizeAdvertising(array &$state): array
     {
+        if(!$this->license()->allows($state,'advertising'))return ['ran'=>false];
         return AdvertisingService::synchronize($state,
             function(array $body, ?string $id) use (&$state): array { return $this->saveSlide($state,$body,$id); },
             function(array $body, ?string $id) use (&$state): array { return $this->saveRecord($state,'channels',$body,$id); });
@@ -1163,6 +1185,7 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed> */
     private function runAutomaticCrewBrainImport(array &$state): array
     {
+        if(!$this->license()->allows($state,'integrations','crewbrain'))return ['ran'=>false,'reason'=>'license'];
         if (!$this->crewBrain) return ['ran' => false, 'reason' => 'service_unavailable'];
         if (($state['activeEventSource'] ?? null) !== 'crewbrain') return ['ran' => false, 'reason' => 'source_inactive'];
         $config = $state['crewbrain']['config'];
@@ -1222,6 +1245,7 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed> */
     private function runAutomaticEasyJobImport(array &$state): array
     {
+        if(!$this->license()->allows($state,'integrations','easyjob'))return ['ran'=>false,'reason'=>'license'];
         if (!$this->easyJob) return ['ran' => false, 'reason' => 'service_unavailable'];
         if (($state['activeEventSource'] ?? null) !== 'easyjob') return ['ran' => false, 'reason' => 'source_inactive'];
         $config = $state['easyjob']['config'];
@@ -1548,7 +1572,7 @@ final class Api
         if ($action !== 'state' || $method !== 'GET') throw new RuntimeException('Methode nicht erlaubt.', 405);
 
         $matrixLayout = $this->matrixLayout($state, (string)$display['id']);
-        $assignment = $this->resolveAssignment($state, $display, $matrixLayout);
+        $assignment = $this->license()->allows($state,'schedule') ? $this->resolveAssignment($state, $display, $matrixLayout) : null;
         $selection = $this->resolvedChannelSelection($state, $display, $matrixLayout);
         $channel = $selection['channel'];
         $directSlide = $selection['directSlide'] ?? null;
@@ -1638,13 +1662,14 @@ final class Api
     private function resolvedChannelSelection(array $state, array $display, ?array $matrix): array
     {
         $now = $this->now();
-        $schedules = array_values(array_filter($state['schedules'], function (array $item) use ($display, $now): bool {
+        $licensedSchedules=$this->license()->allows($state,'schedule') ? $state['schedules'] : [];
+        $schedules = array_values(array_filter($licensedSchedules, function (array $item) use ($display, $now): bool {
             if (($item['status'] ?? '') !== 'published' || (empty($item['channelId']) && empty($item['slideId']) && empty($item['contentId'])) || !$this->scheduleActive($item, $now)) return false;
             return (($item['targetType'] ?? '') === 'display' && ($item['targetId'] ?? '') === $display['id'])
                 || (($item['targetType'] ?? '') === 'group' && in_array($item['targetId'] ?? '', $display['groupIds'] ?? [], true));
         }));
         if ($matrix) {
-            foreach ($state['schedules'] as $schedule) {
+            foreach ($licensedSchedules as $schedule) {
                 if (($schedule['status'] ?? '') === 'published' && ($schedule['targetType'] ?? '') === 'matrix' && ($schedule['targetId'] ?? '') === $matrix['id'] && $this->scheduleActive($schedule, $now)) {
                     $schedules[] = $schedule;
                 }
@@ -2081,6 +2106,9 @@ final class Api
     }
 
     /** @return array<string,mixed> */
+    private function license(): LicenseClient{return $this->licenseClient ?? new LicenseClient();}
+    public function runLicenseSync(): array{$state=$this->state();$changed=$this->license()->runDue($state);if($changed)$this->store->save($state);return ['ran'=>$changed,'status'=>$this->license()->status($state)];}
+
     private function state(): array
     {
         $stored = $this->store->load();

@@ -49,12 +49,14 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.8.3',
+            '3.9.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
             $portableUsers,
             'typo3',
+            null,
+            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.9.0'),
         );
     }
 }
