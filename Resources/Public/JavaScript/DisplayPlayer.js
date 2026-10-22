@@ -9,6 +9,9 @@
   let content = null;
   let index = 0;
   let timer = 0;
+  let refreshing = false;
+  let revision = '';
+  let started = false;
 
   function setup() {
     root.innerHTML = `<form id="setup" style="max-width:36rem;margin:auto;padding:2rem;font:16px system-ui">
@@ -20,7 +23,7 @@
       token = new FormData(event.currentTarget).get('token').trim();
       if (await load()) {
         localStorage.setItem(tokenKey, token);
-        play();
+        revision=JSON.stringify(content);index=0;started=true;play();
       } else {
         root.querySelector('#error').textContent = 'Token ungültig oder Server nicht erreichbar.';
       }
@@ -45,10 +48,11 @@
     try {
       const response = await request('content');
       content = response.data;
-      localStorage.setItem(cacheKey, JSON.stringify(content));
+      try { localStorage.setItem(cacheKey, JSON.stringify(content)); } catch {}
       return true;
     } catch (error) {
       if (error.message === 'unauthorized') return false;
+      if(content)return true;
       try {
         content = JSON.parse(localStorage.getItem(cacheKey));
         return Boolean(content);
@@ -102,9 +106,12 @@
   }
 
   async function refresh() {
-    const valid = await load();
-    if (!valid && !content) return setup();
-    play();
+    if(refreshing||!token)return;refreshing=true;
+    try {
+      const valid=await load();if(!valid&&!content){setup();return;}
+      const next=JSON.stringify(content);
+      if(!started||next!==revision){revision=next;index=0;started=true;play();}
+    } finally {refreshing=false;}
   }
 
   async function heartbeat() {
@@ -112,7 +119,7 @@
     await request('heartbeat', {
       method: 'POST',
       body: JSON.stringify({
-        playerVersion: 'TYPO3 Web Player 3.7.0',
+        playerVersion: 'TYPO3 Web Player 3.7.1',
         viewport: {width: innerWidth, height: innerHeight, pixelRatio: devicePixelRatio || 1},
       }),
     }).catch(() => {});
@@ -120,7 +127,7 @@
 
   if (!uuid || !token) setup();
   else refresh();
-  window.setInterval(refresh, 60000);
+  window.setInterval(refresh, 5000);
   window.setInterval(heartbeat, 30000);
   heartbeat();
 })();

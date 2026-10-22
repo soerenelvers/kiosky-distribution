@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.7.0-20261021214055%2Bf6b98229">
+  <link rel="stylesheet" href="styles.css?v=3.7.1-20261022111316%2B0e30a2c2">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -941,7 +941,7 @@
             <details class="help-guide">
               <summary><span class="help-guide-number">06</span><span><strong>Betrieb, Warnungen und Fehlerprüfung</strong><small>Monitoring, Sofortaktionen, Updates und Datensicherung</small></span><i>＋</i></summary>
               <div class="help-guide-content">
-                <section><h3>Laufende Ausspielung kontrollieren</h3><ol><li>Unter <b>Displays</b> siehst du Online-Status, letzte Verbindung, Auflösung, Kanal, Matrix und den zuletzt gemeldeten Inhalt. Die aufklappbare Live-Übersicht zeigt Miniaturvorschauen.</li><li>Unter <b>Presets &amp; Warnhinweise</b> prüfst du Player-Version, Cache-Bereitschaft und aktuellen Content. Fordere bei Bedarf „Synchronisieren“, „Neu laden“ oder „Identifizieren“ an.</li><li>Ist ein Player offline, kontrolliere Netzwerk, Kiosky-Adresse und Geräteschlüssel. Mit bereitem Offline-Cache läuft der letzte geladene Stand weiter; neue Änderungen kommen erst nach Wiederverbindung an.</li></ol></section>
+                <section><h3>Laufende Ausspielung kontrollieren</h3><ol><li>Unter <b>Displays</b> siehst du Online-Status, letzte Verbindung, Auflösung, Kanal, Matrix und den zuletzt gemeldeten Inhalt. Die aufklappbare Live-Übersicht zeigt Miniaturvorschauen. Mit „Player neu laden (F5)“ kannst du den Browser des gewählten Players vollständig neu laden.</li><li>Unter <b>Presets &amp; Warnhinweise</b> prüfst du Player-Version, Cache-Bereitschaft und aktuellen Content. Fordere bei Bedarf „Synchronisieren“, „Neu laden“ oder „Identifizieren“ an.</li><li>Ist ein Player offline, kontrolliere Netzwerk, Kiosky-Adresse und Geräteschlüssel. Mit bereitem Offline-Cache läuft der letzte geladene Stand weiter; neue Änderungen kommen erst nach Wiederverbindung an.</li></ol></section>
                 <section><h3>Sofort reagieren</h3><p>Betriebspresets bündeln wiederkehrende Kanalzuweisungen. Warnvorlagen und manuelle Warnungen können ausgewählte Displays, Gruppen oder Matrizen übernehmen; DWD-Warnungen verwenden das Warngebiet des Standorts. Beende eine aktive Warnung ausdrücklich, damit die reguläre Ausspielung wieder sichtbar wird.</p></section>
                 <section><h3>System pflegen</h3><p>Unter <b>Updates</b> prüfen Administratoren signierte Releases und installieren neue Versionen. <b>Einstellungen → Schnittstellen</b> bietet außerdem portable Export-/Importpakete für Konfiguration, Veranstaltungen, Displays, Slides, Vorlagen und Medien. Vor produktiven Updates oder größeren Importen sollte zusätzlich eine externe Sicherung der Instanz vorhanden sein.</p></section>
               </div>
@@ -1069,7 +1069,7 @@
           <div class="help-faq-list">
             <details><summary>Was ist der Unterschied zwischen Slide und Kanal?<span>＋</span></summary><p>Eine Slide ist eine einzelne gestaltete Bildschirmseite. Ein Kanal ist eine Abspielreihenfolge aus einer oder mehreren Slides inklusive Dauer und Übergängen.</p></details>
             <details><summary>Wie erstelle ich meinen ersten Inhalt?<span>＋</span></summary><p>Lege unter „Slides &amp; Kanäle“ zuerst eine Slide an, gestalte sie leer oder aus einer Vorlage und veröffentliche sie. Lege danach einen Kanal an, füge die Slide zur Playlist hinzu und veröffentliche auch den Kanal. Diesen Kanal wählst du als Standardkanal eines Displays oder planst ihn im Zeitplan ein.</p></details>
-            <details><summary>Wann sehe ich eine Änderung auf dem Display?<span>＋</span></summary><p>Gespeicherte und veröffentlichte Änderungen werden beim nächsten Statusabruf an den Online-Player übertragen. Mit „Synchronisieren“ kannst du den Abruf anfordern. Ist der Player offline, zeigt er bei bereitem Cache den letzten geladenen Stand und übernimmt Neues nach Wiederverbindung.</p></details>
+            <details><summary>Wann sehe ich eine Änderung auf dem Display?<span>＋</span></summary><p>Aktive Player prüfen die zugewiesenen Inhalte alle fünf Sekunden. Relevante Änderungen werden ohne Seitennavigation übernommen und die Rotation beginnt von vorne. Mit „Synchronisieren“ kannst du den Abruf anfordern. Ist der Player offline, zeigt er bei bereitem Cache den letzten geladenen Stand und übernimmt Neues nach Wiederverbindung.</p></details>
             <details><summary>Standardkanal, Zeitplan oder Warnung – was hat Vorrang?<span>＋</span></summary><p>Der Standardkanal ist die Rückfallebene. Eine aktive Zeitplanung übernimmt im festgelegten Zeitraum. Gezielte externe API-Zuweisungen können den Zeitplan übersteuern; eine aktive Sicherheitswarnung wird als vorrangige Übernahme angezeigt. Nach deren Ende fällt das Display auf die nächste gültige Ebene zurück.</p></details>
             <details><summary>Wie spiele ich denselben Inhalt auf mehrere Displays aus?<span>＋</span></summary><p>Fasse Geräte zu einer Displaygruppe zusammen. Im Zeitplan weist du den Inhalt anschließend einmal der gesamten Gruppe zu.</p></details>
             <details><summary>Wie kopple ich einen neuen Universal Player?<span>＋</span></summary><p>Lege zuerst das Display in Kiosky an. Starte dann einen Universal Player aus dem Player Center. Trage dessen sechsstelligen Code beim gewünschten Display über das Download-Menü oder im Bearbeitungsdialog unter „Universal Player koppeln“ ein. Nach erfolgreicher Kopplung lädt der Player automatisch die geschützte Display-URL.</p></details>
@@ -1610,7 +1610,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.7.0-20261021214055%2Bf6b98229"></script>
-  <script src="app.js?v=3.7.0-20261021214055%2Bf6b98229"></script>
+  <script src="runtime-config.js?v=3.7.1-20261022111316%2B0e30a2c2"></script>
+  <script src="app.js?v=3.7.1-20261022111316%2B0e30a2c2"></script>
 </body>
 </html>

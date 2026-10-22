@@ -150,7 +150,7 @@ final class Api
             return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'paired', 'display' => ['id' => $display['id'], 'name' => $display['name']], 'playerUrl' => $base . '?display=' . rawurlencode((string)$display['slug']) . '&key=' . rawurlencode((string)$display['playerKey'])]);
         }
 
-        if (preg_match('#^/api/player/([^/]+)/(state|heartbeat|proof)$#', $path, $match)) {
+        if (preg_match('#^/api/player/([^/]+)/(state|heartbeat|proof|commands)$#', $path, $match)) {
             return $this->player($state, $method, rawurldecode($match[1]), $match[2], $body, $playerKey);
         }
 
@@ -435,7 +435,9 @@ final class Api
             return $this->ok($match[2] === 'publish' ? ['warning' => $warning] : ['ok' => true], true);
         }
         if (preg_match('#^/api/operations/displays/([^/]+)/commands$#', $path, $match) && $method === 'POST') {
-            $command = $this->record(['displayId' => rawurldecode($match[1]), 'command' => (string)($body['command'] ?? 'sync')]);
+            $displayId=rawurldecode($match[1]);$this->required($this->active($state['displays']),$displayId,'Display');
+            if (!in_array($body['command'] ?? '',['sync','reload','identify'],true)) throw new RuntimeException('Unbekannter Player-Befehl.',422);
+            $command = $this->record(['displayId' => $displayId, 'command' => $body['command']]);
             $state['commands'][] = $command;
             return $this->created(['command' => $command]);
         }
@@ -1477,11 +1479,21 @@ final class Api
     {
         $display = $this->first($this->listCollection($state, 'displays'), fn(array $item): bool => ($item['slug'] ?? '') === $slug);
         if (!$display || !hash_equals((string)($display['playerKey'] ?? ''), $playerKey)) throw new RuntimeException('Display wurde nicht gefunden.', 404);
+        $deliveryChanged=false;
+        if (in_array($action,['state','commands'],true) && $method==='GET') {
+            $pending=array_values(array_filter($state['commands'],fn(array $item): bool => ($item['displayId'] ?? '')===$display['id']));
+            $ids=array_column($pending,'id');$deliveryChanged=($state['deliveredPlayerCommands'][$display['id']] ?? [])!==$ids;
+            $state['deliveredPlayerCommands'][$display['id']]=$ids;
+            if ($action==='commands') return $this->ok(['commands'=>$pending],$deliveryChanged);
+        }
         if ($action === 'heartbeat' && $method === 'POST') {
             $body['lastSeenAt'] = $this->now();
             $body['online'] = true;
-            $this->saveRecord($state, 'displays', array_replace($display, $body), $display['id']);
-            $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id']));
+            $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
+            // Heartbeat metadata may never overwrite credentials, routing or display configuration.
+            $fields=array_intersect_key($body,array_flip(['channelId','slideId','version','cached','viewportWidth','viewportHeight','devicePixelRatio','lastSeenAt','online']));
+            $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($display,$fields);
+            $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));
             return $this->ok(['ok' => true], true);
         }
         if ($action === 'proof' && $method === 'POST') {
@@ -1506,8 +1518,9 @@ final class Api
         $slides = [];
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : ($channel['items'] ?? []) as $item) {
             $slide = $this->first($this->active($state['slides']), fn(array $candidate): bool => $candidate['id'] === ($item['slideId'] ?? ''));
-            if (!$slide) continue;
-            $event = !empty($slide['eventId']) ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $slide['eventId']) : null;
+            if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
+            $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
+            $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
             $slides[] = $item + ['slide' => $slide, 'event' => $event];
         }
         $targets = ['global', 'display:' . $display['id']];
@@ -1523,19 +1536,25 @@ final class Api
         ] : null;
         $commands = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') === $display['id']));
         $serverTime = $this->now();
-        $matrixMode = $matrixLayout && !empty($selection['matrixMode']);
+        $matrixMode = $matrixLayout && ($assignment ? ($assignment['target']['type'] ?? '')==='matrix' : !empty($selection['matrixMode']));
         $playbackSync = [
             'scope' => $matrixMode ? 'matrix' : 'content',
             'key' => ($matrixMode ? $matrixLayout['id'] . ':' : $display['id'] . ':') . $selection['sourceKey'],
             'epochMs' => $this->milliseconds((string)$selection['epoch'], $serverTime),
             'serverTimeMs' => $this->milliseconds($serverTime, $serverTime),
         ];
+        $scope=$matrixMode?'matrix:'.$matrixLayout['id']:'display:'.$display['id'];
+        if ($assignment) $playbackSync['epochMs']=$this->milliseconds((string)($assignment['startsAt'] ?? $assignment['updatedAt'] ?? $serverTime),$serverTime);
+        $revision=hash('sha256',json_encode(['source'=>$assignment?('assignment:'.$assignment['id']):$selection['sourceKey'],'channel'=>$channel,'assignment'=>$assignment,'slides'=>$slides],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
+        $previous=$state['playbackRevisions'][$scope] ?? null;$changed=($previous['revision'] ?? null)!==$revision;
+        if ($changed) $state['playbackRevisions'][$scope]=['revision'=>$revision,'epochMs'=>$previous?$this->milliseconds($serverTime,$serverTime):$playbackSync['epochMs']];
+        $playbackSync['key']=$scope.':'.$revision;$playbackSync['epochMs']=$state['playbackRevisions'][$scope]['epochMs'];
         return $this->ok([
             'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
-            'playbackSync' => $playbackSync, 'commands' => $commands, 'serverTime' => $serverTime,
-        ]);
+            'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $commands, 'serverTime' => $serverTime,
+        ],$changed||$deliveryChanged);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */

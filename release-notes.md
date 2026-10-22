@@ -1,6 +1,6 @@
-## [3.7.0] – 2026-10-21
+## [3.7.1] – 2026-10-22
 
-- Eigene Speisekarten-Vorlagen im vorhandenen Slide-Editor gestalten, als Standard wählen und für neue Karten nutzen; vollständige Inhaltsfeld-Zuordnungen werden beim Speichern geprüft.
-- Optionaler Passwort-Link zu ausdrücklich freigegebenen Karteninhalten in allen drei Plattformen. Kein Benutzer-/Verwaltungszugang; auch bei exklusivem Zugangswerk zulässig. Gesalzene Passwort-Hashes, zeitlich begrenzte Sitzungen, Fehlversuchssperre und sofortiger Widerruf bei Änderungen.
-- Mehrseitige PDFs lokal im Browser als Speisekarten-Slides importieren und zugewiesene PDF-Seiten im Inhaltseditor ersetzen. Entwürfe, Layout, Kanalzuweisungen und Versionsschutz bleiben erhalten; keine externe Konvertierung oder OCR.
-- Gemeinsame Umsetzung für Standalone, WordPress und TYPO3; additive Einstellungen ohne neue Datenbankmigration.
+- Web-Player übernehmen relevante Inhaltsänderungen in Standalone, WordPress und TYPO3 automatisch ohne Seitennavigation oder Ladebildschirm. Geänderte Kanalinhalte und direkte Slides starten die Rotation neu; unveränderte Abrufe lassen laufende Medien und Rotation bestehen. Matrix-Displays behalten einen gemeinsamen Takt.
+- „Player neu laden (F5)“ direkt in der Display-Verwaltung. Schneller, geräteschlüsselgeschützter Befehlsabruf auch in beiden CMS-Ausgaben; selektive Bestätigung verhindert verlorene oder wiederholte Refresh-Befehle.
+- Regelmäßige Heartbeats für Einzel-Slides, letzter erfolgreicher Stand bei Netzwerkfehlern und unabhängig behandelter Browser-Cache. Der native TYPO3-Tabellenplayer erkennt Playliständerungen ebenfalls ohne unnötige Neustarts.
+- Additive Laufzeitinformationen ohne neue Datenbankmigration. Einrichtung und Verhalten: docs/player-refresh.md.

@@ -57,7 +57,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             [$status,$payload]=$api->handle($request->getMethod(),$apiPath,$body ?? [],$token);
             return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer']);
         }
-        $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
+        $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof|commands)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
         $isExternal = $apiPath === '/api/v1' || str_starts_with($apiPath, '/api/v1/');
         if (!$isPlayer && !$isExternal) {
             return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Öffentlich ist nur die Player-API verfügbar.']], 403);
@@ -85,7 +85,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         $body = json_decode((string)$request->getBody(), true);
         $query = $request->getQueryParams();
         unset($query['path']);
-        $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer']);
+        $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat)$#',$apiPath)===1);
         [$status, $payload] = $api->handle($request->getMethod(), $apiPath, array_merge($query, is_array($body) ? $body : []), $request->getHeaderLine('X-Player-Key'));
         return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store']);
     }
