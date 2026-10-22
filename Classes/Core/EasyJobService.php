@@ -9,8 +9,50 @@ use Throwable;
 
 final class EasyJobService
 {
+    private const ROOM_USE_TYPES = [
+        'access' => ['Einlass', 'Einlass in den Saal', 'Einlass in die Halle', 'Empfang', 'Empfang/Networking', 'Sektempfang'],
+        'setup' => ['Anlieferung', 'Aufbau', 'Aufbau / Probe', 'Aufbautag', 'Stehtische', 'Ausstellung'],
+        'rehearsal' => ['Probe', 'Soundcheck'],
+        'event' => ['Veranstaltung', 'Abendveranstaltung', 'Show', 'Show Teil 2', 'Gala', 'Tagung', 'Tagung / Ausstellung', 'Seminar', 'Prüfung'],
+        'break' => ['Pause', 'Ausklang', 'Ausweichtermin'],
+        'hospitality' => ['Abendessen', 'gastronomische Nutzung', 'Kaffeepause', 'kl. Imbiss', 'Mittagessen', 'Pausengastronomie'],
+        'teardown' => ['Abbau', 'Abbautag', 'Umbau', 'Ende'],
+        'internal' => ['-INTERN- gesperrt HAUSTECHNIK'],
+        'cancelled' => ['Stornierung'],
+    ];
+
+    public static function normalizedRoomUseType(string $label): string
+    {
+        $label = trim(preg_replace('/[°º]+$/u', '', trim(preg_replace('/\s+/u', ' ', $label))));
+        return function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower(strtr($label, ['Ä'=>'ä','Ö'=>'ö','Ü'=>'ü']));
+    }
+
+    public static function roomUseTypes(array $overrides = []): array
+    {
+        $rules = [];
+        foreach (self::ROOM_USE_TYPES as $category => $labels) foreach ($labels as $priority => $label) {
+            $normalized = self::normalizedRoomUseType($label);
+            $rules[$normalized] = ['normalizedType'=>$normalized,'originalLabel'=>$label,'category'=>$category,'isApproximate'=>$category==='teardown' && in_array($normalized,['abbau','ende'],true),'visible'=>$category!=='internal','sortPriority'=>$priority];
+        }
+        foreach ($overrides as $rule) { $rule=self::roomUseType($rule);$rules[$rule['normalizedType']]=$rule; }
+        $rules=array_values($rules);
+        usort($rules,static fn(array $a,array $b):int=>strcmp($a['category'],$b['category']) ?: ($a['sortPriority']<=>$b['sortPriority']) ?: strcmp($a['originalLabel'],$b['originalLabel']));
+        return $rules;
+    }
+
+    public static function roomUseType(array $input): array
+    {
+        $label=$input['originalLabel'] ?? '';$category=$input['category'] ?? '';$priority=$input['sortPriority'] ?? 0;
+        if(!is_string($label)||strlen($label)>1200||self::normalizedRoomUseType($label)===''||!in_array($category,[...array_keys(self::ROOM_USE_TYPES),'other'],true)||!is_int($priority)||abs($priority)>100000)throw new RuntimeException('Typzuordnung ist ungültig.',422);
+        $rule=['normalizedType'=>self::normalizedRoomUseType($label),'originalLabel'=>trim($label),'category'=>$category,'isApproximate'=>(bool)($input['isApproximate'] ?? false),'visible'=>($input['visible'] ?? true)!==false,'sortPriority'=>$priority];
+        foreach(['icon','color'] as $key)if(isset($input[$key])){if(!is_string($input[$key])||strlen($input[$key])>100)throw new RuntimeException('Typzuordnung ist ungültig.',422);$rule[$key]=trim($input[$key]);}
+        return $rule;
+    }
+
     public const DEFAULT_MAPPING = [
         'title' => 'Caption',
+        'organizer' => 'Address_Customer.Company',
+        'eventType' => 'JobType.Caption',
         'subtitle' => '__none',
         'description' => 'Description',
         'date' => 'StartDate',
@@ -27,6 +69,8 @@ final class EasyJobService
 
     private const MAPPING_PATHS = [
         'title' => ['Caption', 'EventName', 'Number', 'CustomNumber', '__project.Caption'],
+        'organizer' => ['Address_Customer.Company','Address_Delivery.Company','__project.Address_Customer.Company','__none'],
+        'eventType' => ['JobType.Caption','JobType','JobState.Caption','ProjectType.Caption','ProjectType','__none'],
         'subtitle' => ['ProjectState.Caption', 'JobState.Caption', 'Address_Customer.Company', '__project.Caption', '__none'],
         'description' => ['Description', 'Comment', 'Info', 'PublicInfo', '__none'],
         'date' => ['StartDate', 'EventStart', 'Start', 'JobStart', '__project.StartDate'],
@@ -94,7 +138,7 @@ final class EasyJobService
     {
         try {
             $projects = $this->projects($config, ['style' => 'Compact']);
-            return ['ok' => true, 'checkedAt' => gmdate('c'), 'projectsReadable' => true, 'projectCount' => count($projects), 'jobsReadable' => null];
+            return ['ok' => true, 'checkedAt' => gmdate('c'), 'projectsReadable' => true, 'projectCount' => count($projects), 'projectDetailsReadable'=>null,'jobsReadable'=>null,'jobDetailsReadable'=>null,'roomCalendarReadable'=>null];
         } catch (Throwable $error) {
             return ['ok' => false, 'checkedAt' => gmdate('c'), 'error' => ['code' => 'EASYJOB_CONNECTION_FAILED', 'message' => $error->getMessage()]];
         }
@@ -112,9 +156,9 @@ final class EasyJobService
     }
 
     /** @param array<string,mixed> $config @return array<string,mixed> */
-    public function project(array $config, string $id): array { return $this->detailPayload($this->request($config, 'api.json/Projects/Details/' . rawurlencode($id)), ['Data', 'Project', 'Item', 'data', 'project', 'item']); }
+    public function project(array $config, string $id): array { return $this->detailPayload($this->request($config, 'api.json/Projects/Details/', ['id'=>$id]), ['Data', 'Project', 'Item', 'data', 'project', 'item']); }
     /** @param array<string,mixed> $config @return array<string,mixed> */
-    public function job(array $config, string $id): array { return $this->detailPayload($this->request($config, 'api.json/Job/Details/' . rawurlencode($id)), ['Data', 'Job', 'Item', 'data', 'job', 'item']); }
+    public function job(array $config, string $id): array { return $this->detailPayload($this->request($config, 'api.json/Jobs/Details/', ['id'=>$id]), ['Data', 'Job', 'Item', 'data', 'job', 'item']); }
 
     /** @param array<string,mixed> $config @return array<int,array<string,mixed>> */
     public function shortcuts(array $config, string $objectId, string $table): array
@@ -137,7 +181,7 @@ final class EasyJobService
         $token = $this->accessToken($config);
         $query = array_filter(['access_token' => $token, 'access_key' => $accessKey], static fn(string $value): bool => $value !== '');
         $url = rtrim((string)$config['baseUrl'], '/') . '/ShortCuts/download/' . rawurlencode($id) . '?' . http_build_query($query);
-        $response = $this->http->request('GET', $url, ['Accept' => 'image/*,application/octet-stream', 'Authorization' => 'Bearer ' . $token], null, 50, true, empty($config['allowSelfSignedCertificate']));
+        $response = $this->http->request('GET', $url, ['Accept' => 'image/*,application/octet-stream', 'ej-webapi-client'=>'ThirdParty', 'Authorization' => 'Bearer ' . $token], null, 50, true, empty($config['allowSelfSignedCertificate']));
         if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob meldet beim Dokumentabruf HTTP ' . $response->status . '.', 502);
         if ($response->body === '') throw new RuntimeException('easyjob hat eine leere Dokumentdatei geliefert.', 502);
         if (strlen($response->body) > 20000000) throw new RuntimeException('Das easyjob-Veranstaltungsbild ist größer als 20 MB.', 413);
@@ -174,6 +218,9 @@ final class EasyJobService
         $externalId = $jobId !== '' ? 'job:' . $jobId : 'project:' . $projectId;
         $mapped = [
             'sourceId' => 'source-easyjob', 'externalId' => $externalId, 'externalParentId' => $jobId !== '' ? 'project:' . $projectId : null,
+            'organizer' => $this->mappedValue($source,$project,$mapping['organizer']) ?: $this->value($project,['Address_Customer.Company']) ?: null,
+            'eventType' => $this->mappedValue($source,$project,$mapping['eventType']) ?: null,
+            'setupStart' => $this->iso($this->value($source,['DayTimeOut','SetupStart','StartDate'])),
             'externalObjectType' => $jobId !== '' ? 'JOB' : 'PROJECT',
             'externalNumber' => $this->value($source, ['Number', 'CustomNumber']) ?: $this->value($project, ['Number', 'CustomNumber']),
             'title' => $this->mappedValue($source, $project, $mapping['title']) ?: ($this->value($source, ['EventName', 'Caption']) ?: ($this->value($project, ['Caption']) ?: 'easyjob ' . ($jobId !== '' ? 'Job ' . $jobId : 'Projekt ' . $projectId))),
@@ -201,7 +248,7 @@ final class EasyJobService
         $token = $this->accessToken($config);
         $query = array_filter($query, static fn(mixed $value): bool => $value !== null && $value !== '');
         $url = rtrim((string)$config['baseUrl'], '/') . '/' . $path . ($query ? '?' . http_build_query($query) : '');
-        $response = $this->http->request('GET', $url, ['Accept' => 'application/json; charset=utf-8', 'Content-Type' => 'application/json; charset=utf-8', 'Authorization' => 'Bearer ' . $token], null, 50, true, $verifyTls);
+        $response = $this->http->request('GET', $url, ['Accept' => 'application/json; charset=utf-8', 'Content-Type' => 'application/json; charset=utf-8', 'ej-webapi-client'=>'ThirdParty', 'Authorization' => 'Bearer ' . $token], null, 50, true, $verifyTls);
         if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob meldet HTTP ' . $response->status . '.', $response->status >= 400 && $response->status < 600 ? $response->status : 502);
         return $response->json();
     }
@@ -210,7 +257,7 @@ final class EasyJobService
     {
         $credentials = $this->credentials($config);
         $verifyTls = empty($config['allowSelfSignedCertificate']);
-        $response = $this->http->request('POST', rtrim((string)$config['baseUrl'], '/') . '/token', ['Accept' => 'application/json', 'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8'], http_build_query(['grant_type' => 'password'] + $credentials), 50, true, $verifyTls);
+        $response = $this->http->request('POST', rtrim((string)$config['baseUrl'], '/') . '/token', ['Accept' => 'application/json', 'ej-webapi-client'=>'ThirdParty', 'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8'], http_build_query(['grant_type' => 'password'] + $credentials), 50, true, $verifyTls);
         if ($response->status < 200 || $response->status >= 300) throw new RuntimeException('easyjob hat die Zugangsdaten abgelehnt.', 401);
         $token = (string)($response->json()['access_token'] ?? '');
         if ($token === '') throw new RuntimeException('easyjob hat keinen Access-Token geliefert.', 502);

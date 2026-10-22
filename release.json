@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "2fb8cbf1966c55b9741572a4baa57e540d538485",
+  "source_commit": "d97e9ace6d6bb19952a1cf616859a005d6706777",
   "product": "kiosky",
-  "version": "3.9.0",
-  "released_at": "2026-10-22T19:42:34.461Z",
+  "version": "3.10.0",
+  "released_at": "2026-10-22T21:26:30.478Z",
   "channel": "stable",
-  "release_notes": "## [3.9.0] – 2026-10-22\n\n- Zentrale Lizenzverwaltung auf einer Standalone-Masterinstanz mit einmalig angezeigten Lizenzschlüsseln, Modulfreigaben, Installationslimit und Instanzregister für Standalone, WordPress und TYPO3.\n- Signierte, an Instanz und Root-Prüfschlüssel gebundene Modulfreigaben; verschlüsselte Speicherung, Abgleich alle 15 Minuten und dauerhafter Erhalt der letzten bestätigten Freigabe bei Serverausfall. Lokale Modulschalter und direkte APIs können fehlende Freigaben nicht umgehen.\n- Ausdrücklich bestätigte Lizenz-/Instanzsperren sperren auch laufende Player und ersetzen deren bisherigen Inhaltscache ohne Seitennavigation. Ein reiner Verbindungsfehler widerruft keine Freigaben.\n- Lizenzverwaltung in den Einstellungen, native WordPress-Menüprüfung und TYPO3-Scheduler/CLI. Bestehende Installationen bleiben bis zur serverseitigen Einrichtung der Vertrauensbasis im gekennzeichneten Übergangsbetrieb. Einrichtung, Modulabhängigkeiten, Wiederherstellung und Sicherheitsgrenzen dokumentiert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.9.0",
+  "release_notes": "## [3.10.0] – 2026-10-22\n\n- Website-Kalender für WordPress und TYPO3 mit fünf bedienbaren Ansichten: Agenda als Vorgabe, Monatskalender, Kategorienfilter, Wochenraster und großer Tag mit verschiebbarer Wochenleiste. Datumsnavigation, Suche, Details, Ticketlinks und Mobilansicht bleiben verfügbar.\n- Akzent-, Akzenttext- und drei Steuerelementfarben automatisch aus dem Website-Theme übernehmen oder einzeln einstellen. Zentrale Vorgaben lassen sich je Shortcode beziehungsweise TYPO3-Inhaltselement überschreiben.\n- Zeit/Einlass, Ort/Raum, Kategorie, Veranstalter, Beschreibung, Status, Ticketlinks, Restkarten und Details separat ausblenden; Datum und Titel bleiben sichtbar. Bestehende TYPO3-Werte bleiben bei additiver Schemaerweiterung erhalten.\n- Fehlende CMS-Routen für manuelle Veranstaltungsablaufpunkte und die DWD-Warngebietssuche ergänzen. Ablaufpunkte validieren, fremde und importierte Einträge schützen; offizielle DWD-Gebietsliste zwischenspeichern und bei Dienstausfall erhalten.\n- Easyjob-Vorschau liefert auswählbare Jobs; explizite Projekt-/Jobauswahl beim Import beachten und bestehende Veranstalter-/Veranstaltungstypzuordnungen übernehmen.\n\n- Easyjob-Einstellungen in WordPress und TYPO3 laden wieder ohne „API-Endpunkt wurde nicht gefunden“: fehlende GET-/PUT-Routen für Raumnutzungsarten im gemeinsamen PHP-Kern ergänzen, Vorgaben mit Standalone abgleichen und administrative Änderungen dauerhaft speichern.\n- PHP-Aufrufe für Projekt-/Jobdetails auf dieselben dokumentierten pluralen Endpunkte und `id`-Queryparameter wie Standalone korrigieren. Easyjob-Clientheader bei Token-, JSON- und Dokumentabrufen mitsenden.\n- Verbindungstest unterscheidet ungeprüfte Prüfungen von Fehlern und zeigt nur tatsächlich geprüfte Projekt-/Jobzahlen. Neue Regressionen prüfen den gemeinsamen Einstellungsloader gegen echte PHP-Antworten, Kataloggleichheit, Speicherung, Rechte und native CMS-Routen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.10.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.9.0",
+    "core_version": "3.10.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.9.0",
-    "typo3_extension_version": "3.9.0"
+    "wordpress_plugin_version": "3.10.0",
+    "typo3_extension_version": "3.10.0"
   },
   "components": {
     "core": {
-      "version": "3.9.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.9.0.zip?ref=v3.9.0",
-      "sha256": "6fb82aaa3cfcc06844acba350c684a380ba17dc1b5d59a1d8f1a09432029ffc2"
+      "version": "3.10.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.10.0.zip?ref=v3.10.0",
+      "sha256": "0eeb5df102f216878855e560e72118776da7188f71381f65c0173cf042cde05a"
     },
     "standalone": {
-      "version": "3.9.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.9.0.zip?ref=v3.9.0",
-      "sha256": "6fb82aaa3cfcc06844acba350c684a380ba17dc1b5d59a1d8f1a09432029ffc2"
+      "version": "3.10.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.10.0.zip?ref=v3.10.0",
+      "sha256": "0eeb5df102f216878855e560e72118776da7188f71381f65c0173cf042cde05a"
     },
     "wordpress": {
-      "version": "3.9.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.9.0.zip?ref=v3.9.0",
-      "sha256": "9c4cda05db8ee138cef636f96852a376ee1e03a41f8c37a08fa4e729af8c76a7",
+      "version": "3.10.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.10.0.zip?ref=v3.10.0",
+      "sha256": "c4399bb03aa55dbd47c009b0415d87cebdad4ec1fab72aa124a8a8acdad48021",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.9.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.9.0.zip?ref=v3.9.0",
-      "sha256": "05b6c8f0f7cc4623b9800c658465396cfc9aad8edfd6c692770d7eed7d4c4d64",
+      "version": "3.10.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.10.0.zip?ref=v3.10.0",
+      "sha256": "eb6ce6c521b139b2d3a9f1029903e64615b9f0200929357877a81aca30a2bb74",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

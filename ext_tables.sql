@@ -32,9 +32,25 @@ CREATE TABLE be_users (
 CREATE TABLE tt_content (
   tx_kiosky_calendar_title varchar(120) NOT NULL default '',
   tx_kiosky_upcoming_title varchar(120) NOT NULL default '',
-  tx_kiosky_upcoming_count int(11) unsigned NOT NULL default '10',
-  tx_kiosky_show_search smallint(5) unsigned NOT NULL default '1',
-  tx_kiosky_show_upcoming smallint(5) unsigned NOT NULL default '1'
+  tx_kiosky_upcoming_count int(11) unsigned NOT NULL default '0',
+  tx_kiosky_show_search smallint(5) NOT NULL default '-1',
+  tx_kiosky_show_upcoming smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_view varchar(20) NOT NULL default '',
+  tx_kiosky_cal_color_mode varchar(10) NOT NULL default '',
+  tx_kiosky_cal_accent_color varchar(7) NOT NULL default '',
+  tx_kiosky_cal_accent_text_color varchar(7) NOT NULL default '',
+  tx_kiosky_cal_control_background varchar(7) NOT NULL default '',
+  tx_kiosky_cal_control_text_color varchar(7) NOT NULL default '',
+  tx_kiosky_cal_control_border_color varchar(7) NOT NULL default '',
+  tx_kiosky_cal_show_time smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_location smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_category smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_organizer smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_description smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_status smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_tickets smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_remaining_tickets smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_details smallint(5) NOT NULL default '-1'
 );
 
 CREATE TABLE tx_kiosky_domain_model_location (

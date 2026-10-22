@@ -192,6 +192,16 @@ final class Api
 
         $this->assertRolePermission($method, $path);
 
+        if(preg_match('#^/api/events/([^/]+)/schedule(?:/([^/]+))?$#',$path,$match))return $this->eventSchedule($state,$method,rawurldecode($match[1]),isset($match[2])?rawurldecode($match[2]):null,$body);
+        if($path==='/api/dwd/warncells'&&$method==='GET'){
+            if(!$this->dwd)throw new RuntimeException('Der DWD-Dienst ist nicht verfügbar.',503);
+            $query=trim((string)($body['q'] ?? ''));
+            if(strlen($query)<2)return $this->ok(['data'=>[],'source'=>'Deutscher Wetterdienst','sourceUrl'=>DwdService::WARNCELL_INFO_URL]);
+            $cached=$state['dwdWarncellCache'] ?? null;$changed=false;
+            if(!$cached || strtotime($cached['loadedAt'])<time()-86400){try{$cached=$this->dwd->warncells();$state['dwdWarncellCache']=$cached;$changed=true;}catch(\Throwable $error){if(!$cached)throw $error;}}
+            return $this->ok(['data'=>DwdService::searchWarncells($cached['data'],$query),'loadedAt'=>$cached['loadedAt'],'source'=>'Deutscher Wetterdienst','sourceUrl'=>DwdService::WARNCELL_INFO_URL],$changed);
+        }
+
         if ($path === '/api/api-users') {
             if ($method === 'GET') return $this->ok(['data'=>array_reverse(array_map([ApiAccess::class,'publicUser'],$state['apiUsers']))]);
             if ($method === 'POST') {
@@ -706,6 +716,13 @@ final class Api
             return $this->ok(['titleExclusions' => $state['titleExclusions']], true);
         }
 
+        if ($path === '/api/integrations/easyjob/schedule/types' && $method === 'GET') return $this->ok(['data'=>EasyJobService::roomUseTypes($state['easyjob']['roomUseTypeRules'] ?? [])]);
+        if ($path === '/api/integrations/easyjob/schedule/types' && $method === 'PUT') {
+            $rule=EasyJobService::roomUseType($body);
+            $state['easyjob']['roomUseTypeRules'][$rule['normalizedType']]=$rule;
+            $this->audit($state,'easyjob.schedule.mapping.updated',$rule['normalizedType']);
+            return $this->ok(['rule'=>$rule],true);
+        }
         if ($path === '/api/integrations/easyjob' && $method === 'GET') return $this->ok($this->easyJob()->publicConfig($state['easyjob']['config']));
         if ($path === '/api/integrations/easyjob' && $method === 'PUT') {
             $state['easyjob']['config'] = $this->easyJob()->saveConfig($state['easyjob']['config'], $body);
@@ -723,7 +740,7 @@ final class Api
             return [$result['ok'] ? 200 : 422, $result, true];
         }
         if ($path === '/api/integrations/easyjob/import-preview' && $method === 'POST') {
-            $projects = $this->easyJob()->projects($state['easyjob']['config'], ['searchtext' => $body['search'] ?? '', 'style' => 'Compact', 'startdate' => $body['from'] ?? '', 'enddate' => $body['until'] ?? '']);
+            $projects = $this->easyJob()->projects($state['easyjob']['config'], ['searchtext' => $body['search'] ?? '', 'style' => 'List', 'startdate' => $body['from'] ?? '', 'enddate' => $body['until'] ?? '']);
             $data = [];
             $excluded = 0;
             foreach ($projects as $project) {
@@ -732,26 +749,45 @@ final class Api
                     $excluded++;
                     continue;
                 }
-                $data[] = ['easyjob' => ['projectId' => $project['IdProject'] ?? $project['ID'] ?? $project['Id'] ?? '', 'number' => $project['Number'] ?? $project['CustomNumber'] ?? null], 'event' => $mapped, 'plannedAction' => 'review'];
+                $projectId=(string)($project['IdProject'] ?? $project['ID'] ?? $project['Id'] ?? '');$jobs=[];$warnings=[];
+                try{
+                    $project=array_replace($project,$this->easyJob()->project($state['easyjob']['config'],$projectId));
+                    $mapped=$this->easyJob()->mapEvent($project,null,$state['easyjob']['mapping']);
+                    foreach(($project['Jobs'] ?? []) as $listedJob){
+                        if(!is_array($listedJob))continue;$jobId=(string)($listedJob['IdJob'] ?? $listedJob['ID'] ?? $listedJob['Id'] ?? '');if($jobId==='')continue;
+                        try{$job=$this->easyJob()->job($state['easyjob']['config'],$jobId);$jobEvent=$this->easyJob()->mapEvent($project,$job,$state['easyjob']['mapping']);
+                            if($this->matchingTitleExclusion((string)$jobEvent['title'],$this->titleExclusions($state)))continue;
+                            if(!empty($body['eventType'])&&stripos((string)($jobEvent['eventType'] ?? ''),(string)$body['eventType'])===false)continue;
+                            $jobs[]=['easyjob'=>['projectId'=>$projectId,'jobId'=>$jobId,'number'=>$job['Number'] ?? null],'event'=>$jobEvent,'quality'=>['valid'=>true,'errors'=>[],'warnings'=>[]],'roomUses'=>[]];
+                        }catch(\Throwable $error){$jobs[]=['easyjob'=>['projectId'=>$projectId,'jobId'=>$jobId],'event'=>['title'=>$listedJob['Caption'] ?? $jobId],'quality'=>['valid'=>false,'errors'=>[$error->getMessage()],'warnings'=>[]],'roomUses'=>[]];}
+                    }
+                }catch(\Throwable $error){$warnings[]=$error->getMessage();}
+                if($this->matchingTitleExclusion((string)$mapped['title'],$this->titleExclusions($state))){$excluded++;continue;}
+                if(($body['objectType'] ?? '')==='job'&&!$jobs)continue;
+                $data[] = ['easyjob' => ['projectId' => $projectId, 'number' => $project['Number'] ?? $project['CustomNumber'] ?? null], 'event' => $mapped, 'jobs'=>($body['objectType'] ?? '')==='project'?[]:$jobs,'quality'=>['valid'=>true,'errors'=>[],'warnings'=>$warnings], 'plannedAction' => 'review'];
             }
             return $this->ok(['data' => $data, 'itemCount' => count($data), 'totalItems' => count($projects), 'excludedCount' => $excluded], true);
         }
         if ($path === '/api/integrations/easyjob/import' && $method === 'POST') {
             $ids = array_slice(array_values(array_unique(array_map('strval', is_array($body['ids'] ?? null) ? $body['ids'] : []))), 0, 100);
             if (!$ids) throw new RuntimeException('Bitte mindestens ein easyjob-Projekt auswählen.', 422);
+            $fallbackKind=match($state['easyjob']['config']['importMode'] ?? ''){'projects'=>'project','jobs'=>'job',default=>'both'};
+            $kind=in_array($body['importKind'] ?? null,['project','job','both'],true)?$body['importKind']:$fallbackKind;
+            $selectedJobs=array_values(array_unique(array_map('strval',is_array($body['jobIds'] ?? null)?$body['jobIds']:[])));
             $results = [];
             foreach ($ids as $projectId) {
                 try {
                     $project = $this->easyJob()->project($state['easyjob']['config'], $projectId);
-                    if (($state['easyjob']['config']['importMode'] ?? '') !== 'jobs') {
+                    if ($kind !== 'job') {
                         $mapped = $this->easyJob()->mapEvent($project, null, $state['easyjob']['mapping']);
                         $exclusion = $this->matchingTitleExclusion((string)($mapped['title'] ?? ''), $this->titleExclusions($state));
                         if ($exclusion) $results[] = ['action' => 'excluded', 'reason' => $exclusion, 'projectId' => $projectId];
                         else { $result = $this->upsertExternalEvent($state, $mapped); $result['projectId'] = $projectId; $result['images'] = $this->syncEasyJobAdvertisingImages($state, $result['event'], $projectId); $results[] = $result; }
                     }
-                    if (($state['easyjob']['config']['importMode'] ?? '') !== 'projects') foreach (($project['Jobs'] ?? []) as $listedJob) {
+                    if ($kind !== 'project') foreach (($project['Jobs'] ?? []) as $listedJob) {
                         if (!is_array($listedJob)) continue;
                         $jobId = (string)($listedJob['IdJob'] ?? $listedJob['ID'] ?? $listedJob['Id'] ?? '');
+                        if($selectedJobs&&!in_array($jobId,$selectedJobs,true))continue;
                         if ($jobId !== '') {
                             $mapped = $this->easyJob()->mapEvent($project, $this->easyJob()->job($state['easyjob']['config'], $jobId), $state['easyjob']['mapping']);
                             $exclusion = $this->matchingTitleExclusion((string)($mapped['title'] ?? ''), $this->titleExclusions($state));
@@ -798,7 +834,7 @@ final class Api
             return $this->ok(['settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? [])]);
         }
         if ($path === '/api/settings/public-calendar' && $method === 'PUT') {
-            $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings($body);
+            $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings(array_replace($state['publicCalendarSettings'] ?? [],$body));
             return $this->ok(['settings' => $state['publicCalendarSettings']], true);
         }
 
@@ -982,6 +1018,45 @@ final class Api
     }
 
     /** @param array<string,mixed> $state */
+    private function eventSchedule(array &$state,string $method,string $eventId,?string $id,array $body): array
+    {
+        $event=$this->required($state['events'],$eventId,'Veranstaltung');
+        if(!empty($event['deletedAt']))throw new RuntimeException('Veranstaltung wurde nicht gefunden.',404);
+        if($method==='GET'&&$id===null){
+            $entries=array_values(array_filter($state['eventSchedules'],static function(array $entry)use($eventId,$body):bool{
+                if(($entry['eventId'] ?? '')!==$eventId||($entry['active'] ?? true)===false)return false;
+                foreach(['roomId','roomName','category','type','source'] as $key)if(!empty($body[$key])&&($entry[$key] ?? '')!==$body[$key])return false;
+                return empty($body['date'])||str_starts_with($entry['startAt'] ?? '',(string)$body['date']);
+            }));
+            usort($entries,static fn(array $a,array $b):int=>strcmp($a['startAt'],$b['startAt']) ?: (($a['sortOrder'] ?? 0)<=>($b['sortOrder'] ?? 0)));
+            return $this->ok(['data'=>$entries]);
+        }
+        $current=$id!==null?$this->required($state['eventSchedules'],$id,'Ablaufpunkt'):null;
+        if($current&&($current['eventId'] ?? '')!==$eventId)throw new RuntimeException('Ablaufpunkt wurde nicht gefunden.',404);
+        if($current&&($current['source'] ?? 'manual')!=='manual')throw new RuntimeException('Importierte Ablaufpunkte sind schreibgeschützt.',403);
+        if($method==='DELETE'&&$current){$this->purge($state['eventSchedules'],$id);$this->audit($state,'event.schedule.deleted',$id);return $this->ok(['ok'=>true],true);}
+        if(!(($method==='POST'&&$id===null)||($method==='PATCH'&&$current)))throw new RuntimeException('Methode nicht erlaubt.',405);
+        $input=array_replace($current ?? [],$body);$type=$input['type'] ?? '';
+        if(!is_string($type)||trim($type)===''||strlen($type)>1200)throw new RuntimeException('Die Ablaufart fehlt oder ist ungültig.',422);
+        $normalized=EasyJobService::normalizedRoomUseType($type);$rule=$this->first(EasyJobService::roomUseTypes($state['easyjob']['roomUseTypeRules'] ?? []),static fn(array $item):bool=>$item['normalizedType']===$normalized);
+        $category=$input['category'] ?? $rule['category'] ?? 'other';
+        EasyJobService::roomUseType(['originalLabel'=>$type,'category'=>$category]);
+        $date=static function(mixed $value,bool $required):?string{
+            if(!$required&&($value===null||$value===''))return null;
+            if(!is_string($value)||!preg_match('/^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/',$value)||strtotime($value)===false)throw new RuntimeException('Ein gültiger ISO-8601-Zeitpunkt mit Zeitzone ist erforderlich.',422);
+            return gmdate('Y-m-d\TH:i:s\Z',strtotime($value));
+        };
+        $start=$date($input['startAt'] ?? null,true);$end=$date($input['endAt'] ?? null,false);
+        if($end!==null&&$end<$start)throw new RuntimeException('Das Ende liegt vor dem Beginn.',422);
+        $priority=$input['sortOrder'] ?? 0;if(!is_int($priority)||abs($priority)>100000)throw new RuntimeException('Sortierpriorität ist ungültig.',422);
+        $entry=array_replace($current ?? [],['id'=>$id ?? $this->uuid(),'eventId'=>$eventId,'type'=>trim($type),'normalizedType'=>$normalized,'category'=>$category,'startAt'=>$start,'endAt'=>$end,'source'=>'manual','active'=>true,'isApproximate'=>(bool)($input['isApproximate'] ?? $rule['isApproximate'] ?? false),'sortOrder'=>$priority,'createdAt'=>$current['createdAt'] ?? $this->now(),'updatedAt'=>$this->now()]);
+        foreach(['caption','roomId','externalRoomId','roomName','roomConfiguration'] as $key){$value=$input[$key] ?? null;if($value!==null&&(!is_string($value)||strlen($value)>2000))throw new RuntimeException('Ablaufangabe ist ungültig.',422);$entry[$key]=$value!==null&&trim($value)!==''?trim($value):null;}
+        $entry['displayCaption']=$entry['caption'] ?: $entry['type'];
+        if($current)$state['eventSchedules'][$this->index($state['eventSchedules'],$id)]=$entry;else $state['eventSchedules'][]=$entry;
+        $this->audit($state,$current?'event.schedule.updated':'event.schedule.created',$entry['id']);
+        return [$current?200:201,['entry'=>$entry],true];
+    }
+
     private function purgeEvent(array &$state, string $eventId): void
     {
         $this->required($state['events'], $eventId, 'Veranstaltung');
@@ -990,6 +1065,7 @@ final class Api
         foreach ($state['channels'] as &$channel) if (($channel['eventId'] ?? '') === $eventId) unset($channel['eventId']);
         unset($channel);
         $this->purge($state['events'], $eventId);
+        $state['eventSchedules']=array_values(array_filter($state['eventSchedules'],static fn(array $item):bool=>($item['eventId'] ?? '')!==$eventId));
         $state['trash'] = array_values(array_filter($state['trash'], static fn(array $item): bool => !(($item['type'] ?? '') === 'event' && ($item['id'] ?? '') === $eventId)));
         $this->audit($state, 'event.purged', $eventId);
     }

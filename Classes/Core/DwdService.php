@@ -8,10 +8,37 @@ use RuntimeException;
 
 final class DwdService
 {
+    public const WARNCELL_INFO_URL='https://www.dwd.de/DE/leistungen/opendata/help/warnungen/cap_warncellids_csv.html';
+    private const WARNCELL_URL='https://www.dwd.de/DE/leistungen/opendata/help/warnungen/cap_warncellids_csv.csv?__blob=publicationFile&v=4';
     private const URL = 'https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json';
 
     public function __construct(private readonly HttpClient $http)
     {
+    }
+
+    public function warncells(): array
+    {
+        $response=$this->http->request('GET',self::WARNCELL_URL,['Accept'=>'text/csv,text/plain;q=0.9'],null,12);
+        if($response->status!==200)throw new RuntimeException('DWD-Warngebietsliste antwortet mit HTTP '.$response->status.'.',502);
+        $lines=preg_split('/\r?\n/',ltrim($response->body,"\xEF\xBB\xBF"));
+        $fields=static fn(string $line):array=>array_map('trim',str_getcsv($line,';','"',''));
+        $headers=array_map('strtoupper',$fields(array_shift($lines) ?? ''));
+        foreach(['WARNCELLID','NAME','BL'] as $key)if(!in_array($key,$headers,true))throw new RuntimeException('Die DWD-Warngebietsliste hat ein unerwartetes Datenformat.',502);
+        $rows=[];foreach($lines as $line){if(trim($line)==='')continue;$values=$fields($line);$row=[];foreach($headers as $i=>$header)$row[$header]=$values[$i] ?? '';
+            $id=preg_replace('/\D/','',$row['WARNCELLID']);if($id===''||$row['NAME']==='')continue;
+            $rows[]=['id'=>$id,'name'=>$row['NAME'],'shortName'=>($row['KURZNAME'] ?? '') ?: $row['NAME'],'abbreviation'=>$row['CCC'] ?? '','state'=>$row['BL']];
+        }
+        if(!$rows)throw new RuntimeException('Die DWD-Warngebietsliste enthält keine Einträge.',502);
+        return ['data'=>$rows,'loadedAt'=>gmdate('c')];
+    }
+
+    public static function searchWarncells(array $cells,string $query): array
+    {
+        $normalize=static function(string $text):string{$text=strtr($text,['ß'=>'ss','ẞ'=>'ss']);$text=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$text) ?: $text;return strtolower($text);};
+        $query=$normalize(trim($query));if(strlen($query)<2)return [];
+        $cells=array_values(array_filter($cells,static fn(array $cell):bool=>str_contains($normalize(implode(' ',[$cell['id'],$cell['name'],$cell['shortName'],$cell['abbreviation'] ?? '',$cell['state']])),$query)));
+        $score=static function(array $cell)use($normalize,$query):int{if($cell['id']===$query)return 0;if(str_starts_with($cell['id'],$query))return 1;foreach(['name','shortName'] as $key)if($normalize($cell[$key])===$query)return 2;foreach(['name','shortName'] as $key)if(str_starts_with($normalize($cell[$key]),$query))return 3;foreach(['name','shortName'] as $key)foreach(preg_split('/\W+/',$normalize($cell[$key])) as $word)if(str_starts_with($word,$query))return 4;return in_array($query,[$normalize($cell['abbreviation'] ?? ''),$normalize($cell['state'])],true)?5:6;};
+        usort($cells,static fn(array $a,array $b):int=>($score($a)<=>$score($b)) ?: strcmp($a['name'],$b['name']));return array_slice($cells,0,30);
     }
 
     /** @return array<int,array<string,mixed>> */

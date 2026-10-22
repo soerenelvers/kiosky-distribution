@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.9.0-20261022194233%2B2fb8cbf1">
+  <link rel="stylesheet" href="styles.css?v=3.10.0-20261022212629%2Bd97e9ace">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -794,16 +794,36 @@
           </form>
         </div>
         <div class="settings-detail" data-settings-detail="calendar" hidden>
-          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Website-Kalender</p><h2>Öffentlicher Veranstaltungskalender</h2><p>Legt die Standardausgabe für WordPress und TYPO3 fest. Das Website-Theme bestimmt Schrift, Farben und Erscheinungsbild.</p></div></div>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Website-Kalender</p><h2>Öffentlicher Veranstaltungskalender</h2><p>Zentrale Vorgaben für WordPress und TYPO3. Ansicht, Farben und Inhalte können je eingebundenem Kalender überschrieben werden.</p></div></div>
           <form class="panel feature-settings-panel" id="public-calendar-settings-form">
             <div class="panel-header"><div><p class="eyebrow">CMS-Einbindung</p><h2>Kalender für Gäste</h2><p>Freigegebene Veranstaltungen werden automatisch bereitgestellt. Entwürfe und interne Notizen bleiben unsichtbar.</p></div><span class="tag blue">Theme-neutral</span></div>
             <div class="config-form-grid">
               <label class="form-field"><span>Kalenderüberschrift</span><input id="public-calendar-title" maxlength="120" value="Veranstaltungskalender"></label>
+              <label class="form-field"><span>Standardansicht</span><select data-public-calendar-field="view"><option value="agenda">Agenda</option><option value="month">Klassischer Monatskalender</option><option value="categories">Kategorien-Explorer</option><option value="week">Wochenkalender mit Uhrzeiten</option><option value="day">Tagesfokus mit Wochenleiste</option></select></label>
+              <label class="form-field"><span>Farben</span><select data-public-calendar-field="colorMode"><option value="theme">Automatisch aus dem Website-Theme</option><option value="custom">Individuell festlegen</option></select></label>
               <label class="form-field"><span>Überschrift der Terminliste</span><input id="public-calendar-upcoming-title" maxlength="120" value="Nächste Veranstaltungen"></label>
               <label class="form-field"><span>Nächste Veranstaltungen</span><input id="public-calendar-upcoming-count" type="number" min="1" max="50" value="10"></label>
               <label class="toggle-label"><input id="public-calendar-show-search" type="checkbox" checked> Volltextsuche anzeigen</label>
               <label class="toggle-label"><input id="public-calendar-show-upcoming" type="checkbox" checked> Terminliste neben dem Kalender anzeigen</label>
             </div>
+            <fieldset id="public-calendar-colors"><legend>Individuelle Farben</legend><p>Bei automatischer Farbwahl werden die Farben des eingebetteten Website-Themes verwendet. Die individuellen Werte bleiben für einen späteren Wechsel gespeichert.</p><div class="config-form-grid">
+              <label class="form-field"><span>Akzentfarbe</span><input type="color" value="#1968d2" data-public-calendar-field="accentColor"></label>
+              <label class="form-field"><span>Text auf Akzentflächen</span><input type="color" value="#ffffff" data-public-calendar-field="accentTextColor"></label>
+              <label class="form-field"><span>Steuerelemente: Hintergrund</span><input type="color" value="#ffffff" data-public-calendar-field="controlBackground"></label>
+              <label class="form-field"><span>Steuerelemente: Text</span><input type="color" value="#183153" data-public-calendar-field="controlTextColor"></label>
+              <label class="form-field"><span>Steuerelemente: Rahmen</span><input type="color" value="#ccd8e6" data-public-calendar-field="controlBorderColor"></label>
+            </div></fieldset>
+            <fieldset><legend>Sichtbare Spalten und Optionen</legend><p>Datum und Veranstaltungstitel bleiben sichtbar. Die übrigen Angaben und Aktionen lassen sich einzeln ausblenden.</p><div class="config-form-grid">
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showTime"> Uhrzeit und Einlass</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showLocation"> Ort und Raum</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showCategory"> Kategorie</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showOrganizer"> Veranstalter</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showDescription"> Beschreibung und öffentliche Hinweise</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showStatus"> Absage / ausverkauft</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showTickets"> Ticket-Link</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showRemainingTickets"> Restkarten / Ticketinformation</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showDetails"> Detail-Schaltfläche</label>
+            </div></fieldset>
             <p class="property-note">WordPress: Shortcode <code>[kiosky_event_calendar]</code>. TYPO3: Inhaltselement „Kiosky Veranstaltungskalender“. Werte können an der jeweiligen Einbindung überschrieben werden.</p>
             <div class="dialog-actions"><button class="button button-primary" type="submit">Kalender-Einstellungen speichern</button></div>
           </form>
@@ -1614,7 +1634,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.9.0-20261022194233%2B2fb8cbf1"></script>
-  <script src="app.js?v=3.9.0-20261022194233%2B2fb8cbf1"></script>
+  <script src="runtime-config.js?v=3.10.0-20261022212629%2Bd97e9ace"></script>
+  <script src="app.js?v=3.10.0-20261022212629%2Bd97e9ace"></script>
 </body>
 </html>
