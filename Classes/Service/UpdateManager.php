@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
 
 final readonly class UpdateManager
 {
-    private const VERSION = '3.8.1';
+    private const VERSION = '3.8.2';
 
     public function __construct(
         private ConnectionPool $connectionPool,

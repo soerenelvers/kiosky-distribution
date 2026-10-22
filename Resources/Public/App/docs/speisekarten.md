@@ -29,7 +29,7 @@ Die eigenständige Küchenadresse `/speisekarten` bleibt ebenfalls erhalten.
    vorhandenes Benutzerkonto auswählen, **Speisekarten bearbeiten erlauben**
    aktivieren und die zulässigen Karten markieren. **Rechte speichern** übernimmt
    die Zuweisung sofort.
-6. Ausschließlich externe Zugänge und PDF-Weblink-Abonnements werden unter
+6. Externe Zugänge und zusätzlich PDF-Weblink-Abonnements werden unter
    **Einstellungen → Module → Speisekarten: externe Links konfigurieren** verwaltet.
 
 Für Küchenkonten empfiehlt sich die bestehende Rolle **Betrachter**. Das eigene
@@ -222,7 +222,7 @@ nur JPEG-Seitenbilder im festen Slide-Format bis 2,8 MB Data-URL-Größe.
 
 ## PDF-Weblinks abonnieren (ab 3.8.0)
 
-Unter **Einstellungen → Module → Speisekarten: externe Links konfigurieren → PDF-Weblinks abonnieren** steht
+Unter **Hauptmenü → Speisekarten → PDF-Weblinks abonnieren** steht
 zusätzlich zum bisherigen lokalen PDF-Import ein wiederkehrender Serverimport zur
 Verfügung. Nur angemeldete Administratoren verwalten Abonnements. Küchenbenutzer
 und Passwort-Freigaben erhalten dadurch keine Verwaltungsrechte.
@@ -386,8 +386,10 @@ PDF-Uploads und Passwort-Freigaben bleiben verfügbar.
 in der Liste der Arbeitsbereiche. Ausschalten blendet **Speisekarten** aus dem
 Hauptmenü aus und sperrt Modul/externen Inhaltseditor; Daten und bereits geplante
 Ausspielungen bleiben erhalten. Unter **Speisekarten: externe Links konfigurieren**
-werden ausschließlich PDF-Weblink-Abonnements sowie Passwort und Freigabelink des
-externen Inhaltseditors eingerichtet. Der bisherige eigene Speisekarten-Reiter in
+werden Passwort und Freigabelink des externen Inhaltseditors eingerichtet.
+PDF-Weblink-Abonnements sind seit 3.8.2 wieder direkt im Hauptmenü unter
+**Speisekarten → PDF-Weblinks abonnieren** erreichbar; der zusätzliche Zugang
+über die Moduleinstellungen bleibt erhalten. Der bisherige eigene Speisekarten-Reiter in
 den Einstellungen entfällt.
 
 Im **Hauptmenü → Speisekarten** befinden sich alle anderen Funktionen: Vorgaben

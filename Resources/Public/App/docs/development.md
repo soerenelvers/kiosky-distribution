@@ -49,3 +49,23 @@ Vor Produktion sind regelmäßige konsistente Datenbank-Backups, Wiederherstellu
 ## CrewBrain
 
 Die Demo-Instanz wird nur lesend verwendet. Die aktuelle Umsetzung ruft ausschließlich dokumentierte GET-Endpunkte auf. Ohne gültige, leseberechtigte Zugangsdaten kann die OpenAPI geprüft werden, aber kein Verbindungstest mit geschützten Daten erfolgen.
+
+
+## Browserregression für PDF-Weblink-Abonnements
+
+Nach `pnpm build` kann `python tests/menu-web-browser-smoke.py` den vollständigen
+Ablauf im **Hauptmenü → Speisekarten** prüfen. Erforderlich sind Chromium unter
+`/usr/bin/chromium`, Python mit Playwright und ReportLab, OpenSSL und Poppler.
+`KIOSKY_BROWSER_PLATFORM=wordpress` beziehungsweise `typo3` prüft zusätzlich die
+CMS-Transportvarianten der gemeinsamen Oberfläche gegen den isolierten Testserver;
+die nativen CMS-Installationen werden separat in CI geprüft. Mit
+`KIOSKY_BROWSER_OUT` lässt sich der Ergebnisordner festlegen.
+
+Der Test startet einen isolierten HTTPS-PDF-Server mit kurzlebigem Testzertifikat,
+verwendet den echten Downloader und Poppler und prüft Formularsichtbarkeit,
+Slides/Kanal/Tags, Umbenennung, Intervalländerung, automatische Aktualisierung ohne
+offenen Editor, Player-Aktualisierung, Fehlererhalt, SSRF-Weiterleitungsschutz und
+Mobilansicht. Er greift weder auf Kundendaten noch auf externe PDF-Server zu.
+Der Netzwerkadapter liegt ausschließlich unter `tests/fixtures` und wird nur vom
+Testprozess geladen. Der gesonderte Kücheneditor darf die Abo-Verwaltung weiterhin
+nicht anzeigen. Der zusätzliche Zugang über die Moduleinstellungen bleibt geprüft.

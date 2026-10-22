@@ -17,7 +17,7 @@ function forgetShare(){shareToken='';try{sessionStorage.removeItem(`kiosky-menu-
 
 if(linksOnly)root.querySelector('.workspace').hidden=true;
 for(const id of ['create','create-template','pdf-import','access'])$('#'+id).closest('details').hidden=linksOnly;
-root.querySelector('.menu-web-section').hidden=!linksOnly;
+root.querySelector('.menu-web-section').hidden=editorOnly;
 let cards=[],templates=[],accounts=[],subscriptions=[],current=null,dirty=false,busy=false,adminAccess=false,contentDirty=false,managementDirty=false;
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function setBusy(value){busy=value;$('#admin').inert=value;$('#editor').inert=value;$('#reload').disabled=value;$('#share-login').inert=value;}
@@ -93,10 +93,10 @@ async function load(){
     if(settings.defaultTemplate.startsWith('template:')&&!templates.some(item=>`template:${item.id}`===settings.defaultTemplate))$('#create [name=template]').add(new Option('Standardvorlage nicht mehr verfügbar – andere wählen',settings.defaultTemplate));
     $('#create [name=template]').value=settings.defaultTemplate;$('#create [name=orientation]').value=templates.find(item=>`template:${item.id}`===settings.defaultTemplate)?.orientation||settings.defaultOrientation;
     $('#cards').innerHTML=cards.map(card=>`<button type="button" data-id="${esc(card.id)}">${esc(card.name)}</button>`).join('');
-    if(result.admin&&linksOnly)await loadSubscriptions();
+    if(result.admin&&!editorOnly)await loadSubscriptions();
     if(result.admin&&!editorOnly&&!linksOnly){accounts=(await api('/api/menus/access')).data;const selected=$('#access-user').value;$('#access-user').innerHTML=accounts.map(account=>`<option value="${esc(account.id)}">${esc(account.displayName)}</option>`).join('');if(accounts.some(account=>account.id===selected))$('#access-user').value=selected;assignment();}
     const selected=current?.id;dirty=false;select(cards.some(card=>card.id===selected)?selected:cards[0]?.id);
-    message(managementOnly?'PDF-Weblinks abonnieren und bestehende Abonnements verwalten.':cards.length?'Karte auswählen, Inhalte bearbeiten und speichern.':'Keine Karten zugewiesen. Bitte die Administration kontaktieren.');
+    message(managementOnly?'PDF-Weblinks abonnieren und bestehende Abonnements verwalten.':cards.length?'Karte auswählen, Inhalte bearbeiten und speichern.':result.admin?'Neue Karte anlegen oder einen PDF-Weblink abonnieren.':'Keine Karten zugewiesen. Bitte die Administration kontaktieren.');
   }catch(error){if(!dirty){cards=[];current=null;$('#cards').replaceChildren();$('#editor').hidden=true;$('#admin').hidden=true;}message(error.message,true);}finally{setBusy(false);}
 }
 $('#preview-format').onchange=preview;
