@@ -340,3 +340,27 @@ Berechtigung. Einrichtung und Rollback: [Speisekarten](speisekarten.md).
 Ausgeschaltet geben `/api/menus` und seine Unterrouten HTTP 503 mit einer
 verständlichen Modul-Meldung zurück. Einstellungen bleiben erreichbar. Karten,
 Zuweisungen und geplante Player-Ausspielungen werden nicht entfernt.
+
+### Speisekarten-PDF-Weblink-Abonnements (3.8.0)
+
+Nur interaktiv angemeldete Administratoren; keine Maschinen- oder
+Passwort-Freigabe-Zugänge. Gemeinsamer Vertrag für alle drei Plattformen:
+
+- `GET /api/menus/subscriptions`: `{data, rendererAvailable}`, je Abonnement
+  Konfiguration, `revision`, `slideIds`, `channelId`, `pages: [{id,name,tags}]`,
+  erfolgreicher SHA-256-Fingerabdruck und Prüf-/Fehlerstatus; keine Bilddaten.
+- `POST /api/menus/subscriptions`: `{url,name,slideName,tag,intervalMinutes,enabled}`,
+  optional `names` (ein Name je Seite). Importiert sofort; `201 {subscription}`.
+- `PUT /api/menus/subscriptions/:id`: dieselbe Konfiguration plus aktuelle
+  `revision`; optional `names` entsprechend `slideIds`. Quelladresse ist unveränderlich.
+  Speichert Metadaten ohne PDF-Download; Konflikte ergeben HTTP 409.
+- `POST /api/menus/subscriptions/:id/check`: `{}`; sofortige vollständige Prüfung,
+  auch bei pausiertem Abonnement. `200 {subscription}`; bei einem fehlgeschlagenen
+  Folgeabgleich enthält `subscription.error` den Status, die alten Inhalte bleiben.
+  Ein fehlgeschlagener Erstimport liefert einen Fehlerstatus ohne Abonnement.
+- `DELETE /api/menus/subscriptions/:id`: `{revision}`; nur Abonnement entfernen,
+  Kanal/Slides bleiben. `200 {ok:true}`.
+
+Intervall 1–10080 ganze Minuten, Standardwert in der Oberfläche 15. Je PDF maximal
+20 MiB/20 Seiten, maximal 20 Abonnements. Servervoraussetzungen, Scheduler,
+Namenszuordnung, Kanalhoheit und Wiederherstellung: [Speisekarten](speisekarten.md).

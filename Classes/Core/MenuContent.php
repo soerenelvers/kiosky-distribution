@@ -11,13 +11,24 @@ final class MenuContent
     {
         if (array_diff(array_keys($input),array_keys(self::DEFAULT_SETTINGS))) throw new RuntimeException('Unbekannte Speisekarten-Einstellung.',422);
         $settings = array_replace(self::DEFAULT_SETTINGS,$input);
-        if ((!is_string($settings['defaultTemplate']) || (!in_array($settings['defaultTemplate'],['blue','light','dark'],true) && !preg_match('/^template:[a-zA-Z0-9-]{16,64}$/',$settings['defaultTemplate']))) || !in_array($settings['defaultOrientation'],['portrait','landscape'],true)) throw new RuntimeException('Vorlage oder Format ist ungültig.',422);
+        if ((!is_string($settings['defaultTemplate']) || (!in_array($settings['defaultTemplate'],['blue','light','dark'],true) && !preg_match('/^template:[a-zA-Z0-9-]{16,64}$/',$settings['defaultTemplate']))) || !in_array($settings['defaultOrientation'],['portrait','landscape','auto'],true)) throw new RuntimeException('Vorlage oder Format ist ungültig.',422);
         foreach (['defaultTitle'=>60,'defaultSubtitle'=>90,'defaultFooter'=>120] as $field=>$max) {
             $value = $settings[$field];
             if (!is_string($value) || preg_match('/[\x00-\x1f\x7f]/u',$value) || preg_match_all('/./us',$value) > $max || ($field === 'defaultTitle' && trim($value) === '')) throw new RuntimeException('Die Standardtexte sind ungültig oder zu lang.',422);
             $settings[$field] = trim($value);
         }
         return $settings;
+    }
+
+    /** Percentage positions keep complete menu rows together at any player resolution. */
+    public static function responsiveDocument(array $document,string $orientation): array
+    {
+        unset($document['responsiveLayouts']);
+        if($orientation==='auto'){
+            $elements=array_map(static fn(array $e):array=>($e['type'] ?? '')==='text' && !empty($e['menuField'])?array_replace($e,['autoFontSize'=>true,'responsiveText'=>true]):$e,$document['elements'] ?? []);
+            $document['responsiveLayouts']=['landscape'=>$elements,'portrait'=>$elements];
+        }
+        return $document;
     }
 
     public static function pdfDocument(mixed $page,string $orientation,?array $existing=null): array

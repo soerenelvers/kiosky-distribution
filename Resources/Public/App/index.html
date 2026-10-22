@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.7.1-20261022111316%2B0e30a2c2">
+  <link rel="stylesheet" href="styles.css?v=3.8.1-20261022172557%2B11b70313">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -249,7 +249,19 @@
       </section>
 
       <section class="view" data-view-panel="menus">
-        <div class="section-heading"><div><p class="eyebrow">Speisekarten-Modul</p><h2>Karten für Küche und Restaurant</h2><p>Bearbeite Titel, Speisen und Preise deiner zugewiesenen Karten.</p></div><button class="button button-secondary admin-only" type="button" data-settings-open="menus">Modul konfigurieren</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Speisekarten-Modul</p><h2>Karten für Küche und Restaurant</h2><p>Karten erstellen, gestalten und verwalten. Küchenzugänge bearbeiten ausschließlich zugewiesene Inhalte.</p></div><button class="button button-secondary admin-only" type="button" data-settings-open="modules">Modul und externe Links</button></div>
+        <details class="panel menu-configuration admin-only"><summary>Vorgaben für neue Speisekarten</summary>          <form class="feature-settings-panel" id="menu-module-settings-form">
+            <p class="property-note">Diese Vorgaben gelten für neu angelegte Karten. Bestehende Karten werden einzeln im Speisekarten-Modul bearbeitet.</p>
+            <div class="config-form-grid">
+              <label class="form-field"><span>Standardvorlage</span><select id="menu-default-template"><option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option></select></label>
+              <label class="form-field"><span>Standardformat</span><select id="menu-default-orientation"><option value="auto">Responsive · Displayauflösung folgen</option><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label>
+              <label class="form-field"><span>Standardtitel</span><input id="menu-default-title" maxlength="60" required></label>
+              <label class="form-field"><span>Standarduntertitel</span><input id="menu-default-subtitle" maxlength="90"></label>
+              <label class="form-field"><span>Standardfußzeile / Hinweise</span><input id="menu-default-footer" maxlength="120"></label>
+            </div>
+            <div class="dialog-actions"><button class="button button-primary" type="submit">Speisekarten-Einstellungen speichern</button></div>
+            <p id="menu-module-settings-message" class="auth-message" role="status"></p>
+          </form></details>
         <div id="menu-module-root"><p>Speisekarten werden geladen …</p></div>
       </section>
       <section class="view" data-view-panel="channels">
@@ -692,7 +704,7 @@
       <section class="view" data-view-panel="settings">
         <header class="settings-header" aria-label="Einstellungsnavigation">
           <div class="settings-header-title"><div class="settings-header-icon" aria-hidden="true">⚙</div><div><p class="eyebrow">Systemverwaltung</p><strong>Einstellungen</strong></div></div>
-          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-settings-open="menus">Speisekarten</button><button type="button" data-settings-open="advertising">Werbung</button><button type="button" data-settings-open="zugangswerk" data-standalone-only>Zugangswerk</button><button type="button" data-settings-open="calendar">Website-Kalender</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
+          <nav class="settings-menu" aria-label="Bereiche der Einstellungen"><button class="is-active" type="button" data-settings-home aria-current="page">Übersicht</button><button type="button" data-settings-open="modules">Module</button><button type="button" data-settings-open="editor">Slide-Editor</button><button type="button" data-settings-open="advertising">Werbung</button><button type="button" data-settings-open="zugangswerk" data-standalone-only>Zugangswerk</button><button type="button" data-settings-open="calendar">Website-Kalender</button><button type="button" data-view-link="integrations">Schnittstellen</button><button type="button" data-view-link="users">Benutzer &amp; Rollen</button></nav>
         </header>
         <div class="settings-overview" data-settings-overview>
           <div class="section-heading"><div><p class="eyebrow">Alle Bereiche</p><h2>Was möchtest du einstellen?</h2><p>Wähle einen Bereich. Über den Kopfbereich und „Zurück“ kannst du jederzeit zwischen den Ebenen wechseln.</p></div></div>
@@ -700,7 +712,6 @@
             <button class="panel settings-destination" type="button" data-settings-open="zugangswerk" data-standalone-only><span aria-hidden="true">↪</span><strong>Zugangswerk</strong><small>Zentrale Anmeldung und exklusiven Kontozugang konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="modules"><span>▦</span><strong>Module &amp; Navigation</strong><small>Sichtbarkeit und Reihenfolge der Arbeitsbereiche festlegen.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="editor"><span>◇</span><strong>Slide-Editor</strong><small>Verfügbare Gestaltungselemente zentral auswählen.</small><i>Öffnen →</i></button>
-            <button class="panel settings-destination" type="button" data-settings-open="menus"><span aria-hidden="true">▤</span><strong>Speisekarten</strong><small>Modul ein- und ausschalten, Vorgaben, Karten und Bearbeitungsrechte konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="advertising"><span>▤</span><strong>Werbung</strong><small>Automatische Werbeslides und den Werbekanal konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-settings-open="calendar"><span>▦</span><strong>Website-Kalender</strong><small>Gästekalender und Liste der nächsten Veranstaltungen konfigurieren.</small><i>Öffnen →</i></button>
             <button class="panel settings-destination" type="button" data-view-link="integrations"><span>⇄</span><strong>Schnittstellen</strong><small>CrewBrain, easyjob, externe API und Datentransfer verwalten.</small><i>Öffnen →</i></button>
@@ -742,6 +753,7 @@
           <div class="module-switching-list" id="module-switching-list" aria-label="Module und Reihenfolge"></div>
           <div class="dialog-actions"><button class="button button-primary" type="submit">Einstellungen speichern</button></div>
         </form>
+        <details class="panel menu-configuration"><summary>Speisekarten: externe Links konfigurieren</summary><p>PDF-Weblink-Abonnements und den passwortgeschützten Inhaltszugang verwalten. Karten, Vorlagen und Bearbeitungsrechte befinden sich im Hauptmenü unter Speisekarten.</p><details class="panel menu-settings-group"><summary>Inhaltsbearbeitung mit Freigabepasswort</summary><form class="config-panel" id="menu-share-settings-form"><p>Ein eigener Link erlaubt ohne Benutzerkonto ausschließlich die Bearbeitung ausgewählter Speisekarten. Dieser getrennte Inhaltszugang ist auch bei aktivem Zugangswerk verfügbar.</p><label class="toggle-label"><input id="menu-share-enabled" type="checkbox"> Passwortgeschützten Inhaltszugang aktivieren</label><label class="form-field"><span>Freigabepasswort festlegen oder ändern</span><input id="menu-share-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" placeholder="Mindestens 12 Zeichen; leer lässt das vorhandene Passwort bestehen"></label><p id="menu-share-password-status" class="property-note"></p><fieldset><legend>Für diesen Link freigegebene Karten</legend><div id="menu-share-cards"></div></fieldset><label class="form-field"><span>Link zum Inhaltseditor</span><input id="menu-share-url" readonly placeholder="Freigabe zuerst speichern"></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="menu-share-copy">Link kopieren</button><a class="button button-secondary" id="menu-share-open" target="_blank" rel="noopener noreferrer" hidden>Editor öffnen</a><button type="button" class="button button-secondary" id="menu-share-reset">Neuen Link erzeugen</button><button type="submit" class="button button-primary">Freigabe speichern</button></div><p class="property-note">Jedes Speichern beendet bestehende Freigabesitzungen. Passwort getrennt vom Link weitergeben. Layout, Vorlagen, Rechte und Veröffentlichung bleiben in der Verwaltung.</p><p id="menu-share-message" class="auth-message" role="status"></p></form></details><div id="menu-module-management-root"></div></details>
         </div>
         <div class="settings-detail" data-settings-detail="editor" hidden>
           <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Slide-Editor</p><h2>Slide-Editor</h2><p>Steuere die Werkzeuge, die Redaktionen beim Gestalten verwenden können.</p></div></div>
@@ -750,23 +762,6 @@
           <div class="editor-element-settings" id="editor-element-settings"></div>
           <div class="dialog-actions"><button class="button button-primary" type="submit">Editor-Elemente speichern</button></div>
         </form>
-        </div>
-        <div class="settings-detail" data-settings-detail="menus" hidden>
-          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home aria-label="Zur Einstellungsübersicht">←</button><div><p class="eyebrow">Einstellungen / Speisekarten</p><h2>Speisekarten-Modul</h2></div></div>
-          <form class="panel feature-settings-panel" id="menu-module-settings-form">
-            <label class="toggle-label"><input id="menu-module-enabled" type="checkbox"> Speisekarten-Modul aktivieren</label>
-            <p class="property-note">Ausgeschaltet sind Modul und Küchen-Editor gesperrt. Karten, Rechte und bereits geplante Ausspielungen bleiben erhalten. Vorgaben gelten nur für neu angelegte Karten.</p>
-            <div class="config-form-grid">
-              <label class="form-field"><span>Standardvorlage</span><select id="menu-default-template"><option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option></select></label>
-              <label class="form-field"><span>Standardformat</span><select id="menu-default-orientation"><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label>
-              <label class="form-field"><span>Standardtitel</span><input id="menu-default-title" maxlength="60" required></label>
-              <label class="form-field"><span>Standarduntertitel</span><input id="menu-default-subtitle" maxlength="90"></label>
-              <label class="form-field"><span>Standardfußzeile / Hinweise</span><input id="menu-default-footer" maxlength="120"></label>
-            </div>
-            <div class="dialog-actions"><button class="button button-primary" type="submit">Speisekarten-Einstellungen speichern</button></div>
-            <p id="menu-module-settings-message" class="auth-message" role="status"></p>
-          </form>
-          <form class="panel config-panel" id="menu-share-settings-form"><h3>Inhaltsbearbeitung mit Freigabepasswort</h3><p>Ein eigener Link erlaubt ohne Benutzerkonto ausschließlich die Bearbeitung ausgewählter Speisekarten. Dieser getrennte Inhaltszugang ist auch bei aktivem Zugangswerk verfügbar.</p><label class="toggle-label"><input id="menu-share-enabled" type="checkbox"> Passwortgeschützten Inhaltszugang aktivieren</label><label class="form-field"><span>Freigabepasswort festlegen oder ändern</span><input id="menu-share-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" placeholder="Mindestens 12 Zeichen; leer lässt das vorhandene Passwort bestehen"></label><p id="menu-share-password-status" class="property-note"></p><fieldset><legend>Für diesen Link freigegebene Karten</legend><div id="menu-share-cards"></div></fieldset><label class="form-field"><span>Link zum Inhaltseditor</span><input id="menu-share-url" readonly placeholder="Freigabe zuerst speichern"></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="menu-share-copy">Link kopieren</button><a class="button button-secondary" id="menu-share-open" target="_blank" rel="noopener noreferrer" hidden>Editor öffnen</a><button type="button" class="button button-secondary" id="menu-share-reset">Neuen Link erzeugen</button><button type="submit" class="button button-primary">Freigabe speichern</button></div><p class="property-note">Jedes Speichern beendet bestehende Freigabesitzungen. Passwort getrennt vom Link weitergeben. Layout, Vorlagen, Rechte und Veröffentlichung bleiben in der Verwaltung.</p><p id="menu-share-message" class="auth-message" role="status"></p></form><article class="panel config-panel"><h3>Karten und Berechtigungen</h3><p>Karten aus einer Vorlage anlegen und bestehenden Benutzern das Speisekarten-Recht mit ausgewählten Karten zuweisen.</p><div id="menu-module-management-root"></div></article>
         </div>
         <div class="settings-detail" data-settings-detail="advertising" hidden>
           <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Veranstaltungswerbung</h2><p>Erzeugt responsive Slides aus passenden Veranstaltungen und pflegt daraus automatisch den Werbekanal.</p></div></div>
@@ -1610,7 +1605,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.7.1-20261022111316%2B0e30a2c2"></script>
-  <script src="app.js?v=3.7.1-20261022111316%2B0e30a2c2"></script>
+  <script src="runtime-config.js?v=3.8.1-20261022172557%2B11b70313"></script>
+  <script src="app.js?v=3.8.1-20261022172557%2B11b70313"></script>
 </body>
 </html>

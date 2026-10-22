@@ -1,6 +1,6 @@
-## [3.7.1] – 2026-10-22
+## [3.8.1] – 2026-10-22
 
-- Web-Player übernehmen relevante Inhaltsänderungen in Standalone, WordPress und TYPO3 automatisch ohne Seitennavigation oder Ladebildschirm. Geänderte Kanalinhalte und direkte Slides starten die Rotation neu; unveränderte Abrufe lassen laufende Medien und Rotation bestehen. Matrix-Displays behalten einen gemeinsamen Takt.
-- „Player neu laden (F5)“ direkt in der Display-Verwaltung. Schneller, geräteschlüsselgeschützter Befehlsabruf auch in beiden CMS-Ausgaben; selektive Bestätigung verhindert verlorene oder wiederholte Refresh-Befehle.
-- Regelmäßige Heartbeats für Einzel-Slides, letzter erfolgreicher Stand bei Netzwerkfehlern und unabhängig behandelter Browser-Cache. Der native TYPO3-Tabellenplayer erkennt Playliständerungen ebenfalls ohne unnötige Neustarts.
-- Additive Laufzeitinformationen ohne neue Datenbankmigration. Einrichtung und Verhalten: docs/player-refresh.md.
+- Bestehende Speisekarten direkt im Modul umbenennen, Vorlagen und Ausrichtung wechseln, im vorhandenen visuellen Editor gestalten und in den Papierkorb verschieben. Inhalte, IDs und Zuweisungen bleiben bei Bearbeitungen erhalten; Küchen-/Passwortzugänge bleiben auf Inhalte begrenzt.
+- Responsive Speisekarten folgen der Player-Auflösung, halten Speisen und Preise zusammen und passen gebundene Texte automatisch an. Auch in WordPress und TYPO3; feste Formate bleiben verfügbar.
+- Einstellungen auf Modulein-/ausschaltung und externe Links konzentriert. Erstellung, Vorlagen, Vorgaben, Bearbeitung und Benutzerzuweisungen befinden sich im Hauptmenü unter Speisekarten.
+- PDF-Abonnements akzeptieren gültige öffentliche IPv6-Hostingadressen; nur reservierte Teilnetze werden gesperrt. Der Restaurant-Wetzlarerhof-Link wurde erfolgreich heruntergeladen und mit zwölf Seiten serverseitig gerendert.

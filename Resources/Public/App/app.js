@@ -586,7 +586,7 @@ function setView(view) {
     loadApiUsers();
   }
   if(view==='settings'){showSettingsLevel();loadFeatureSettings();loadAdvertisingSettings();if(cmsManagedServices)loadPublicCalendarSettings();}
-  if (view === 'menus') mountMenuModule('menu-module-root','editor');
+  if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin')loadMenuModuleSettings();}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
   if (['channels','advertising'].includes(view)) loadContent();
@@ -698,7 +698,7 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
     setView('settings');
   }
   showSettingsLevel(level);
-  if(level==='menus')loadMenuModuleSettings();
+  if(level==='modules')loadMenuModuleSettings(true);
   if(level==='advertising')loadAdvertisingSettings();
   if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
   if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
@@ -1698,31 +1698,27 @@ async function mountMenuModule(id,mode){
     root.classList.add('menu-app','is-embedded');
     root.replaceChildren(...[...template.children].filter(node=>node.tagName!=='SCRIPT').map(node=>node.cloneNode(true)));
     root.querySelectorAll('[id]').forEach(node=>{node.dataset.menuId=node.id;node.removeAttribute('id');});
-    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode,onChanged:async()=>{await loadContent();await loadMenuShareSettings();},editTemplate:async template=>{await loadContent();editTemplate(template.id);}});
+    return window.KioskyMenus.mount(root,{runtime:kioskyRuntime,mode,onChanged:async()=>{await loadContent();await loadMenuShareSettings();},editTemplate:async template=>{await loadContent();editTemplate(template.id);await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();},editSlide:async card=>{await loadContent();openSlideEditor(slideForUi(card),{menuCard:true});await new Promise(resolve=>slideDialog.addEventListener('close',resolve,{once:true}));await loadContent();}});
   })();
   try{return await root.menuLoading;}catch(error){root.textContent=error.message;showToast(error.message);}finally{root.menuLoading=null;}
 }
-async function loadMenuModuleSettings(){
+async function loadMenuModuleSettings(loadLinks=false){
   const form=document.querySelector('#menu-module-settings-form');form.inert=true;
   try{
     const [result,templateResult]=await Promise.all([apiRequest('/api/settings/menus'),apiRequest('/api/templates')]),settings=result.settings;
     const own=(templateResult.data||[]).filter(item=>item.document?.menuTemplate===true);
     document.querySelector('#menu-default-template').innerHTML='<option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option>'+own.map(item=>`<option value="template:${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
     if(settings.defaultTemplate?.startsWith('template:')&&!own.some(item=>`template:${item.id}`===settings.defaultTemplate))document.querySelector('#menu-default-template').add(new Option('Gespeicherte Vorlage nicht mehr verfügbar',settings.defaultTemplate));
-    document.querySelector('#menu-module-enabled').checked=result.enabled;
     for(const [key,id] of Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}))document.querySelector(`#menu-default-${id}`).value=settings[key];
-    await mountMenuModule('menu-module-management-root','manage');
-    await loadMenuShareSettings();
+    if(loadLinks){await mountMenuModule('menu-module-management-root','links');await loadMenuShareSettings();}
   }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{form.inert=false;}
 }
 document.querySelector('#menu-module-settings-form').addEventListener('submit',async event=>{
-  event.preventDefault();const button=event.submitter,form=event.currentTarget,enabled=document.querySelector('#menu-module-enabled').checked;button.disabled=true;form.inert=true;
+  event.preventDefault();const button=event.submitter,form=event.currentTarget;button.disabled=true;form.inert=true;
   try{
     const settings=Object.fromEntries(Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}).map(([key,id])=>[key,document.querySelector(`#menu-default-${id}`).value]));
     await apiRequest('/api/settings/menus',{method:'PUT',body:JSON.stringify(settings)});
-    const features=await apiRequest('/api/settings/features',{method:'PUT',body:JSON.stringify({menus:enabled})});
-    applyNavigationConfig(features.data,features.navigationOrder);
-    await mountMenuModule('menu-module-management-root','manage');
+    await mountMenuModule('menu-module-root','cards');
     showAuthMessage('menu-module-settings-message','Speisekarten-Einstellungen wurden gespeichert.',true);
   }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{button.disabled=false;form.inert=false;}
 });
@@ -3305,12 +3301,13 @@ async function persistSlideEditor() {
   if (!payload) throw new Error('Bitte einen Namen für die Slide eingeben.');
   const idInput = document.querySelector('#slide-edit-id');
   const id = idInput.value;
-  const result = await apiRequest(id ? `/api/slides/${id}` : '/api/slides', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+  const menuCard=state.editingMenuCard&&id?state.slides.find(slide=>slide.id===id):null;
+  const result = await apiRequest(menuCard?`/api/menus/${id}/settings`:id ? `/api/slides/${id}` : '/api/slides', { method: id ? 'PUT' : 'POST', body: JSON.stringify(menuCard?{version:menuCard.currentVersion,name:payload.name,orientation:payload.orientation,designOrientation:payload.document.designOrientation,layoutDocument:payload.document}:payload) });
   idInput.value = result.slide.id;
   document.querySelector('#slide-editor-title').textContent = 'Slide bearbeiten';
-  document.querySelector('#archive-slide-button').hidden = state.currentUser?.role === 'viewer';
+  document.querySelector('#archive-slide-button').hidden = state.currentUser?.role === 'viewer'||state.editingMenuCard;
   document.querySelector('#duplicate-slide-button').hidden = false;
-  document.querySelector('#delete-slide-button').hidden = state.currentUser?.role !== 'admin';
+  document.querySelector('#delete-slide-button').hidden = state.currentUser?.role !== 'admin'||state.editingMenuCard;
   const uiSlide = slideForUi(result.slide);
   const index = state.slides.findIndex(slide => slide.id === uiSlide.id);
   if (index >= 0) state.slides[index] = uiSlide;
@@ -3372,6 +3369,7 @@ function openSlideEditor(slide = null, options = {}) {
   state.slideDirty = false;
   state.slideLastScheduledSnapshot = '';
   state.editingTemplateId = options.templateId || null;
+  state.editingMenuCard=!!options.menuCard;
   document.querySelector('#slide-edit-id').value = slide?.id || '';
   document.querySelector('#slide-editor-title').textContent = state.editingTemplateId ? 'Vorlage bearbeiten' : slide ? 'Slide bearbeiten' : 'Slide erstellen';
   document.querySelector('#new-slide-title').value = options.templateName || slide?.title || 'Neue Slide';
@@ -3384,10 +3382,12 @@ function openSlideEditor(slide = null, options = {}) {
   document.querySelector('#slide-ends-at').value = slideDateTimeInputValue(slide?.endsAt);
   document.querySelector('#slide-tags').value=scopedTags(slide?.tags||[]).join(', ');
   renderSlideLocationOptions(slide?.locationIds||[]);
-  document.querySelectorAll('.slide-validity-field').forEach(field => { field.hidden = Boolean(state.editingTemplateId); });
-  document.querySelector('#archive-slide-button').hidden = !slide || state.currentUser?.role === 'viewer';
+  document.querySelectorAll('.slide-validity-field').forEach(field => { field.hidden = Boolean(state.editingTemplateId)||state.editingMenuCard; });
+  for(const id of ['slide-event','slide-status','slide-tags'])document.getElementById(id).closest('.editor-title-field').hidden=state.editingMenuCard;
+  document.querySelector('[data-action="save-template"]').hidden=state.editingMenuCard;
+  document.querySelector('#archive-slide-button').hidden = !slide || state.currentUser?.role === 'viewer' || state.editingMenuCard;
   document.querySelector('#duplicate-slide-button').hidden = !slide || Boolean(state.editingTemplateId);
-  document.querySelector('#delete-slide-button').hidden = !slide || Boolean(state.editingTemplateId) || state.currentUser?.role !== 'admin';
+  document.querySelector('#delete-slide-button').hidden = !slide || Boolean(state.editingTemplateId) || state.currentUser?.role !== 'admin' || state.editingMenuCard;
   state.editorElements = slide?.elements?.length ? slide.elements.map(element => ({ ...element })) : [createEditorElement('event', 10, 30)];
   state.editorSlideSettings = { ...defaultSlideSettings(), ...(slide?.settings || {}), background: { ...defaultSlideSettings().background, ...(slide?.settings?.background || {}) }, logo: { ...defaultSlideSettings().logo, ...(slide?.settings?.logo || {}) }, clock: { ...defaultSlideSettings().clock, ...(slide?.settings?.clock || {}) } };
   state.showSlideSettings = false;
@@ -3620,7 +3620,7 @@ function editorElementMarkup(element) {
   if (element.type === 'weather') return weatherElementMarkup(element);
   if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
   if (element.type === 'countdown') return `<div class="canvas-countdown">${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</div>`;
-  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt="">`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
+  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt=""${element.menuPdfImage?' style="object-fit:contain"':''}>`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
   if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Sommerkonzert',element)}</div>`;
@@ -4254,7 +4254,7 @@ document.querySelector('#archive-slide-button').addEventListener('click', async 
 document.querySelector('#duplicate-slide-button').addEventListener('click',async()=>{
   const id=document.querySelector('#slide-edit-id').value,title=document.querySelector('#new-slide-title').value.trim();
   if(!id)return;
-  try{await flushSlideAutosave({force:true,silent:true});const result=await apiRequest(`/api/slides/${encodeURIComponent(id)}/duplicate`,{method:'POST'});slideDialog.close();await loadContent();openSlideEditor(slideForUi(result.slide));showToast(`Slide „${title}“ wurde dupliziert.`);}catch(error){showToast(error.message);}
+  try{await flushSlideAutosave({force:true,silent:true});const result=await apiRequest(`/api/slides/${encodeURIComponent(id)}/duplicate`,{method:'POST'});slideDialog.close();await loadContent();openSlideEditor(slideForUi(result.slide),{menuCard:state.editingMenuCard});showToast(`Slide „${title}“ wurde dupliziert.`);}catch(error){showToast(error.message);}
 });
 document.querySelector('#delete-slide-button').addEventListener('click',async()=>{
   const id=document.querySelector('#slide-edit-id').value,title=document.querySelector('#new-slide-title').value.trim();

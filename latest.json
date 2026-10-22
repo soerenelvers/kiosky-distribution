@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "0e30a2c2fe439ab14d7c9ee34ba7602fbade2513",
+  "source_commit": "11b7031322d2729060b0692e88eb8e13519c9b61",
   "product": "kiosky",
-  "version": "3.7.1",
-  "released_at": "2026-10-22T11:13:17.910Z",
+  "version": "3.8.1",
+  "released_at": "2026-10-22T17:25:59.117Z",
   "channel": "stable",
-  "release_notes": "## [3.7.1] – 2026-10-22\n\n- Web-Player übernehmen relevante Inhaltsänderungen in Standalone, WordPress und TYPO3 automatisch ohne Seitennavigation oder Ladebildschirm. Geänderte Kanalinhalte und direkte Slides starten die Rotation neu; unveränderte Abrufe lassen laufende Medien und Rotation bestehen. Matrix-Displays behalten einen gemeinsamen Takt.\n- „Player neu laden (F5)“ direkt in der Display-Verwaltung. Schneller, geräteschlüsselgeschützter Befehlsabruf auch in beiden CMS-Ausgaben; selektive Bestätigung verhindert verlorene oder wiederholte Refresh-Befehle.\n- Regelmäßige Heartbeats für Einzel-Slides, letzter erfolgreicher Stand bei Netzwerkfehlern und unabhängig behandelter Browser-Cache. Der native TYPO3-Tabellenplayer erkennt Playliständerungen ebenfalls ohne unnötige Neustarts.\n- Additive Laufzeitinformationen ohne neue Datenbankmigration. Einrichtung und Verhalten: docs/player-refresh.md.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.7.1",
+  "release_notes": "## [3.8.1] – 2026-10-22\n\n- Bestehende Speisekarten direkt im Modul umbenennen, Vorlagen und Ausrichtung wechseln, im vorhandenen visuellen Editor gestalten und in den Papierkorb verschieben. Inhalte, IDs und Zuweisungen bleiben bei Bearbeitungen erhalten; Küchen-/Passwortzugänge bleiben auf Inhalte begrenzt.\n- Responsive Speisekarten folgen der Player-Auflösung, halten Speisen und Preise zusammen und passen gebundene Texte automatisch an. Auch in WordPress und TYPO3; feste Formate bleiben verfügbar.\n- Einstellungen auf Modulein-/ausschaltung und externe Links konzentriert. Erstellung, Vorlagen, Vorgaben, Bearbeitung und Benutzerzuweisungen befinden sich im Hauptmenü unter Speisekarten.\n- PDF-Abonnements akzeptieren gültige öffentliche IPv6-Hostingadressen; nur reservierte Teilnetze werden gesperrt. Der Restaurant-Wetzlarerhof-Link wurde erfolgreich heruntergeladen und mit zwölf Seiten serverseitig gerendert.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.8.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.7.1",
+    "core_version": "3.8.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.7.1",
-    "typo3_extension_version": "3.7.1"
+    "wordpress_plugin_version": "3.8.1",
+    "typo3_extension_version": "3.8.1"
   },
   "components": {
     "core": {
-      "version": "3.7.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.7.1.zip?ref=v3.7.1",
-      "sha256": "ae738c4375fcd0d8519728ad1469f7e1c52adeff8535dd1696328e08c3a1191a"
+      "version": "3.8.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.1.zip?ref=v3.8.1",
+      "sha256": "fcc7d2f56a20da02cbd83789c7c0087bc5119da093e14fffa2198656feb2bf2b"
     },
     "standalone": {
-      "version": "3.7.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.7.1.zip?ref=v3.7.1",
-      "sha256": "ae738c4375fcd0d8519728ad1469f7e1c52adeff8535dd1696328e08c3a1191a"
+      "version": "3.8.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.8.1.zip?ref=v3.8.1",
+      "sha256": "fcc7d2f56a20da02cbd83789c7c0087bc5119da093e14fffa2198656feb2bf2b"
     },
     "wordpress": {
-      "version": "3.7.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.7.1.zip?ref=v3.7.1",
-      "sha256": "54c7920cfb2d710157e07cc0a6e405d5a6317630dd297d2a4c8518ccaf1a9bd2",
+      "version": "3.8.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.8.1.zip?ref=v3.8.1",
+      "sha256": "6ec5c7509fe129d3f0948cb94353347cc66198ee67ad346430ba004f76ba535d",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.7.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.7.1.zip?ref=v3.7.1",
-      "sha256": "127ce2b56635a4ee15dc8546d94035f7e35f637eb47117c10b6b4565821b81b2",
+      "version": "3.8.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.8.1.zip?ref=v3.8.1",
+      "sha256": "2b97209a3db61decd2c3593591db08597a2fd43c29645bd1c497eb8bec771d0b",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

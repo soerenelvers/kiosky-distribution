@@ -1431,3 +1431,15 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 .preview-controls .button { flex:1 1 auto; }
 .preview-content p.preview-playback-status { margin:12px 0 0; color:#d9e6f8; font-size:.8rem; }
 .preview-content p.preview-note { margin:10px 0 0; color:#9fb1c9; font-size:.7rem; line-height:1.5; }
+
+/* Menu configuration must remain readable and operable on narrow screens. */
+.menu-configuration .menu-settings-group summary{cursor:pointer;min-height:44px;padding:10px 0;font-weight:700;line-height:1.4}
+.menu-configuration .menu-settings-group summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.menu-configuration .menu-settings-group[open]>summary{margin-bottom:12px}
+.menu-configuration .toggle-label{white-space:normal;align-items:flex-start;gap:8px;line-height:1.5;overflow-wrap:anywhere}
+.menu-configuration .toggle-label input[type="checkbox"]{flex:0 0 16px;width:16px;min-width:16px;margin-top:3px}
+.menu-configuration fieldset{min-width:0;border:1px solid var(--line);border-radius:10px;padding:12px}
+.menu-configuration .config-panel>p{line-height:1.5}
+@media(max-width:560px){.menu-configuration .form-field input,.menu-configuration .form-field select{font-size:16px}.menu-configuration .button{min-height:44px}.menu-configuration .dialog-actions{gap:10px}}
+
+.menu-configuration>summary{cursor:pointer;font-weight:700;min-height:44px;padding:10px 0;line-height:1.5}.menu-configuration .feature-settings-panel{padding:0}.menu-configuration{margin-block:16px}

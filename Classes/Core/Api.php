@@ -20,6 +20,7 @@ final class Api
         /** @var list<array<string,mixed>> */
         private readonly array $platformUsers = [],
         private readonly string $platform = 'cms',
+        private readonly ?MenuSubscriptions $menuSubscriptions = null,
     ) {
     }
 
@@ -89,11 +90,26 @@ final class Api
             $summary['ran'] = true;
             $summary['advertisingSynchronized'] = true;
         }
+        $menuChecks=($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
+            function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
+            function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);});
+        if($menuChecks){$summary['ran']=true;$summary['menuChecks']=$menuChecks;}
         if ($summary['ran']) {
             $state['updatedAt'] = $this->now();
             $this->store->save($state);
         }
         return $summary;
+    }
+
+    /** Explicit CLI/Scheduler entry point; requires no browser traffic. */
+    public function runMenuSubscriptions(): array
+    {
+        $state=$this->state();
+        $count=($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
+            function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
+            function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);});
+        if($count){$state['updatedAt']=$this->now();$this->store->save($state);}
+        return ['ran'=>$count>0,'menuChecks'=>$count];
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
@@ -797,6 +813,12 @@ final class Api
         $access = $sharedSlideIds !== null ? ['enabled'=>true,'slideIds'=>$sharedSlideIds] : ($state['menuAccess'][$id] ?? []);
         $live = array_values(array_filter($this->active($state['slides']),static fn(array $slide): bool => (isset($slide['document']['menu']) || isset($slide['document']['menuPdf']))));
         $allowed = array_values(array_filter($live,static fn(array $slide): bool => $admin || (!empty($access['enabled']) && in_array($slide['id'],$access['slideIds'] ?? [],true))));
+        if (str_starts_with($path,'/api/menus/subscriptions')) {
+            if (!$admin) throw new RuntimeException('Nur Administratoren dürfen PDF-Abonnements verwalten.',403);
+            return ($this->menuSubscriptions ?? new MenuSubscriptions())->handle($state,$method,$path,$body,
+                function(array &$target,array $input,?string $slideId): array{return $this->saveSlide($target,$input,$slideId);},
+                function(array &$target,array $input,?string $channelId): array{return $this->saveRecord($target,'channels',$input,$channelId);});
+        }
         if (preg_match('#^/api/menus/templates(?:/([^/]+))?$#',$path,$templateMatch)) {
             if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Vorlagen bearbeiten.',403);
             $templateId = isset($templateMatch[1]) ? rawurldecode($templateMatch[1]) : null;
@@ -808,7 +830,7 @@ final class Api
                 return $this->ok(['ok'=>true],true);
             }
             if (($method === 'POST' && !$templateId) || ($method === 'PUT' && $templateId)) {
-                if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true)) throw new RuntimeException('Name oder Format ist ungültig.',422);
+                if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape','auto'],true)) throw new RuntimeException('Name oder Format ist ungültig.',422);
                 MenuContent::validateTemplate($body['document'] ?? null);
                 $template = $this->saveRecord($state,'templates',['name'=>trim($body['name']),'orientation'=>$body['orientation'],'status'=>'active','description'=>'Speisekarten-Vorlage','document'=>array_replace($body['document'],['menuTemplate'=>true])],$templateId);
                 $this->audit($state,'menu.template.saved',$template['id']);
@@ -837,15 +859,39 @@ final class Api
         }
         if ($path === '/api/menus' && $method === 'POST') {
             if (!$admin) throw new RuntimeException('Nur Administratoren dürfen Speisekarten anlegen.',403);
-            if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape'],true) || !is_array($body['document'] ?? null) || strlen(json_encode($body['document'])) > 80000) throw new RuntimeException('Name, Format oder Vorlage ist ungültig.',422);
+            if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || strlen($body['name']) > 100 || !in_array($body['orientation'] ?? '',['portrait','landscape','auto'],true) || !is_array($body['document'] ?? null) || strlen(json_encode($body['document'])) > 80000) throw new RuntimeException('Name, Format oder Vorlage ist ungültig.',422);
             $slide = $this->saveSlide($state,['name'=>trim($body['name']),'orientation'=>$body['orientation'],'type'=>'custom','status'=>'draft','tags'=>['Speisekarte'],'document'=>MenuContent::document($body['document'],MenuContent::validate($body['menu'] ?? null))]);
             return $this->created(['slide'=>$slide]);
+        }
+        if(preg_match('#^/api/menus/([^/]+)/settings$#',$path,$settingsMatch)){
+            if(!$admin)throw new RuntimeException('Nur Administratoren dürfen Name, Layout, Vorlage und Ausrichtung ändern oder Karten löschen.',403);
+            $slide=$this->required($allowed,rawurldecode($settingsMatch[1]),'Speisekarte');
+            if(($body['version'] ?? null)!==$slide['currentVersion'])throw new RuntimeException('Die Karte wurde zwischenzeitlich geändert. Bitte neu laden.',409);
+            if($method==='DELETE'){
+                if(array_diff(array_keys($body),['version']))throw new RuntimeException('Ungültige Löschanfrage.',422);
+                foreach($state['menuSubscriptions'] ?? [] as $record)if(in_array($slide['id'],$record['slideIds'],true))throw new RuntimeException('Diese Karte gehört zu einem PDF-Abonnement. Bitte zuerst das Abonnement beenden; danach kann die Karte gelöscht werden.',409);
+                return $this->trashRecord($state,'slides','slide',$slide['id']);
+            }
+            if($method!=='PUT')throw new RuntimeException('Methode nicht erlaubt.',405);
+            if(array_diff(array_keys($body),['version','name','orientation','designOrientation','layoutDocument']) || !is_string($body['name'] ?? null) || trim($body['name'])==='' || strlen($body['name'])>100 || preg_match('/[\x00-\x1f\x7f]/',$body['name']) || !in_array($body['orientation'] ?? '',['landscape','portrait','auto'],true) || (isset($body['designOrientation']) && !in_array($body['designOrientation'],['landscape','portrait'],true)))throw new RuntimeException('Name oder Ausrichtung ist ungültig.',422);
+            $document=$slide['document'];
+            if(array_key_exists('layoutDocument',$body)){
+                $layout=$body['layoutDocument'];if(!is_array($layout) || strlen(json_encode($layout))>(isset($document['menuPdf'])?2950000:80000))throw new RuntimeException('Ungültiges Speisekarten-Layout.',422);
+                if(isset($document['menuPdf'])){
+                    $original=null;foreach($document['elements'] as $element)if(!empty($element['menuPdfImage'])){$original=$element;break;}
+                    if(!is_array($layout['elements'] ?? null) || !array_filter($layout['elements'],static fn($element):bool=>is_array($element) && ($element['menuPdfImage'] ?? false)===true && ($element['src'] ?? null)===($original['src'] ?? null)))throw new RuntimeException('Das PDF-Bildfeld muss im Layout erhalten bleiben.',422);
+                    $document=array_replace($layout,['menuPdf'=>$document['menuPdf']]);
+                }else $document=MenuContent::document($layout,MenuContent::validate($document['menu']));
+            }
+            $document['designOrientation']=$body['orientation']==='auto'?($body['designOrientation'] ?? $document['designOrientation'] ?? 'landscape'):$body['orientation'];
+            $updated=$this->saveSlide($state,array_replace($slide,['name'=>trim($body['name']),'orientation'=>$body['orientation'],'document'=>$document]),$slide['id']);
+            return $this->ok(['slide'=>$updated],true);
         }
         if (preg_match('#^/api/menus/([^/]+)$#',$path,$match) && $method === 'PUT') {
             $slide = $this->required($allowed,rawurldecode($match[1]),'Zugewiesene Speisekarte');
             if (array_diff(array_keys($body),isset($slide['document']['menuPdf'])?['pdfPage','version']:['menu','version'])) throw new RuntimeException('Nur Inhalte dürfen geändert werden.',422);
             if (($body['version'] ?? null) !== $slide['currentVersion']) throw new RuntimeException('Die Karte wurde zwischenzeitlich geändert. Bitte neu laden und Änderungen vergleichen.',409);
-            $slide['document'] = isset($slide['document']['menuPdf']) ? MenuContent::pdfDocument($body['pdfPage'] ?? null,$slide['orientation'],$slide['document']) : MenuContent::document($slide['document'],MenuContent::validate($body['menu'] ?? null));
+            $slide['document'] = isset($slide['document']['menuPdf']) ? MenuContent::pdfDocument($body['pdfPage'] ?? null,$slide['orientation']==='auto'?($slide['document']['designOrientation'] ?? 'landscape'):$slide['orientation'],$slide['document']) : MenuContent::document($slide['document'],MenuContent::validate($body['menu'] ?? null));
             $updated = $this->saveSlide($state,$slide,$slide['id']);
             $this->audit($state,'menu.content.updated',$slide['id']);
             return $this->ok(['slide'=>$updated],true);
@@ -1891,6 +1937,8 @@ final class Api
         $version = (int)($current['currentVersion'] ?? 0) + 1;
         $orientation = (string)($body['orientation'] ?? 'landscape');
         $body += ['width' => $orientation === 'portrait' ? 1080 : 1920, 'height' => $orientation === 'portrait' ? 1920 : 1080, 'status' => 'draft'];
+        if(isset($body['document']['menu']) || isset($body['document']['menuPdf']))$body['document']=MenuContent::responsiveDocument($body['document'],$orientation);
+        if(isset($body['document']['menu']) || isset($body['document']['menuPdf'])){ $base=$orientation==='auto'?($body['document']['designOrientation'] ?? 'landscape'):$orientation;$body['width']=$base==='portrait'?1080:1920;$body['height']=$base==='portrait'?1920:1080;}
         $body['currentVersion'] = $version;
         $slide = $this->saveRecord($state, 'slides', $body, $id);
         $state['slideVersions'][] = $this->record(['slideId' => $slide['id'], 'version' => $version, 'document' => $slide['document'] ?? [], 'changeNote' => $current ? 'Im Slide-Editor gespeichert' : 'Slide angelegt']);
