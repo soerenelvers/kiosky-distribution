@@ -1,11 +1,7 @@
-## [3.10.0] – 2026-10-22
+## [3.11.0] – 2026-10-23
 
-- Website-Kalender für WordPress und TYPO3 mit fünf bedienbaren Ansichten: Agenda als Vorgabe, Monatskalender, Kategorienfilter, Wochenraster und großer Tag mit verschiebbarer Wochenleiste. Datumsnavigation, Suche, Details, Ticketlinks und Mobilansicht bleiben verfügbar.
-- Akzent-, Akzenttext- und drei Steuerelementfarben automatisch aus dem Website-Theme übernehmen oder einzeln einstellen. Zentrale Vorgaben lassen sich je Shortcode beziehungsweise TYPO3-Inhaltselement überschreiben.
-- Zeit/Einlass, Ort/Raum, Kategorie, Veranstalter, Beschreibung, Status, Ticketlinks, Restkarten und Details separat ausblenden; Datum und Titel bleiben sichtbar. Bestehende TYPO3-Werte bleiben bei additiver Schemaerweiterung erhalten.
-- Fehlende CMS-Routen für manuelle Veranstaltungsablaufpunkte und die DWD-Warngebietssuche ergänzen. Ablaufpunkte validieren, fremde und importierte Einträge schützen; offizielle DWD-Gebietsliste zwischenspeichern und bei Dienstausfall erhalten.
-- Easyjob-Vorschau liefert auswählbare Jobs; explizite Projekt-/Jobauswahl beim Import beachten und bestehende Veranstalter-/Veranstaltungstypzuordnungen übernehmen.
-
-- Easyjob-Einstellungen in WordPress und TYPO3 laden wieder ohne „API-Endpunkt wurde nicht gefunden“: fehlende GET-/PUT-Routen für Raumnutzungsarten im gemeinsamen PHP-Kern ergänzen, Vorgaben mit Standalone abgleichen und administrative Änderungen dauerhaft speichern.
-- PHP-Aufrufe für Projekt-/Jobdetails auf dieselben dokumentierten pluralen Endpunkte und `id`-Queryparameter wie Standalone korrigieren. Easyjob-Clientheader bei Token-, JSON- und Dokumentabrufen mitsenden.
-- Verbindungstest unterscheidet ungeprüfte Prüfungen von Fehlern und zeigt nur tatsächlich geprüfte Projekt-/Jobzahlen. Neue Regressionen prüfen den gemeinsamen Einstellungsloader gegen echte PHP-Antworten, Kataloggleichheit, Speicherung, Rechte und native CMS-Routen.
+- Kanalübersicht mit Mehrfachauswahl, gefiltertem „Alle auswählen“ und Stapelaktionen zum Umbenennen, Exportieren, Taggen, Duplizieren, Archivieren und endgültigen Löschen. Bestehende Komponenten für Inhaltspakete, Tags und Papierkorb weiterverwenden; offene Kanaländerungen vor Aktionen speichern und Teilfehler nachvollziehbar melden.
+- Endgültiges Kanallöschen in WordPress und TYPO3 entfernt abhängige Zeitplan-/Ausspielzuweisungen und löst Display-/Matrix-/Preset-Verweise wie Standalone. Kanalzustände und Zuweisungslisten in Presets werden in allen Ausgaben gezielt bereinigt; Archivieren/Wiederherstellen erhalten die Verknüpfungen.
+- Fehlenden WordPress-Menüpunkt „Werbung“ einschließlich Ansichtszuordnung ergänzen. Allgemeiner Sichtbarkeitsschalter, signierte Lizenzfreigaben und native WordPress-Rechte bleiben verbindlich; die Automatik-Konfiguration steuert die Menüverfügbarkeit nicht.
+- Betrachter-Schreibzugriffe der gemeinsamen CMS-API an das strikt lesende Standalone-Rollenmodell angleichen. Separat erteilte Speisekartenrechte bleiben erhalten. Kanalduplikate in CMS-Ausgaben von der ursprünglichen Werbeautomatik entkoppeln.
+- Regressionen für Kanalaktionen, Daten- und Einstellungserhalt, Filter, Teilfehler, Rollen sowie WordPress-Menüs mit signierten Lizenzfreigaben ergänzen; Browserprüfung für Desktop, Mobilansicht und die drei Oberflächentransporte.

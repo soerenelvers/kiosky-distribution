@@ -479,6 +479,8 @@ const state = {
   currentScheduleEventId: null,
   selectedEvents: new Set(),
   selectedSlides: new Set(),
+  selectedChannels: new Set(),
+  channelBulkBusy: false,
   contentScope: 'standard',
   crewbrainPreview: [],
   crewbrainPreviewSelection: new Set(),
@@ -2881,6 +2883,7 @@ async function loadContent(preferredChannelId = state.activeChannelId) {
     state.slides = (slidesResult.data || []).map(slideForUi);
     state.selectedSlides = new Set([...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)));
     state.channels = channelsResult.data || [];
+    state.selectedChannels = new Set([...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)));
     state.templates = (templatesResult.data || []).map(template => ({ ...template, document: hydrateMediaReferences(structuredClone(template.document || {})) }));
     const availableChannels=scopedChannels();
     state.activeChannelId = availableChannels.some(channel => channel.id === preferredChannelId) ? preferredChannelId : availableChannels[0]?.id || null;
@@ -2898,11 +2901,24 @@ async function loadContent(preferredChannelId = state.activeChannelId) {
 function formatDuration(seconds){const value=Math.max(0,Number(seconds||0));if(!value)return'0 Sek.';const hours=Math.floor(value/3600),minutes=Math.floor(value%3600/60),rest=value%60;return[hours?`${hours} Std.`:'',minutes?`${minutes} Min.`:'',rest?`${rest} Sek.`:''].filter(Boolean).join(' ');}
 function channelDuration(channel){return Number(channel?.totalDurationSeconds??channel?.items?.reduce((sum,item)=>sum+Number(item.durationSeconds||0),0)??0);}
 function channelStatusLabel(status){return status==='published'?'Veröffentlicht':status==='ready'?'Bereit':status==='paused'?'Pausiert':'Entwurf';}
+function visibleChannels(){
+  const query=document.querySelector('#channel-search').value.trim().toLowerCase(),tag=document.querySelector('#channel-tag-filter').value,channels=scopedChannels().filter(channel=>(!tag||(channel.tags||[]).includes(tag))&&(!query||`${channel.name} ${channel.description||''} ${(channel.tags||[]).join(' ')} ${channel.items.map(item=>state.slides.find(slide=>slide.id===item.slideId)?.title||'').join(' ')}`.toLowerCase().includes(query)));
+  return channels;
+}
 function renderChannelOverview(){
   const table=document.querySelector('#channel-overview');if(!table)return;
-  const scoped=scopedChannels(),query=document.querySelector('#channel-search').value.trim().toLowerCase(),tag=document.querySelector('#channel-tag-filter').value,channels=scoped.filter(channel=>(!tag||(channel.tags||[]).includes(tag))&&(!query||`${channel.name} ${channel.description||''} ${(channel.tags||[]).join(' ')} ${channel.items.map(item=>state.slides.find(slide=>slide.id===item.slideId)?.title||'').join(' ')}`.toLowerCase().includes(query)));
+  const scoped=scopedChannels(),channels=visibleChannels();
+  const editable=state.currentUser?.role!=='viewer',busy=state.channelBulkBusy;
+  const selectedVisible=channels.filter(channel=>state.selectedChannels.has(channel.id)).length;
+  const selectAll=document.querySelector('#channel-select-all');
+  selectAll.checked=Boolean(channels.length)&&selectedVisible===channels.length;
+  selectAll.indeterminate=selectedVisible>0&&selectedVisible<channels.length;
+  selectAll.disabled=!editable||busy||!channels.length;
+  document.querySelector('#channel-bulk-toolbar').hidden=!editable;
+  document.querySelector('#channel-selection-count').textContent=`${state.selectedChannels.size} ausgewählt`;
+  for(const action of ['rename','export','tags','duplicate','archive','delete'])document.querySelector(`#channel-bulk-${action}`).disabled=!editable||busy||!state.selectedChannels.size||(action==='delete'&&state.currentUser?.role!=='admin');
   document.querySelector('#channel-count').textContent=scoped.length;
-  table.innerHTML=channels.map(channel=>`<button class="channel-list-item ${channel.id===state.activeChannelId?'is-active':''}" type="button" role="option" aria-selected="${channel.id===state.activeChannelId}" data-channel-switch="${escapeHtml(channel.id)}"><span class="channel-list-title"><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description||'Ohne Beschreibung')}</small>${contentTagMarkup(channel.tags)}</span><span class="channel-list-status ${channel.status}"><i></i>${escapeHtml(channelStatusLabel(channel.status))}</span><span class="channel-list-meta">${channel.items.length} Slide${channel.items.length===1?'':'s'} · ${escapeHtml(formatDuration(channelDuration(channel)))} · ${channel.locationIds?.length?`${channel.locationIds.length} Standort${channel.locationIds.length===1?'':'e'}`:'alle Standorte'}</span><span class="channel-list-arrow" aria-hidden="true">›</span></button>`).join('')||'<p class="channel-list-empty">Keine passenden Kanäle gefunden.</p>';
+  table.innerHTML=channels.map(channel=>`<div class="channel-selection-row">${editable?`<label class="channel-library-check"><input type="checkbox" data-channel-select="${escapeHtml(channel.id)}" aria-label="${escapeHtml(channel.name)} auswählen" ${state.selectedChannels.has(channel.id)?'checked':''} ${busy?'disabled':''}></label>`:''}<button class="channel-list-item ${channel.id===state.activeChannelId?'is-active':''}" type="button" aria-pressed="${channel.id===state.activeChannelId}" data-channel-switch="${escapeHtml(channel.id)}"><span class="channel-list-title"><strong>${escapeHtml(channel.name)}</strong><small>${escapeHtml(channel.description||'Ohne Beschreibung')}</small>${contentTagMarkup(channel.tags)}</span><span class="channel-list-status ${channel.status}"><i></i>${escapeHtml(channelStatusLabel(channel.status))}</span><span class="channel-list-meta">${channel.items.length} Slide${channel.items.length===1?'':'s'} · ${escapeHtml(formatDuration(channelDuration(channel)))} · ${channel.locationIds?.length?`${channel.locationIds.length} Standort${channel.locationIds.length===1?'':'e'}`:'alle Standorte'}</span><span class="channel-list-arrow" aria-hidden="true">›</span></button></div>`).join('')||'<p class="channel-list-empty">Keine passenden Kanäle gefunden.</p>';
 }
 document.querySelector('#channel-search').addEventListener('input',renderChannelOverview);
 document.querySelector('#channel-tag-filter').addEventListener('change',renderChannelOverview);
@@ -2910,6 +2926,60 @@ document.querySelector('#channel-overview').addEventListener('click',async event
   const button=event.target.closest('[data-channel-switch]');if(!button||button.dataset.channelSwitch===state.activeChannelId)return;
   try{await flushChannelAutosave();state.activeChannelId=button.dataset.channelSwitch;applyActiveChannel();}catch(error){showToast(error.message);}
 });
+
+document.querySelector('#channel-select-all').addEventListener('change',event=>{
+  if(state.channelBulkBusy||state.currentUser?.role==='viewer')return;
+  visibleChannels().forEach(channel=>event.target.checked?state.selectedChannels.add(channel.id):state.selectedChannels.delete(channel.id));
+  renderChannelOverview();
+});
+document.querySelector('#channel-overview').addEventListener('change',event=>{
+  const checkbox=event.target.closest('[data-channel-select]');
+  if(!checkbox||state.channelBulkBusy||state.currentUser?.role==='viewer')return;
+  checkbox.checked?state.selectedChannels.add(checkbox.dataset.channelSelect):state.selectedChannels.delete(checkbox.dataset.channelSelect);
+  renderChannelOverview();
+});
+function channelUpdatePayload(channel,changes={}){
+  const {name,description,eventId,status,orientation,defaultTransition,repeatEnabled,items,tags,locationIds}=channel;
+  return {name,description,eventId,status,orientation,defaultTransition,repeatEnabled,items,tags,locationIds,...changes};
+}
+async function bulkChannels(action){
+  if(state.channelBulkBusy||state.currentUser?.role==='viewer'||(action==='delete'&&state.currentUser?.role!=='admin'))return;
+  const ids=[...state.selectedChannels].filter(id=>scopedChannels().some(channel=>channel.id===id));
+  if(!ids.length)return;
+  state.channelBulkBusy=true;renderChannelOverview();
+  let completed=0;
+  try{
+    await flushChannelAutosave();
+    const result=await apiRequest('/api/channels');
+    const channels=ids.map(id=>{const channel=result.data.find(item=>item.id===id);if(!channel)throw new Error('Ein ausgewählter Kanal ist nicht mehr verfügbar.');return channel;});
+    const updates=[];
+    if(action==='rename'){
+      const names=new Set(result.data.map(channel=>channel.name.toLocaleLowerCase('de-DE')));
+      for(const channel of channels){
+        const answer=window.prompt(`Neuer Name für „${channel.name}“:`,channel.name);
+        if(answer===null)continue;
+        const name=answer.trim();
+        if(!name)throw new Error('Ein Kanalname darf nicht leer sein.');
+        if(name===channel.name)continue;
+        if(names.has(name.toLocaleLowerCase('de-DE')))throw new Error(`Der Kanalname „${name}“ ist bereits vergeben. Bitte eindeutige Namen wählen.`);
+        names.add(name.toLocaleLowerCase('de-DE'));updates.push({channel,name});
+      }
+      for(const {channel,name} of updates){await apiRequest(`/api/channels/${encodeURIComponent(channel.id)}`,{method:'PUT',body:JSON.stringify(channelUpdatePayload(channel,{name}))});state.selectedChannels.delete(channel.id);completed++;}
+    }else{
+      const label=action==='duplicate'?'duplizieren':action==='archive'?'archivieren (im Papierkorb wiederherstellbar)':'endgültig löschen';
+      if(!window.confirm(`${channels.length} Kanal/Kanäle ${label}?${action==='delete'?' Zugehörige Zeitplaneinträge und Ausspielzuweisungen werden entfernt; Display- und Preset-Verweise werden gelöst. Diese Aktion kann nicht rückgängig gemacht werden.':action==='archive'?' Zugewiesene Displays, Zeitpläne und Presets können diese Kanäle bis zur Wiederherstellung nicht mehr abspielen.':''}`))return;
+      for(const channel of channels){
+        await apiRequest(`/api/channels/${encodeURIComponent(channel.id)}${action==='duplicate'?'/duplicate':action==='delete'?'/permanent':''}`,{method:action==='duplicate'?'POST':'DELETE'});
+        state.selectedChannels.delete(channel.id);completed++;
+      }
+    }
+    if(completed)showToast(`${completed} Kanal/Kanäle verarbeitet.`);
+  }catch(error){showToast(`${completed?`${completed} Kanal/Kanäle verarbeitet. `:''}${error.message}`);}
+  finally{state.channelBulkBusy=false;await loadContent();}
+}
+for(const action of ['rename','duplicate','archive','delete'])document.querySelector(`#channel-bulk-${action}`).addEventListener('click',()=>bulkChannels(action));
+document.querySelector('#channel-bulk-export').addEventListener('click',async event=>{try{await flushChannelAutosave();await exportContentPackage({channels:[...state.selectedChannels]},event.currentTarget);}catch(error){showToast(error.message);}});
+document.querySelector('#channel-bulk-tags').addEventListener('click',()=>openSlideTagPicker('channels'));
 
 function addSlideToPlaylist(slideId, insertAt = state.playlist.length) {
   const slide = state.slides.find(item => item.id === slideId);
@@ -3045,14 +3115,14 @@ function renderSlideTagOptions() {
 
 function openSlideTagPicker(mode) {
   if (state.currentUser?.role === 'viewer') return;
-  const ids = mode === 'bulk' ? [...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)) : [];
-  if (mode === 'bulk' && !ids.length) return;
+  const ids = mode === 'channels' ? [...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)) : mode === 'bulk' ? [...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)) : [];
+  if (mode !== 'editor' && !ids.length) return;
   const selected = mode === 'editor' ? uniqueSlideTags(scopedTags(tagInput(document.querySelector('#slide-tags').value))) : [];
   const available = uniqueSlideTags([...selected, ...scopedTags([...state.slides, ...state.channels].flatMap(item => item.tags || []))]).sort((a, b) => a.localeCompare(b, 'de'));
   slideTagPicker = { mode, ids, available, selected: new Set(available.filter(tag => selected.some(value => value.toLocaleLowerCase('de-DE') === tag.toLocaleLowerCase('de-DE')))), saving: false };
-  document.querySelector('#slide-tags-title').textContent = mode === 'bulk' ? 'Tags zuweisen' : 'Tags auswählen';
-  document.querySelector('#slide-tags-description').textContent = mode === 'bulk'
-    ? `Tags zu ${ids.length} ausgewählten Slides hinzufügen. Bereits zugewiesene Tags bleiben erhalten.`
+  document.querySelector('#slide-tags-title').textContent = mode !== 'editor' ? 'Tags zuweisen' : 'Tags auswählen';
+  document.querySelector('#slide-tags-description').textContent = mode !== 'editor'
+    ? `Tags zu ${ids.length} ausgewählten ${mode === 'channels' ? 'Kanälen' : 'Slides'} hinzufügen. Bereits zugewiesene Tags bleiben erhalten.`
     : 'Mehrere Tags auswählen oder neue Tags hinzufügen. Abgewählte Tags werden von dieser Slide entfernt.';
   document.querySelector('#slide-new-tag').value = '';
   document.querySelector('#slide-tags-message').textContent = '';
@@ -3096,23 +3166,25 @@ async function applySlidePickerTags(event) {
   let completed = 0;
   try {
     // Fetch current data so an older library snapshot cannot overwrite slide edits.
-    const result = await licensedRead('/api/slides');
+    const channels = picker.mode === 'channels';
+    if(channels)await flushChannelAutosave();
+    const result = await licensedRead(channels ? '/api/channels' : '/api/slides');
     const updates = picker.ids.map(id => {
       const slide = (result.data || []).find(item => item.id === id);
-      if (!slide) throw new Error('Eine ausgewählte Slide ist nicht mehr verfügbar. Bitte Auswahl aktualisieren.');
+      if (!slide) throw new Error(`${channels ? 'Ein ausgewählter Kanal' : 'Eine ausgewählte Slide'} ist nicht mehr verfügbar. Bitte Auswahl aktualisieren.`);
       const merged = uniqueSlideTags([...(slide.tags || []), ...tags]);
       if (merged.length > 30) throw new Error(`„${slide.name}“ hätte mehr als 30 Tags. Bitte weniger Tags auswählen.`);
       return { slide, merged };
     });
     for (const { slide, merged } of updates) {
-      await apiRequest(`/api/slides/${encodeURIComponent(slide.id)}`, { method: 'PUT', body: JSON.stringify({ ...slideUpdatePayload(slide, slide.name), tags: merged }) });
+      await apiRequest(`/api/${channels ? 'channels' : 'slides'}/${encodeURIComponent(slide.id)}`, { method: 'PUT', body: JSON.stringify(channels ? channelUpdatePayload(slide,{tags:merged}) : { ...slideUpdatePayload(slide, slide.name), tags: merged }) });
       picker.ids = picker.ids.filter(id => id !== slide.id);
       completed++;
     }
     document.querySelector('#slide-tags-dialog').close();
-    showToast(`Tags wurden ${completed} Slide${completed === 1 ? '' : 's'} zugewiesen.`);
+    showToast(`Tags wurden ${completed} ${channels ? 'Kanal/Kanälen' : 'Slides'} zugewiesen.`);
   } catch (error) {
-    message.textContent = `${completed ? `${completed} Slides gespeichert. ` : ''}${error.message}`;
+    message.textContent = `${completed ? `${completed} ${picker.mode === 'channels' ? 'Kanäle' : 'Slides'} gespeichert. ` : ''}${error.message}`;
   } finally {
     picker.saving = false;
     controls.forEach(control => { control.disabled = false; });

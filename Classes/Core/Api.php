@@ -368,7 +368,7 @@ final class Api
         }
         if (preg_match('#^/api/channels/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['channels'], rawurldecode($match[1]), 'Kanal');
-            unset($source['id'], $source['createdAt'], $source['updatedAt']);
+            unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['automationKey'], $source['deletedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
             return $this->created(['channel' => $this->saveRecord($state, 'channels', $source)]);
@@ -983,14 +983,8 @@ final class Api
             throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
         }
         if (in_array($method, ['GET', 'HEAD'], true)) return;
-        if ($method === 'DELETE') throw new RuntimeException('Betrachter dürfen keine Daten löschen oder archivieren.', 403);
-
-        $allowed = ($method === 'POST' && in_array($path, ['/api/slides', '/api/channels', '/api/templates', '/api/schedules'], true))
-            || ($method === 'PUT' && $path === '/api/schedule-target-order')
-            || (preg_match('#^/api/slides/[^/]+(?:/duplicate|/versions/\d+/restore)?$#', $path) && in_array($method, ['PUT', 'POST'], true))
-            || (preg_match('#^/api/channels/[^/]+(?:/duplicate)?$#', $path) && in_array($method, ['PUT', 'POST'], true))
-            || ($method === 'PUT' && preg_match('#^/api/(templates|schedules)/[^/]+$#', $path));
-        if (!$allowed) throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
+        // Match the standalone API: viewers remain read-only outside the separately granted menu editor.
+        throw new RuntimeException('Betrachter dürfen keine Daten ändern.', 403);
     }
 
     /** @param array<int,string> $prefixes */
@@ -2096,7 +2090,11 @@ final class Api
     /** @param array<string,mixed> $state @return array{0:int,1:array<string,mixed>,2:bool} */
     private function purgeTrash(array &$state, string $collection, string $type, string $id): array
     {
-        $this->purge($state[$collection], $id);
+        if ($collection === 'channels') {
+            $record = $this->required($state[$collection], $id, 'Kanal');
+            if (empty($record['deletedAt'])) throw new RuntimeException('Kanal wurde im Papierkorb nicht gefunden.', 404);
+        }
+        $this->purgeRecord($state, $collection, $id);
         $state['trash'] = array_values(array_filter($state['trash'], fn(array $item): bool => !($item['type'] === $type && $item['id'] === $id)));
         return $this->ok(['ok' => true], true);
     }
@@ -2121,7 +2119,36 @@ final class Api
     private function purgeRecord(array &$state, string $collection, string $id): array
     {
         $this->purge($state[$collection], $id);
+        if ($collection === 'channels') $this->removeChannelReferences($state, $id);
         return $this->ok(['ok' => true], true);
+    }
+
+    /** Permanent deletion only: soft deletion must preserve assignments for restoration. */
+    private function removeChannelReferences(array &$state, string $id): void
+    {
+        $state['schedules'] = array_values(array_filter($state['schedules'], static fn(array $item): bool =>
+            ($item['channelId'] ?? '') !== $id && !(($item['contentType'] ?? '') === 'channel' && ($item['contentId'] ?? '') === $id)));
+        $state['assignments'] = array_values(array_filter($state['assignments'], static fn(array $item): bool =>
+            !(($item['content']['type'] ?? '') === 'channel' && ($item['content']['id'] ?? '') === $id)));
+        foreach (['displays', 'matrices', 'proof'] as $collection) {
+            foreach ($state[$collection] as &$item) {
+                foreach (['defaultChannelId', 'channelId', 'currentChannelId'] as $field) {
+                    if (($item[$field] ?? '') === $id) $item[$field] = null;
+                }
+            }
+            unset($item);
+        }
+        foreach ($state['presets'] as &$preset) {
+            if (($preset['channelId'] ?? '') === $id) $preset['channelId'] = null;
+            if (is_array($preset['config']['channelUpdates'] ?? null)) {
+                $preset['config']['channelUpdates'] = array_values(array_filter($preset['config']['channelUpdates'], static fn(mixed $item): bool => !is_array($item) || ($item['channelId'] ?? '') !== $id));
+            }
+            if (is_array($preset['config']['assignments'] ?? null)) {
+                $preset['config']['assignments'] = array_values(array_filter($preset['config']['assignments'], static fn(mixed $item): bool => !is_array($item) || !(($item['contentType'] ?? '') === 'channel' && ($item['contentId'] ?? '') === $id)));
+            }
+        }
+        unset($preset);
+        $state['trash'] = array_values(array_filter($state['trash'], static fn(array $item): bool => !(($item['type'] ?? '') === 'channel' && ($item['id'] ?? '') === $id)));
     }
 
     /** @param array<int,array<string,mixed>> $items */

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.10.0-20261022212629%2Bd97e9ace">
+  <link rel="stylesheet" href="styles.css?v=3.11.0-20261023122806%2B5026acfd">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -306,7 +306,12 @@
                 <div class="content-package-actions"><button class="button button-secondary" type="button" data-import-content-package>⇩ Kanal importieren</button><button class="button button-secondary" id="channel-export" type="button" disabled>⇧ Kanal exportieren</button></div><div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
                 <label class="search-field compact"><span>⌕</span><input id="channel-search" type="search" placeholder="Kanäle durchsuchen"></label>
                 <select id="channel-tag-filter" aria-label="Kanäle nach Tag filtern"><option value="">Alle Tags</option></select>
-                <div class="channel-list" id="channel-overview" role="listbox" aria-label="Kanalliste"></div>
+                <div class="slide-bulk-toolbar" id="channel-bulk-toolbar">
+                  <label class="toggle-label"><input id="channel-select-all" type="checkbox"> Alle auswählen</label>
+                  <span id="channel-selection-count" aria-live="polite">0 ausgewählt</span>
+                  <div class="slide-bulk-actions"><button class="button button-secondary" id="channel-bulk-rename" type="button" disabled>Umbenennen</button><button class="button button-secondary" id="channel-bulk-export" type="button" disabled>Exportieren</button><button class="button button-secondary" id="channel-bulk-tags" type="button" disabled>Tags zuweisen</button><button class="button button-secondary" id="channel-bulk-duplicate" type="button" disabled>Duplizieren</button><button class="button button-secondary" id="channel-bulk-archive" type="button" disabled>Archivieren</button><button class="button danger-action" id="channel-bulk-delete" type="button" disabled>Löschen</button></div>
+                </div>
+                <div class="channel-list" id="channel-overview" role="group" aria-label="Kanalliste"></div>
               </aside>
               <div class="channel-editor-body">
                 <div class="channel-settings-row">
@@ -1634,7 +1639,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.10.0-20261022212629%2Bd97e9ace"></script>
-  <script src="app.js?v=3.10.0-20261022212629%2Bd97e9ace"></script>
+  <script src="runtime-config.js?v=3.11.0-20261023122806%2B5026acfd"></script>
+  <script src="app.js?v=3.11.0-20261023122806%2B5026acfd"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "d97e9ace6d6bb19952a1cf616859a005d6706777",
+  "source_commit": "5026acfd24f561c38b11eaf538f84774fdd95101",
   "product": "kiosky",
-  "version": "3.10.0",
-  "released_at": "2026-10-22T21:26:30.478Z",
+  "version": "3.11.0",
+  "released_at": "2026-10-23T12:28:07.705Z",
   "channel": "stable",
-  "release_notes": "## [3.10.0] – 2026-10-22\n\n- Website-Kalender für WordPress und TYPO3 mit fünf bedienbaren Ansichten: Agenda als Vorgabe, Monatskalender, Kategorienfilter, Wochenraster und großer Tag mit verschiebbarer Wochenleiste. Datumsnavigation, Suche, Details, Ticketlinks und Mobilansicht bleiben verfügbar.\n- Akzent-, Akzenttext- und drei Steuerelementfarben automatisch aus dem Website-Theme übernehmen oder einzeln einstellen. Zentrale Vorgaben lassen sich je Shortcode beziehungsweise TYPO3-Inhaltselement überschreiben.\n- Zeit/Einlass, Ort/Raum, Kategorie, Veranstalter, Beschreibung, Status, Ticketlinks, Restkarten und Details separat ausblenden; Datum und Titel bleiben sichtbar. Bestehende TYPO3-Werte bleiben bei additiver Schemaerweiterung erhalten.\n- Fehlende CMS-Routen für manuelle Veranstaltungsablaufpunkte und die DWD-Warngebietssuche ergänzen. Ablaufpunkte validieren, fremde und importierte Einträge schützen; offizielle DWD-Gebietsliste zwischenspeichern und bei Dienstausfall erhalten.\n- Easyjob-Vorschau liefert auswählbare Jobs; explizite Projekt-/Jobauswahl beim Import beachten und bestehende Veranstalter-/Veranstaltungstypzuordnungen übernehmen.\n\n- Easyjob-Einstellungen in WordPress und TYPO3 laden wieder ohne „API-Endpunkt wurde nicht gefunden“: fehlende GET-/PUT-Routen für Raumnutzungsarten im gemeinsamen PHP-Kern ergänzen, Vorgaben mit Standalone abgleichen und administrative Änderungen dauerhaft speichern.\n- PHP-Aufrufe für Projekt-/Jobdetails auf dieselben dokumentierten pluralen Endpunkte und `id`-Queryparameter wie Standalone korrigieren. Easyjob-Clientheader bei Token-, JSON- und Dokumentabrufen mitsenden.\n- Verbindungstest unterscheidet ungeprüfte Prüfungen von Fehlern und zeigt nur tatsächlich geprüfte Projekt-/Jobzahlen. Neue Regressionen prüfen den gemeinsamen Einstellungsloader gegen echte PHP-Antworten, Kataloggleichheit, Speicherung, Rechte und native CMS-Routen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.10.0",
+  "release_notes": "## [3.11.0] – 2026-10-23\n\n- Kanalübersicht mit Mehrfachauswahl, gefiltertem „Alle auswählen“ und Stapelaktionen zum Umbenennen, Exportieren, Taggen, Duplizieren, Archivieren und endgültigen Löschen. Bestehende Komponenten für Inhaltspakete, Tags und Papierkorb weiterverwenden; offene Kanaländerungen vor Aktionen speichern und Teilfehler nachvollziehbar melden.\n- Endgültiges Kanallöschen in WordPress und TYPO3 entfernt abhängige Zeitplan-/Ausspielzuweisungen und löst Display-/Matrix-/Preset-Verweise wie Standalone. Kanalzustände und Zuweisungslisten in Presets werden in allen Ausgaben gezielt bereinigt; Archivieren/Wiederherstellen erhalten die Verknüpfungen.\n- Fehlenden WordPress-Menüpunkt „Werbung“ einschließlich Ansichtszuordnung ergänzen. Allgemeiner Sichtbarkeitsschalter, signierte Lizenzfreigaben und native WordPress-Rechte bleiben verbindlich; die Automatik-Konfiguration steuert die Menüverfügbarkeit nicht.\n- Betrachter-Schreibzugriffe der gemeinsamen CMS-API an das strikt lesende Standalone-Rollenmodell angleichen. Separat erteilte Speisekartenrechte bleiben erhalten. Kanalduplikate in CMS-Ausgaben von der ursprünglichen Werbeautomatik entkoppeln.\n- Regressionen für Kanalaktionen, Daten- und Einstellungserhalt, Filter, Teilfehler, Rollen sowie WordPress-Menüs mit signierten Lizenzfreigaben ergänzen; Browserprüfung für Desktop, Mobilansicht und die drei Oberflächentransporte.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.10.0",
+    "core_version": "3.11.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.10.0",
-    "typo3_extension_version": "3.10.0"
+    "wordpress_plugin_version": "3.11.0",
+    "typo3_extension_version": "3.11.0"
   },
   "components": {
     "core": {
-      "version": "3.10.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.10.0.zip?ref=v3.10.0",
-      "sha256": "0eeb5df102f216878855e560e72118776da7188f71381f65c0173cf042cde05a"
+      "version": "3.11.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.0.zip?ref=v3.11.0",
+      "sha256": "73838b333e6d7d8275568b5484c7f877e119b5c92d2362067ab12cb73c57e28a"
     },
     "standalone": {
-      "version": "3.10.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.10.0.zip?ref=v3.10.0",
-      "sha256": "0eeb5df102f216878855e560e72118776da7188f71381f65c0173cf042cde05a"
+      "version": "3.11.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.0.zip?ref=v3.11.0",
+      "sha256": "73838b333e6d7d8275568b5484c7f877e119b5c92d2362067ab12cb73c57e28a"
     },
     "wordpress": {
-      "version": "3.10.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.10.0.zip?ref=v3.10.0",
-      "sha256": "c4399bb03aa55dbd47c009b0415d87cebdad4ec1fab72aa124a8a8acdad48021",
+      "version": "3.11.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.0.zip?ref=v3.11.0",
+      "sha256": "1448fc1610cb0e5611bea5e576fb03c361f0ac97818e51781abe4e4bb447661e",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.10.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.10.0.zip?ref=v3.10.0",
-      "sha256": "eb6ce6c521b139b2d3a9f1029903e64615b9f0200929357877a81aca30a2bb74",
+      "version": "3.11.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.0.zip?ref=v3.11.0",
+      "sha256": "6216504733c9c15d21a28c3ffd44f4bf738b4b938cd29b14577a108a5035b728",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

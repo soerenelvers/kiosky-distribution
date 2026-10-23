@@ -1456,3 +1456,12 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 #license-public-key { width:100%; min-width:0; font-family:monospace; }
 #license-new-key-value { width:100%; }
 #license-authority { overflow-wrap: anywhere; }
+
+.channel-selection-row { display:flex; align-items:center; min-width:0; gap:4px; }
+.channel-library-check { display:grid; place-items:center; min-width:36px; min-height:44px; cursor:pointer; }
+.channel-library-check input { width:18px; height:18px; }
+.channel-selection-row .channel-list-item { min-width:0; }
+#channel-bulk-toolbar { margin-top:10px; grid-template-columns:minmax(0,1fr) auto; }
+#channel-selection-count { color:var(--muted); font-size:.62rem; white-space:nowrap; }
+#channel-bulk-toolbar .slide-bulk-actions { grid-column:1/-1; justify-content:flex-start; }
+#channel-bulk-toolbar .slide-bulk-actions { flex-wrap:wrap; }
