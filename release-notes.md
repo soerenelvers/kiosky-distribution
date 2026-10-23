@@ -1,7 +1,5 @@
-## [3.11.0] – 2026-10-23
+## [3.11.1] – 2026-10-23
 
-- Kanalübersicht mit Mehrfachauswahl, gefiltertem „Alle auswählen“ und Stapelaktionen zum Umbenennen, Exportieren, Taggen, Duplizieren, Archivieren und endgültigen Löschen. Bestehende Komponenten für Inhaltspakete, Tags und Papierkorb weiterverwenden; offene Kanaländerungen vor Aktionen speichern und Teilfehler nachvollziehbar melden.
-- Endgültiges Kanallöschen in WordPress und TYPO3 entfernt abhängige Zeitplan-/Ausspielzuweisungen und löst Display-/Matrix-/Preset-Verweise wie Standalone. Kanalzustände und Zuweisungslisten in Presets werden in allen Ausgaben gezielt bereinigt; Archivieren/Wiederherstellen erhalten die Verknüpfungen.
-- Fehlenden WordPress-Menüpunkt „Werbung“ einschließlich Ansichtszuordnung ergänzen. Allgemeiner Sichtbarkeitsschalter, signierte Lizenzfreigaben und native WordPress-Rechte bleiben verbindlich; die Automatik-Konfiguration steuert die Menüverfügbarkeit nicht.
-- Betrachter-Schreibzugriffe der gemeinsamen CMS-API an das strikt lesende Standalone-Rollenmodell angleichen. Separat erteilte Speisekartenrechte bleiben erhalten. Kanalduplikate in CMS-Ausgaben von der ursprünglichen Werbeautomatik entkoppeln.
-- Regressionen für Kanalaktionen, Daten- und Einstellungserhalt, Filter, Teilfehler, Rollen sowie WordPress-Menüs mit signierten Lizenzfreigaben ergänzen; Browserprüfung für Desktop, Mobilansicht und die drei Oberflächentransporte.
+- WordPress-Menükollision zwischen „Kiosky → Updates“ und den nativen Zugangseinstellungen beheben: Die Updateübersicht erhält einen eigenen Seitenschlüssel und öffnet wieder die gemeinsame Oberfläche zum Prüfen und Installieren. Bestehende Einstellungs-URLs, gespeicherte Tokens und Berechtigungen bleiben erhalten.
+- Die WordPress-Einstellungsseite als „Kiosky Update-Zugang“ kennzeichnen und mit „Updates suchen und installieren“ zur Updateübersicht verlinken. Direktaufruf und regulären WordPress-Updateweg für bereits betroffene Installationen dokumentieren.
+- Regressionen prüfen beide Registrierungsreihenfolgen, getrennte WordPress-Elternseiten und Callbacks sowie die tatsächlich gerenderte Updateansicht und Zugangseinstellung in einer nativen WordPress-Installation.

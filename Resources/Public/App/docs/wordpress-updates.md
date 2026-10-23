@@ -7,7 +7,7 @@ zwischengespeichert; daraus entsteht kein eigener Sechs-Stunden-Zeitplan. Netzwe
 PHP-Fatal-Error ignoriert.
 
 Bei privaten Kiosky-Repositories wird ein fein eingeschränkter GitHub-Zugangstoken unter
-**Einstellungen → Kiosky Updates** gespeichert. Alternativ kann er in
+**Einstellungen → Kiosky Update-Zugang** gespeichert. Alternativ kann er in
 `wp-config.php` gesetzt werden:
 
 ```php
@@ -50,3 +50,11 @@ normalen Oberfläche derzeit nicht. Automatische Installation ist separat pro
 Plugin aktivierbar.
 
 Für den einmaligen Wechsel alter Pluginordner und Updater siehe [Paketnamen und Migration](package-naming.md).
+
+## Kiosky → Updates öffnet nur die Zugangseinstellungen
+
+Bis einschließlich 3.11.0 verwenden die Kiosky-Updateübersicht und die native WordPress-Seite für den Update-Zugang denselben Seitenschlüssel `kiosky-updates`. Dadurch können die WordPress-Menüzuordnung und die Seiten-Callbacks kollidieren: „Kiosky → Updates“ zeigt dann das Formular für den Zugangstoken statt der Updateübersicht.
+
+Ab 3.11.1 besitzt die Kiosky-Updateübersicht den eigenen Schlüssel `kiosky-update-center`. Die bisherige URL der Zugangseinstellungen und die gespeicherten Tokens bleiben erhalten. Die Seite heißt nun „Kiosky Update-Zugang“ und verlinkt für berechtigte Administratoren auf „Updates suchen und installieren“.
+
+Bis zur Installation der Korrektur kann ein angemeldeter Administrator die Kiosky-Updateübersicht direkt über `<WordPress-Adresse>/wp-admin/admin-post.php?action=kiosky_app&view=updates` öffnen. Alternativ stehen die normale WordPress-Prüfung unter „Dashboard → Aktualisierungen → Erneut prüfen“ und die anschließende Installation unter „Plugins → Installierte Plugins“ zur Verfügung. Das Plugin muss dafür nicht deinstalliert werden. Eine erfolgreiche manuelle Prüfung erfordert weiterhin eine erreichbare, gültige und kompatible Updatequelle; eine Modullizenz oder ein Zugangstoken wird durch den Direktaufruf nicht ersetzt.

@@ -21,7 +21,7 @@ Vor einem Update die Datenbank und Dateien sichern; bei WordPress insbesondere `
 
 ### WordPress: Update-Zugang einrichten
 
-1. Mit einem Administrator unter **Einstellungen → Kiosky Updates** den GitHub-Zugangstoken hinterlegen und speichern.
+1. Mit einem Administrator unter **Einstellungen → Kiosky Update-Zugang** den GitHub-Zugangstoken hinterlegen und speichern.
 2. Im **Kiosky-Backend → Updates → Nach Updates suchen** die aktuelle Version abrufen.
 3. Die angebotene Version installieren. Alternativ unter **WordPress → Dashboard → Aktualisierungen → Erneut prüfen** suchen und Kiosky aktualisieren.
 4. Nach dem Update im Kiosky-Updatebereich die installierte Version kontrollieren.
@@ -208,7 +208,7 @@ Vollständige Aktionsfelder, Mehrfachinstallationen und weitere Beispiele: https
 
 | Zugang | Wird erstellt bei | Wird eingetragen in | Zweck |
 | --- | --- | --- | --- |
-| GitHub-Update-Token | GitHub → Developer settings → Personal access tokens | WordPress: Einstellungen → Kiosky Updates; TYPO3/Standalone: Updatekonfiguration | Release-Metadaten und Installationspakete laden |
+| GitHub-Update-Token | GitHub → Developer settings → Personal access tokens | WordPress: Einstellungen → Kiosky Update-Zugang; TYPO3/Standalone: Updatekonfiguration | Release-Metadaten und Installationspakete laden |
 | Kiosky-API-Schlüssel | Kiosky → Schnittstellen → Externe API → API-Zugänge | Home Assistant oder andere externe Integration | Displays, Inhalte, Presets und Warnungen steuern |
 
 Der öffentliche HACS-Repository-Link erfordert keinen eigenen Kiosky-Distributions-Token. HACS verwendet seine reguläre GitHub-Anbindung. Zum Steuern der Kiosky-Installation benötigt die eingerichtete Integration trotzdem ihren eigenen Kiosky-API-Schlüssel.
@@ -257,4 +257,4 @@ Die Änderung eines GitHub-Releases allein kann den bereits installierten alten 
 4. Bei einem alten Ordner `kioski/` zuerst die sichere Ordnerumstellung aus [package-naming.md](package-naming.md#wordpress) durchführen. Keine zweite Kopie aktivieren und keine vorhandenen Verzeichnisse überschreiben. Wenn WordPress keinen Ersetzungsdialog anbietet, zuerst den Ordner prüfen.
 5. Danach unter **Dashboard → Aktualisierungen → Erneut prüfen** beziehungsweise **Kiosky → Updates → Prüfen** den Cache erneuern.
 
-Ein korrekt installierter Stand 3.3.9 bietet nicht dieselbe Version erneut an; erst eine neuere kompatible Stable-Version erscheint als Update. Ein eigener Update-Dienst ist für den GitHub-Pfad nicht erforderlich. Bei privaten Quellen den Token unter **Einstellungen → Kiosky Updates** hinterlegen.
+Ein korrekt installierter Stand 3.3.9 bietet nicht dieselbe Version erneut an; erst eine neuere kompatible Stable-Version erscheint als Update. Ein eigener Update-Dienst ist für den GitHub-Pfad nicht erforderlich. Bei privaten Quellen den Token unter **Einstellungen → Kiosky Update-Zugang** hinterlegen.

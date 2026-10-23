@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "5026acfd24f561c38b11eaf538f84774fdd95101",
+  "source_commit": "31434cc1bc099afc961bb891c9508bfdda5f3dd7",
   "product": "kiosky",
-  "version": "3.11.0",
-  "released_at": "2026-10-23T12:28:07.705Z",
+  "version": "3.11.1",
+  "released_at": "2026-10-23T13:08:42.477Z",
   "channel": "stable",
-  "release_notes": "## [3.11.0] – 2026-10-23\n\n- Kanalübersicht mit Mehrfachauswahl, gefiltertem „Alle auswählen“ und Stapelaktionen zum Umbenennen, Exportieren, Taggen, Duplizieren, Archivieren und endgültigen Löschen. Bestehende Komponenten für Inhaltspakete, Tags und Papierkorb weiterverwenden; offene Kanaländerungen vor Aktionen speichern und Teilfehler nachvollziehbar melden.\n- Endgültiges Kanallöschen in WordPress und TYPO3 entfernt abhängige Zeitplan-/Ausspielzuweisungen und löst Display-/Matrix-/Preset-Verweise wie Standalone. Kanalzustände und Zuweisungslisten in Presets werden in allen Ausgaben gezielt bereinigt; Archivieren/Wiederherstellen erhalten die Verknüpfungen.\n- Fehlenden WordPress-Menüpunkt „Werbung“ einschließlich Ansichtszuordnung ergänzen. Allgemeiner Sichtbarkeitsschalter, signierte Lizenzfreigaben und native WordPress-Rechte bleiben verbindlich; die Automatik-Konfiguration steuert die Menüverfügbarkeit nicht.\n- Betrachter-Schreibzugriffe der gemeinsamen CMS-API an das strikt lesende Standalone-Rollenmodell angleichen. Separat erteilte Speisekartenrechte bleiben erhalten. Kanalduplikate in CMS-Ausgaben von der ursprünglichen Werbeautomatik entkoppeln.\n- Regressionen für Kanalaktionen, Daten- und Einstellungserhalt, Filter, Teilfehler, Rollen sowie WordPress-Menüs mit signierten Lizenzfreigaben ergänzen; Browserprüfung für Desktop, Mobilansicht und die drei Oberflächentransporte.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.0",
+  "release_notes": "## [3.11.1] – 2026-10-23\n\n- WordPress-Menükollision zwischen „Kiosky → Updates“ und den nativen Zugangseinstellungen beheben: Die Updateübersicht erhält einen eigenen Seitenschlüssel und öffnet wieder die gemeinsame Oberfläche zum Prüfen und Installieren. Bestehende Einstellungs-URLs, gespeicherte Tokens und Berechtigungen bleiben erhalten.\n- Die WordPress-Einstellungsseite als „Kiosky Update-Zugang“ kennzeichnen und mit „Updates suchen und installieren“ zur Updateübersicht verlinken. Direktaufruf und regulären WordPress-Updateweg für bereits betroffene Installationen dokumentieren.\n- Regressionen prüfen beide Registrierungsreihenfolgen, getrennte WordPress-Elternseiten und Callbacks sowie die tatsächlich gerenderte Updateansicht und Zugangseinstellung in einer nativen WordPress-Installation.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.11.0",
+    "core_version": "3.11.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.11.0",
-    "typo3_extension_version": "3.11.0"
+    "wordpress_plugin_version": "3.11.1",
+    "typo3_extension_version": "3.11.1"
   },
   "components": {
     "core": {
-      "version": "3.11.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.0.zip?ref=v3.11.0",
-      "sha256": "73838b333e6d7d8275568b5484c7f877e119b5c92d2362067ab12cb73c57e28a"
+      "version": "3.11.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.1.zip?ref=v3.11.1",
+      "sha256": "c820a46c7236c91994ccd2971ce3f2e9d03a9d6b013167778874f99b7e5f2d0f"
     },
     "standalone": {
-      "version": "3.11.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.0.zip?ref=v3.11.0",
-      "sha256": "73838b333e6d7d8275568b5484c7f877e119b5c92d2362067ab12cb73c57e28a"
+      "version": "3.11.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.1.zip?ref=v3.11.1",
+      "sha256": "c820a46c7236c91994ccd2971ce3f2e9d03a9d6b013167778874f99b7e5f2d0f"
     },
     "wordpress": {
-      "version": "3.11.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.0.zip?ref=v3.11.0",
-      "sha256": "1448fc1610cb0e5611bea5e576fb03c361f0ac97818e51781abe4e4bb447661e",
+      "version": "3.11.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.1.zip?ref=v3.11.1",
+      "sha256": "68277a445cbc939ec44ad931835cdfe3f5eedb0e371d31f79be6d89ecf0093cc",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.11.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.0.zip?ref=v3.11.0",
-      "sha256": "6216504733c9c15d21a28c3ffd44f4bf738b4b938cd29b14577a108a5035b728",
+      "version": "3.11.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.1.zip?ref=v3.11.1",
+      "sha256": "510ca4fcc3f524fb19ea6459a041102c1a24be7c3a5646c818d2a599e01a3def",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
