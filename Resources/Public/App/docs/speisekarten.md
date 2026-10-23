@@ -3,7 +3,7 @@
 Ab Kiosky 3.5.0 in Standalone, WordPress und TYPO3; seit 3.6.0 als eigenes
 **Speisekarten-Modul** in Navigation und Einstellungen. Einstieg:
 `https://deine-kiosky-adresse/speisekarten` (bei Unterverzeichnissen entsprechend
-unterhalb der Installation). Der Arbeitsbereich **Speisekarten** öffnet den Inhaltseditor direkt in Kiosky.
+unterhalb der Installation). Der Arbeitsbereich **Speisekarten** öffnet die vollständige Verwaltung mit eingebettetem Inhaltseditor direkt in Kiosky.
 Die eigenständige Küchenadresse `/speisekarten` bleibt ebenfalls erhalten.
 
 ## Einrichtung durch die Administration
@@ -55,8 +55,13 @@ Geöffnete Küchen-Editoren melden die Sperre spätestens bei der nächsten Anfr
 offene lokale Texte werden nicht automatisch gespeichert.
 
 In WordPress erscheint bei aktiviertem Modul und vorhandenem Speisekarten-Recht
-zusätzlich der native Untermenüpunkt **Kiosky → Speisekarten**. Die gemeinsamen
-Oberflächen verwenden dieselben Einstellungen in allen drei Plattformen.
+zusätzlich der native Untermenüpunkt **Kiosky → Speisekarten**. Ab **3.11.2**
+öffnet dieser Untermenüpunkt die vollständige Verwaltung wie in Standalone. Frühere WordPress-Ausgaben wählten hier versehentlich das Dokument
+des vereinfachten Kücheneditors. Nach dem Pluginupdate den WordPress-Arbeitsbereich
+neu laden. Die separate Adresse `/speisekarten` bleibt auf Inhaltsbearbeitung
+begrenzt. Die gemeinsamen Oberflächen verwenden dieselben Einstellungen in allen
+drei Plattformen. Der geprüfte [Funktionsabgleich](speisekarten-parity-3.11.2.md)
+beschreibt Umfang und plattformspezifische Voraussetzungen.
 
 ## Tägliche Bearbeitung
 

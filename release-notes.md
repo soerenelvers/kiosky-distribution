@@ -1,5 +1,5 @@
-## [3.11.1] – 2026-10-23
+## [3.11.2] – 2026-10-23
 
-- WordPress-Menükollision zwischen „Kiosky → Updates“ und den nativen Zugangseinstellungen beheben: Die Updateübersicht erhält einen eigenen Seitenschlüssel und öffnet wieder die gemeinsame Oberfläche zum Prüfen und Installieren. Bestehende Einstellungs-URLs, gespeicherte Tokens und Berechtigungen bleiben erhalten.
-- Die WordPress-Einstellungsseite als „Kiosky Update-Zugang“ kennzeichnen und mit „Updates suchen und installieren“ zur Updateübersicht verlinken. Direktaufruf und regulären WordPress-Updateweg für bereits betroffene Installationen dokumentieren.
-- Regressionen prüfen beide Registrierungsreihenfolgen, getrennte WordPress-Elternseiten und Callbacks sowie die tatsächlich gerenderte Updateansicht und Zugangseinstellung in einer nativen WordPress-Installation.
+- WordPress-Untermenü „Kiosky → Speisekarten“ öffnet die vollständige gemeinsame Verwaltung statt des vereinfachten Kücheneditors: Vorgaben, Kartenerstellung, Vorlagen-/Layoutgestaltung, Ausrichtung, PDF-Import, Weblink-Abonnements und Benutzerzuweisungen sind wieder am vorgesehenen Einstieg erreichbar.
+- Öffentliche Küchen- und Passwortfreigaben unter `/speisekarten` behalten ihren getrennten Inhaltseditor und die bestehenden Rechte. WordPress-Anmeldung, REST-Nonce, Lizenzfreigaben und Modulschalter bleiben verbindlich; bestehende Karten und Zuweisungen benötigen keine Migration.
+- Regressionen führen die tatsächlichen WordPress-Einstiegsfunktionen aus, prüfen vollständige Verwaltungsdokumente und getrennte Küchen-/Freigaberouten einschließlich Unterverzeichnis-URLs. Native WordPress-Installations-/Upgrade-Prüfungen kontrollieren zusätzlich Menü-Hooks und die ausgelieferten Dokumente. Funktionsabgleich für das Speisekarten-Modul dokumentiert.

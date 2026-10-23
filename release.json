@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "31434cc1bc099afc961bb891c9508bfdda5f3dd7",
+  "source_commit": "75f38fea9921d0ae5f5477004d60b6a61ef64a57",
   "product": "kiosky",
-  "version": "3.11.1",
-  "released_at": "2026-10-23T13:08:42.477Z",
+  "version": "3.11.2",
+  "released_at": "2026-10-23T14:05:58.555Z",
   "channel": "stable",
-  "release_notes": "## [3.11.1] – 2026-10-23\n\n- WordPress-Menükollision zwischen „Kiosky → Updates“ und den nativen Zugangseinstellungen beheben: Die Updateübersicht erhält einen eigenen Seitenschlüssel und öffnet wieder die gemeinsame Oberfläche zum Prüfen und Installieren. Bestehende Einstellungs-URLs, gespeicherte Tokens und Berechtigungen bleiben erhalten.\n- Die WordPress-Einstellungsseite als „Kiosky Update-Zugang“ kennzeichnen und mit „Updates suchen und installieren“ zur Updateübersicht verlinken. Direktaufruf und regulären WordPress-Updateweg für bereits betroffene Installationen dokumentieren.\n- Regressionen prüfen beide Registrierungsreihenfolgen, getrennte WordPress-Elternseiten und Callbacks sowie die tatsächlich gerenderte Updateansicht und Zugangseinstellung in einer nativen WordPress-Installation.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.1",
+  "release_notes": "## [3.11.2] – 2026-10-23\n\n- WordPress-Untermenü „Kiosky → Speisekarten“ öffnet die vollständige gemeinsame Verwaltung statt des vereinfachten Kücheneditors: Vorgaben, Kartenerstellung, Vorlagen-/Layoutgestaltung, Ausrichtung, PDF-Import, Weblink-Abonnements und Benutzerzuweisungen sind wieder am vorgesehenen Einstieg erreichbar.\n- Öffentliche Küchen- und Passwortfreigaben unter `/speisekarten` behalten ihren getrennten Inhaltseditor und die bestehenden Rechte. WordPress-Anmeldung, REST-Nonce, Lizenzfreigaben und Modulschalter bleiben verbindlich; bestehende Karten und Zuweisungen benötigen keine Migration.\n- Regressionen führen die tatsächlichen WordPress-Einstiegsfunktionen aus, prüfen vollständige Verwaltungsdokumente und getrennte Küchen-/Freigaberouten einschließlich Unterverzeichnis-URLs. Native WordPress-Installations-/Upgrade-Prüfungen kontrollieren zusätzlich Menü-Hooks und die ausgelieferten Dokumente. Funktionsabgleich für das Speisekarten-Modul dokumentiert.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.2",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.11.1",
+    "core_version": "3.11.2",
     "api_version": "1",
-    "wordpress_plugin_version": "3.11.1",
-    "typo3_extension_version": "3.11.1"
+    "wordpress_plugin_version": "3.11.2",
+    "typo3_extension_version": "3.11.2"
   },
   "components": {
     "core": {
-      "version": "3.11.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.1.zip?ref=v3.11.1",
-      "sha256": "c820a46c7236c91994ccd2971ce3f2e9d03a9d6b013167778874f99b7e5f2d0f"
+      "version": "3.11.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.2.zip?ref=v3.11.2",
+      "sha256": "e0cada09aba5903b1e6b3943b9f66e06b939316e0630e6e519378111fb631383"
     },
     "standalone": {
-      "version": "3.11.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.1.zip?ref=v3.11.1",
-      "sha256": "c820a46c7236c91994ccd2971ce3f2e9d03a9d6b013167778874f99b7e5f2d0f"
+      "version": "3.11.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.2.zip?ref=v3.11.2",
+      "sha256": "e0cada09aba5903b1e6b3943b9f66e06b939316e0630e6e519378111fb631383"
     },
     "wordpress": {
-      "version": "3.11.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.1.zip?ref=v3.11.1",
-      "sha256": "68277a445cbc939ec44ad931835cdfe3f5eedb0e371d31f79be6d89ecf0093cc",
+      "version": "3.11.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.2.zip?ref=v3.11.2",
+      "sha256": "c7c3249e0406f610e8b59617842d4d3c5d6b74f19a09680affce541af021f682",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.11.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.1.zip?ref=v3.11.1",
-      "sha256": "510ca4fcc3f524fb19ea6459a041102c1a24be7c3a5646c818d2a599e01a3def",
+      "version": "3.11.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.2.zip?ref=v3.11.2",
+      "sha256": "1e3cc905cf72869e689a198304c3513e406ec50ba7e2943221cec396c8bfe76c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
