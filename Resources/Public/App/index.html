@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.11.2-20261023140557%2B75f38fea">
+  <link rel="stylesheet" href="styles.css?v=3.12.0-20261024190612%2Bf6d2c45b">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -277,9 +277,11 @@
             <div class="slide-toolbar">
               <label class="search-field compact"><span>⌕</span><input type="search" id="slide-search" placeholder="Slides suchen"></label>
               <select id="slide-filter" aria-label="Slide-Typ filtern"><option value="all">Alle Typen</option><option value="custom">Eigene Slides</option><option value="event">Veranstaltung</option><option value="text">Freitext</option><option value="image">Bild</option><option value="video">Video</option><option value="web">Website</option></select>
-              <select id="slide-tag-filter" aria-label="Slides nach Tag filtern"><option value="">Alle Tags</option></select>
+              <select id="slide-tag-view" aria-label="Slides: Tagfilter oder Ordneransicht"><option value="filter">Tagfilter</option><option value="folders">Ordneransicht</option></select>
+<select id="slide-tag-filter" aria-label="Slides nach Tag filtern"><option value="">Alle Tags</option></select>
+<nav id="slide-tag-folders" class="content-tag-folders" aria-label="Slides nach Tag-Ordner" hidden></nav>
             </div>
-            <div class="template-toolbar"><button class="button button-secondary" type="button" data-import-content-package>⇩ Importieren</button><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
+            <div class="template-toolbar"><button class="button button-secondary" type="button" data-import-content-package>⇩ Importieren</button><button class="button button-secondary" type="button" data-action="url-slide">↗ Slide aus URL</button><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
             <div class="slide-bulk-toolbar">
               <label class="table-check"><input id="slide-select-all" type="checkbox"> Alle sichtbaren Slides</label>
               <span id="slide-selection-count">0 ausgewählt</span>
@@ -305,7 +307,9 @@
               <aside class="channel-navigator" aria-label="Kanäle auswählen">
                 <div class="content-package-actions"><button class="button button-secondary" type="button" data-import-content-package>⇩ Kanal importieren</button><button class="button button-secondary" id="channel-export" type="button" disabled>⇧ Kanal exportieren</button></div><div class="channel-navigator-head"><div><p class="eyebrow">Kanäle</p><strong>Schnell wechseln</strong></div><span id="channel-count">0</span></div>
                 <label class="search-field compact"><span>⌕</span><input id="channel-search" type="search" placeholder="Kanäle durchsuchen"></label>
-                <select id="channel-tag-filter" aria-label="Kanäle nach Tag filtern"><option value="">Alle Tags</option></select>
+                <select id="channel-tag-view" aria-label="Kanäle: Tagfilter oder Ordneransicht"><option value="filter">Tagfilter</option><option value="folders">Ordneransicht</option></select>
+<select id="channel-tag-filter" aria-label="Kanäle nach Tag filtern"><option value="">Alle Tags</option></select>
+<nav id="channel-tag-folders" class="content-tag-folders" aria-label="Kanäle nach Tag-Ordner" hidden></nav>
                 <div class="slide-bulk-toolbar" id="channel-bulk-toolbar">
                   <label class="toggle-label"><input id="channel-select-all" type="checkbox"> Alle auswählen</label>
                   <span id="channel-selection-count" aria-live="polite">0 ausgewählt</span>
@@ -1380,6 +1384,11 @@
             <div><p class="eyebrow">Auswahl</p><strong>Eigenschaften</strong></div>
             <button class="editor-panel-close" type="button" data-editor-panel-close aria-label="Eigenschaften schließen">×</button>
           </div>
+          <details class="editor-event-source"><summary>Event-Daten für diese Slide</summary>
+            <label class="toggle-label"><input type="checkbox" id="editor-event-auto"> Veranstaltung automatisch auswählen</label>
+            <div id="editor-event-options" hidden><label class="form-field"><span>Event-Auswahl</span><select id="editor-event-mode"><option value="next">Zeitlich nächstes Event</option><option value="current">Aktuell laufendes Event</option><option value="today">Heutiges Event</option></select></label><label class="form-field"><span>Raum / Saal (optional, exakter Name)</span><input id="editor-event-room" maxlength="150" placeholder="Alle Räume"></label></div>
+            <p id="editor-event-resolved" class="property-note"></p><p class="property-note">Gilt für alle Eventfelder, Eventdaten, Eventbilder und Event-Countdowns dieser Slide. Heute richtet sich nach Europe/Berlin. Ohne Automatik gilt die oben gewählte Veranstaltung bzw. die des Kanals.</p>
+          </details>
           <div id="no-element-selected" class="property-empty"><span>◇</span><p>Element auswählen, um Eigenschaften zu bearbeiten.</p></div>
           <div id="element-properties" hidden>
             <div class="property-heading"><strong id="property-element-type">Text</strong><button type="button" data-editor-action="duplicate">⧉ Duplizieren</button></div>
@@ -1418,11 +1427,18 @@
               <p class="property-note">Der QR-Code wird lokal erzeugt und funktioniert auch ohne externen Generator.</p>
             </div>
             <div data-property-section="countdown">
-              <label class="form-field"><span>Ziel</span><select id="property-countdown-mode"><option value="daily">Täglich zu einer Uhrzeit</option><option value="datetime">Einmaliges Datum mit Uhrzeit</option></select></label>
+              <label class="form-field"><span>Ziel</span><select id="property-countdown-mode"><option value="daily">Täglich zu einer Uhrzeit</option><option value="datetime">Einmaliges Datum mit Uhrzeit</option><option value="event">Zeit aus Veranstaltung / Ablauf</option></select></label>
               <label class="form-field" id="property-countdown-daily-field"><span>Tägliche Zielzeit</span><input id="property-countdown-daily-time" type="time" step="60" value="18:00"></label>
               <label class="form-field" id="property-countdown-datetime-field" hidden><span>Datum und Uhrzeit</span><input id="property-countdown-target" type="datetime-local" step="60"></label>
+              <div id="property-countdown-event-fields" hidden>
+                <label class="form-field"><span>Event-Zeitpunkt</span><select id="property-countdown-event-field"><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass / Öffnung</option><option value="eventStart">Beginn</option><option value="breakStart">Pause beginnt</option><option value="breakEnd">Pause endet / Weiter geht es</option><option value="eventEnd">Ende</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="schedule">Ablaufpunkt der Veranstaltung</option></select></label>
+                <div id="property-countdown-schedule-fields" hidden><label class="form-field"><span>Nächster Ablaufpunkt</span><select id="property-countdown-schedule-category"><option value="">Alle öffentlichen Kategorien</option><option value="access">Einlass</option><option value="setup">Aufbau</option><option value="rehearsal">Probe</option><option value="event">Programm / Veranstaltung</option><option value="break">Pause</option><option value="hospitality">Gastronomie</option><option value="teardown">Abbau</option><option value="other">Sonstiges</option></select></label><label class="form-field"><span>Bezeichnung (optional, exakter Name)</span><input id="property-countdown-schedule-caption" maxlength="200" placeholder="z. B. Zweiter Teil"></label><label class="form-field"><span>Zeitpunkt des Ablaufpunkts</span><select id="property-countdown-schedule-edge"><option value="start">Beginn</option><option value="end">Ende</option></select></label></div>
+                <div class="countdown-offset-fields"><label class="form-field"><span>Offset</span><select id="property-countdown-offset-direction"><option value="-1">Früher (−)</option><option value="1">Später (+)</option></select></label><label class="form-field"><span>Minuten</span><input id="property-countdown-offset-minutes" type="number" inputmode="numeric" min="0" max="10080" value="0"></label><label class="form-field"><span>Sekunden</span><input id="property-countdown-offset-seconds" type="number" inputmode="numeric" min="0" max="59" value="0"></label></div>
+                <p class="property-note">Zielzeit = Event-Zeitpunkt + Offset. Beispiel: Pausenende 21:20 minus 7 Minuten → 21:13. Fehlende Event-Zeiten bleiben unsichtbar; erreichte feste Ziele zeigen null.</p>
+              </div>
               <label class="form-field"><span>Text davor</span><input id="property-countdown-prefix" type="text" placeholder="z. B. Noch "></label>
               <label class="form-field"><span>Text danach</span><input id="property-countdown-suffix" type="text" placeholder="z. B. bis zum Einlass"></label>
+              <label class="form-field"><span>Anzeigeformat</span><select id="property-countdown-format"><option value="clock">Stunden : Minuten : Sekunden</option><option value="minutes">Verbleibende Minuten als Text</option></select></label>
               <label class="toggle-label"><input id="property-countdown-show-seconds" type="checkbox" checked> Sekunden anzeigen</label>
               <p class="property-note">Nach Erreichen der täglichen Uhrzeit startet der Countdown automatisch für den nächsten Tag neu.</p>
             </div>
@@ -1434,6 +1450,8 @@
           <button type="button" data-editor-panel-toggle="tools"><span>＋</span>Hinzufügen</button>
           <button type="button" data-editor-panel-toggle="layers"><span>▱</span>Ebenen <i id="editor-mobile-layer-count">0</i></button>
           <button type="button" data-editor-panel-toggle="properties"><span>⚙</span>Eigenschaften</button>
+          <button type="button" id="editor-mobile-save"><span>✓</span>Speichern</button>
+          <button type="button" id="editor-mobile-close"><span>×</span>Schließen</button>
         </nav>
       </div>
     </div>
@@ -1441,6 +1459,16 @@
 
   <dialog id="template-dialog" class="wide-dialog">
     <div class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="template-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">▧</span><p class="eyebrow">Wiederverwendbare Layouts</p><h2>Slide-Vorlagen</h2><p>Vorlagen können verwendet, vollständig bearbeitet oder archiviert werden.</p><div class="content-package-actions"><button class="button button-secondary" type="button" data-import-content-package>⇩ Vorlagen importieren</button><button class="button button-secondary" id="templates-export" type="button">⇧ Alle Vorlagen exportieren</button></div><div id="template-list" class="template-list"></div></div>
+  </dialog>
+
+  <dialog id="url-slide-dialog">
+    <form id="url-slide-form" class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="url-slide-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Externe Displays und Websites</p><h2>Slide aus URL erstellen</h2>
+      <label class="form-field"><span>Website- oder Display-URL (HTTPS)</span><input id="url-slide-url" type="url" inputmode="url" autocomplete="url" maxlength="2048" placeholder="https://display.example.org" required></label>
+      <label class="form-field"><span>Name (optional)</span><input id="url-slide-name" maxlength="100" placeholder="Wird aus der Adresse übernommen"></label>
+      <label class="form-field"><span>Format</span><select id="url-slide-orientation"><option value="auto">Automatisch / responsiv</option><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label>
+      <p class="property-note">Die Website füllt die gesamte Slide. Die HTTPS-Zielseite muss das Einbetten in einem iFrame erlauben. Anmeldung, Cookies und Darstellung der Fremdseite liegen beim jeweiligen System. Es wird kein Inhalt kopiert oder über einen Proxy geladen.</p>
+      <p id="url-slide-message" class="auth-message" role="alert"></p><div class="dialog-actions"><button type="button" class="button button-secondary" data-close-dialog="url-slide-dialog">Abbrechen</button><button type="submit" class="button button-primary">Als Entwurf erstellen</button></div>
+    </form>
   </dialog>
 
   <dialog id="template-chooser-dialog" class="wide-dialog">
@@ -1639,7 +1667,7 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.11.2-20261023140557%2B75f38fea"></script>
-  <script src="app.js?v=3.11.2-20261023140557%2B75f38fea"></script>
+  <script src="runtime-config.js?v=3.12.0-20261024190612%2Bf6d2c45b"></script>
+  <script src="app.js?v=3.12.0-20261024190612%2Bf6d2c45b"></script>
 </body>
 </html>

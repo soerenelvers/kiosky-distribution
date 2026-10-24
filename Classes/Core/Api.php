@@ -8,6 +8,7 @@ use RuntimeException;
 use Throwable;
 
 require_once __DIR__.'/LicenseClient.php';
+require_once __DIR__.'/SlideEventSelection.php';
 
 final class Api
 {
@@ -1661,6 +1662,12 @@ final class Api
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
             $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
+            $event=SlideEventSelection::select($this->license()->allows($state,'events')?$this->active($state['events']):[],is_array($slide['document']['eventSelection'] ?? null)?$slide['document']['eventSelection']:[],$event);
+            if($event){
+                unset($event['internalNotes'],$event['lockedFields']);
+                $scheduleRules=[];foreach(EasyJobService::roomUseTypes($state['easyjob']['roomUseTypeRules'] ?? []) as $rule)$scheduleRules[$rule['normalizedType']]=$rule;
+                $event['scheduleEntries']=array_values(array_map(static fn(array $entry):array=>array_intersect_key($entry,array_flip(['id','displayCaption','category','startAt','endAt','roomName'])),array_filter($state['eventSchedules'],static fn(array $entry):bool=>($entry['eventId'] ?? '')===$event['id']&&($entry['active'] ?? true)!==false&&!in_array($entry['category'] ?? '',['internal','cancelled'],true)&&($entry['visible'] ?? true)!==false&&($scheduleRules[EasyJobService::normalizedRoomUseType((string)($entry['type'] ?? ''))]['visible'] ?? true)!==false)));
+            }
             $slides[] = $item + ['slide' => $slide, 'event' => $event];
         }
         $targets = ['global', 'display:' . $display['id']];

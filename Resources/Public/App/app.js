@@ -141,6 +141,31 @@ function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
   return `<svg class="generated-qr-code" viewBox="0 0 ${viewSize} ${viewSize}" role="img" aria-label="QR-Code" shape-rendering="crispEdges"><path fill="${escapeHtml(background)}" d="M0 0h${viewSize}v${viewSize}H0z"/><path fill="${escapeHtml(foreground)}" d="${paths.join('')}"/></svg>`;
 }
 
+function slideEventDay(time) { return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time)); }
+function selectSlideEvent(events, selection={}, linked=null, now=Date.now()) {
+  if(!['current','today','next'].includes(selection.mode||''))return linked;
+  const room=typeof selection.room==='string'?selection.room.trim().toLowerCase():'';
+  const candidates=events.filter(event=>['ready','published','sold_out'].includes(event.status)&&!(event.deletedAt)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(event.eventStart||'')&&Number.isFinite(Date.parse(event.eventStart||''))&&(!room||(event.room||'').trim().toLowerCase()===room)).sort((a,b)=>Date.parse(a.eventStart)-Date.parse(b.eventStart)||(a.id<b.id?-1:a.id>b.id?1:0));
+  const running=candidates.filter(event=>Date.parse(event.eventStart)<=now&&(event.eventEnd?Date.parse(event.eventEnd)>now:slideEventDay(Date.parse(event.eventStart))===slideEventDay(now))).at(-1)||null;
+  if(selection.mode==='current')return running;
+  if(selection.mode==='next')return candidates.find(event=>Date.parse(event.eventStart)>=now)||null;
+  const today=candidates.filter(event=>slideEventDay(Date.parse(event.eventStart))===slideEventDay(now));
+  return running||today.find(event=>Date.parse(event.eventStart)>=now)||today.at(-1)||null;
+}
+
+function resolveEventCountdown(element,event,now=Date.now()) {
+  if(element.countdownMode!=='event')return element;
+  const offset=Math.max(-604800,Math.min(604800,Number(element.countdownOffsetSeconds)||0));
+  let target=event?.[element.countdownEventField||'eventStart'];
+  if(element.countdownEventField==='schedule') {
+    const entries=(event?.scheduleEntries||[]).filter(entry=>!['internal','cancelled'].includes(entry.category)&&(!element.countdownScheduleId||entry.id===element.countdownScheduleId)&&(!element.countdownScheduleCategory||entry.category===element.countdownScheduleCategory)&&(!element.countdownScheduleCaption||(entry.displayCaption||'').trim().toLowerCase()===element.countdownScheduleCaption.trim().toLowerCase()));
+    const field=element.countdownScheduleEdge==='end'?'endAt':'startAt';
+    const targets=entries.map(entry=>Date.parse(entry[field]||'')).filter(Number.isFinite).sort((a,b)=>a-b);
+    target=element.countdownScheduleId?targets[0]:targets.find(value=>value+offset*1000>=now);
+  }
+  const timestamp=typeof target==='number'?target:Date.parse(target||'');
+  return {...element,countdownMode:'datetime',targetTime:Number.isFinite(timestamp)?new Date(timestamp+offset*1000).toISOString():'',countdownMissing:!Number.isFinite(timestamp)};
+}
 function countdownSeconds(element, now = new Date()) {
   if (element.countdownMode === 'daily') {
     const [hours, minutes, seconds = 0] = String(element.countdownDailyTime || '18:00').split(':').map(Number);
@@ -154,9 +179,11 @@ function countdownSeconds(element, now = new Date()) {
 }
 
 function countdownText(element, now = new Date()) {
+  if(element.countdownMissing)return '';
   const total = countdownSeconds(element, now);
   const showSeconds = element.showSeconds !== false;
   if (!Number.isFinite(total)) return showSeconds ? '00:00:00' : '00:00';
+  if(element.countdownFormat==='minutes'){const minutes=Math.ceil(total/60);return `${minutes} ${minutes===1?'Minute':'Minuten'}`;}
   const days = Math.floor(total / 86400), hours = Math.floor(total % 86400 / 3600), minutes = Math.floor(total % 3600 / 60), seconds = total % 60;
   return `${days ? `${days} T · ` : ''}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}${showSeconds ? `:${String(seconds).padStart(2, '0')}` : ''}`;
 }
@@ -327,7 +354,7 @@ function scheduleAutomaticTextFit(root=document){if(root.matches?.('.slide-edito
     return `<span class="wf-text ${cell.underline?'is-underlined':''}" ${auto} style="${colorStyle};${textFontStyle(cell,textStylePixels(cell),styles[cell.textStyle]||styles.body)};text-align:${cell.align||'left'};font-weight:${cell.bold||['hero','heading'].includes(cell.textStyle)?700:400}">${cell.text||''}</span>`;
   };
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown')return`<div class="player-layout-element player-countdown" style="${style}" data-slide-countdown data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(element)}${escapeHtml(element.suffix||'')}</span></div>`;if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""${element.menuPdfImage?' data-menu-pdf-page':''}></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${element.src||''}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""${element.menuPdfImage?' data-menu-pdf-page':''}></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -349,7 +376,7 @@ function renderPlaybackSlide(slide,display,item,orientation,animate=true,elapsed
 }
 
 function updatePlaybackClocks(root) {
-  const time=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});root.querySelectorAll('#player-clock,.wayfinding-clock,.slide-clock').forEach(clock=>{clock.textContent=time;});root.querySelectorAll('[data-countdown-target]').forEach(node=>{node.textContent=`${node.dataset.countdownPrefix||''}${countdownText({targetTime:node.dataset.countdownTarget})}${node.dataset.countdownSuffix||''}`;});root.querySelectorAll('[data-slide-countdown]').forEach(node=>{try{const element=JSON.parse(decodeURIComponent(node.dataset.countdownElement||''));node.querySelector('span').textContent=`${element.prefix||''}${countdownText(element)}${element.suffix||''}`;}catch{}});root.querySelectorAll('[data-ticker-countdown]').forEach(node=>{try{const item=JSON.parse(decodeURIComponent(node.dataset.tickerCountdown||''));node.textContent=`${item.prefix||''}${countdownText(item)}${item.suffix||''}`;}catch{}});root.querySelectorAll('[data-wayfinding-countdown]').forEach(node=>{try{const countdown=JSON.parse(decodeURIComponent(node.dataset.wayfindingCountdown||''));node.textContent=`${countdown.prefix||''}${countdownText(countdown)}${countdown.suffix||''}`;}catch{}});
+  const time=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});root.querySelectorAll('#player-clock,.wayfinding-clock,.slide-clock').forEach(clock=>{clock.textContent=time;});root.querySelectorAll('[data-countdown-target]').forEach(node=>{node.textContent=`${node.dataset.countdownPrefix||''}${countdownText({targetTime:node.dataset.countdownTarget})}${node.dataset.countdownSuffix||''}`;});root.querySelectorAll('[data-slide-countdown]').forEach(node=>{try{const element=JSON.parse(decodeURIComponent(node.dataset.countdownElement||''));const countdown=resolveEventCountdown(element,JSON.parse(decodeURIComponent(node.dataset.countdownEvent||'null')));node.toggleAttribute('data-event-value-missing',!!countdown.countdownMissing);if(countdown.countdownMissing)node.dataset.eventValueMissing='true';node.style.visibility=countdown.countdownMissing?'hidden':'';node.querySelector('span').textContent=`${element.prefix||''}${countdownText(countdown)}${element.suffix||''}`;}catch{}});root.querySelectorAll('[data-ticker-countdown]').forEach(node=>{try{const item=JSON.parse(decodeURIComponent(node.dataset.tickerCountdown||''));node.textContent=`${item.prefix||''}${countdownText(item)}${item.suffix||''}`;}catch{}});root.querySelectorAll('[data-wayfinding-countdown]').forEach(node=>{try{const countdown=JSON.parse(decodeURIComponent(node.dataset.wayfindingCountdown||''));node.textContent=`${countdown.prefix||''}${countdownText(countdown)}${countdown.suffix||''}`;}catch{}});
 }
 
 async function renderDisplayPlayer(slug) {
@@ -2845,6 +2872,26 @@ function activeChannel() {
   return state.channels.find(channel => channel.id === state.activeChannelId) || null;
 }
 
+function tagFolderGroups(items) {
+  const counts=new Map();
+  for(const item of items)for(const tag of new Set(item.tags||[]))counts.set(tag,(counts.get(tag)||0)+1);
+  return [...counts].sort(([a],[b])=>a.localeCompare(b,'de')).map(([tag,count])=>({tag,count}));
+}
+function renderContentTagFolders(kind) {
+  const prefix=kind==='slides'?'slide':'channel',root=document.getElementById(`${prefix}-tag-folders`),view=document.getElementById(`${prefix}-tag-view`),filter=document.getElementById(`${prefix}-tag-filter`);
+  if(!root||!view||!filter)return;
+  const folders=view.value==='folders';root.hidden=!folders;filter.hidden=folders;
+  if(!folders)return;
+  const items=kind==='slides'?scopedSlides():scopedChannels(),selected=filter.value;
+  root.innerHTML=[{tag:'',count:items.length},...tagFolderGroups(items)].map(({tag,count})=>`<button type="button" data-content-tag="${escapeHtml(tag)}" aria-pressed="${selected===tag}"><span aria-hidden="true">▰</span><strong>${escapeHtml(tag||'Alle Inhalte')}</strong><small>${count}</small></button>`).join('');
+}
+for(const [prefix,kind,render] of [['slide','slides',renderSlideLibrary],['channel','channels',renderChannelOverview]]){
+  const view=document.getElementById(`${prefix}-tag-view`),key=`kiosky-content-view:${kioskyRuntime.platform}:${kind}`;
+  try{view.value=localStorage.getItem(key)==='folders'?'folders':'filter';}catch{}
+  view.addEventListener('change',()=>{try{localStorage.setItem(key,view.value);}catch{}renderContentTagFolders(kind);});
+  document.getElementById(`${prefix}-tag-folders`).addEventListener('click',event=>{const button=event.target.closest('[data-content-tag]');if(!button)return;document.getElementById(`${prefix}-tag-filter`).value=button.dataset.contentTag;render();});
+}
+
 function populateContentEventOptions() {
   const options = state.events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(event.title)}</option>`).join('');
   document.querySelector('#channel-event').innerHTML = `<option value="">Keine feste Veranstaltung</option>${options}`;
@@ -2906,6 +2953,7 @@ function visibleChannels(){
   return channels;
 }
 function renderChannelOverview(){
+  renderContentTagFolders('channels');
   const table=document.querySelector('#channel-overview');if(!table)return;
   const scoped=scopedChannels(),channels=visibleChannels();
   const editable=state.currentUser?.role!=='viewer',busy=state.channelBulkBusy;
@@ -2992,6 +3040,7 @@ function addSlideToPlaylist(slideId, insertAt = state.playlist.length) {
 }
 
 function renderSlideLibrary() {
+  renderContentTagFolders('slides');
   const library = document.querySelector('#slide-library');
   if (!library) return;
   const search = document.querySelector('#slide-search').value.trim().toLowerCase();
@@ -3383,7 +3432,7 @@ function slideEditorPayload() {
   return {
     name: title,
     eventId: document.querySelector('#slide-event').value || undefined,
-    type: 'custom',
+    type: state.editorElements.length===1&&state.editorElements[0].type==='web'?'web':'custom',
     orientation,
     status: document.querySelector('#slide-status').value,
     startsAt,
@@ -3394,6 +3443,7 @@ function slideEditorPayload() {
       thumbTitle: title,
       thumbSub: orientationLabels[orientation] || 'Querformat',
       designOrientation,
+      eventSelection: structuredClone(state.editorEventSelection||{mode:'linked'}),
       settings: structuredClone(state.editorSlideSettings),
       elements: state.editorElements.map(element => ({ ...element, src: String(element.src || '').startsWith('blob:') ? '' : element.src }))
     }
@@ -3481,6 +3531,7 @@ function openSlideEditor(slide = null, options = {}) {
   document.querySelector('#create-slide-button').hidden = Boolean(state.editingTemplateId);
   document.querySelector('#editor-ratio').value = slide?.ratio || 'landscape';
   document.querySelector('#slide-event').value = slide?.eventId || '';
+  state.editorEventSelection=structuredClone(slide?.document?.eventSelection||{mode:'linked',room:''});state.editorEventSchedules={};syncEditorEventSource();
   document.querySelector('#slide-status').value = slide?.status || 'draft';
   document.querySelector('#slide-starts-at').value = slideDateTimeInputValue(slide?.startsAt);
   document.querySelector('#slide-ends-at').value = slideDateTimeInputValue(slide?.endsAt);
@@ -3582,6 +3633,7 @@ function setEditorMobilePanel(panel = '') {
 function editorSnapshot(){
   return JSON.stringify({
     elements:structuredClone(state.editorElements),
+    eventSelection:structuredClone(state.editorEventSelection||{mode:'linked'}),
     settings:structuredClone(state.editorSlideSettings),
     title:document.querySelector('#new-slide-title').value,
     ratio:document.querySelector('#editor-ratio').value,
@@ -3611,10 +3663,11 @@ function restoreEditorSnapshot(snapshot){
   const value=JSON.parse(snapshot),legacy=Array.isArray(value);
   state.editorElements=structuredClone(legacy?value:value.elements||[]);
   if(!legacy){
+    state.editorEventSelection=structuredClone(value.eventSelection||{mode:'linked'});
     state.editorSlideSettings=structuredClone(value.settings||defaultSlideSettings());
     document.querySelector('#new-slide-title').value=value.title||'Neue Slide';
     document.querySelector('#editor-ratio').value=value.ratio||'landscape';
-    document.querySelector('#slide-event').value=value.eventId||'';
+    document.querySelector('#slide-event').value=value.eventId||'';syncEditorEventSource();
     document.querySelector('#slide-status').value=value.status||'draft';
     document.querySelector('#slide-starts-at').value=value.startsAt||'';
     document.querySelector('#slide-ends-at').value=value.endsAt||'';
@@ -3717,13 +3770,37 @@ function slideDecorationsMarkup(settings = state.editorSlideSettings) {
   return `<div class="slide-global-background" style="${slideBackgroundStyle(settings)}"></div>${logo}${clock}`;
 }
 
+function editorSelectedEvent(now=Date.now()) {
+  const linked=state.events.find(item=>item.id===document.querySelector('#slide-event').value)||null;
+  const event=selectSlideEvent(state.events,state.editorEventSelection||{},linked,now);
+  return event?{...event,scheduleEntries:state.editorEventSchedules?.[event.id]||[]}:null;
+}
+function syncEditorEventSource() {
+  const selection=state.editorEventSelection||{mode:'linked',room:''};
+  document.querySelector('#editor-event-auto').checked=['current','today','next'].includes(selection.mode);
+  document.querySelector('#editor-event-mode').value=selection.mode==='linked'?'next':selection.mode;
+  document.querySelector('#editor-event-options').hidden=selection.mode==='linked';
+  document.querySelector('#editor-event-room').value=selection.room||'';
+  document.querySelector('#slide-event').disabled=selection.mode!=='linked';
+  const event=editorSelectedEvent();
+  document.querySelector('#editor-event-resolved').textContent=event?`Vorschau: ${event.title}`:'Keine passende Veranstaltung. Eventfelder bleiben leer.';
+  if(event&&!state.editorEventSchedules?.[event.id]) {
+    state.editorEventSchedules??={};state.editorEventSchedules[event.id]=[];
+    apiRequest(`/api/events/${encodeURIComponent(event.id)}/schedule`).then(result=>{state.editorEventSchedules[event.id]=(result.data||[]).filter(entry=>!['internal','cancelled'].includes(entry.category));if(slideDialog.open){renderEditorCanvas();}}).catch(error=>{delete state.editorEventSchedules[event.id];showToast(error.message);});
+  }
+}
+document.querySelector('#editor-mobile-save').addEventListener('click',()=>document.querySelector(state.editingTemplateId?'[data-action=\"save-template\"]':'#create-slide-button').click());
+document.querySelector('#editor-mobile-close').addEventListener('click',()=>document.querySelector('[data-close-dialog=\"slide-dialog\"]').click());
+for(const id of ['editor-event-auto','editor-event-mode','editor-event-room'])document.getElementById(id).addEventListener('change',()=>{
+  pushEditorHistory();state.editorEventSelection={mode:document.querySelector('#editor-event-auto').checked?document.querySelector('#editor-event-mode').value:'linked',room:document.querySelector('#editor-event-room').value.trim()};syncEditorEventSource();renderEditorCanvas();scheduleSlideAutosave();
+});
 function editorElementMarkup(element) {
-  const event=state.events.find(item=>item.id===document.querySelector('#slide-event').value);
+  const event=editorSelectedEvent();
   if (element.type === 'wayfinding') return wayfindingMarkup(element,state.editorSlideSettings,event);
   if (element.type === 'ticker') return `<div class="canvas-ticker ${element.tickerDirection==='right'?'is-right':''}" style="--ticker-duration:${Math.max(3,Math.min(60,Number(element.tickerDuration||15)))}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div>`;
   if (element.type === 'weather') return weatherElementMarkup(element);
   if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
-  if (element.type === 'countdown') return `<div class="canvas-countdown">${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</div>`;
+  if (element.type === 'countdown') { const countdown=resolveEventCountdown(element,event);return `<div class="canvas-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)}>${escapeHtml(element.prefix || '')}${countdownText(countdown)}${escapeHtml(element.suffix || '')}</div>`; }
   if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt=""${element.menuPdfImage?' style="object-fit:contain"':''}>`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
@@ -3735,7 +3812,7 @@ function editorElementMarkup(element) {
 function renderEditorCanvas() {
   const canvas = document.querySelector('#slide-editor-canvas');
   if(!state.selectedEditorElementIds)state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
-  const selectedEvent=state.events.find(item=>item.id===document.querySelector('#slide-event').value);
+  const selectedEvent=editorSelectedEvent();
   canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${element.id}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}<button class="canvas-rotate-handle" type="button" aria-label="Element drehen">↻</button><button class="canvas-element-handle" type="button" aria-label="Element verschieben">⠿</button>${selected?'<button class="canvas-delete-button" type="button" aria-label="Element löschen">×</button><i class="resize-handle nw"></i><i class="resize-handle ne"></i><i class="resize-handle sw"></i><i class="resize-handle se"></i>':''}</div>`;}).join('');
   hydrateWeatherElements(canvas);
   scheduleAutomaticTextFit(canvas);
@@ -4051,8 +4128,18 @@ function syncEditorProperties() {
   document.querySelector('#property-countdown-prefix').value = element.prefix || '';
   document.querySelector('#property-countdown-suffix').value = element.suffix || '';
   document.querySelector('#property-countdown-show-seconds').checked = element.showSeconds !== false;
-  document.querySelector('#property-countdown-daily-field').hidden = element.countdownMode === 'datetime';
+  document.querySelector('#property-countdown-format').value=element.countdownFormat||'clock';
+  document.querySelector('#property-countdown-show-seconds').disabled=element.countdownFormat==='minutes';
+  document.querySelector('#property-countdown-daily-field').hidden = ['datetime','event'].includes(element.countdownMode);
   document.querySelector('#property-countdown-datetime-field').hidden = element.countdownMode !== 'datetime';
+  document.querySelector('#property-countdown-event-fields').hidden=element.countdownMode!=='event';
+  document.querySelector('#property-countdown-event-field').value=element.countdownEventField||'eventStart';
+  document.querySelector('#property-countdown-schedule-fields').hidden=element.countdownEventField!=='schedule';
+  for(const [id,key] of [['category','countdownScheduleCategory'],['caption','countdownScheduleCaption'],['edge','countdownScheduleEdge']])document.querySelector(`#property-countdown-schedule-${id}`).value=element[key]|| (id==='edge'?'start':'');
+  const offset=Number(element.countdownOffsetSeconds)||0;
+  document.querySelector('#property-countdown-offset-direction').value=String(offset<0?-1:offset>0?1:(element.countdownOffsetDirection||-1));
+  document.querySelector('#property-countdown-offset-minutes').value=Math.floor(Math.abs(offset)/60);
+  document.querySelector('#property-countdown-offset-seconds').value=Math.abs(offset)%60;
   document.querySelector('#property-weather-mode').value = element.weatherMode || 'today';
   document.querySelector('#property-weather-location-note').textContent = 'Der Standort wird automatisch vom abspielenden Display übernommen. Ohne Display-Standort erscheint „Bitte Standort wählen“.';
   renderTickerProperties(element);
@@ -4097,7 +4184,7 @@ document.querySelector('#editor-ratio').addEventListener('change', event => {
   applyEditorOrientation(event.target.value, previousDesign);
   scheduleSlideAutosave();
 });
-document.querySelector('#slide-event').addEventListener('change',()=>{pushEditorHistory();renderEditorCanvas();scheduleSlideAutosave();});
+document.querySelector('#slide-event').addEventListener('change',()=>{pushEditorHistory();syncEditorEventSource();renderEditorCanvas();scheduleSlideAutosave();});
 document.querySelector('#slide-status').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
 document.querySelector('#slide-starts-at').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
 document.querySelector('#slide-ends-at').addEventListener('change',()=>{pushEditorHistory();scheduleSlideAutosave();});
@@ -4177,8 +4264,8 @@ const propertyBindings = [
   ['property-qr-kind', 'qrKind', value => value], ['property-qr-value', 'qrValue', value => value], ['property-wifi-ssid', 'wifiSsid', value => value],
   ['property-wifi-password', 'wifiPassword', value => value], ['property-wifi-encryption', 'wifiEncryption', value => value], ['property-wifi-hidden', 'wifiHidden', (_, input) => input.checked],
   ['property-qr-foreground', 'qrForeground', value => value], ['property-countdown-mode', 'countdownMode', value => value],
-  ['property-countdown-daily-time', 'countdownDailyTime', value => value], ['property-countdown-target', 'targetTime', value => value], ['property-countdown-prefix', 'prefix', value => value],
-  ['property-countdown-suffix', 'suffix', value => value], ['property-countdown-show-seconds', 'showSeconds', (_,input) => input.checked], ['property-weather-mode', 'weatherMode', value => value]
+  ['property-countdown-event-field','countdownEventField',value=>value], ['property-countdown-schedule-category','countdownScheduleCategory',value=>value], ['property-countdown-schedule-caption','countdownScheduleCaption',value=>value], ['property-countdown-schedule-edge','countdownScheduleEdge',value=>value], ['property-countdown-daily-time', 'countdownDailyTime', value => value], ['property-countdown-target', 'targetTime', value => value], ['property-countdown-prefix', 'prefix', value => value],
+  ['property-countdown-format','countdownFormat',value=>value], ['property-countdown-suffix', 'suffix', value => value], ['property-countdown-show-seconds', 'showSeconds', (_,input) => input.checked], ['property-weather-mode', 'weatherMode', value => value]
 ];
 propertyBindings.forEach(([id, property, convert]) => {
   const input = document.querySelector(`#${id}`);
@@ -4190,6 +4277,10 @@ propertyBindings.forEach(([id, property, convert]) => {
   });
 });
 
+for(const id of ['direction','minutes','seconds'])document.querySelector(`#property-countdown-offset-${id}`).addEventListener('change',()=>{
+  const minutes=Math.max(0,Math.min(10080,Number(document.querySelector('#property-countdown-offset-minutes').value)||0)),seconds=Math.max(0,Math.min(59,Number(document.querySelector('#property-countdown-offset-seconds').value)||0)),direction=Number(document.querySelector('#property-countdown-offset-direction').value);
+  const element=selectedEditorElement();if(!element)return;pushEditorHistory();Object.assign(element,{countdownOffsetSeconds:Math.min(604800,minutes*60+seconds)*direction,countdownOffsetDirection:direction});renderEditorCanvas();scheduleSlideAutosave();
+});
 document.querySelector('#property-background-mode').addEventListener('change', event => {
   const transparent = event.target.value === 'transparent';
   const color = document.querySelector('#property-background');
@@ -4375,15 +4466,37 @@ function renderTemplates() {
   list.querySelectorAll('[data-edit-template-id]').forEach(button=>button.addEventListener('click',()=>{editTemplate(button.dataset.editTemplateId);document.querySelector('#template-dialog').close();}));
   list.querySelectorAll('[data-delete-template-id]').forEach(button=>button.addEventListener('click',async()=>{const template=state.templates.find(item=>item.id===button.dataset.deleteTemplateId);if(!template||!window.confirm(`Vorlage „${template.name}“ archivieren?`))return;try{await apiRequest(template.document?.menuTemplate?`/api/menus/templates/${template.id}`:`/api/templates/${template.id}`,{method:'DELETE'});await loadContent();showToast('Vorlage wurde archiviert.');}catch(error){showToast(error.message);}}));
 }
-function loadTemplateElements(template){state.editorElements=structuredClone(template.document.elements||[]).map(element=>({...element,...(element.type==='wayfinding'?{background:'transparent',logo:{src:'',position:'top-left'},clock:{enabled:false,position:'bottom-right'}}:{}),id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`}));state.editorSlideSettings={...defaultSlideSettings(),...(structuredClone(template.document.settings||{})),background:{...defaultSlideSettings().background,...(structuredClone(template.document.settings?.background||{}))},logo:{...defaultSlideSettings().logo,...(structuredClone(template.document.settings?.logo||{}))},clock:{...defaultSlideSettings().clock,...(structuredClone(template.document.settings?.clock||{}))}};state.selectedEditorElementId=state.editorElements[0]?.id||null;document.querySelector('#editor-ratio').value=template.orientation;applyEditorOrientation(template.orientation,template.document.designOrientation);renderEditorCanvas();}
+function loadTemplateElements(template){state.editorElements=structuredClone(template.document.elements||[]).map(element=>({...element,...(element.type==='wayfinding'?{background:'transparent',logo:{src:'',position:'top-left'},clock:{enabled:false,position:'bottom-right'}}:{}),id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`}));state.editorEventSelection=structuredClone(template.document.eventSelection||{mode:'linked'});syncEditorEventSource();state.editorSlideSettings={...defaultSlideSettings(),...(structuredClone(template.document.settings||{})),background:{...defaultSlideSettings().background,...(structuredClone(template.document.settings?.background||{}))},logo:{...defaultSlideSettings().logo,...(structuredClone(template.document.settings?.logo||{}))},clock:{...defaultSlideSettings().clock,...(structuredClone(template.document.settings?.clock||{}))}};state.selectedEditorElementId=state.editorElements[0]?.id||null;document.querySelector('#editor-ratio').value=template.orientation;applyEditorOrientation(template.orientation,template.document.designOrientation);renderEditorCanvas();}
 function applyTemplate(id){const template=state.templates.find(item=>item.id===id);if(!template){openSlideEditor();return;}openSlideEditor();loadTemplateElements(template);scheduleSlideAutosave({immediate:true,successMessage:`Vorlage „${template.name}“ wurde geladen und als Slide gespeichert.`});}
 function editTemplate(id){const template=state.templates.find(item=>item.id===id);if(!template)return;openSlideEditor(null,{templateId:template.id,templateName:template.name});loadTemplateElements(template);}
-function openTemplateChooser(){const list=document.querySelector('#template-chooser-list'),templates=state.templates.map((template,index)=>`<label class="template-choice"><input type="radio" name="template-choice" value="${escapeHtml(template.id)}" ${index===0?'checked':''}><span class="template-choice-preview">${slideThumb({type:'custom',ratio:template.orientation,elements:template.document.elements||[],settings:template.document.settings||{}})}</span><span><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(orientationLabels[template.orientation]||'Querformat')} · ${escapeHtml(template.description||'Wiederverwendbares Layout')}</small></span></label>`).join('');list.innerHTML=`${templates}<label class="template-choice"><input type="radio" name="template-choice" value="__blank" ${state.templates.length?'':'checked'}><span class="template-choice-preview blank-slide-preview">＋</span><span><strong>Ohne Vorlage</strong><small>Leeren Blanko-Slide öffnen</small></span></label>`;showAuthMessage('template-chooser-message','');document.querySelector('#template-chooser-dialog').showModal();}
+function websiteSlidePayload(urlValue,name='',orientation='auto') {
+  let url;try{url=new URL(String(urlValue).trim());}catch{throw new Error('Bitte eine vollständige HTTPS-Adresse eingeben.');}
+  if(url.protocol!=='https:'||url.username||url.password||url.href.length>2048)throw new Error('Eine HTTPS-Adresse ohne eingebettete Zugangsdaten ist erforderlich.');
+  if(!['auto','portrait','landscape'].includes(orientation))throw new Error('Das Slide-Format ist ungültig.');
+  const title=String(name).trim()||url.hostname;if(title.length>100)throw new Error('Der Name darf höchstens 100 Zeichen enthalten.');
+  return {name:title,type:'web',orientation,status:'draft',document:{designOrientation:orientation==='portrait'?'portrait':'landscape',elements:[{id:'website',type:'web',src:url.href,x:0,y:0,width:100,height:100,background:'transparent',opacity:100,rotation:0,padding:0}]}};
+}
+function openUrlSlideDialog() {
+  if(state.currentUser?.role==='viewer')return;
+  document.querySelector('#url-slide-form').reset();showAuthMessage('url-slide-message','');document.querySelector('#url-slide-dialog').showModal();
+}
+document.querySelectorAll('[data-action="url-slide"]').forEach(button=>button.addEventListener('click',openUrlSlideDialog));
+document.querySelector('#url-slide-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(state.currentUser?.role==='viewer')return;
+  const form=event.currentTarget;form.inert=true;
+  try {
+    const payload=websiteSlidePayload(document.querySelector('#url-slide-url').value,document.querySelector('#url-slide-name').value,document.querySelector('#url-slide-orientation').value);
+    const result=await apiRequest('/api/slides',{method:'POST',body:JSON.stringify({...payload,tags:scopedTags([])})});
+    await loadContent();document.querySelector('#url-slide-dialog').close();openSlideEditor(slideForUi(result.slide));showToast('Website-Slide als Entwurf erstellt. Vorschau prüfen und anschließend einem Kanal hinzufügen.');
+  }catch(error){showAuthMessage('url-slide-message',error.message);}finally{form.inert=false;}
+});
+
+function openTemplateChooser(){const list=document.querySelector('#template-chooser-list'),templates=state.templates.map((template,index)=>`<label class="template-choice"><input type="radio" name="template-choice" value="${escapeHtml(template.id)}" ${index===0?'checked':''}><span class="template-choice-preview">${slideThumb({type:'custom',ratio:template.orientation,elements:template.document.elements||[],settings:template.document.settings||{}})}</span><span><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(orientationLabels[template.orientation]||'Querformat')} · ${escapeHtml(template.description||'Wiederverwendbares Layout')}</small></span></label>`).join('');list.innerHTML=`<label class="template-choice"><input type="radio" name="template-choice" value="__website"><span class="template-choice-preview blank-slide-preview">↗</span><span><strong>Website / externes Display</strong><small>Slide direkt aus einer HTTPS-URL erstellen</small></span></label>${templates}<label class="template-choice"><input type="radio" name="template-choice" value="__blank" ${state.templates.length?'':'checked'}><span class="template-choice-preview blank-slide-preview">＋</span><span><strong>Ohne Vorlage</strong><small>Leeren Blanko-Slide öffnen</small></span></label>`;showAuthMessage('template-chooser-message','');document.querySelector('#template-chooser-dialog').showModal();}
 document.querySelector('[data-action="blank-slide"]').addEventListener('click',()=>openSlideEditor());
 document.querySelector('[data-action="use-template"]').addEventListener('click',openTemplateChooser);
-document.querySelector('#template-chooser-form').addEventListener('submit',event=>{event.preventDefault();const selected=document.querySelector('input[name="template-choice"]:checked');if(!selected){showAuthMessage('template-chooser-message','Bitte wähle eine Vorlage aus.');return;}document.querySelector('#template-chooser-dialog').close();selected.value==='__blank'?openSlideEditor():applyTemplate(selected.value);});
+document.querySelector('#template-chooser-form').addEventListener('submit',event=>{event.preventDefault();const selected=document.querySelector('input[name="template-choice"]:checked');if(!selected){showAuthMessage('template-chooser-message','Bitte wähle eine Vorlage aus.');return;}document.querySelector('#template-chooser-dialog').close();selected.value==='__website'?openUrlSlideDialog():selected.value==='__blank'?openSlideEditor():applyTemplate(selected.value);});
 document.querySelector('[data-action="manage-templates"]').addEventListener('click',()=>{renderTemplates();document.querySelector('#template-dialog').showModal();});
-document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{...(current?.document?.menuTemplate?{menuTemplate:true}:{}),designOrientation:state.editorAutoDesignOrientation,settings:structuredClone(state.editorSlideSettings),elements:structuredClone(state.editorElements)}};try{await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${current.id}`:current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();if(current?.document?.menuTemplate)await loadMenuModuleSettings();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
+document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{...(current?.document?.menuTemplate?{menuTemplate:true}:{}),designOrientation:state.editorAutoDesignOrientation,eventSelection:structuredClone(state.editorEventSelection||{mode:'linked'}),settings:structuredClone(state.editorSlideSettings),elements:structuredClone(state.editorElements)}};try{await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${current.id}`:current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();if(current?.document?.menuTemplate)await loadMenuModuleSettings();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
 
 ['channel-transition', 'channel-orientation', 'channel-repeat'].forEach(id => document.querySelector(`#${id}`).addEventListener('change', () => {
   updateChannelPreviewFormat();
@@ -4488,7 +4601,7 @@ function channelPreviewItems(channel, slides, events, nowMs=Date.now()) {
   return channel.items.flatMap(entry=>{
     const slide=byId.get(entry.slideId);
     if(!slide||slide.deletedAt||slide.status==='archived'||(slide.startsAt&&!(Date.parse(slide.startsAt)<=nowMs))||(slide.endsAt&&!(Date.parse(slide.endsAt)>nowMs)))return[];
-    return [{...entry,slide,event:eventsById.get(slide.eventId||channel.eventId)||null}];
+    return [{...entry,slide,event:selectSlideEvent(events,slide.document?.eventSelection||{},eventsById.get(slide.eventId||channel.eventId)||null,nowMs)}];
   });
 }
 
@@ -4578,6 +4691,12 @@ async function openChannelPreview() {
   try{
     const [slides,events]=await Promise.all([licensedRead('/api/slides'),licensedRead('/api/events')]);
     if(generation!==channelPreviewGeneration||!dialog.open)return;
+    if((slides.data||[]).some(slide=>JSON.stringify(slide.document||{}).includes('countdownSchedule'))) {
+      const previewItems=channelPreviewItems(channel,slides.data||[],events.data||[]);
+      const ids=[...new Set(previewItems.map(item=>item.event?.id).filter(Boolean))];
+      await Promise.all(ids.map(async id=>{const response=await apiRequest(`/api/events/${encodeURIComponent(id)}/schedule`);const event=(events.data||[]).find(item=>item.id===id);if(event)event.scheduleEntries=(response.data||[]).filter(entry=>!['internal','cancelled'].includes(entry.category));}));
+      if(generation!==channelPreviewGeneration||!dialog.open)return;
+    }
     channelPreviewSession={channel,slides:(slides.data||[]).map(slide=>({...slide,document:hydrateMediaReferences(slide.document||{})})),events:events.data||[],elapsedMs:0,startedAt:performance.now(),paused:false,signature:null,renderKey:null};
     const observer=new ResizeObserver(scaleChannelPreview);channelPreviewSession.resizeObserver=observer;
     observer.observe(document.querySelector('#channel-preview-viewport'));
@@ -5535,10 +5654,11 @@ setInterval(() => { if (state.view === 'operations') renderOperations(); }, 3000
 setInterval(() => { if (state.view === 'displays' && !document.querySelector('dialog[open]')) loadDisplays(); }, 30000);
 setInterval(() => {
   if (!slideDialog.open) return;
+  if(state.editorEventSelection?.mode!=='linked'){const eventId=editorSelectedEvent()?.id||'';if(state.editorResolvedEventId!==eventId){state.editorResolvedEventId=eventId;syncEditorEventSource();renderEditorCanvas();}}
   document.querySelectorAll('.canvas-element.type-countdown').forEach(node => {
     const element = state.editorElements.find(item => item.id === node.dataset.editorElement);
     const countdown = node.querySelector('.canvas-countdown');
-    if (element && countdown) countdown.textContent = `${element.prefix || ''}${countdownText(element)}${element.suffix || ''}`;
+    if (element && countdown) {const resolved=resolveEventCountdown(element,editorSelectedEvent());countdown.style.visibility=resolved.countdownMissing?'hidden':'';countdown.textContent = `${element.prefix || ''}${countdownText(resolved)}${element.suffix || ''}`;}
   });
   document.querySelectorAll('.canvas-ticker [data-ticker-countdown]').forEach(node => {
     try {

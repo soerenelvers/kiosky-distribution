@@ -79,3 +79,21 @@ Die PDF-Player-Prüfung verwendet farbige Eckmarken und kontrolliert anhand echt
 Screenshot-Pixel die Sichtbarkeit aller vier Seitenecken in Querformat, Hochformat,
 Quadrat und einem sehr breiten Fenster. Sie prüft außerdem bestehende PDF-Rahmen,
 responsive Slides, aus dem PDF ermittelte Randfarben und manuelle Hintergrundfarben.
+
+## Event-, URL- und mobile Editor-Regression
+
+`python tests/event-editor-browser-smoke.py` prüft nach dem Build automatische
+Eventquellen, Event-Countdown/Offset, Tagordner, direkte HTTPS-Website-Slides und
+Playeraktualisierung ohne Navigation. Fünf Smartphone-/Tabletformate im Hoch- und
+Querformat sowie die Layoutgrenzen sämtlicher vorhandener Dialoge werden geprüft.
+Mit `KIOSKY_BROWSER_ENGINE=webkit` wird ein installiertes Playwright-WebKit benutzt;
+`KIOSKY_WEBKIT_EXECUTABLE` erlaubt einen eigenen MiniBrowser-Pfad.
+`KIOSKY_BROWSER_PLATFORM=wordpress` oder `typo3` prüft den gemeinsamen
+CMS-Oberflächentransport gegen den isolierten Node-Server. Native CMS-Installation
+und Upgrade werden zusätzlich durch die obligatorische CI geprüft.
+`KIOSKY_BROWSER_OUT` legt den Ordner für Screenshots und Serverlogs fest.
+
+Die externe Displayseite wird ausschließlich als lokale Browserfixture erfüllt.
+Es erfolgt kein Zugriff auf ein fremdes Kundendisplay. Die Bibliotheks-/Dialogtests
+sind Browseremulation mit Touch-Eingabe; echte Android-/iOS-Geräte sind davon
+getrennte Abnahmeziele. Funktionsbeschreibung: [Event- und URL-Slides](dynamic-event-slides.md).

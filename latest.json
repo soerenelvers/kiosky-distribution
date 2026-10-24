@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "75f38fea9921d0ae5f5477004d60b6a61ef64a57",
+  "source_commit": "f6d2c45b315608b3b1a61cdc366375685245e884",
   "product": "kiosky",
-  "version": "3.11.2",
-  "released_at": "2026-10-23T14:05:58.555Z",
+  "version": "3.12.0",
+  "released_at": "2026-10-24T19:06:14.033Z",
   "channel": "stable",
-  "release_notes": "## [3.11.2] – 2026-10-23\n\n- WordPress-Untermenü „Kiosky → Speisekarten“ öffnet die vollständige gemeinsame Verwaltung statt des vereinfachten Kücheneditors: Vorgaben, Kartenerstellung, Vorlagen-/Layoutgestaltung, Ausrichtung, PDF-Import, Weblink-Abonnements und Benutzerzuweisungen sind wieder am vorgesehenen Einstieg erreichbar.\n- Öffentliche Küchen- und Passwortfreigaben unter `/speisekarten` behalten ihren getrennten Inhaltseditor und die bestehenden Rechte. WordPress-Anmeldung, REST-Nonce, Lizenzfreigaben und Modulschalter bleiben verbindlich; bestehende Karten und Zuweisungen benötigen keine Migration.\n- Regressionen führen die tatsächlichen WordPress-Einstiegsfunktionen aus, prüfen vollständige Verwaltungsdokumente und getrennte Küchen-/Freigaberouten einschließlich Unterverzeichnis-URLs. Native WordPress-Installations-/Upgrade-Prüfungen kontrollieren zusätzlich Menü-Hooks und die ausgelieferten Dokumente. Funktionsabgleich für das Speisekarten-Modul dokumentiert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.11.2",
+  "release_notes": "## [3.12.0] – 2026-10-24\n\n- Event-Daten pro Slide automatisch aus der aktuellen, heutigen oder zeitlich nächsten freigegebenen Veranstaltung beziehen; optional nach Raum filtern. Alle Eventfelder, Eventblöcke und Eventbilder einer Slide verwenden dieselbe Auswahl. Bestehende feste Slide-/Kanalverknüpfungen bleiben die Vorgabe.\n- Countdown auf Event-Zeitfelder oder den nächsten öffentlichen Ablaufpunkt mit Kategorie, Bezeichnung und Beginn/Ende ergänzen. Positive und negative Offsets in Minuten und Sekunden, Sekundenanzeige und verbleibende Minuten als Text unterstützen; fehlende Ziele bleiben unsichtbar, erreichte feste Event-Ziele springen nicht auf den nächsten Tag.\n- Vorhandene Tags in Slides und Kanälen als virtuelle Ordner mit Inhaltszähler anzeigen; zwischen Tagfilter und Ordneransicht wechseln. Mehrfach getaggte Inhalte erscheinen in mehreren Ordnern; bestehende Zuordnungen und Stapelaktionen bleiben erhalten.\n- „Slide aus URL“ direkt in der Bibliothek und im Erstellungsdialog anbieten. HTTPS-Webseiten und externe Displays werden als vollflächige responsive Entwürfe angelegt und im vorhandenen Editor sowie Player dargestellt. Fremde Einbettungs-, Anmelde- und Cookie-Regeln bleiben maßgeblich.\n- Mobile Werkzeugleiste um jederzeit erreichbares Speichern/Schließen erweitern; Touch-Flächen, Formularschriften, Safe-Area-Abstände und Dialoghöhen für Smartphones/Tablets verbessern. Gemeinsame Quellen gelten in Standalone, WordPress und TYPO3.\n- Hohe neu gemeldete Undici-Sicherheitsbefunde in den Update-Service-Entwicklungswerkzeugen durch Festlegung der kompatiblen korrigierten Version 7.30.1 beheben.\n- Regressionen für Event-Auswahl und Tageswechsel, öffentliche Player-Daten und Revisionen, Countdown-Offsets, URL-Erstellung, Tag-Ordner sowie Smartphone-/Tablet-Ansichten in Chromium und WebKit ergänzen. Native CMS-Smokes prüfen dieselben Datenverträge bei Installation und Upgrade.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.12.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.11.2",
+    "core_version": "3.12.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.11.2",
-    "typo3_extension_version": "3.11.2"
+    "wordpress_plugin_version": "3.12.0",
+    "typo3_extension_version": "3.12.0"
   },
   "components": {
     "core": {
-      "version": "3.11.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.2.zip?ref=v3.11.2",
-      "sha256": "e0cada09aba5903b1e6b3943b9f66e06b939316e0630e6e519378111fb631383"
+      "version": "3.12.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.12.0.zip?ref=v3.12.0",
+      "sha256": "71236dd234f54e361521b88438b83908724b581a759db70e7a2e8cd460656973"
     },
     "standalone": {
-      "version": "3.11.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.11.2.zip?ref=v3.11.2",
-      "sha256": "e0cada09aba5903b1e6b3943b9f66e06b939316e0630e6e519378111fb631383"
+      "version": "3.12.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.12.0.zip?ref=v3.12.0",
+      "sha256": "71236dd234f54e361521b88438b83908724b581a759db70e7a2e8cd460656973"
     },
     "wordpress": {
-      "version": "3.11.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.11.2.zip?ref=v3.11.2",
-      "sha256": "c7c3249e0406f610e8b59617842d4d3c5d6b74f19a09680affce541af021f682",
+      "version": "3.12.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.12.0.zip?ref=v3.12.0",
+      "sha256": "20bf5916ddbf03b80f00f7b363ab1ca7184168c448c49e7e7fe89fa792d69635",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.11.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.11.2.zip?ref=v3.11.2",
-      "sha256": "1e3cc905cf72869e689a198304c3513e406ec50ba7e2943221cec396c8bfe76c",
+      "version": "3.12.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.12.0.zip?ref=v3.12.0",
+      "sha256": "ab018400e913b764b8741a6d13ee46f1aa8d37ce26f72ff45d27bf4c5c65ee19",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
