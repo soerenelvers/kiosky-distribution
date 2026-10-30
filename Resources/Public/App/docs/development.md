@@ -118,3 +118,35 @@ Bleibt der Fehler bestehen, müssen die konkrete Datenbankfehlermeldung,
 Schreibberechtigungen, Verbindungszustand und Datenbankgrenzen geprüft werden.
 SQL-Abfragen und Optionsinhalte können Zugangsdaten enthalten und dürfen nicht
 ungefiltert weitergegeben werden.
+
+### WordPress-Schreibgrenzen ab 3.12.2
+
+Der Store validiert neue Inhalte weiterhin mit WordPress je Datenbankspalte.
+Die ASCII-Abfrage überträgt den Wert einmal als Base64; `FROM_BASE64()` schreibt
+unveränderte serialisierte Bytes. `SHA2(option_value, 256)` vergleicht den zuvor
+gelesenen Zustand atomar und unabhängig von einer Groß-/Kleinschreibung der
+Textkollation. Dies reduziert die Abfragegröße gegenüber zwei vollständigen
+Zustandswerten. Es gibt weder eine Datenmigration noch ein neues Speicherformat.
+
+Vor dem UPDATE wird `@@max_allowed_packet` gelesen. Überschreitet bereits die
+verkleinerte Abfrage dieses Limit, bleibt der bestehende Datensatz erhalten;
+das Datenbanklimit muss dann beim Hoster angepasst werden. Das Plugin ändert
+keine Serverkonfiguration und komprimiert oder entfernt keine Inhalte.
+Fehlgeschlagene Lesezugriffe und nicht als Array lesbare gespeicherte Zustände
+brechen ab, anstatt mit einer leeren Datenbasis fortzufahren.
+
+Öffentliche Fehler enthalten feste Kennungen wie `WP_DB_PACKET_LIMIT`,
+`WP_DB_PERMISSION`, `WP_DB_CONNECTION`, `WP_DB_TEXT_FORMAT`, `WP_DB_STATE_CORRUPT`,
+`WP_DB_DISK_FULL` oder `WP_DB_WRITE`, aber keine ursprünglichen SQL-Fehlertexte.
+Die WordPress-Fehlerausgabe wird für die Schreibabfrage vorübergehend unterdrückt
+und anschließend wiederhergestellt, damit keine serialisierten Inhalte in die
+Antwort oder das Standard-Datenbankfehlerlog gelangen.
+
+Der native Smoke führt die CRUD-/Einstellungsszenarien zusätzlich mit 700 KB
+Bestand und 1 MB Abfragebudget aus. Lokal wurde derselbe Fall gegen MariaDB 11
+mit echtem `max_allowed_packet=1048576` nachgestellt: 3.12.1 scheitert, 3.12.2
+besteht. Weitere Fälle prüfen Überschreitungen vor dem Senden, unveränderte Daten
+bei Fehlern sowie eine zweite Datenbankverbindung als gleichzeitigen Schreiber
+(dieselben Fixture-Zugangsdaten). Der eigenständige Test
+`php tests/wordpress-storage-errors-test.php` prüft sichere Diagnosen und
+verhindert das Überschreiben nach einem Lesefehler.
