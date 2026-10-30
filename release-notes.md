@@ -1,9 +1,4 @@
-## [3.12.0] – 2026-10-24
+## [3.12.1] – 2026-10-30
 
-- Event-Daten pro Slide automatisch aus der aktuellen, heutigen oder zeitlich nächsten freigegebenen Veranstaltung beziehen; optional nach Raum filtern. Alle Eventfelder, Eventblöcke und Eventbilder einer Slide verwenden dieselbe Auswahl. Bestehende feste Slide-/Kanalverknüpfungen bleiben die Vorgabe.
-- Countdown auf Event-Zeitfelder oder den nächsten öffentlichen Ablaufpunkt mit Kategorie, Bezeichnung und Beginn/Ende ergänzen. Positive und negative Offsets in Minuten und Sekunden, Sekundenanzeige und verbleibende Minuten als Text unterstützen; fehlende Ziele bleiben unsichtbar, erreichte feste Event-Ziele springen nicht auf den nächsten Tag.
-- Vorhandene Tags in Slides und Kanälen als virtuelle Ordner mit Inhaltszähler anzeigen; zwischen Tagfilter und Ordneransicht wechseln. Mehrfach getaggte Inhalte erscheinen in mehreren Ordnern; bestehende Zuordnungen und Stapelaktionen bleiben erhalten.
-- „Slide aus URL“ direkt in der Bibliothek und im Erstellungsdialog anbieten. HTTPS-Webseiten und externe Displays werden als vollflächige responsive Entwürfe angelegt und im vorhandenen Editor sowie Player dargestellt. Fremde Einbettungs-, Anmelde- und Cookie-Regeln bleiben maßgeblich.
-- Mobile Werkzeugleiste um jederzeit erreichbares Speichern/Schließen erweitern; Touch-Flächen, Formularschriften, Safe-Area-Abstände und Dialoghöhen für Smartphones/Tablets verbessern. Gemeinsame Quellen gelten in Standalone, WordPress und TYPO3.
-- Hohe neu gemeldete Undici-Sicherheitsbefunde in den Update-Service-Entwicklungswerkzeugen durch Festlegung der kompatiblen korrigierten Version 7.30.1 beheben.
-- Regressionen für Event-Auswahl und Tageswechsel, öffentliche Player-Daten und Revisionen, Countdown-Offsets, URL-Erstellung, Tag-Ordner sowie Smartphone-/Tablet-Ansichten in Chromium und WebKit ergänzen. Native CMS-Smokes prüfen dieselben Datenverträge bei Installation und Upgrade.
+- WordPress-Speicherung bei gemischten Zeichensätzen der Optionstabelle korrigieren: Die native spaltenweise Validierung erlaubt gültige Unicode-Inhalte im Datenfeld, auch wenn Optionsnamen noch den älteren Zeichensatz verwenden. Dies behebt blockierte Änderungen an Slides und Einstellungen ohne Datenbankmigration oder Änderung des Speicherformats.
+- Native WordPress-/MariaDB-Regressionen für Anlegen, Bearbeiten und Löschen von Slides, Einstellungen, Optionscache, konkurrierende Änderungen und echte Schreibfehler ergänzen; sowohl gemischte als auch durchgängig utf8mb4 kodierte Tabellen prüfen.

@@ -97,3 +97,24 @@ Die externe Displayseite wird ausschließlich als lokale Browserfixture erfüllt
 Es erfolgt kein Zugriff auf ein fremdes Kundendisplay. Die Bibliotheks-/Dialogtests
 sind Browseremulation mit Touch-Eingabe; echte Android-/iOS-Geräte sind davon
 getrennte Abnahmeziele. Funktionsbeschreibung: [Event- und URL-Slides](dynamic-event-slides.md).
+
+## WordPress-Speicherregression
+
+Der native WordPress-Smoke (`tests/wordpress-external-api-smoke.php`) führt
+`wordpress-state-store-scenario.php` gegen eine isolierte temporäre Optionstabelle
+aus. Geprüft werden gemischte utf8-/utf8mb4-Spalten sowie reine utf8mb4-Spalten,
+Unicode-Inhalte, Slide-Erstellung/-Änderung/-Löschung, Einstellungen, Optionscache,
+veraltete Schreibzugriffe und Erhalt der Daten bei einem SQL-Schreibfehler.
+Die eigentliche WordPress-Optionstabelle wird nicht verändert.
+
+Bei „Kiosky-Daten konnten nicht in WordPress gespeichert werden“ wurde ein
+Schreibzugriff abgewiesen. Bis 3.12.0 konnte die tabellenweite Zeichensatzprüfung
+einer direkten SQL-Abfrage gültige Inhalte in einer utf8mb4-Datenspalte ablehnen,
+wenn andere Spalten noch utf8 verwenden. Ab 3.12.1 verwendet der Store die native
+WordPress-Funktion `$wpdb->update()` mit spaltenweiser Validierung und dem bisherigen
+Wert als Bedingung gegen paralleles Überschreiben. Das vorhandene serialisierte
+Datenformat bleibt erhalten; keine Konvertierung von Kundentabellen ist nötig.
+Bleibt der Fehler bestehen, müssen die konkrete Datenbankfehlermeldung,
+Schreibberechtigungen, Verbindungszustand und Datenbankgrenzen geprüft werden.
+SQL-Abfragen und Optionsinhalte können Zugangsdaten enthalten und dürfen nicht
+ungefiltert weitergegeben werden.
