@@ -1,7 +1,6 @@
-## [3.13.1] – 2026-11-02
+## [3.13.2] – 2026-11-02
 
-- Zeitplaneinträge in allen drei Ausgaben erst beim Klick auf „Schließen“ speichern. Änderungen im Dialog bleiben bis dahin lokal; Fehler oder ungültige Zeiträume lassen den Dialog mit den Eingaben geöffnet. Mehrfachzuweisungen behalten vorhandene IDs und werden ohne parallele CMS-Schreibabfragen gespeichert.
-
-- WordPress-Speicherfehler „Die Kiosky-Daten wurden parallel geändert“ bei gleichzeitigem Player-Betrieb beheben: Reine Heartbeats, Befehlszustellung und API-Nutzungszeitpunkte mit Inhalts-/Einstellungsänderungen zusammenführen, ohne die eigentliche API-Aktion erneut auszuführen. Aktuelle Statuswerte und gespeicherte Inhalte bleiben erhalten.
-- Atomaren Datenbankvergleich, echte Konfigurationskonflikte, Änderungen/Widerrufe von API-Zugängen und die erneute Player-Autorisierung nach Schlüsselwechsel oder Löschen weiterhin erzwingen. Keine Datenmigration oder Änderung am WordPress-Speicherformat.
-- Reproduktion mit echter zweiter MariaDB-Verbindung für Slide-Speichern/-Löschen, Einstellungen und ein Rennen direkt vor dem SQL-UPDATE ergänzen; zusätzlich große Bestände, Paketgrenzen und Zeichensätze prüfen.
+- Verbleibenden CMS-Speicherkonflikt bei laufenden Playern beheben: Heartbeats aktualisieren ausschließlich gespeicherte Statusfelder und schreiben keine berechneten Kanal-/Slide-Namen, Auflösungs-, Standort- oder Matrixprojektionen zurück. Der Fehler ist unter 3.13.1 mit echten Player-API-Aufrufen reproduziert; die früheren Tests mit direkt veränderten Statusfeldern deckten diesen Fall nicht ab.
+- Mehrere Zuweisungen eines Zeitplaneintrags beim Schließen mit einer gemeinsamen Anfrage speichern. Alle Ziele werden vorab geprüft und in WordPress/TYPO3 mit einem geschützten Zustands-Schreibvorgang, in Standalone innerhalb einer Datenbanktransaktion übernommen. Fehler hinterlassen keine Teiländerungen; vorhandene Ziel-IDs und Metadaten bleiben erhalten.
+- Den beim Öffnen gelesenen Eintrag mit dem aktuellen Stand vergleichen. Tatsächlich geänderte oder entfernte Einträge ergeben einen gezielten 409-Konflikt, ohne neuere Änderungen zu überschreiben. Dialog und Eingaben bleiben bei Fehlern geöffnet.
+- Regressionen für echte Player-Heartbeats, Mehrfachziele, einen fehlgeschlagenen WordPress-SQL-Schreibvorgang, späte SQLite-Fehler und ungültige/veraltete Auswahlen ergänzen.

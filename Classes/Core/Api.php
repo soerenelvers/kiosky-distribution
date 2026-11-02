@@ -10,6 +10,7 @@ use Throwable;
 require_once __DIR__.'/LicenseClient.php';
 require_once __DIR__.'/SlideEventSelection.php';
 require_once __DIR__.'/MediaSlides.php';
+require_once __DIR__.'/ScheduleBlock.php';
 
 final class Api
 {
@@ -52,7 +53,7 @@ final class Api
             if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer|content-packages)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
             $status = $error instanceof RuntimeException ? max(400, min(599, $error->getCode() ?: 422)) : 500;
             return [$status, ['error' => [
-                'code' => $status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST')),
+                'code' => $status === 409 && $path === '/api/schedules/block' ? 'SCHEDULE_CONFLICT' : ($status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST'))),
                 'message' => $error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.',
             ]]];
         }
@@ -423,6 +424,19 @@ final class Api
             $state['playerPairings'][$index]['displayId'] = $display['id'];
             $state['playerPairings'][$index]['pairedAt'] = $this->now();
             return $this->ok(['pairing' => ['id' => $pairing['id'], 'status' => 'paired']], true);
+        }
+
+        if ($path === '/api/schedules/block' && $method === 'PUT') {
+            $available=[];
+            foreach (['display'=>'displays','group'=>'groups','matrix'=>'matrices'] as $type=>$collection) $available[$type]=array_column($this->active($state[$collection]),'id');
+            $plan=ScheduleBlock::plan($body,$state['schedules'],$available);
+            $entries=[];
+            foreach($plan['saves'] as $save) {
+                $result=$save['id']?$this->itemRoute($state,'PUT','schedules','entry',$save['id'],$save['input']):$this->collectionRoute($state,'POST','schedules','entry',$save['input']);
+                $entries[]=$result[1]['entry'];
+            }
+            foreach($plan['removeIds'] as $id)$this->itemRoute($state,'DELETE','schedules','entry',$id,[]);
+            return $this->ok(['entries'=>$entries],true);
         }
 
         foreach ([
@@ -1641,7 +1655,8 @@ final class Api
             $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
             // Heartbeat metadata may never overwrite credentials, routing or display configuration.
             $fields=array_intersect_key($body,array_flip(['channelId','slideId','version','cached','viewportWidth','viewportHeight','devicePixelRatio','lastSeenAt','online']));
-            $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($display,$fields);
+            // Persist status into the raw record: $display contains read-only projections.
+            $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($state['displays'][$index],$fields);
             $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));
             return $this->ok(['ok' => true], true);
         }

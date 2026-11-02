@@ -222,14 +222,37 @@ geöffnet und weist auf „Schließen“ hin. Während des Speicherns verhindert
 Sperre weitere Bearbeitung und doppelte Abschlüsse. Validierungs-/Speicherfehler
 lassen Eingaben und Dialog erhalten.
 
-Vorhandene Ziel-Zuweisungen werden aktualisiert, neue Ziele ergänzt und entfernte
-Ziele anschließend gelöscht. Die Schreibanfragen laufen nacheinander; vorhandene
-IDs werden nicht jedes Mal gelöscht und neu angelegt. Erfolgreiche Zwischenschritte
-bleiben bei einem späteren Fehler für den erneuten Versuch bekannt. Drag-and-drop
-und Größenänderung außerhalb des Dialogs behalten ihr bisheriges Verhalten.
+Ab 3.13.2 sendet der Dialog `PUT /api/schedules/block` mit den beim Öffnen
+gelesenen `entries`, allen gewählten `targets` und `changes` (Zeitraum,
+Priorität, Wiederholung). Vorhandene Zuweisungen behalten ihre IDs; neue Ziele
+werden ergänzt und entfernte Ziele im selben Vorgang gelöscht. Der gemeinsame
+CMS-Kern speichert den Zustand einmal, Standalone verwendet einen Savepoint.
+Fehler bei Prüfung, Speicherung oder späten SQL-Änderungen hinterlassen keine
+Teiländerungen. Ein abweichender aktueller Eintrag liefert 409
+`SCHEDULE_CONFLICT`; ein automatisches Überschreiben neuerer Daten findet nicht
+statt. Drag-and-drop außerhalb des Dialogs behält sein bisheriges Verhalten.
 
 `tests/schedule-close-save.test.ts` prüft Entwürfe, Schließen, Doppelklick,
 Reihenfolge, Fehler und Escape. `python tests/schedule-close-browser-smoke.py`
 prüft nach dem Build unveränderte Serverdaten vor dem Schließen, mehrere Ziele,
 Fehler/Retry und mobile Layouts. `KIOSKY_BROWSER_PLATFORM=wordpress|typo3` prüft
 den CMS-Transport; `KIOSKY_BROWSER_ENGINE=webkit` verwendet das lokale WebKit.
+
+### Reale Heartbeats und Zeitplan-Blocktransaktionen
+
+Der neue native `kioskyWordPressRealHeartbeatScenario()` verwendet die echte
+Player-API während der Zeitplanspeicherung. Unter 3.13.1 kopierte deren Heartbeat
+berechnete Displayfelder aus `listCollection()` in den Zustand. Wechselnde
+`currentSlideId`-Projektionen wurden deshalb als Konfigurationsänderung erkannt
+und erschöpften die bisherigen Wiederholungen. Ab 3.13.2 wird die Status-Whitelist
+auf den ursprünglichen gespeicherten Displaydatensatz angewendet. Anzeigenamen,
+Auflösung, Standort und Matrix bleiben ausschließlich Leseprojektionen.
+
+Der native Test prüft zwei Zuweisungen mit einem Zustands-UPDATE neben einem
+echten Heartbeat sowie vollständige Unverändertheit bei abgewiesenem SQL-UPDATE.
+Die Node-Tests lösen späte UPDATE-/DELETE-Fehler aus und prüfen das Zurückrollen
+aller Ziele. `php tests/schedule-block-test.php` prüft dieselbe API, ihre
+Snapshot-/Zielprüfung, genau einen Speichervorgang und Viewer-Schutz. Der
+Medien-Smoke prüft den neuen Endpunkt zusätzlich in realen WordPress- und
+TYPO3-Installationen. Die Browserprüfung erwartet eine einzige Schreibanfrage
+beim Schließen und unveränderte Serverdaten nach einem Speicherfehler.

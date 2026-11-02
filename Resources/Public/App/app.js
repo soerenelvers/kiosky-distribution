@@ -5342,7 +5342,7 @@ function openScheduleEntryDialog(block) {
   document.querySelector('#schedule-entry-recurrence').value=block.recurrence;
   document.querySelector('#schedule-entry-targets').innerHTML=orderedScheduleTargets().map(id=>{const target=catalog[id];return`<label><input type="checkbox" value="${escapeHtml(id)}" ${targets.has(id)?'checked':''}><span><strong>${escapeHtml(target.label)}</strong><small>${escapeHtml(target.kind)} · ${target.count} Display${target.count===1?'':'s'}</small></span></label>`;}).join('')||'<p class="property-note">Noch keine Displays oder Gruppen vorhanden.</p>';
   setScheduleSaveStatus('saved');
-  state.scheduleEntrySnapshot=scheduleEntryFormSnapshot();state.scheduleEntryHasPartialSave=false;
+  state.scheduleEntrySnapshot=scheduleEntryFormSnapshot();state.scheduleEntryOriginals=structuredClone(block.entries);
   document.querySelector('#schedule-entry-dialog').showModal();
 }
 
@@ -5501,44 +5501,27 @@ function scheduleEntryFormSnapshot() {
 async function persistScheduleEntryDialog() {
   const ids=document.querySelector('#schedule-entry-ids').value.split(',').filter(Boolean),entries=ids.map(id=>state.scheduleEntries.find(entry=>entry.id===id)).filter(Boolean);
   if(!entries.length){setScheduleSaveStatus('error');showToast('Der Zeitplaneintrag ist nicht mehr verfügbar.');return false;}
-  const base=entries[0],start=scheduleDateTimeInputValue('schedule-entry-start-date','schedule-entry-start-time'),end=scheduleDateTimeInputValue('schedule-entry-end-date','schedule-entry-end-time');
+  const start=scheduleDateTimeInputValue('schedule-entry-start-date','schedule-entry-start-time'),end=scheduleDateTimeInputValue('schedule-entry-end-date','schedule-entry-end-time');
   if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())){setScheduleSaveStatus('error');showToast('Bitte für „Von“ und „Bis“ ein gültiges Datum mit Uhrzeit angeben.');return false;}
   if(end<=start){setScheduleSaveStatus('error');showToast('„Bis“ muss nach „Von“ liegen.');return false;}
   const targets=[...document.querySelectorAll('#schedule-entry-targets input:checked')].map(input=>input.value);
   if(!targets.length){setScheduleSaveStatus('error');showToast('Ein Zeitplaneintrag benötigt mindestens ein Ziel.');return false;}
   const priority=document.querySelector('#schedule-entry-priority').value,recurrence=document.querySelector('#schedule-entry-recurrence').value;
-  const activeIds=new Set(ids),retainedIds=new Set();
-  const remember=entry=>{
-    state.scheduleEntryHasPartialSave=true;
-    activeIds.add(entry.id);retainedIds.add(entry.id);
-    state.scheduleEntries=state.scheduleEntries.filter(item=>item.id!==entry.id).concat(entry);
-    document.querySelector('#schedule-entry-ids').value=[...activeIds].join(',');
-  };
   setScheduleSaveStatus('saving');
-  try{
-    // Retain existing target IDs and serialize requests. Parallel writes to the
-    // same CMS state used to make even one editor compete with itself.
-    for(const target of targets){
-      const existing=entries.find(entry=>scheduleTargetValue(entry)===target);
-      const payload=schedulePayload(existing||base,{...scheduleTargetPayload(target),startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence});
-      const result=await apiRequest(existing?`/api/schedules/${existing.id}`:'/api/schedules',{method:existing?'PUT':'POST',body:JSON.stringify(payload)});
-      remember(result.entry);
-    }
-    for(const entry of entries.filter(item=>!retainedIds.has(item.id))){
-      await apiRequest(`/api/schedules/${entry.id}`,{method:'DELETE'});
-      state.scheduleEntryHasPartialSave=true;
-      activeIds.delete(entry.id);state.scheduleEntries=state.scheduleEntries.filter(item=>item.id!==entry.id);
-      document.querySelector('#schedule-entry-ids').value=[...activeIds].join(',');
-    }
-    await loadScheduling();state.scheduleEntryHasPartialSave=false;setScheduleSaveStatus('saved');return true;
-  }catch(error){setScheduleSaveStatus('error');showToast(error.message);return false;}
+  try {
+    const result=await apiRequest('/api/schedules/block',{method:'PUT',body:JSON.stringify({entries:state.scheduleEntryOriginals,targets:targets.map(scheduleTargetPayload),changes:{startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence}})});
+    state.scheduleEntries=state.scheduleEntries.filter(entry=>!ids.includes(entry.id)).concat(result.entries);
+    document.querySelector('#schedule-entry-ids').value=result.entries.map(entry=>entry.id).join(',');
+    state.scheduleEntryOriginals=structuredClone(result.entries);
+    await loadScheduling();setScheduleSaveStatus('saved');return true;
+  } catch(error){setScheduleSaveStatus('error');showToast(error.message);return false;}
 }
 
 async function closeScheduleEntryDialog() {
   const dialog=document.querySelector('#schedule-entry-dialog'),form=document.querySelector('#schedule-entry-form');
   if(!dialog.open)return;
   if(state.scheduleEntrySavePromise)return state.scheduleEntrySavePromise;
-  if(!state.scheduleEntryHasPartialSave&&scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot){dialog.close();return;}
+  if(scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot){dialog.close();return;}
   if(!form.reportValidity())return;
   form.inert=true;
   state.scheduleEntrySavePromise=(async()=>{
@@ -5548,7 +5531,7 @@ async function closeScheduleEntryDialog() {
 }
 
 function markScheduleEntryDraft() {
-  setScheduleSaveStatus(!state.scheduleEntryHasPartialSave&&scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot?'saved':'pending');
+  setScheduleSaveStatus(scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot?'saved':'pending');
 }
 
 document.querySelector('#schedule-entry-form').addEventListener('submit',event=>{event.preventDefault();markScheduleEntryDraft();});
@@ -5559,7 +5542,7 @@ document.querySelector('#schedule-entry-targets').addEventListener('change',even
   markScheduleEntryDraft();
 });
 document.querySelector('#schedule-entry-dialog').addEventListener('cancel',event=>{
-  if(state.scheduleEntrySavePromise||state.scheduleEntryHasPartialSave||scheduleEntryFormSnapshot()!==state.scheduleEntrySnapshot){event.preventDefault();showToast('Bitte „Schließen“ drücken, um die Änderungen zu speichern.');}
+  if(state.scheduleEntrySavePromise||scheduleEntryFormSnapshot()!==state.scheduleEntrySnapshot){event.preventDefault();showToast('Bitte „Schließen“ drücken, um die Änderungen zu speichern.');}
 });
 document.querySelector('#delete-schedule-entry').addEventListener('click',()=>{const ids=document.querySelector('#schedule-entry-ids').value.split(',').filter(Boolean),entries=ids.map(id=>state.scheduleEntries.find(entry=>entry.id===id)).filter(Boolean);if(entries.length)deleteScheduleBlock({...entries[0],entries},true);});
 
