@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "a9fd8d1c67c70699521c85895a08031f1ae09448",
+  "source_commit": "303e2a789b6a1e6898e5443c07780196ddbcef70",
   "product": "kiosky",
-  "version": "3.13.0",
-  "released_at": "2026-11-02T16:13:32.132Z",
+  "version": "3.13.1",
+  "released_at": "2026-11-02T18:06:50.220Z",
   "channel": "stable",
-  "release_notes": "## [3.13.0] – 2026-11-02\n\n- Bulk-Slide-Import in allen drei Ausgaben: Bis zu 100 Bilder/Videos in der Mediathek auswählen und pro Datei einen Entwurf erstellen. Native IDs und Videotrim-Werte bleiben erhalten; Dateien werden nicht kopiert. Vollständige Prüfung und gemeinsames Speichern verhindern Teilimporte. Bilder/Videos erscheinen vollständig und unverzerrt.\n\n- Zeitplanung in Standalone, WordPress und TYPO3 um „Nur Online-Displays“ ergänzen: Tages-/Wochenzeilen und Timetable filtern, Gruppen und Matrizen mit mindestens einem Online-Mitglied anzeigen, den Filter pro Browser merken und Statusänderungen regelmäßig nachladen. Bestehende Zuweisungen und die Reihenfolge ausgeblendeter Ziele bleiben erhalten.\n\n- WordPress-Bild-/Videoauswahl sowie Hintergründe, Logos, Wegweisung und Veranstaltungs-/Werbebilder an den originalen WordPress-Medienbrowser anbinden. Suche, vorhandene Medien und neue Uploads verwenden direkt die native Mediathek; auswählbare Dateien werden anhand der bestehenden Attachment-ID übernommen.\n- Native Medienauswahl im übergeordneten WordPress-Fenster öffnen, damit der Dialog außerhalb des Kiosky-Iframes bedienbar bleibt. Abbrechen, Schließen-vor-Auswahl und frische Upload-Metadaten berücksichtigen; Editor-Objektverweise und bestehende Medienrechte erhalten.\n- Native WordPress- und JavaScript-Regressionen für Dateien anderer Autoren, private Medien, Viewer-Rechte, Auswahlfilter, Abbrechen, Metadaten und unveränderte Standalone-/TYPO3-Auswahl ergänzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.13.0",
+  "release_notes": "## [3.13.1] – 2026-11-02\n\n- Zeitplaneinträge in allen drei Ausgaben erst beim Klick auf „Schließen“ speichern. Änderungen im Dialog bleiben bis dahin lokal; Fehler oder ungültige Zeiträume lassen den Dialog mit den Eingaben geöffnet. Mehrfachzuweisungen behalten vorhandene IDs und werden ohne parallele CMS-Schreibabfragen gespeichert.\n\n- WordPress-Speicherfehler „Die Kiosky-Daten wurden parallel geändert“ bei gleichzeitigem Player-Betrieb beheben: Reine Heartbeats, Befehlszustellung und API-Nutzungszeitpunkte mit Inhalts-/Einstellungsänderungen zusammenführen, ohne die eigentliche API-Aktion erneut auszuführen. Aktuelle Statuswerte und gespeicherte Inhalte bleiben erhalten.\n- Atomaren Datenbankvergleich, echte Konfigurationskonflikte, Änderungen/Widerrufe von API-Zugängen und die erneute Player-Autorisierung nach Schlüsselwechsel oder Löschen weiterhin erzwingen. Keine Datenmigration oder Änderung am WordPress-Speicherformat.\n- Reproduktion mit echter zweiter MariaDB-Verbindung für Slide-Speichern/-Löschen, Einstellungen und ein Rennen direkt vor dem SQL-UPDATE ergänzen; zusätzlich große Bestände, Paketgrenzen und Zeichensätze prüfen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.13.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.13.0",
+    "core_version": "3.13.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.13.0",
-    "typo3_extension_version": "3.13.0"
+    "wordpress_plugin_version": "3.13.1",
+    "typo3_extension_version": "3.13.1"
   },
   "components": {
     "core": {
-      "version": "3.13.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.0.zip?ref=v3.13.0",
-      "sha256": "b07352d813bbb3b397aed18151b7c1e9ff91ec87239225bebbeed9e7d550c7ac"
+      "version": "3.13.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.1.zip?ref=v3.13.1",
+      "sha256": "4b95cdeb4dd17d57b87ef784c1eec2054ecd8acb375d52b942d0af84499935c3"
     },
     "standalone": {
-      "version": "3.13.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.0.zip?ref=v3.13.0",
-      "sha256": "b07352d813bbb3b397aed18151b7c1e9ff91ec87239225bebbeed9e7d550c7ac"
+      "version": "3.13.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.1.zip?ref=v3.13.1",
+      "sha256": "4b95cdeb4dd17d57b87ef784c1eec2054ecd8acb375d52b942d0af84499935c3"
     },
     "wordpress": {
-      "version": "3.13.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.13.0.zip?ref=v3.13.0",
-      "sha256": "9eeca40f308789ff9d1a7c5d21e3d5bb8bcbfde8ea4298170dd60b42a11a2751",
+      "version": "3.13.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.13.1.zip?ref=v3.13.1",
+      "sha256": "5690cceedf06770d15d5b14a0048f66ade96d3bf43452bbc71fceb0d897b9099",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.13.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.13.0.zip?ref=v3.13.0",
-      "sha256": "a966ada4eb4360aed13a9999a305dd782fb6fc0d6505217595ef8868030510bc",
+      "version": "3.13.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.13.1.zip?ref=v3.13.1",
+      "sha256": "d65da3da3d4c2685ab76649689206e866bfc95e59211d093df4160ccd6433253",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

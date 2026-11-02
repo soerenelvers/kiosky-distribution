@@ -186,3 +186,50 @@ Online-Filter in Tages-/Wochenansicht, Live-Heartbeat-Übernahme und mobile Layo
 CMS-Speicherung wird zusätzlich in `cms-media-smoke.php` geprüft. WordPress läuft
 für diese Medienauswahl im echten nativen Fixture über
 `tests/wordpress-media-browser-smoke.py` einschließlich Mehrfachauswahl.
+
+## WordPress: Speichern während laufender Player
+
+Ab 3.13.1 darf eine reine Hintergrundänderung an Player-Status,
+Befehlszustellungs-IDs oder API-Nutzungszeitpunkten den gemeinsamen WordPress-
+Zustand beim Speichern nicht allein als Inhaltskonflikt sperren. Der Store
+vergleicht den geladenen Ausgangsstand, die beabsichtigte Änderung und den
+frischen Datenbankstand. Nur wenn mindestens eine Seite ausschließlich solche
+Statuswerte verändert hat, werden die Änderungen vor dem atomaren UPDATE
+zusammengeführt. Eine Heartbeat-Beobachtung wird dabei vollständig erhalten;
+ältere Zeitstempel ersetzen keine neueren Beobachtungen.
+
+Zwei Konfigurationsänderungen werden weiterhin nicht automatisch zusammengeführt.
+Geänderte/widerrufene API-Zugänge erzwingen die erneute Autorisierung. Dasselbe
+gilt für Status-/Zustellungsanfragen eines inzwischen geänderten oder gelöschten
+Players. Neue Befehle werden nicht durch alte Heartbeats entfernt. Der
+SHA-256-Vergleich bleibt auch nach dem Zusammenführen aktiv; bei einem weiteren
+Rennen liest der Store erneut, statt die komplette API-Aktion zu wiederholen.
+
+`php tests/wordpress-state-merge-test.php` prüft diese Grenzen. Die native
+`wordpress-state-store-scenario.php` erzeugt mit einer zweiten Datenbankverbindung
+vor jedem Speichern eine Statusänderung: 3.13.0 erschöpft die API-Wiederholungen
+mit exakt der gemeldeten Fehlermeldung; 3.13.1 speichert/löscht Slides und speichert
+Einstellungen jeweils ohne Aktionswiederholung. Ein weiteres Rennen zwischen
+frischem Lesen und SQL-UPDATE sowie die bisherigen echten Konflikt-, Unicode-
+und 700-KB-/1-MB-Pakettests bleiben Teil desselben Szenarios.
+
+## Zeitplaneintrag: beim Schließen speichern
+
+Der Dialog hält Datum, Uhrzeit, Priorität, Wiederholung und Ziele lokal, bis
+„Schließen“ oder das Schließen-Kreuz betätigt wird. Unverändertes Schließen sendet
+keine Schreibanfrage. Enter speichert nicht; Escape hält einen geänderten Dialog
+geöffnet und weist auf „Schließen“ hin. Während des Speicherns verhindert eine
+Sperre weitere Bearbeitung und doppelte Abschlüsse. Validierungs-/Speicherfehler
+lassen Eingaben und Dialog erhalten.
+
+Vorhandene Ziel-Zuweisungen werden aktualisiert, neue Ziele ergänzt und entfernte
+Ziele anschließend gelöscht. Die Schreibanfragen laufen nacheinander; vorhandene
+IDs werden nicht jedes Mal gelöscht und neu angelegt. Erfolgreiche Zwischenschritte
+bleiben bei einem späteren Fehler für den erneuten Versuch bekannt. Drag-and-drop
+und Größenänderung außerhalb des Dialogs behalten ihr bisheriges Verhalten.
+
+`tests/schedule-close-save.test.ts` prüft Entwürfe, Schließen, Doppelklick,
+Reihenfolge, Fehler und Escape. `python tests/schedule-close-browser-smoke.py`
+prüft nach dem Build unveränderte Serverdaten vor dem Schließen, mehrere Ziele,
+Fehler/Retry und mobile Layouts. `KIOSKY_BROWSER_PLATFORM=wordpress|typo3` prüft
+den CMS-Transport; `KIOSKY_BROWSER_ENGINE=webkit` verwendet das lokale WebKit.

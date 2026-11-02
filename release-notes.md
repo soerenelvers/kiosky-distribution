@@ -1,9 +1,7 @@
-## [3.13.0] – 2026-11-02
+## [3.13.1] – 2026-11-02
 
-- Bulk-Slide-Import in allen drei Ausgaben: Bis zu 100 Bilder/Videos in der Mediathek auswählen und pro Datei einen Entwurf erstellen. Native IDs und Videotrim-Werte bleiben erhalten; Dateien werden nicht kopiert. Vollständige Prüfung und gemeinsames Speichern verhindern Teilimporte. Bilder/Videos erscheinen vollständig und unverzerrt.
+- Zeitplaneinträge in allen drei Ausgaben erst beim Klick auf „Schließen“ speichern. Änderungen im Dialog bleiben bis dahin lokal; Fehler oder ungültige Zeiträume lassen den Dialog mit den Eingaben geöffnet. Mehrfachzuweisungen behalten vorhandene IDs und werden ohne parallele CMS-Schreibabfragen gespeichert.
 
-- Zeitplanung in Standalone, WordPress und TYPO3 um „Nur Online-Displays“ ergänzen: Tages-/Wochenzeilen und Timetable filtern, Gruppen und Matrizen mit mindestens einem Online-Mitglied anzeigen, den Filter pro Browser merken und Statusänderungen regelmäßig nachladen. Bestehende Zuweisungen und die Reihenfolge ausgeblendeter Ziele bleiben erhalten.
-
-- WordPress-Bild-/Videoauswahl sowie Hintergründe, Logos, Wegweisung und Veranstaltungs-/Werbebilder an den originalen WordPress-Medienbrowser anbinden. Suche, vorhandene Medien und neue Uploads verwenden direkt die native Mediathek; auswählbare Dateien werden anhand der bestehenden Attachment-ID übernommen.
-- Native Medienauswahl im übergeordneten WordPress-Fenster öffnen, damit der Dialog außerhalb des Kiosky-Iframes bedienbar bleibt. Abbrechen, Schließen-vor-Auswahl und frische Upload-Metadaten berücksichtigen; Editor-Objektverweise und bestehende Medienrechte erhalten.
-- Native WordPress- und JavaScript-Regressionen für Dateien anderer Autoren, private Medien, Viewer-Rechte, Auswahlfilter, Abbrechen, Metadaten und unveränderte Standalone-/TYPO3-Auswahl ergänzen.
+- WordPress-Speicherfehler „Die Kiosky-Daten wurden parallel geändert“ bei gleichzeitigem Player-Betrieb beheben: Reine Heartbeats, Befehlszustellung und API-Nutzungszeitpunkte mit Inhalts-/Einstellungsänderungen zusammenführen, ohne die eigentliche API-Aktion erneut auszuführen. Aktuelle Statuswerte und gespeicherte Inhalte bleiben erhalten.
+- Atomaren Datenbankvergleich, echte Konfigurationskonflikte, Änderungen/Widerrufe von API-Zugängen und die erneute Player-Autorisierung nach Schlüsselwechsel oder Löschen weiterhin erzwingen. Keine Datenmigration oder Änderung am WordPress-Speicherformat.
+- Reproduktion mit echter zweiter MariaDB-Verbindung für Slide-Speichern/-Löschen, Einstellungen und ein Rennen direkt vor dem SQL-UPDATE ergänzen; zusätzlich große Bestände, Paketgrenzen und Zeichensätze prüfen.

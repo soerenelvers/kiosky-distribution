@@ -4194,6 +4194,7 @@ document.querySelector('#new-slide-title').addEventListener('input',()=>{pushEdi
 
 document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', async () => {
   const dialog = document.querySelector(`#${button.dataset.closeDialog}`);
+  if (dialog.id === 'schedule-entry-dialog') { await closeScheduleEntryDialog(); return; }
   if (dialog === slideDialog && !state.editingTemplateId) {
     try { await flushSlideAutosave(); } catch { return; }
   }
@@ -5054,7 +5055,7 @@ document.querySelector('#matrix-form').addEventListener('submit',async event=>{e
 
 // Display scheduler
 const dayKeys=['mo','di','mi','do','fr','sa','so'];
-state.scheduleEntries=[];state.scheduleTargetOrder=[];state.scheduleDay=dayKeys[(new Date().getDay()+6)%7];state.scheduleView='day';state.scheduleSaveQueue=Promise.resolve();
+state.scheduleEntries=[];state.scheduleTargetOrder=[];state.scheduleDay=dayKeys[(new Date().getDay()+6)%7];state.scheduleView='day';state.scheduleEntrySavePromise=null;state.scheduleEntrySnapshot='';
 state.scheduleOnlineOnly=false;
 try { state.scheduleOnlineOnly=localStorage.getItem('kiosky.scheduleOnlineOnly')==='true'; } catch {}
 document.querySelector('#schedule-online-only').checked=state.scheduleOnlineOnly;
@@ -5171,7 +5172,7 @@ document.querySelector('#schedule-online-only').addEventListener('change',event=
 setInterval(()=>{void refreshScheduleOnlineStatus();},15000);
 
 function setScheduleSaveStatus(status) {
-  const labels={saving:'Wird gespeichert und veröffentlicht …',saved:'Veröffentlicht',error:'Speichern oder Veröffentlichen fehlgeschlagen'};
+  const labels={pending:'Änderungen noch nicht gespeichert · Schließen zum Speichern',saving:'Wird gespeichert und veröffentlicht …',saved:'Veröffentlicht',error:'Speichern oder Veröffentlichen fehlgeschlagen'};
   for(const element of [document.querySelector('#schedule-save-status'),document.querySelector('#schedule-dialog-save-status')]){
     if(!element)continue;element.classList.toggle('is-saving',status==='saving');element.classList.toggle('is-error',status==='error');element.querySelector('span:last-child').textContent=labels[status]||labels.saved;
   }
@@ -5341,6 +5342,7 @@ function openScheduleEntryDialog(block) {
   document.querySelector('#schedule-entry-recurrence').value=block.recurrence;
   document.querySelector('#schedule-entry-targets').innerHTML=orderedScheduleTargets().map(id=>{const target=catalog[id];return`<label><input type="checkbox" value="${escapeHtml(id)}" ${targets.has(id)?'checked':''}><span><strong>${escapeHtml(target.label)}</strong><small>${escapeHtml(target.kind)} · ${target.count} Display${target.count===1?'':'s'}</small></span></label>`;}).join('')||'<p class="property-note">Noch keine Displays oder Gruppen vorhanden.</p>';
   setScheduleSaveStatus('saved');
+  state.scheduleEntrySnapshot=scheduleEntryFormSnapshot();state.scheduleEntryHasPartialSave=false;
   document.querySelector('#schedule-entry-dialog').showModal();
 }
 
@@ -5490,28 +5492,75 @@ async function saveScheduleTargetOrder(targetKeys) {
   catch(error){setScheduleSaveStatus('error');showToast(error.message);await loadScheduling();}
 }
 
+function scheduleEntryFormSnapshot() {
+  const fields=['schedule-entry-start-date','schedule-entry-start-time','schedule-entry-end-date','schedule-entry-end-time','schedule-entry-priority','schedule-entry-recurrence'].map(id=>document.querySelector(`#${id}`).value);
+  const targets=[...document.querySelectorAll('#schedule-entry-targets input:checked')].map(input=>input.value).sort();
+  return JSON.stringify([fields,targets]);
+}
+
 async function persistScheduleEntryDialog() {
-  const ids=document.querySelector('#schedule-entry-ids').value.split(',').filter(Boolean),entries=ids.map(id=>state.scheduleEntries.find(entry=>entry.id===id)).filter(Boolean);if(!entries.length)return;
+  const ids=document.querySelector('#schedule-entry-ids').value.split(',').filter(Boolean),entries=ids.map(id=>state.scheduleEntries.find(entry=>entry.id===id)).filter(Boolean);
+  if(!entries.length){setScheduleSaveStatus('error');showToast('Der Zeitplaneintrag ist nicht mehr verfügbar.');return false;}
   const base=entries[0],start=scheduleDateTimeInputValue('schedule-entry-start-date','schedule-entry-start-time'),end=scheduleDateTimeInputValue('schedule-entry-end-date','schedule-entry-end-time');
-  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())){setScheduleSaveStatus('error');showToast('Bitte für „Von“ und „Bis“ ein gültiges Datum mit Uhrzeit angeben.');return;}
-  if(end<=start){setScheduleSaveStatus('error');showToast('„Bis“ muss nach „Von“ liegen.');return;}
-  const targets=[...document.querySelectorAll('#schedule-entry-targets input:checked')].map(input=>input.value);if(!targets.length){setScheduleSaveStatus('error');showToast('Ein Zeitplaneintrag benötigt mindestens ein Ziel.');return;}
-  const priority=document.querySelector('#schedule-entry-priority').value,recurrence=document.querySelector('#schedule-entry-recurrence').value;setScheduleSaveStatus('saving');
+  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())){setScheduleSaveStatus('error');showToast('Bitte für „Von“ und „Bis“ ein gültiges Datum mit Uhrzeit angeben.');return false;}
+  if(end<=start){setScheduleSaveStatus('error');showToast('„Bis“ muss nach „Von“ liegen.');return false;}
+  const targets=[...document.querySelectorAll('#schedule-entry-targets input:checked')].map(input=>input.value);
+  if(!targets.length){setScheduleSaveStatus('error');showToast('Ein Zeitplaneintrag benötigt mindestens ein Ziel.');return false;}
+  const priority=document.querySelector('#schedule-entry-priority').value,recurrence=document.querySelector('#schedule-entry-recurrence').value;
+  const activeIds=new Set(ids),retainedIds=new Set();
+  const remember=entry=>{
+    state.scheduleEntryHasPartialSave=true;
+    activeIds.add(entry.id);retainedIds.add(entry.id);
+    state.scheduleEntries=state.scheduleEntries.filter(item=>item.id!==entry.id).concat(entry);
+    document.querySelector('#schedule-entry-ids').value=[...activeIds].join(',');
+  };
+  setScheduleSaveStatus('saving');
   try{
-    const firstTarget=scheduleTargetPayload(targets[0]),firstResult=await apiRequest(`/api/schedules/${base.id}`,{method:'PUT',body:JSON.stringify(schedulePayload(base,{...firstTarget,startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence}))});
-    await Promise.all(entries.slice(1).map(entry=>apiRequest(`/api/schedules/${entry.id}`,{method:'DELETE'})));
-    const created=await Promise.all(targets.slice(1).map(target=>apiRequest('/api/schedules',{method:'POST',body:JSON.stringify(schedulePayload(base,{...scheduleTargetPayload(target),startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence}))})));
-    document.querySelector('#schedule-entry-ids').value=[firstResult.entry.id,...created.map(result=>result.entry.id)].join(',');await loadScheduling();setScheduleSaveStatus('saved');
-  }catch(error){setScheduleSaveStatus('error');showToast(error.message);await loadScheduling();}
+    // Retain existing target IDs and serialize requests. Parallel writes to the
+    // same CMS state used to make even one editor compete with itself.
+    for(const target of targets){
+      const existing=entries.find(entry=>scheduleTargetValue(entry)===target);
+      const payload=schedulePayload(existing||base,{...scheduleTargetPayload(target),startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence});
+      const result=await apiRequest(existing?`/api/schedules/${existing.id}`:'/api/schedules',{method:existing?'PUT':'POST',body:JSON.stringify(payload)});
+      remember(result.entry);
+    }
+    for(const entry of entries.filter(item=>!retainedIds.has(item.id))){
+      await apiRequest(`/api/schedules/${entry.id}`,{method:'DELETE'});
+      state.scheduleEntryHasPartialSave=true;
+      activeIds.delete(entry.id);state.scheduleEntries=state.scheduleEntries.filter(item=>item.id!==entry.id);
+      document.querySelector('#schedule-entry-ids').value=[...activeIds].join(',');
+    }
+    await loadScheduling();state.scheduleEntryHasPartialSave=false;setScheduleSaveStatus('saved');return true;
+  }catch(error){setScheduleSaveStatus('error');showToast(error.message);return false;}
 }
 
-function queueScheduleEntryAutosave() {
-  setScheduleSaveStatus('saving');state.scheduleSaveQueue=state.scheduleSaveQueue.then(()=>persistScheduleEntryDialog());
+async function closeScheduleEntryDialog() {
+  const dialog=document.querySelector('#schedule-entry-dialog'),form=document.querySelector('#schedule-entry-form');
+  if(!dialog.open)return;
+  if(state.scheduleEntrySavePromise)return state.scheduleEntrySavePromise;
+  if(!state.scheduleEntryHasPartialSave&&scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot){dialog.close();return;}
+  if(!form.reportValidity())return;
+  form.inert=true;
+  state.scheduleEntrySavePromise=(async()=>{
+    if(await persistScheduleEntryDialog())dialog.close();
+  })();
+  try{await state.scheduleEntrySavePromise;}finally{state.scheduleEntrySavePromise=null;form.inert=false;}
 }
 
-document.querySelector('#schedule-entry-form').addEventListener('submit',event=>{event.preventDefault();queueScheduleEntryAutosave();});
-['schedule-entry-start-date','schedule-entry-start-time','schedule-entry-end-date','schedule-entry-end-time','schedule-entry-priority','schedule-entry-recurrence'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',queueScheduleEntryAutosave));
-document.querySelector('#schedule-entry-targets').addEventListener('change',event=>{if(!event.target.matches('input[type="checkbox"]'))return;const checked=document.querySelectorAll('#schedule-entry-targets input:checked');if(!checked.length){event.target.checked=true;showToast('Mindestens ein Ziel muss ausgewählt bleiben.');return;}queueScheduleEntryAutosave();});
+function markScheduleEntryDraft() {
+  setScheduleSaveStatus(!state.scheduleEntryHasPartialSave&&scheduleEntryFormSnapshot()===state.scheduleEntrySnapshot?'saved':'pending');
+}
+
+document.querySelector('#schedule-entry-form').addEventListener('submit',event=>{event.preventDefault();markScheduleEntryDraft();});
+['schedule-entry-start-date','schedule-entry-start-time','schedule-entry-end-date','schedule-entry-end-time','schedule-entry-priority','schedule-entry-recurrence'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',markScheduleEntryDraft));
+document.querySelector('#schedule-entry-targets').addEventListener('change',event=>{
+  if(!event.target.matches('input[type="checkbox"]'))return;
+  if(!document.querySelectorAll('#schedule-entry-targets input:checked').length){event.target.checked=true;showToast('Mindestens ein Ziel muss ausgewählt bleiben.');return;}
+  markScheduleEntryDraft();
+});
+document.querySelector('#schedule-entry-dialog').addEventListener('cancel',event=>{
+  if(state.scheduleEntrySavePromise||state.scheduleEntryHasPartialSave||scheduleEntryFormSnapshot()!==state.scheduleEntrySnapshot){event.preventDefault();showToast('Bitte „Schließen“ drücken, um die Änderungen zu speichern.');}
+});
 document.querySelector('#delete-schedule-entry').addEventListener('click',()=>{const ids=document.querySelector('#schedule-entry-ids').value.split(',').filter(Boolean),entries=ids.map(id=>state.scheduleEntries.find(entry=>entry.id===id)).filter(Boolean);if(entries.length)deleteScheduleBlock({...entries[0],entries},true);});
 
 function syncScheduleView() {
