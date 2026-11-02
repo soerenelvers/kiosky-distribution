@@ -1,5 +1,9 @@
-## [3.12.2] – 2026-10-30
+## [3.13.0] – 2026-11-02
 
-- WordPress-Schreibabfragen verkleinern: Den serialisierten Datenbestand nur einmal über einen ASCII-Transport übertragen und den vorherigen Zustand atomar mit SHA-256 vergleichen. Dies behebt den reproduzierten Ausfall bei 700 KB Bestand und 1 MB Datenbank-Paketlimit; Speicherformat und spaltenweise Zeichensatzprüfung bleiben erhalten.
-- Datenbank-Paketgrenzen vor dem Schreiben prüfen und sichere Fehlerkennungen für Paketlimit, Rechte, Verbindungsfehler, Zeichensatz/Feldgröße, Speicherplatz sowie beschädigte Daten anzeigen. Fehlgeschlagene Lesezugriffe und unlesbare Bestände dürfen nicht als leere Datenbasis überschrieben werden. SQL-Inhalte und Zugangsdaten erscheinen nicht in den öffentlichen Fehlermeldungen.
-- Native WordPress-Regressionen um große Bestände, Paketgrenzen, ungültige Textdaten, tatsächliche konkurrierende Schreibzugriffe mit zwei Verbindungen und Schutz unlesbarer Daten erweitern; vertrauliche Inhalte in Fehlermeldungen separat prüfen.
+- Bulk-Slide-Import in allen drei Ausgaben: Bis zu 100 Bilder/Videos in der Mediathek auswählen und pro Datei einen Entwurf erstellen. Native IDs und Videotrim-Werte bleiben erhalten; Dateien werden nicht kopiert. Vollständige Prüfung und gemeinsames Speichern verhindern Teilimporte. Bilder/Videos erscheinen vollständig und unverzerrt.
+
+- Zeitplanung in Standalone, WordPress und TYPO3 um „Nur Online-Displays“ ergänzen: Tages-/Wochenzeilen und Timetable filtern, Gruppen und Matrizen mit mindestens einem Online-Mitglied anzeigen, den Filter pro Browser merken und Statusänderungen regelmäßig nachladen. Bestehende Zuweisungen und die Reihenfolge ausgeblendeter Ziele bleiben erhalten.
+
+- WordPress-Bild-/Videoauswahl sowie Hintergründe, Logos, Wegweisung und Veranstaltungs-/Werbebilder an den originalen WordPress-Medienbrowser anbinden. Suche, vorhandene Medien und neue Uploads verwenden direkt die native Mediathek; auswählbare Dateien werden anhand der bestehenden Attachment-ID übernommen.
+- Native Medienauswahl im übergeordneten WordPress-Fenster öffnen, damit der Dialog außerhalb des Kiosky-Iframes bedienbar bleibt. Abbrechen, Schließen-vor-Auswahl und frische Upload-Metadaten berücksichtigen; Editor-Objektverweise und bestehende Medienrechte erhalten.
+- Native WordPress- und JavaScript-Regressionen für Dateien anderer Autoren, private Medien, Viewer-Rechte, Auswahlfilter, Abbrechen, Metadaten und unveränderte Standalone-/TYPO3-Auswahl ergänzen.

@@ -354,7 +354,7 @@ function scheduleAutomaticTextFit(root=document){if(root.matches?.('.slide-edito
     return `<span class="wf-text ${cell.underline?'is-underlined':''}" ${auto} style="${colorStyle};${textFontStyle(cell,textStylePixels(cell),styles[cell.textStyle]||styles.body)};text-align:${cell.align||'left'};font-weight:${cell.bold||['hero','heading'].includes(cell.textStyle)?700:400}">${cell.text||''}</span>`;
   };
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""${element.menuPdfImage?' data-menu-pdf-page':''}></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""${element.menuPdfImage?' data-menu-pdf-page':''}${element.mediaFit === 'contain' ? ' style="object-fit:contain"' : ''}></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} ${element.mediaFit === 'contain' ? 'style="object-fit:contain"' : ''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -3801,8 +3801,8 @@ function editorElementMarkup(element) {
   if (element.type === 'weather') return weatherElementMarkup(element);
   if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
   if (element.type === 'countdown') { const countdown=resolveEventCountdown(element,event);return `<div class="canvas-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)}>${escapeHtml(element.prefix || '')}${countdownText(countdown)}${escapeHtml(element.suffix || '')}</div>`; }
-  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt=""${element.menuPdfImage?' style="object-fit:contain"':''}>`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
-  if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
+  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt=""${(element.menuPdfImage || element.mediaFit === 'contain')?' style="object-fit:contain"':''}>`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
+  if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''}${element.mediaFit === 'contain' ? ' style="object-fit:contain"' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
   if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Sommerkonzert',element)}</div>`;
   if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="canvas-text-content" ${hiddenEventValueAttributes(presentation.present)}>${escapeHtml(presentation.text)}</div>`; }
@@ -4347,8 +4347,8 @@ document.querySelector('#property-video-library').addEventListener('click', () =
   scheduleSlideAutosave({ immediate: true, successMessage: 'Video wurde zugewiesen und die Slide gespeichert.' });
 }, 'video', 'Video für das ausgewählte Element auswählen'));
 
-function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium für die Slide auswählen') {
-  state.mediaSelectHandler = handler || (asset => {
+function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium für die Slide auswählen', { multiple = false } = {}) {
+  const selectHandler = handler || (asset => {
     const selected = selectedEditorElement();
     if (selected && ['image', 'video'].includes(selected.type)) selected.type = asset.type === 'video' ? 'video' : 'image';
     else addEditorElement(asset.type === 'video' ? 'video' : 'image');
@@ -4357,11 +4357,46 @@ function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium fü
     renderEditorCanvas();
     scheduleSlideAutosave({ immediate: true, successMessage: 'Medium wurde hinzugefügt und die Slide gespeichert.' });
   });
+  if (kioskyRuntime.platform === 'wordpress') {
+    void openWordPressMediaLibrary(selectHandler, typeFilter, context, multiple);
+    return;
+  }
+  state.mediaSelectHandler = selectHandler;
+  state.mediaMultiSelect = multiple;
+  state.mediaSelectedIds = new Set();
+  document.querySelector('#media-multi-footer').hidden = !multiple;
+  updateMediaMultiSelection();
   state.mediaTypeFilter = typeFilter;
   document.querySelector('#media-dialog-title').textContent = typeFilter === 'video' ? 'Video aus Mediendatenbank' : ['image','image-only'].includes(typeFilter) ? 'Bild aus Mediendatenbank' : 'Mediendatenbank';
   document.querySelector('#media-dialog-context').textContent = `${context}. Neue Dateien werden hier hochgeladen und zentral gespeichert.`;
   renderMediaBrowser('media', true);
   document.querySelector('#media-dialog').showModal();
+}
+async function openWordPressMediaLibrary(selectHandler, typeFilter, context, multiple = false) {
+  if (state.nativeMediaSelecting) return;
+  state.nativeMediaSelecting = true;
+  try {
+    const picker = window.parent.KioskyWordPressMediaPicker;
+    if (typeof picker?.open !== 'function') throw new Error('Bitte die Medienauswahl über die Kiosky-Seite in der WordPress-Verwaltung öffnen.');
+    const id = await picker.open({ type: typeFilter, title: context, multiple });
+    if (id === null) return;
+    const media = await apiRequest('/api/media');
+    state.mediaFolders = media.folders || [];
+    state.mediaAssets = media.assets || [];
+    const ids = multiple ? id : [id];
+    if (!Array.isArray(ids) || !ids.length || ids.length > 100) throw new Error('Bitte 1 bis 100 Bilder oder Videos auswählen.');
+    const assets = [...new Set(ids)].map(value => state.mediaAssets.find(item => item.id === `wp:${value}` && !item.deletedAt));
+    const allowed = assets.every(asset => asset && (typeFilter === 'video' ? asset.type === 'video' : typeFilter === 'image-only' ? asset.type === 'image' : typeFilter === 'image' ? ['image', 'icon'].includes(asset.type) : ['image', 'icon', 'video'].includes(asset.type)));
+    if (!allowed) throw new Error('Das ausgewählte WordPress-Medium ist nicht verfügbar oder passt nicht zu diesem Element.');
+    // Do not call refreshMedia here: it replaces editor objects and would break
+    // the captured background, logo and wayfinding selection callbacks.
+    await selectHandler(multiple ? assets : assets[0]);
+    renderMediaLibrary();
+  } catch (error) {
+    showToast(error.message || 'Das WordPress-Medium konnte nicht übernommen werden.');
+  } finally {
+    state.nativeMediaSelecting = false;
+  }
 }
 function renderMediaFolders(prefix, parentId = null, depth = 0) {
   const activeId = prefix === 'media-page' ? state.activeMediaPageFolderId : state.activeMediaFolderId;
@@ -4380,13 +4415,19 @@ function renderMediaBrowser(prefix, selectionMode = false) {
   const grid = document.querySelector(`#${prefix}-asset-grid`);
   grid.innerHTML = assets.map(asset => {
     const typeLabel = asset.metadata?.system ? 'Systemdatei' : asset.type === 'video' ? `Video${asset.metadata?.trimEnd ? ` · ${Number(asset.metadata.trimStart || 0).toFixed(1)}–${Number(asset.metadata.trimEnd).toFixed(1)} s` : ''}` : asset.type === 'icon' ? 'Vektorgrafik' : asset.type === 'file' ? 'Datei' : 'Bild';
-    const actions = trash ? `<button type="button" data-restore-media="${escapeHtml(asset.id)}" title="Wiederherstellen">↶</button><button class="is-danger" type="button" data-purge-media="${escapeHtml(asset.id)}" title="Endgültig löschen">×</button>` : `${selectionMode ? `<button type="button" data-use-media="${escapeHtml(asset.id)}" title="In Slide verwenden">＋</button>` : ''}${asset.metadata?.system ? '' : `<button type="button" data-edit-media="${escapeHtml(asset.id)}" title="Bearbeiten">✎</button><button type="button" data-delete-media="${escapeHtml(asset.id)}" title="In den Papierkorb">♲</button>`}`;
+    const multi = selectionMode && state.mediaMultiSelect;
+    const actions = trash ? `<button type="button" data-restore-media="${escapeHtml(asset.id)}" title="Wiederherstellen">↶</button><button class="is-danger" type="button" data-purge-media="${escapeHtml(asset.id)}" title="Endgültig löschen">×</button>` : `${multi ? `<label class="media-multi-choice"><input type="checkbox" data-select-media="${escapeHtml(asset.id)}" ${state.mediaSelectedIds.has(asset.id) ? 'checked' : ''} aria-label="${escapeHtml(asset.name)} auswählen"> Auswählen</label>` : selectionMode ? `<button type="button" data-use-media="${escapeHtml(asset.id)}" title="In Slide verwenden">＋</button>` : ''}${asset.metadata?.system ? '' : `<button type="button" data-edit-media="${escapeHtml(asset.id)}" title="Bearbeiten">✎</button><button type="button" data-delete-media="${escapeHtml(asset.id)}" title="In den Papierkorb">♲</button>`}`;
     return `<article class="media-asset"><div class="media-asset-preview">${asset.type === 'file' ? '<span class="media-file-preview">▤ Datei</span>' : asset.type === 'video' ? `<video src="${escapeHtml(asset.src)}" muted preload="metadata"></video><span class="media-duration">▶</span>` : `<img src="${escapeHtml(asset.src)}" alt="">`}</div><div class="media-asset-body"><strong title="${escapeHtml(asset.name)}">${escapeHtml(asset.name)}</strong><small>${typeLabel}</small><span class="media-asset-actions">${actions}</span></div></article>`;
   }).join('') || `<div class="media-empty">${trash ? 'Der Papierkorb ist leer.' : 'Noch keine Medien in diesem Ordner.<br>Lege Ordner an oder lade Bilder, Vektorgrafiken und Videos hoch.'}</div>`;
   tree.querySelectorAll('[data-media-folder]').forEach(button => button.addEventListener('click', () => { if (isPage) { state.activeMediaPageFolderId = button.dataset.mediaFolder || null; state.mediaPageTrash = false; } else state.activeMediaFolderId = button.dataset.mediaFolder || null; renderMediaBrowser(prefix, selectionMode); }));
   tree.querySelector('[data-media-trash]')?.addEventListener('click', () => { state.activeMediaPageFolderId = null; state.mediaPageTrash = true; renderMediaBrowser(prefix); });
   tree.querySelectorAll('[data-rename-media-folder]').forEach(button => button.addEventListener('click', async () => { const folder = state.mediaFolders.find(item => item.id === button.dataset.renameMediaFolder), name = folder && window.prompt('Neuer Ordnername:', folder.name); if (!name?.trim()) return; try { await apiRequest(`/api/media/folders/${encodeURIComponent(folder.id)}`, { method: 'PUT', body: JSON.stringify({ name: name.trim(), parentId: folder.parentId }) }); await refreshMedia(); } catch (error) { showToast(error.message); } }));
   tree.querySelectorAll('[data-delete-media-folder]').forEach(button => button.addEventListener('click', async () => { const folder = state.mediaFolders.find(item => item.id === button.dataset.deleteMediaFolder); if (!folder || !window.confirm(`Ordner „${folder.name}“ löschen? Enthaltene Medien werden nach „Alle Medien“ verschoben.`)) return; try { await apiRequest(`/api/media/folders/${encodeURIComponent(folder.id)}`, { method: 'DELETE' }); if (state.activeMediaFolderId === folder.id) state.activeMediaFolderId = null; if (state.activeMediaPageFolderId === folder.id) state.activeMediaPageFolderId = null; await refreshMedia(); showToast('Ordner wurde gelöscht.'); } catch (error) { showToast(error.message); } }));
+  grid.querySelectorAll('[data-select-media]').forEach(input => input.addEventListener('change', () => {
+    if (input.checked && state.mediaSelectedIds.size >= 100) { input.checked = false; showToast('Bitte höchstens 100 Medien je Import auswählen.'); return; }
+    if (input.checked) state.mediaSelectedIds.add(input.dataset.selectMedia); else state.mediaSelectedIds.delete(input.dataset.selectMedia);
+    updateMediaMultiSelection();
+  }));
   grid.querySelectorAll('[data-use-media]').forEach(button => button.addEventListener('click', () => { const asset = state.mediaAssets.find(item => item.id === button.dataset.useMedia); if (asset && state.mediaSelectHandler) state.mediaSelectHandler(asset); document.querySelector('#media-dialog').close(); }));
   grid.querySelectorAll('[data-edit-media]').forEach(button => button.addEventListener('click', () => openMediaEditor(button.dataset.editMedia)));
   grid.querySelectorAll('[data-delete-media]').forEach(button => button.addEventListener('click', async () => { const asset = state.mediaAssets.find(item => item.id === button.dataset.deleteMedia); if (!asset || !window.confirm(`„${asset.name}“ in den Papierkorb verschieben?`)) return; try { await apiRequest(`/api/media/assets/${encodeURIComponent(asset.id)}`, { method: 'DELETE' }); await refreshMedia(); showToast('Medium wurde in den Papierkorb verschoben.'); } catch (error) { showToast(error.message); } }));
@@ -4406,6 +4447,40 @@ async function refreshMedia() {
   renderMediaLibrary();
   if (slideDialog.open) renderEditorCanvas();
 }
+function updateMediaMultiSelection() {
+  const count = state.mediaSelectedIds?.size || 0;
+  const button = document.querySelector('#media-create-slides');
+  button.disabled = !count || Boolean(state.bulkSlideImporting);
+  button.textContent = `${count} Slide${count === 1 ? '' : 's'} erstellen`;
+}
+async function createSlidesFromMedia(assets) {
+  if (state.bulkSlideImporting) return;
+  state.bulkSlideImporting = true;
+  document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => { button.disabled = true; });
+  updateMediaMultiSelection();
+  try {
+    const result = await apiRequest('/api/slides/from-media', { method: 'POST', body: JSON.stringify({ mediaAssetIds: assets.map(asset => asset.id) }) });
+    document.querySelector('#media-dialog').close();
+    await loadContent();
+    showToast(`${result.slides.length} Slides als Entwürfe erstellt. Du kannst sie jetzt bearbeiten und Kanälen hinzufügen.`);
+  } catch (error) { showToast(error.message); }
+  finally {
+    state.bulkSlideImporting = false;
+    document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => { button.disabled = false; });
+    updateMediaMultiSelection();
+  }
+}
+document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => button.addEventListener('click', async () => {
+  try {
+    await refreshMedia();
+    openMediaLibrary(createSlidesFromMedia, '', 'Bulk-Slide-Import: Eine Slide pro Bild oder Video (maximal 100)', { multiple: true });
+  } catch (error) { showToast(error.message); }
+}));
+document.querySelector('#media-create-slides').addEventListener('click', () => {
+  const assets = [...state.mediaSelectedIds].map(id => state.mediaAssets.find(asset => asset.id === id && !asset.deletedAt));
+  if (assets.some(asset => !asset)) { showToast('Ein ausgewähltes Medium ist nicht mehr verfügbar. Bitte die Auswahl erneuern.'); return; }
+  void createSlidesFromMedia(assets);
+});
 document.querySelector('[data-action="open-media-library"]').addEventListener('click', () => openMediaLibrary());
 document.querySelector('#media-search').addEventListener('input', () => renderMediaBrowser('media', true));
 document.querySelector('#media-page-search').addEventListener('input', () => renderMediaBrowser('media-page'));
@@ -4980,6 +5055,9 @@ document.querySelector('#matrix-form').addEventListener('submit',async event=>{e
 // Display scheduler
 const dayKeys=['mo','di','mi','do','fr','sa','so'];
 state.scheduleEntries=[];state.scheduleTargetOrder=[];state.scheduleDay=dayKeys[(new Date().getDay()+6)%7];state.scheduleView='day';state.scheduleSaveQueue=Promise.resolve();
+state.scheduleOnlineOnly=false;
+try { state.scheduleOnlineOnly=localStorage.getItem('kiosky.scheduleOnlineOnly')==='true'; } catch {}
+document.querySelector('#schedule-online-only').checked=state.scheduleOnlineOnly;
 function scheduleWeekStart(){const date=new Date();const day=(date.getDay()+6)%7;date.setHours(0,0,0,0);date.setDate(date.getDate()-day+(state.weekOffset||0)*7);return date;}
 function scheduleDayDate(key){const date=scheduleWeekStart();date.setDate(date.getDate()+dayKeys.indexOf(key));return date;}
 function scheduleWeekRangeLabel(start) {
@@ -5034,7 +5112,7 @@ function positionScheduleWeekPicker(){
   const preferredTop=rect.bottom+gap,top=preferredTop+picker.offsetHeight<=window.innerHeight-12?preferredTop:Math.max(12,rect.top-picker.offsetHeight-gap);
   picker.style.left=`${left}px`;picker.style.top=`${top}px`;
 }
-async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);state.scheduleEntries=result.data||[];state.scheduleTargetOrder=order.data||[];renderScheduleContents();updateWeekNavigation();renderSchedule();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
+async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);state.scheduleEntries=result.data||[];state.scheduleTargetOrder=order.data||[];renderScheduleContents();updateWeekNavigation();renderSchedule();if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
 function renderScheduleContents(){const list=document.querySelector('#schedule-content-list'),query=document.querySelector('#schedule-content-search').value.trim().toLowerCase(),showChannels=document.querySelector('#schedule-show-channels').checked,showSlides=document.querySelector('#schedule-show-slides').checked;const channels=showChannels?state.channels.filter(item=>!query||`${item.name} ${item.description||''}`.toLowerCase().includes(query)).map(channel=>`<button draggable="true" data-schedule-content="channel:${escapeHtml(channel.id)}" data-content-type="${channel.eventId?'event':'default'}"><i class="content-swatch ${channel.eventId?'coral':'blue'}"></i><span><strong>${escapeHtml(channel.name)}</strong><small>${channel.eventId?'Eventkanal':'Kanal'} · ${channel.items.length} Slides</small></span><b>⠿</b></button>`):[];const slides=showSlides?state.slides.filter(item=>!query||`${item.title} ${item.meta}`.toLowerCase().includes(query)).map(slide=>`<button draggable="true" data-schedule-content="slide:${escapeHtml(slide.id)}" data-content-type="slide"><i class="content-swatch green"></i><span><strong>${escapeHtml(slide.title)}</strong><small>Einzelne Slide · ${escapeHtml(slideTypeLabels[slide.type]||slide.type)}</small></span><b>⠿</b></button>`):[];list.innerHTML=[...channels,...slides].join('')||'<p class="property-note">Keine passenden Kanäle oder Slides gefunden.</p>';list.querySelectorAll('[data-schedule-content]').forEach(button=>{button.classList.toggle('is-selected',button.dataset.scheduleContent===state.selectedScheduleContent);button.addEventListener('click',()=>{state.selectedScheduleContent=button.dataset.scheduleContent;renderScheduleContents();document.querySelector('#schedule-drag-hint').textContent=`„${button.querySelector('strong').textContent}“ gewählt – jetzt ${state.scheduleView==='week'?'einen Tag':'eine Uhrzeit'} anklicken.`;});button.addEventListener('dragstart',event=>{state.selectedScheduleContent=button.dataset.scheduleContent;event.dataTransfer.setData('application/x-kiosky-schedule',button.dataset.scheduleContent);button.classList.add('dragging');});button.addEventListener('dragend',()=>button.classList.remove('dragging'));});}
 ['schedule-show-channels','schedule-show-slides'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',renderScheduleContents));document.querySelector('#schedule-content-search').addEventListener('input',renderScheduleContents);
 
@@ -5050,6 +5128,47 @@ function orderedScheduleTargets() {
   const catalog=scheduleTargetCatalog(),known=state.scheduleTargetOrder.filter(key=>catalog[key]);
   return [...known,...Object.keys(catalog).filter(key=>!known.includes(key))];
 }
+
+function visibleScheduleTargets() {
+  const targets=orderedScheduleTargets();
+  if(!state.scheduleOnlineOnly)return targets;
+  const catalog=scheduleTargetCatalog(),online=new Set(state.displays.filter(display=>display.online===true).map(display=>display.id));
+  return targets.filter(key=>catalog[key].displayIds.some(id=>online.has(id)));
+}
+
+function mergeVisibleScheduleOrder(next) {
+  const full=orderedScheduleTargets(),ordered=[...new Set(next.filter(key=>full.includes(key)))],visible=new Set(ordered);
+  let index=0;
+  return full.map(key=>visible.has(key)?ordered[index++]:key);
+}
+
+function scheduleListEntries(block) {
+  const visible=state.scheduleOnlineOnly?new Set(visibleScheduleTargets()):null;
+  return block.entries.filter(entry=>entry.targetType!=='unassigned'&&(!visible||visible.has(scheduleTargetValue(entry))));
+}
+
+async function refreshScheduleOnlineStatus(reportErrors=false) {
+  const busy=()=>document.hidden||document.querySelector('dialog[open], #visual-schedule .is-linked, #visual-schedule .is-sorting');
+  if(state.view!=='schedule'||!state.scheduleOnlineOnly||state.scheduleOnlineLoading||busy())return;
+  state.scheduleOnlineLoading=true;
+  try {
+    const result=await apiRequest('/api/displays');
+    if(state.view!=='schedule'||!state.scheduleOnlineOnly||busy()||!Array.isArray(result.data))return;
+    const before=visibleScheduleTargets().join('|');
+    state.displays=result.data;
+    if(before!==visibleScheduleTargets().join('|'))renderSchedule();
+  } catch(error) {
+    if(reportErrors)showToast(error.message||'Der Online-Status konnte nicht aktualisiert werden.');
+  } finally { state.scheduleOnlineLoading=false; }
+}
+
+document.querySelector('#schedule-online-only').addEventListener('change',event=>{
+  state.scheduleOnlineOnly=event.target.checked;
+  try { localStorage.setItem('kiosky.scheduleOnlineOnly',String(state.scheduleOnlineOnly)); } catch {}
+  renderSchedule();
+  if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus(true);
+});
+setInterval(()=>{void refreshScheduleOnlineStatus();},15000);
 
 function setScheduleSaveStatus(status) {
   const labels={saving:'Wird gespeichert und veröffentlicht …',saved:'Veröffentlicht',error:'Speichern oder Veröffentlichen fehlgeschlagen'};
@@ -5310,8 +5429,8 @@ function scheduleTargetIcon(item) {
 }
 
 function renderScheduleEntryList(blocks,title) {
-  const assignedBlocks=blocks.filter(block=>block.entries.some(entry=>entry.targetType!=='unassigned')),entryList=document.querySelector('#schedule-entry-list');
-  entryList.innerHTML=assignedBlocks.length?`<h4>${title}</h4>${assignedBlocks.map(block=>`<div><time>${scheduleTimeRangeLabel(block.startsAt,block.endsAt)}</time><strong>${escapeHtml(block.contentName||block.channelName)}</strong><span>${block.entries.filter(entry=>entry.targetType!=='unassigned').length} Ziel${block.entries.filter(entry=>entry.targetType!=='unassigned').length===1?'':'e'} · ${block.status==='published'?'veröffentlicht':'Entwurf'}${block.entries.length>1?' · Überlappungen werden gestapelt':''}</span></div>`).join('')}`:'';
+  const assignedBlocks=blocks.map(block=>({block,entries:scheduleListEntries(block)})).filter(item=>item.entries.length),entryList=document.querySelector('#schedule-entry-list');
+  entryList.innerHTML=assignedBlocks.length?`<h4>${title}</h4>${assignedBlocks.map(({block,entries})=>`<div><time>${scheduleTimeRangeLabel(block.startsAt,block.endsAt)}</time><strong>${escapeHtml(block.contentName||block.channelName)}</strong><span>${entries.length} Ziel${entries.length===1?'':'e'} · ${block.status==='published'?'veröffentlicht':'Entwurf'}${entries.length>1?' · Überlappungen werden gestapelt':''}</span></div>`).join('')}`:'';
 }
 
 function scheduleWeekCellTimeLabel(block,dayStart) {
@@ -5327,7 +5446,7 @@ function renderScheduleWeek(canvas,catalog,targets,readOnly) {
   canvas.className='visual-schedule is-week-view';
   canvas.innerHTML=`<div class="schedule-week-columns"><div class="schedule-week-corner"></div>${dayKeys.map((day,index)=>{const date=new Date(weekStart);date.setDate(date.getDate()+index);return`<div class="schedule-week-day"><span>${date.toLocaleDateString('de-DE',{weekday:'short'})}</span><small>${date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</small></div>`;}).join('')}</div>`;
   const cardMarkup=(block,index,dayStart)=>{const recurrenceLabel=block.recurrence==='daily'?' · täglich':block.recurrence==='weekly'?' · wöchentlich':'',name=block.contentName||block.channelName,deleteButton=readOnly?'':`<button class="schedule-block-delete" type="button" aria-label="${escapeHtml(name)} löschen">×</button>`;return`<article class="schedule-week-card ${scheduleBlockType(block)} priority-${escapeHtml(block.priority)}" data-week-block-index="${index}" tabindex="0" role="button" aria-label="${escapeHtml(name)} bearbeiten"><strong>${escapeHtml(name)}</strong><small>${scheduleWeekCellTimeLabel(block,dayStart)}${recurrenceLabel}</small>${deleteButton}</article>`;};
-  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target];return`<div class="schedule-lane schedule-week-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="${readOnly?'false':'true'}" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div>${dayKeys.map((day,index)=>{const dayStart=new Date(weekStart);dayStart.setDate(dayStart.getDate()+index);const dayEnd=new Date(dayStart);dayEnd.setDate(dayEnd.getDate()+1);const dayBlocks=blocks.map((block,blockIndex)=>({block,blockIndex})).filter(({block})=>new Date(block.startsAt)<dayEnd&&new Date(block.endsAt)>dayStart&&block.entries.some(entry=>scheduleTargetValue(entry)===target));return`<div class="schedule-week-day-cell" data-target="${escapeHtml(target)}" data-week-day="${day}" aria-label="${dayStart.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})} · ${escapeHtml(item.label)}">${dayBlocks.length?dayBlocks.map(({block,blockIndex})=>cardMarkup(block,blockIndex,dayStart)).join(''):'<span class="schedule-week-empty">Ganztägig zuweisen</span>'}</div>`;}).join('')}</div>`;}).join('')||'<div class="schedule-empty-targets">Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.</div>');
+  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target];return`<div class="schedule-lane schedule-week-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="${readOnly?'false':'true'}" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div>${dayKeys.map((day,index)=>{const dayStart=new Date(weekStart);dayStart.setDate(dayStart.getDate()+index);const dayEnd=new Date(dayStart);dayEnd.setDate(dayEnd.getDate()+1);const dayBlocks=blocks.map((block,blockIndex)=>({block,blockIndex})).filter(({block})=>new Date(block.startsAt)<dayEnd&&new Date(block.endsAt)>dayStart&&block.entries.some(entry=>scheduleTargetValue(entry)===target));return`<div class="schedule-week-day-cell" data-target="${escapeHtml(target)}" data-week-day="${day}" aria-label="${dayStart.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})} · ${escapeHtml(item.label)}">${dayBlocks.length?dayBlocks.map(({block,blockIndex})=>cardMarkup(block,blockIndex,dayStart)).join(''):'<span class="schedule-week-empty">Ganztägig zuweisen</span>'}</div>`;}).join('')}</div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
   if(!readOnly)canvas.querySelectorAll('.schedule-week-day-cell').forEach(cell=>{
     cell.addEventListener('dragover',event=>{if(event.dataTransfer.types.includes('application/x-kiosky-schedule-row'))return;event.preventDefault();cell.classList.add('drag-over');});
     cell.addEventListener('dragleave',()=>cell.classList.remove('drag-over'));
@@ -5341,13 +5460,13 @@ function renderScheduleWeek(canvas,catalog,targets,readOnly) {
 
 function renderSchedule() {
   const canvas=document.querySelector('#visual-schedule');if(!canvas)return;
-  const catalog=scheduleTargetCatalog(),targets=orderedScheduleTargets(),readOnly=state.currentUser?.role==='viewer';
+  const catalog=scheduleTargetCatalog(),targets=visibleScheduleTargets(),readOnly=state.currentUser?.role==='viewer';
   if(state.scheduleView==='week'){renderScheduleWeek(canvas,catalog,targets,readOnly);return;}
   const blocks=scheduleDayBlocks();
   canvas.className='visual-schedule';
   canvas.innerHTML=`<div class="schedule-hours">${Array.from({length:24},(_,hour)=>`<div class="schedule-hour">${String(hour).padStart(2,'0')}:00</div>`).join('')}</div>`;
   const blockMarkup=(block,index,stackLevel)=>{const window=scheduleBlockWindow(block),recurrenceLabel=block.recurrence==='daily'?' · täglich':block.recurrence==='weekly'?' · wöchentlich':'',name=block.contentName||block.channelName,deleteButton=readOnly?'':`<button class="schedule-block-delete" type="button" aria-label="${escapeHtml(name)} löschen">×</button>`;return`<div class="schedule-block ${scheduleBlockType(block)} priority-${escapeHtml(block.priority)}" data-block-index="${index}" data-stack-level="${stackLevel}" tabindex="0" role="button" style="left:${window.visibleStart/14.4}%;width:${Math.max(1,window.visibleEnd-window.visibleStart)/14.4}%;z-index:${100+stackLevel}" aria-label="${escapeHtml(name)} bearbeiten und verschieben"><button class="schedule-resize-handle start" type="button" aria-label="Startzeit ändern"></button><strong>${escapeHtml(name)}</strong><small>${scheduleTimeRangeLabel(block.startsAt,block.endsAt)}${recurrenceLabel}</small>${deleteButton}<button class="schedule-resize-handle end" type="button" aria-label="Endzeit ändern"></button></div>`;};
-  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target],targetBlocks=blocks.map((block,index)=>({block,index,stackOrder:scheduleBlockStackOrder(block,target)})).filter(({block})=>block.entries.some(entry=>scheduleTargetValue(entry)===target)).sort((a,b)=>a.stackOrder-b.stackOrder);return`<div class="schedule-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="true" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div><div class="schedule-lane-track" data-target="${escapeHtml(target)}">${targetBlocks.map(({block,index},stackLevel)=>blockMarkup(block,index,stackLevel)).join('')}</div></div>`;}).join('')||'<div class="schedule-empty-targets">Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.</div>');
+  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target],targetBlocks=blocks.map((block,index)=>({block,index,stackOrder:scheduleBlockStackOrder(block,target)})).filter(({block})=>block.entries.some(entry=>scheduleTargetValue(entry)===target)).sort((a,b)=>a.stackOrder-b.stackOrder);return`<div class="schedule-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="true" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div><div class="schedule-lane-track" data-target="${escapeHtml(target)}">${targetBlocks.map(({block,index},stackLevel)=>blockMarkup(block,index,stackLevel)).join('')}</div></div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
   if(!readOnly)canvas.querySelectorAll('.schedule-lane-track').forEach(track=>{
     track.addEventListener('dragover',event=>{event.preventDefault();track.classList.add('drag-over');});
     track.addEventListener('dragleave',()=>track.classList.remove('drag-over'));
@@ -5362,7 +5481,7 @@ function renderSchedule() {
 
 function bindScheduleRowSorting(canvas,targets) {
   canvas.querySelectorAll('[data-schedule-row-handle]').forEach(handle=>{handle.addEventListener('dragstart',event=>{event.dataTransfer.setData('application/x-kiosky-schedule-row',handle.dataset.scheduleRowHandle);handle.closest('.schedule-lane').classList.add('is-sorting');});handle.addEventListener('dragend',()=>canvas.querySelectorAll('.schedule-lane').forEach(lane=>lane.classList.remove('is-sorting','sort-before','sort-after')));});
-  canvas.querySelectorAll('[data-schedule-row]').forEach(lane=>{lane.addEventListener('dragover',event=>{if(!event.dataTransfer.types.includes('application/x-kiosky-schedule-row'))return;event.preventDefault();const after=event.clientY>lane.getBoundingClientRect().top+lane.getBoundingClientRect().height/2;lane.classList.toggle('sort-before',!after);lane.classList.toggle('sort-after',after);});lane.addEventListener('dragleave',()=>lane.classList.remove('sort-before','sort-after'));lane.addEventListener('drop',event=>{const moving=event.dataTransfer.getData('application/x-kiosky-schedule-row');if(!moving)return;event.preventDefault();const destination=lane.dataset.scheduleRow,after=lane.classList.contains('sort-after'),next=targets.filter(target=>target!==moving),index=next.indexOf(destination);next.splice(Math.max(0,index+(after?1:0)),0,moving);state.scheduleTargetOrder=next;renderSchedule();saveScheduleTargetOrder(next);});});
+  canvas.querySelectorAll('[data-schedule-row]').forEach(lane=>{lane.addEventListener('dragover',event=>{if(!event.dataTransfer.types.includes('application/x-kiosky-schedule-row'))return;event.preventDefault();const after=event.clientY>lane.getBoundingClientRect().top+lane.getBoundingClientRect().height/2;lane.classList.toggle('sort-before',!after);lane.classList.toggle('sort-after',after);});lane.addEventListener('dragleave',()=>lane.classList.remove('sort-before','sort-after'));lane.addEventListener('drop',event=>{const moving=event.dataTransfer.getData('application/x-kiosky-schedule-row');if(!moving)return;event.preventDefault();const destination=lane.dataset.scheduleRow,after=lane.classList.contains('sort-after'),next=targets.filter(target=>target!==moving),index=next.indexOf(destination);next.splice(Math.max(0,index+(after?1:0)),0,moving);const fullOrder=mergeVisibleScheduleOrder(next);state.scheduleTargetOrder=fullOrder;renderSchedule();saveScheduleTargetOrder(fullOrder);});});
 }
 
 async function saveScheduleTargetOrder(targetKeys) {

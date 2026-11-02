@@ -150,3 +150,39 @@ bei Fehlern sowie eine zweite Datenbankverbindung als gleichzeitigen Schreiber
 (dieselben Fixture-Zugangsdaten). Der eigenständige Test
 `php tests/wordpress-storage-errors-test.php` prüft sichere Diagnosen und
 verhindert das Überschreiben nach einem Lesefehler.
+
+## Native WordPress-Medienauswahl und Online-Zeitplanfilter
+
+`php tests/wordpress-native-media-test.php` prüft das Laden der originalen
+WordPress-Medienassets ausschließlich auf Kiosky-Seiten mit Bearbeitungs- und
+Uploadrechten. Der native Medien-Smoke prüft außerdem vorhandene Dateien anderer
+Autoren, private Dateien und Viewer-Rechte mit echten WordPress-Benutzern.
+Die Node-Suite prüft Dialog-Abbruch, das native Schließen-vor-Auswahl-Ereignis,
+Filter, Editor-Referenzen und die unveränderten anderen Plattformen.
+
+`python tests/wordpress-media-browser-smoke.py` läuft ausschließlich gegen eine
+isolierte Loopback-WordPress-Fixture (Standardport 18085). Die Fixture benötigt
+die lokalen Testkonten `fixture` (Administrator), `native-browser-editor`
+(Kiosky-Redakteur), die Datei-IDs in
+`work/wp-native-media-3.13.0/browser-seed.json` sowie das Upload-Testbild im selben
+Ordner. Der Test prüft den originalen `wp.media`-Dialog im Elternfenster, Dateien
+anderer Autoren, Abbrechen, echte native Uploads, Bilder/Videos, Metadaten,
+Attachment-IDs ohne Doppelimport und Desktop-/Mobilbedienung.
+`KIOSKY_BROWSER_ENGINE=webkit` verwendet ein vorhandenes Playwright-WebKit;
+`KIOSKY_WEBKIT_EXECUTABLE` erlaubt den lokalen MiniBrowser.
+
+Der Online-Filter verwendet ausschließlich das Backend-Feld `display.online`,
+keine zusätzliche Heartbeat-Grenze im Browser. Gruppen und Matrizen bleiben bei
+mindestens einem Online-Mitglied sichtbar. Er filtert die Ansicht und Timetable,
+nicht gespeicherte Zuweisungen oder die Zielauswahl bestehender Einträge.
+Die Reihenfolge verborgener Zeilen bleibt beim Sortieren erhaltbar. Statusabfragen
+laufen alle 15 Sekunden nur bei aktivem Filter und sichtbarer Zeitplanung;
+Dialoge und aktive Zeileninteraktionen werden dabei nicht unterbrochen.
+
+`python tests/media-schedule-browser-smoke.py` prüft nach dem Build den Bulk-Import
+über Ordnergrenzen, Entwürfe ohne Dateikopien, ungültige Gesamtimporte sowie den
+Online-Filter in Tages-/Wochenansicht, Live-Heartbeat-Übernahme und mobile Layouts.
+`KIOSKY_BROWSER_PLATFORM=typo3` prüft denselben Ablauf mit CMS-Transport; die echte
+CMS-Speicherung wird zusätzlich in `cms-media-smoke.php` geprüft. WordPress läuft
+für diese Medienauswahl im echten nativen Fixture über
+`tests/wordpress-media-browser-smoke.py` einschließlich Mehrfachauswahl.

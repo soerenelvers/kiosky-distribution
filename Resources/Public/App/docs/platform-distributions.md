@@ -97,3 +97,37 @@ Medienbibliothek. Details zu API und Migration: [External Control API](external-
 Alle drei Ausgaben enthalten Speisekarten-Slides und den geschützten Einstieg
 `/speisekarten`. Rechte, Kartenzuweisung und CMS-Anmeldung beschreibt die
 [Speisekarten-Anleitung](speisekarten.md).
+
+### Native WordPress-Medienauswahl
+
+Ab 3.13.0 öffnen die Bild-/Videoauswahl sowie Hintergrund-, Logo-, Wegweisungs-,
+Veranstaltungs- und Werbebild-Auswahl den originalen WordPress-Medienbrowser im
+übergeordneten Verwaltungsfenster. Vorhandene Dateien anderer Autoren können
+ausgewählt werden, soweit die WordPress-Berechtigungen dies erlauben. Suche,
+Vorschau und Upload stammen aus WordPress; neue Dateien landen direkt in dessen
+Mediathek. Die Auswahl filtert die zum jeweiligen Element passenden Dateitypen.
+
+Kiosky übernimmt die vorhandene Attachment-ID, URL und Metadaten einschließlich
+vorhandener Videotrim-Werte über den bestehenden CMS-Adapter. Es entsteht keine
+Kopie der ausgewählten Datei. Die WordPress-Verwaltungsseite ist für die Auswahl
+erforderlich; eine separat geöffnete App-Iframe-URL meldet einen fehlenden Host.
+Benötigt werden die vorhandenen Rechte `kiosky_edit` und `upload_files`; private
+Dateien und Bearbeitungsrechte anderer Autoren bleiben geschützt.
+Standalone und TYPO3 behalten ihre bisherige Auswahloberfläche.
+
+### Bulk-Slide-Import (alle Plattformen)
+
+Unter „Slides & Kanäle → Bulk-Slide-Import“ bis zu 100 Bilder oder Videos auswählen.
+WordPress öffnet dafür die native Mediathek mit Mehrfachauswahl; Standalone und
+TYPO3 verwenden ihre Medienauswahl mit Checkboxen und einem gemeinsamen
+Erstellen-Button. Die Auswahl bleibt beim Wechseln von Ordnern erhalten.
+
+Pro Datei entsteht ein Entwurf mit dem Mediennamen, passender Grundausrichtung
+und vollflächiger Darstellung ohne Beschnitt. Videotrim-Werte werden übernommen.
+Der Import referenziert vorhandene Dateien, veröffentlicht keine Slides und
+ändert keine Kanäle. Ein ungültiges oder nicht mehr verfügbares Medium verhindert
+den gesamten Import. PDF-Seiten verwenden weiterhin den bestehenden PDF-Import.
+
+`POST /api/slides/from-media` erwartet `{ "mediaAssetIds": ["…"] }` und liefert
+`201 { "slides": […] }`. Erforderlich sind Bearbeitungsrechte sowie die Module
+Medien und Slides/Kanäle. Doppelte IDs werden einmal übernommen.

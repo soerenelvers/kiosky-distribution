@@ -9,6 +9,7 @@ use Throwable;
 
 require_once __DIR__.'/LicenseClient.php';
 require_once __DIR__.'/SlideEventSelection.php';
+require_once __DIR__.'/MediaSlides.php';
 
 final class Api
 {
@@ -316,6 +317,13 @@ final class Api
             return $this->ok(['ok' => true], true);
         }
 
+        if ($path === '/api/slides/from-media' && $method === 'POST') {
+            $this->license()->assertPath($state,'/api/media');
+            $inputs=MediaSlides::inputs($body['mediaAssetIds']??null,$state['mediaAssets']??[]);
+            $slides=[];
+            foreach($inputs as $input)$slides[]=$this->saveSlide($state,$input);
+            return $this->created(['slides'=>$slides]);
+        }
         if ($path === '/api/slides') {
             if ($method === 'GET') return $this->ok(['data' => $this->active($state['slides'])]);
             if ($method === 'POST') {
