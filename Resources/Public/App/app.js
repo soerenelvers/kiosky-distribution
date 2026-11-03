@@ -379,14 +379,47 @@ function updatePlaybackClocks(root) {
   const time=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});root.querySelectorAll('#player-clock,.wayfinding-clock,.slide-clock').forEach(clock=>{clock.textContent=time;});root.querySelectorAll('[data-countdown-target]').forEach(node=>{node.textContent=`${node.dataset.countdownPrefix||''}${countdownText({targetTime:node.dataset.countdownTarget})}${node.dataset.countdownSuffix||''}`;});root.querySelectorAll('[data-slide-countdown]').forEach(node=>{try{const element=JSON.parse(decodeURIComponent(node.dataset.countdownElement||''));const countdown=resolveEventCountdown(element,JSON.parse(decodeURIComponent(node.dataset.countdownEvent||'null')));node.toggleAttribute('data-event-value-missing',!!countdown.countdownMissing);if(countdown.countdownMissing)node.dataset.eventValueMissing='true';node.style.visibility=countdown.countdownMissing?'hidden':'';node.querySelector('span').textContent=`${element.prefix||''}${countdownText(countdown)}${element.suffix||''}`;}catch{}});root.querySelectorAll('[data-ticker-countdown]').forEach(node=>{try{const item=JSON.parse(decodeURIComponent(node.dataset.tickerCountdown||''));node.textContent=`${item.prefix||''}${countdownText(item)}${item.suffix||''}`;}catch{}});root.querySelectorAll('[data-wayfinding-countdown]').forEach(node=>{try{const countdown=JSON.parse(decodeURIComponent(node.dataset.wayfindingCountdown||''));node.textContent=`${countdown.prefix||''}${countdownText(countdown)}${countdown.suffix||''}`;}catch{}});
 }
 
+function createPlayerCacheWriter(write,now=()=>performance.now()) {
+  let savedIdentity='',savedAt=-Infinity,lastAttempt='',retryAt=0;
+  return value=>{
+    const snapshot={...value,commands:[]};
+    // Heartbeats and clock samples change on every poll; they are not new content.
+    const identity=JSON.stringify({...snapshot,serverTime:undefined,cachedClockOffsetMs:undefined,
+      playbackSync:snapshot.playbackSync?{...snapshot.playbackSync,serverTimeMs:undefined}:snapshot.playbackSync,
+      display:snapshot.display?{...snapshot.display,lastSeenAt:undefined,online:undefined,cached:undefined,playerVersion:undefined,version:undefined,channelId:undefined,slideId:undefined,currentChannelId:undefined,currentChannelName:undefined,currentSlideId:undefined,currentSlideName:undefined}:snapshot.display});
+    const timestamp=now();
+    if(identity===savedIdentity&&timestamp-savedAt<60000)return false;
+    if(identity===lastAttempt&&timestamp<retryAt)return false;
+    lastAttempt=identity;retryAt=timestamp+60000;
+    try{write(JSON.stringify(snapshot));savedIdentity=identity;savedAt=timestamp;retryAt=0;return true;}catch{return false;}
+  };
+}
+
+function createPlayerWakeLock(navigatorObject,documentObject) {
+  let lock=null,pending=false,stopped=false;
+  const acquire=async()=>{
+    if(stopped||!navigatorObject.wakeLock||documentObject.visibilityState==='hidden'||pending||(lock&&!lock.released))return;
+    pending=true;
+    try{
+      const acquired=await navigatorObject.wakeLock.request('screen');
+      if(stopped){await acquired.release();return;}
+      lock=acquired;
+      acquired.addEventListener('release',()=>{if(lock===acquired)lock=null;},{once:true});
+    }catch{/* Browser/OS may refuse screen locks; playback remains available. */}
+    finally{pending=false;}
+  };
+  acquire.release=async()=>{stopped=true;const previous=lock;lock=null;try{await previous?.release?.();}catch{}};
+  return acquire;
+}
+
 async function renderDisplayPlayer(slug) {
   document.body.className = 'player-mode';
-  let wakeLock=null;
-  const keepDisplayAwake=async()=>{try{if('wakeLock'in navigator&&!wakeLock)wakeLock=await navigator.wakeLock.request('screen');}catch{/* Der Kiosk-Browser oder das Betriebssystem übernimmt die Energiesperre. */}};
+  const keepDisplayAwake=createPlayerWakeLock(navigator,document);
   keepDisplayAwake();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')keepDisplayAwake();});
   const playerDevice=()=>'Web Player';
   const key=new URLSearchParams(window.location.search).get('key')||''; const cacheKey=`kiosky-player-cache-${slug}`; let playerState=null,index=0,timer=null,currentItem=null,currentMatrixIndex=-1,renderedOrientation=null,resizeTimer=null,identificationTimer=null,commandPollRunning=false,statePollRunning=false,pendingForcedRefresh=false,serverClockOffsetMs=0,playbackSyncKey='',contentIdentity='',playbackEpochMs=null;
+  const cachePlayerState=createPlayerCacheWriter(value=>localStorage.setItem(cacheKey,value));
   const headers={'X-Player-Key':key,'Content-Type':'application/json','Accept':'application/json',...(kioskyRuntime.playerRequestHeaders||{})};
   const playerFetch=async(url,options={},readJson=false)=>{
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
@@ -401,7 +434,7 @@ async function renderDisplayPlayer(slug) {
       if(Number.isFinite(serverTimeMs))serverClockOffsetMs=serverTimeMs-(requestStartedAt+responseReceivedAt)/2;
       playerState=next;playerState.cachedClockOffsetMs=serverClockOffsetMs;
       // Storage quota / private browsing must not discard a successfully received update.
-      try{localStorage.setItem(cacheKey,JSON.stringify({...next,commands:[]}));}catch{}
+      cachePlayerState(next);
       document.querySelector('#player-offline-indicator')?.setAttribute('hidden','');return playerState;
     }catch{
       if(!playerState)try{const cached=JSON.parse(localStorage.getItem(cacheKey));if(cached?.display&&Array.isArray(cached.slides)){playerState={...cached,commands:[]};serverClockOffsetMs=Number(cached.cachedClockOffsetMs||0);}}catch{}
@@ -477,7 +510,7 @@ async function renderDisplayPlayer(slug) {
   setInterval(()=>updatePlaybackClocks(document),1000);
   window.addEventListener('online',()=>refreshPlayer());
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{applyMatrixViewport();if(currentItem?.slide?.orientation==='auto'&&itemOrientation(currentItem)!==renderedOrientation)renderPlayerItem(currentItem,false,synchronizedPosition()?.elapsedMs||0);},120);});
-  window.addEventListener('beforeunload',()=>{wakeLock?.release?.();});
+  window.addEventListener('beforeunload',()=>{void keepDisplayAwake.release();});
 }
 
 const playerSlug = new URLSearchParams(window.location.search).get('display');

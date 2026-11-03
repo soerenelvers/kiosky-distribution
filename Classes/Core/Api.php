@@ -1640,7 +1640,8 @@ final class Api
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
     private function player(array &$state, string $method, string $slug, string $action, array $body, string $playerKey): array
     {
-        $display = $this->first($this->listCollection($state, 'displays'), fn(array $item): bool => ($item['slug'] ?? '') === $slug);
+        $rawDisplay = $this->first($state['displays'], fn(array $item): bool => ($item['slug'] ?? '') === $slug && empty($item['deletedAt']) && ($item['status'] ?? '') !== 'archived');
+        $display = $rawDisplay ? $this->listCollection(array_replace($state, ['displays' => [$rawDisplay]]), 'displays')[0] : null;
         if (!$display || !hash_equals((string)($display['playerKey'] ?? ''), $playerKey)) throw new RuntimeException('Display wurde nicht gefunden.', 404);
         $deliveryChanged=false;
         if (in_array($action,['state','commands'],true) && $method==='GET') {
@@ -1911,22 +1912,33 @@ final class Api
             return array_map(fn(array $item): array => $item + ['displayIds' => [], 'status' => 'active'], $items);
         }
         if ($collection === 'locations') {
-            return array_map(function (array $item) use ($state): array {
-                $item['displayCount'] = count(array_filter($this->active($state['displays']), fn(array $display): bool => ($display['locationId'] ?? '') === $item['id']));
+            $counts = [];
+            foreach ($this->active($state['displays']) as $display) {
+                $id = $display['locationId'] ?? '';
+                if (is_string($id)) $counts[$id] = ($counts[$id] ?? 0) + 1;
+            }
+            return array_map(function (array $item) use ($counts): array {
+                $item['displayCount'] = $counts[$item['id']] ?? 0;
                 return $item;
             }, $items);
         }
+        $channels = [];
+        if (in_array($collection, ['presets', 'schedules', 'matrices', 'displays'], true)) {
+            foreach ($state['channels'] as $record) $channels[$record['id']] ??= $record;
+        }
         if ($collection === 'presets') {
-            return array_map(function (array $item) use ($state): array {
-                $channel = !empty($item['channelId']) ? $this->first($state['channels'], fn(array $candidate): bool => $candidate['id'] === $item['channelId']) : null;
+            return array_map(function (array $item) use ($channels): array {
+                $channel = $channels[$item['channelId'] ?? ''] ?? null;
                 $item['channelName'] = $channel['name'] ?? null;
                 return $item;
             }, $items);
         }
         if ($collection === 'schedules') {
-            return array_map(function (array $item) use ($state): array {
-                $channel = !empty($item['channelId']) ? $this->first($state['channels'], fn(array $candidate): bool => $candidate['id'] === $item['channelId']) : null;
-                $slide = !empty($item['slideId']) ? $this->first($state['slides'], fn(array $candidate): bool => $candidate['id'] === $item['slideId']) : null;
+            $slides = [];
+            foreach ($state['slides'] as $record) $slides[$record['id']] ??= $record;
+            return array_map(function (array $item) use ($channels, $slides): array {
+                $channel = $channels[$item['channelId'] ?? ''] ?? null;
+                $slide = $slides[$item['slideId'] ?? ''] ?? null;
                 $item['contentType'] = $item['contentType'] ?? ($slide ? 'slide' : 'channel');
                 $item['contentId'] = $item['contentId'] ?? ($slide['id'] ?? $channel['id'] ?? '');
                 $item['contentName'] = $slide['name'] ?? $channel['name'] ?? 'Unbekannter Inhalt';
@@ -1936,7 +1948,7 @@ final class Api
             }, $items);
         }
         if ($collection === 'matrices') {
-            return array_map(function (array $item) use ($state): array {
+            return array_map(function (array $item) use ($channels): array {
                 $members = is_array($item['members'] ?? null) ? $item['members'] : [];
                 $columns = max(1, (int)($item['columns'] ?? 1));
                 $rows = max(1, (int)($item['rows'] ?? 1));
@@ -1954,21 +1966,29 @@ final class Api
                         array_filter($members, static fn(array $member): bool => (int)($member['row'] ?? 0) === $row)
                     )]);
                 }
-                $channel = !empty($item['defaultChannelId']) ? $this->first($state['channels'], fn(array $candidate): bool => $candidate['id'] === $item['defaultChannelId']) : null;
+                $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
                 $item['channelName'] = $channel['name'] ?? null;
                 $item['totalResolution'] = ['width' => array_sum($columnWidths), 'height' => array_sum($rowHeights)];
                 return $item;
             }, $items);
         }
         if ($collection !== 'displays') return $items;
-        return array_map(function (array $item) use ($state): array {
-            $channel = !empty($item['defaultChannelId']) ? $this->first($state['channels'], fn(array $candidate): bool => $candidate['id'] === $item['defaultChannelId']) : null;
-            $location = !empty($item['locationId']) ? $this->first($state['locations'], fn(array $candidate): bool => $candidate['id'] === $item['locationId']) : null;
-            $matrix = $this->first($this->active($state['matrices']), fn(array $candidate): bool => in_array($item['id'], array_column($candidate['members'] ?? [], 'displayId'), true));
-            $member = $matrix ? $this->first($matrix['members'] ?? [], fn(array $candidate): bool => $candidate['displayId'] === $item['id']) : null;
+        $locations = []; $slides = []; $memberships = [];
+        foreach ($state['locations'] as $record) $locations[$record['id']] ??= $record;
+        foreach ($state['slides'] as $record) $slides[$record['id']] ??= $record;
+        foreach ($this->active($state['matrices']) as $matrix) {
+            foreach ($matrix['members'] ?? [] as $member) $memberships[$member['displayId']] ??= [$matrix, $member];
+        }
+        $now = time();
+        return array_map(function (array $item) use ($channels, $locations, $slides, $memberships, $now): array {
+            $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
+            $location = $locations[$item['locationId'] ?? ''] ?? null;
+            [$matrix, $member] = $memberships[$item['id']] ?? [null, null];
             $item['channel'] = $channel['name'] ?? 'Kein Standardkanal';
-            $currentChannel = !empty($item['channelId']) ? $this->first($state['channels'], fn(array $candidate): bool => $candidate['id'] === $item['channelId']) : null;
-            $currentSlide = !empty($item['slideId']) ? $this->first($state['slides'], fn(array $candidate): bool => $candidate['id'] === $item['slideId']) : null;
+            $currentChannel = $channels[$item['channelId'] ?? ''] ?? null;
+            $currentSlide = $slides[$item['slideId'] ?? ''] ?? null;
+            $lastSeen = strtotime((string)($item['lastSeenAt'] ?? ''));
+            $item['online'] = !empty($item['online']) && $lastSeen !== false && abs($now - $lastSeen) <= 60;
             $item['currentChannelId'] = $item['channelId'] ?? null;
             $item['currentChannelName'] = $currentChannel['name'] ?? null;
             $item['currentSlideId'] = $item['slideId'] ?? null;

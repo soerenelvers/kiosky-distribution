@@ -27,11 +27,18 @@ final class Typo3StateStore implements StateStore
         $row = $query->select('state_json')->from(self::TABLE)->where(
             $query->expr()->eq('uid', $query->createNamedParameter(1, ParameterType::INTEGER))
         )->executeQuery()->fetchAssociative();
+        $state = $row ? $this->decode((string)$row['state_json']) : [];
         $this->loaded = true;
         $this->loadedRaw = $row ? (string)$row['state_json'] : null;
-        if (!$row || empty($row['state_json'])) return [];
-        $state = json_decode((string)$row['state_json'], true);
-        return is_array($state) ? $state : [];
+        return $state;
+    }
+
+    private function decode(string $raw): array
+    {
+        try { $state = json_decode($raw, true, 512, JSON_THROW_ON_ERROR); }
+        catch (\JsonException) { throw new RuntimeException('Kiosky-Daten sind nicht lesbar (TYPO3_STATE_CORRUPT).', 500); }
+        if (!is_array($state)) throw new RuntimeException('Kiosky-Daten sind nicht lesbar (TYPO3_STATE_CORRUPT).', 500);
+        return $state;
     }
 
     public function save(array $state): void
@@ -48,7 +55,7 @@ final class Typo3StateStore implements StateStore
                     return;
                 } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $error) { continue; }
             }
-            $current = json_decode((string)$row['state_json'],true) ?: [];
+            $current = $this->decode((string)$row['state_json']);
             $next = $state;
             if (isset($state['apiUsers']) || isset($current['apiUsers'])) $next['apiUsers'] = ApiAccess::mergeUsers($state['apiUsers'] ?? [],$current['apiUsers'] ?? []);
             $json = json_encode($next,JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

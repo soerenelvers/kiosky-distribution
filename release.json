@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "768ef4bebd292126dfe460127f2bd4185b520f6d",
+  "source_commit": "d47ab2c3e1412eff937eaba55de0b9d04825c39c",
   "product": "kiosky",
-  "version": "3.13.2",
-  "released_at": "2026-11-02T18:55:08.559Z",
+  "version": "3.13.3",
+  "released_at": "2026-11-03T14:07:31.987Z",
   "channel": "stable",
-  "release_notes": "## [3.13.2] – 2026-11-02\n\n- Verbleibenden CMS-Speicherkonflikt bei laufenden Playern beheben: Heartbeats aktualisieren ausschließlich gespeicherte Statusfelder und schreiben keine berechneten Kanal-/Slide-Namen, Auflösungs-, Standort- oder Matrixprojektionen zurück. Der Fehler ist unter 3.13.1 mit echten Player-API-Aufrufen reproduziert; die früheren Tests mit direkt veränderten Statusfeldern deckten diesen Fall nicht ab.\n- Mehrere Zuweisungen eines Zeitplaneintrags beim Schließen mit einer gemeinsamen Anfrage speichern. Alle Ziele werden vorab geprüft und in WordPress/TYPO3 mit einem geschützten Zustands-Schreibvorgang, in Standalone innerhalb einer Datenbanktransaktion übernommen. Fehler hinterlassen keine Teiländerungen; vorhandene Ziel-IDs und Metadaten bleiben erhalten.\n- Den beim Öffnen gelesenen Eintrag mit dem aktuellen Stand vergleichen. Tatsächlich geänderte oder entfernte Einträge ergeben einen gezielten 409-Konflikt, ohne neuere Änderungen zu überschreiben. Dialog und Eingaben bleiben bei Fehlern geöffnet.\n- Regressionen für echte Player-Heartbeats, Mehrfachziele, einen fehlgeschlagenen WordPress-SQL-Schreibvorgang, späte SQLite-Fehler und ungültige/veraltete Auswahlen ergänzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.13.2",
+  "release_notes": "## [3.13.3] – 2026-11-03\n\n- Standalone-Player laden ein Display über dessen ID/Slug direkt. Sammelabfragen lesen Gruppenzuordnungen gemeinsam; ein zusätzlicher SQLite-Index unterstützt die Suche nach Displaymitgliedschaften. Die bisherige Abfrage aller Displays samt einer Gruppenabfrage pro Display entfällt.\n- WordPress und TYPO3 projizieren bei Player-Anfragen nur das angefragte Display. Kanal-, Slide-, Standort- und Matrixzuordnungen sowie Standortzähler werden für Listen gemeinsam aufbereitet.\n- Displays gelten in allen Ausgaben nach mehr als 60 Sekunden ohne gültigen Heartbeat als offline. Frische Heartbeats stellen den Status wieder her; dafür werden keine zusätzlichen Status-Schreibvorgänge ausgelöst.\n- Gemeinsamer Player speichert unveränderte Offline-Inhalte höchstens einmal pro Minute statt bei jedem Fünf-Sekunden-Poll. Inhalts-, Warnungs- und Lizenzänderungen bleiben sofort speicherbar; volle oder gesperrte Browserablagen unterbrechen die Live-Wiedergabe nicht und werden gedrosselt erneut versucht.\n- Die Bildschirmsperre wird nach Freigabe durch Browser/Betriebssystem wieder angefordert; doppelte Anforderungen und beim Schließen noch ausstehende Sperren werden aufgeräumt.\n- TYPO3 bricht bei ungültigem oder nicht als Array lesbarem gespeichertem JSON mit einer sicheren Diagnose ab, statt einen leeren Bestand zu liefern. Bestehende Bytes bleiben bei Lese-/Schreibfehlern erhalten.\n- Regressions- und Browserprüfungen für Abfrageaufwand, Offline-/Warnungserhalt, Speicherfehler, Heartbeatalter, Wake-Lock-Lebenszyklus sowie TYPO3-Datenfehler ergänzen. Prüfbericht und Messgrenzen: [Stabilität 3.13.3](docs/stability-3.13.3.md).",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.13.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.13.2",
+    "core_version": "3.13.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.13.2",
-    "typo3_extension_version": "3.13.2"
+    "wordpress_plugin_version": "3.13.3",
+    "typo3_extension_version": "3.13.3"
   },
   "components": {
     "core": {
-      "version": "3.13.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.2.zip?ref=v3.13.2",
-      "sha256": "69f9baff8371621f4a0cd7083ba576a52110273094eff58288c772d9824fde7c"
+      "version": "3.13.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.3.zip?ref=v3.13.3",
+      "sha256": "3f8cc5d409f1348bf83c4d10450568c759a29c01a34590a45abde0470e963876"
     },
     "standalone": {
-      "version": "3.13.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.2.zip?ref=v3.13.2",
-      "sha256": "69f9baff8371621f4a0cd7083ba576a52110273094eff58288c772d9824fde7c"
+      "version": "3.13.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.3.zip?ref=v3.13.3",
+      "sha256": "3f8cc5d409f1348bf83c4d10450568c759a29c01a34590a45abde0470e963876"
     },
     "wordpress": {
-      "version": "3.13.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.13.2.zip?ref=v3.13.2",
-      "sha256": "5e8880cbebc0f0dd26244b70956ad90bdf539489b014c93723389a19a7191f1b",
+      "version": "3.13.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.13.3.zip?ref=v3.13.3",
+      "sha256": "4b95efcee63596601b6caaf59a06a85ee49fab0ead9b0370bfadfb94cd71e56c",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.13.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.13.2.zip?ref=v3.13.2",
-      "sha256": "33497ca01253568fe4deca13fb4d1f3d42f41aafee360cc2e571c6ce60ed866a",
+      "version": "3.13.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.13.3.zip?ref=v3.13.3",
+      "sha256": "f5d8ecd2df95614177ca719149356284e4433de72aa5d8495b3080fdaaf60841",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -1,6 +1,9 @@
-## [3.13.2] – 2026-11-02
+## [3.13.3] – 2026-11-03
 
-- Verbleibenden CMS-Speicherkonflikt bei laufenden Playern beheben: Heartbeats aktualisieren ausschließlich gespeicherte Statusfelder und schreiben keine berechneten Kanal-/Slide-Namen, Auflösungs-, Standort- oder Matrixprojektionen zurück. Der Fehler ist unter 3.13.1 mit echten Player-API-Aufrufen reproduziert; die früheren Tests mit direkt veränderten Statusfeldern deckten diesen Fall nicht ab.
-- Mehrere Zuweisungen eines Zeitplaneintrags beim Schließen mit einer gemeinsamen Anfrage speichern. Alle Ziele werden vorab geprüft und in WordPress/TYPO3 mit einem geschützten Zustands-Schreibvorgang, in Standalone innerhalb einer Datenbanktransaktion übernommen. Fehler hinterlassen keine Teiländerungen; vorhandene Ziel-IDs und Metadaten bleiben erhalten.
-- Den beim Öffnen gelesenen Eintrag mit dem aktuellen Stand vergleichen. Tatsächlich geänderte oder entfernte Einträge ergeben einen gezielten 409-Konflikt, ohne neuere Änderungen zu überschreiben. Dialog und Eingaben bleiben bei Fehlern geöffnet.
-- Regressionen für echte Player-Heartbeats, Mehrfachziele, einen fehlgeschlagenen WordPress-SQL-Schreibvorgang, späte SQLite-Fehler und ungültige/veraltete Auswahlen ergänzen.
+- Standalone-Player laden ein Display über dessen ID/Slug direkt. Sammelabfragen lesen Gruppenzuordnungen gemeinsam; ein zusätzlicher SQLite-Index unterstützt die Suche nach Displaymitgliedschaften. Die bisherige Abfrage aller Displays samt einer Gruppenabfrage pro Display entfällt.
+- WordPress und TYPO3 projizieren bei Player-Anfragen nur das angefragte Display. Kanal-, Slide-, Standort- und Matrixzuordnungen sowie Standortzähler werden für Listen gemeinsam aufbereitet.
+- Displays gelten in allen Ausgaben nach mehr als 60 Sekunden ohne gültigen Heartbeat als offline. Frische Heartbeats stellen den Status wieder her; dafür werden keine zusätzlichen Status-Schreibvorgänge ausgelöst.
+- Gemeinsamer Player speichert unveränderte Offline-Inhalte höchstens einmal pro Minute statt bei jedem Fünf-Sekunden-Poll. Inhalts-, Warnungs- und Lizenzänderungen bleiben sofort speicherbar; volle oder gesperrte Browserablagen unterbrechen die Live-Wiedergabe nicht und werden gedrosselt erneut versucht.
+- Die Bildschirmsperre wird nach Freigabe durch Browser/Betriebssystem wieder angefordert; doppelte Anforderungen und beim Schließen noch ausstehende Sperren werden aufgeräumt.
+- TYPO3 bricht bei ungültigem oder nicht als Array lesbarem gespeichertem JSON mit einer sicheren Diagnose ab, statt einen leeren Bestand zu liefern. Bestehende Bytes bleiben bei Lese-/Schreibfehlern erhalten.
+- Regressions- und Browserprüfungen für Abfrageaufwand, Offline-/Warnungserhalt, Speicherfehler, Heartbeatalter, Wake-Lock-Lebenszyklus sowie TYPO3-Datenfehler ergänzen. Prüfbericht und Messgrenzen: [Stabilität 3.13.3](docs/stability-3.13.3.md).
