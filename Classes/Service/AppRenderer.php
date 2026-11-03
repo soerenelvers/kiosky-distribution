@@ -59,12 +59,7 @@ final readonly class AppRenderer
         $html = str_replace('/player/', $assetBase . 'player/', (string)file_get_contents($file));
         $runtime = $page === 'browser'
             ? ['apiEndpoint' => $apiEndpoint, 'playerBaseUrl' => $playerBaseUrl, 'browserUrl' => $browserUrl]
-            : ['browserUrl' => $browserUrl, 'downloads' => [
-                'windows-x64' => $assetBase . 'launchers/kiosky-player-windows-x64.exe',
-                'windows-x86' => $assetBase . 'launchers/kiosky-player-windows-x86.exe',
-                'linux-x64' => $assetBase . 'launchers/kiosky-player-linux-x64',
-                'macos-universal' => $assetBase . 'launchers/kiosky-player-macos-universal',
-            ]];
+            : ['browserUrl' => $browserUrl, 'downloadBase' => rtrim(dirname(rtrim($playerBaseUrl, '/')), '/') . '/kiosky-player-download/'];
         $name = $page === 'browser' ? 'KioskyPlayerRuntime' : 'KioskyPlayerCenterRuntime';
         return str_replace('</head>', '<script>window.' . $name . '=' . json_encode($runtime, JSON_UNESCAPED_SLASHES) . ';</script></head>', $html);
     }

@@ -1,9 +1,7 @@
-## [3.13.3] – 2026-11-03
+## [3.13.4] – 2026-11-03
 
-- Standalone-Player laden ein Display über dessen ID/Slug direkt. Sammelabfragen lesen Gruppenzuordnungen gemeinsam; ein zusätzlicher SQLite-Index unterstützt die Suche nach Displaymitgliedschaften. Die bisherige Abfrage aller Displays samt einer Gruppenabfrage pro Display entfällt.
-- WordPress und TYPO3 projizieren bei Player-Anfragen nur das angefragte Display. Kanal-, Slide-, Standort- und Matrixzuordnungen sowie Standortzähler werden für Listen gemeinsam aufbereitet.
-- Displays gelten in allen Ausgaben nach mehr als 60 Sekunden ohne gültigen Heartbeat als offline. Frische Heartbeats stellen den Status wieder her; dafür werden keine zusätzlichen Status-Schreibvorgänge ausgelöst.
-- Gemeinsamer Player speichert unveränderte Offline-Inhalte höchstens einmal pro Minute statt bei jedem Fünf-Sekunden-Poll. Inhalts-, Warnungs- und Lizenzänderungen bleiben sofort speicherbar; volle oder gesperrte Browserablagen unterbrechen die Live-Wiedergabe nicht und werden gedrosselt erneut versucht.
-- Die Bildschirmsperre wird nach Freigabe durch Browser/Betriebssystem wieder angefordert; doppelte Anforderungen und beim Schließen noch ausstehende Sperren werden aufgeräumt.
-- TYPO3 bricht bei ungültigem oder nicht als Array lesbarem gespeichertem JSON mit einer sicheren Diagnose ab, statt einen leeren Bestand zu liefern. Bestehende Bytes bleiben bei Lese-/Schreibfehlern erhalten.
-- Regressions- und Browserprüfungen für Abfrageaufwand, Offline-/Warnungserhalt, Speicherfehler, Heartbeatalter, Wake-Lock-Lebenszyklus sowie TYPO3-Datenfehler ergänzen. Prüfbericht und Messgrenzen: [Stabilität 3.13.3](docs/stability-3.13.3.md).
+- WordPress-Playerdownloads serverseitig mit der tatsächlichen Kopplungsadresse versehen. Bisher wurde die unveränderte EXE-Vorlage mit `KIOSKY_PLAYER_URL_PLACEHOLDER` ausgeliefert, was beim Start einen DNS-Fehler erzeugte.
+- TYPO3-Player-Center auf konfigurierte Download-Endpunkte umstellen; alte Asset-Downloadlinks ebenfalls mit der Serveradresse ausliefern. Unterverzeichnis, Inhaltstyp, Downloadname, HEAD und nicht cachebare Antworten werden berücksichtigt.
+- macOS-Downloads beider CMS als vollständiges `.app.zip` mit ausführbarer Universal-Binary für Apple Silicon und Intel, passender App-Metadatei und gültigen ZIP-Zeitstempeln erzeugen.
+- Gemeldete Windows-32-Bit-EXE bis zur Klärung der Virenerkennung aus der aktuellen Auslieferung zurücknehmen. Stattdessen steht in allen Varianten eine sichtbare `.url`-Browserverknüpfung zur Verfügung; Vollbild dort über F11. Dies ist keine Bestätigung eines Fehlalarms oder eine Codesignierung.
+- URL- und Vorlagenprüfung sowie Regressionen für tatsächliche Download-Controller, native CMS-Routen, öffentliche Codekopplung, Playerzugriff und den nativen Linux-Start ergänzen. Nach Installation des Updates die Playerdateien neu herunterladen.

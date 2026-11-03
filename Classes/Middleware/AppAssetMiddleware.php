@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kiosky\Kiosky\Middleware;
 
+use Kiosky\Core\PlayerLauncher;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -57,6 +58,18 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
         $relativePath = rawurldecode(substr($path, strlen(self::PREFIX)));
         if (!$this->isSafeRelativePath($relativePath)) {
             return new Response('php://temp', 404);
+        }
+
+        // Old Player Center links must not keep distributing unconfigured templates.
+        $legacyLaunchers = ['launchers/kiosky-player-windows-x64.exe'=>'windows-x64','launchers/kiosky-player-windows-x86.exe'=>'windows-x86','launchers/kiosky-player-linux-x64'=>'linux-x64','launchers/kiosky-player-macos-universal'=>'macos-universal'];
+        if (isset($legacyLaunchers[$relativePath])) {
+            $base = $request->getUri()->getScheme().'://'.$request->getUri()->getAuthority().rtrim($sitePath,'/');
+            try {
+                $download = PlayerLauncher::download($legacyLaunchers[$relativePath],$base.'/kiosky-player-browser/',(string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'));
+            } catch (\RuntimeException $error) { return new Response('php://temp',$error->getCode() ?: 503,['Cache-Control'=>'no-store']); }
+            $response = new Response('php://temp',200,['Content-Type'=>$download['contentType'],'Content-Disposition'=>'attachment; filename="'.$download['filename'].'"','Content-Length'=>(string)strlen($download['body']),'Cache-Control'=>'no-store','X-Content-Type-Options'=>'nosniff']);
+            if (strtoupper($request->getMethod()) === 'GET') $response->getBody()->write($download['body']);
+            return $response;
         }
 
         $specialFiles = [

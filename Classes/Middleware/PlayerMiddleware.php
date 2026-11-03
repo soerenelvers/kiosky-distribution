@@ -6,6 +6,7 @@ namespace Kiosky\Kiosky\Middleware;
 
 use Kiosky\Core\ApiAccess;
 use Kiosky\Core\ExternalRequest;
+use Kiosky\Core\PlayerLauncher;
 use Kiosky\Kiosky\Service\ApiFactory;
 use Kiosky\Kiosky\Service\AppRenderer;
 use Psr\Http\Message\ResponseInterface;
@@ -14,6 +15,8 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Http\JsonResponse;
+use TYPO3\CMS\Core\Http\Response;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final readonly class PlayerMiddleware implements MiddlewareInterface
 {
@@ -30,6 +33,15 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         if ($sitePath !== '/' && str_starts_with($uriPath,$sitePath)) $uriPath = substr($uriPath,strlen($sitePath));
         $path = '/' . trim($uriPath, '/') . '/';
         $base = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($sitePath,'/');
+        if (preg_match('#^/kiosky-player-download/([^/]+)/$#', $path, $match)) {
+            if (!in_array(strtoupper($request->getMethod()), ['GET','HEAD'], true)) return new Response('php://temp',405,['Allow'=>'GET, HEAD']);
+            try {
+                $download = PlayerLauncher::download(rawurldecode($match[1]), $base.'/kiosky-player-browser/', (string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'));
+            } catch (\RuntimeException $error) { return new JsonResponse(['error'=>['message'=>$error->getMessage()]],$error->getCode() ?: 503,['Cache-Control'=>'no-store']); }
+            $response = new Response('php://temp',200,['Content-Type'=>$download['contentType'],'Content-Disposition'=>'attachment; filename="'.$download['filename'].'"','Content-Length'=>(string)strlen($download['body']),'Cache-Control'=>'no-store','X-Content-Type-Options'=>'nosniff']);
+            if (strtoupper($request->getMethod()) === 'GET') $response->getBody()->write($download['body']);
+            return $response;
+        }
         if ($path === '/speisekarten/') {
             if (is_string($request->getQueryParams()['freigabe'] ?? null) && $request->getQueryParams()['freigabe']!=='') return new HtmlResponse($this->renderer->renderMenus($base.'/kiosky-api/',$request),200,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer']);
             $uriBuilder = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
