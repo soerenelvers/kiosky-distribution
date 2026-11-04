@@ -1,5 +1,4 @@
-## [3.16.1] – 2026-11-04
+## [3.17.0] – 2026-11-04
 
-- Aktuelle Zustands-Presets mit Kanalaktionen und gespeicherten Zuweisungen auch über externe API und Companion ausführen. Warn-Presets mit gespeicherten Zielen, Design und Laufzeit übernehmen. Companion 1.2.1 verwendet standardmäßig die Preset-Ziele.
-- CMS-Ausführungshistorie auf die letzten 100 Einträge begrenzen und OpenAPI für Aufrufe mit gespeicherten Zielen aktualisieren.
-- Mehrfachauswahl von Slides gemeinsam per Drag-and-drop oder über „Zu Kanal hinzufügen“ in den aktiven Kanal übernehmen; Reihenfolge erhalten und jede Aktion einmal speichern.
+- Bilder und Videos im Slide-Editor beschneiden, vollständig einpassen oder in Originalgröße darstellen; Zoom von 10–400 %, Inhaltsposition und Zurücksetzen ergänzen. Vorschau, Miniaturen und Player verwenden dasselbe Modell. Video-Quelle und Wiedergabeposition bleiben beim Einstellen erhalten.
+- Dynamische Hilfslinien und Einrasten an Slidekanten, Mittellinien sowie Kanten/Mitten anderer Elemente ergänzen. Mehrfachauswahlen gemeinsam verschieben, Drehung berücksichtigen und Fangabstand in Bildschirm-Pixeln bemessen. Einrasten abschaltbar; Alt erlaubt vorübergehend freies Verschieben.

@@ -1537,3 +1537,21 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 .slide-archive-row > div { min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
 .slide-archive-row small { display: block; margin-top: 4px; }
 .slide-archive-row button, #slide-archive-dialog .dialog-actions button { min-height: 44px; }
+
+/* The outer element controls size/rotation; media placement only changes its content. */
+.media-placement { position:relative; display:block; width:100%; height:100%; overflow:hidden; min-width:0; min-height:0; }
+.media-placement > .placed-media { position:absolute; inset:0; display:block; width:100%; height:100%; max-width:none; max-height:none; object-position:var(--media-x,50%) var(--media-y,50%); transform:scale(var(--media-zoom,1)); transform-origin:var(--media-x,50%) var(--media-y,50%); }
+.media-placement > .placed-media[data-media-fit="none"]:not([data-media-pending]) { inset:auto; left:var(--media-x,50%); top:var(--media-y,50%); width:calc(var(--media-natural-width) * var(--media-zoom,1) * 100cqw / var(--slide-font-reference,1920)); height:calc(var(--media-natural-height) * var(--media-zoom,1) * 100cqw / var(--slide-font-reference,1920)); transform:translate(calc(-1 * var(--media-x,50%)),calc(-1 * var(--media-y,50%))); }
+.editor-media-placement { min-width:0; margin:12px 0; padding:10px; border:1px solid var(--line); border-radius:8px; }
+.editor-media-placement legend { font-weight:700; }
+.editor-media-placement .property-row { align-items:end; }
+.editor-media-placement input[type="range"] { width:100%; min-height:44px; }
+.editor-media-placement button { min-height:44px; }
+.editor-snap-toggle { display:inline-flex; align-items:center; gap:6px; margin-left:auto; min-height:44px; font-size:.7rem; white-space:nowrap; }
+.editor-toolbar { flex-wrap:wrap; }
+.editor-snap-guides { position:absolute; inset:0; z-index:100000; pointer-events:none; }
+.editor-snap-line { position:absolute; display:block; box-shadow:0 0 1px #fff; }
+.editor-snap-line.axis-x { top:0; bottom:0; width:1px; background:#ed3b9b; }
+.editor-snap-line.axis-y { left:0; right:0; height:1px; background:#ed3b9b; }
+.canvas-element-handle,.canvas-rotate-handle,.resize-handle { touch-action:none; }
+@media(pointer:coarse){.canvas-element-handle,.canvas-rotate-handle { min-width:44px; min-height:44px; }}

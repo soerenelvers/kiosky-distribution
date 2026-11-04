@@ -354,7 +354,7 @@ function scheduleAutomaticTextFit(root=document){if(root.matches?.('.slide-edito
     return `<span class="wf-text ${cell.underline?'is-underlined':''}" ${auto} style="${colorStyle};${textFontStyle(cell,textStylePixels(cell),styles[cell.textStyle]||styles.body)};text-align:${cell.align||'left'};font-weight:${cell.bold||['hero','heading'].includes(cell.textStyle)?700:400}">${cell.text||''}</span>`;
   };
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}"><img src="${src}" alt=""${element.menuPdfImage?' data-menu-pdf-page':''}${element.mediaFit === 'contain' ? ' style="object-fit:contain"' : ''}></div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}"><video src="${element.src||''}" autoplay loop ${element.muted!==false?'muted':''} ${element.mediaFit === 'contain' ? 'style="object-fit:contain"' : ''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"></video></div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}">${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -372,7 +372,7 @@ function applyPlaybackPdfBackground(slide,documentData) {
 }
 
 function renderPlaybackSlide(slide,display,item,orientation,animate=true,elapsedMs=0,matrixMode=false) {
-  if(!item)return;const elements=playbackItemElements(item,orientation),settings=item.slide.document?.settings;slide.dataset.slideOrientation=item.slide.orientation||'landscape';slide.dataset.renderOrientation=orientation;display?.classList.toggle('display-player-portrait',orientation==='portrait');display?.classList.toggle('display-player-landscape',orientation==='landscape');const designed=Boolean(settings)||elements.some(element=>element.type==='wayfinding');display?.classList.toggle('has-slide-design',designed||matrixMode);slide.innerHTML=playerSettingsMarkup(settings)+elements.map(element=>elementMarkup(element,item.event,settings)).join('')||`<div class="player-empty-channel"><strong>${escapeHtml(item.slide.name)}</strong></div>`;slide.querySelectorAll('.player-layout-element').forEach((node,index)=>{const element=elements[index];if(element?.autoFontSize){node.dataset.autoFont='true';node.dataset.autoFontMax=element.fontSizeUnit==='pt'?'320':'240';if(element.responsiveText)node.dataset.autoFontResponsive='true';}});scheduleAutomaticTextFit(slide);applyPlaybackPdfBackground(slide,item.slide.document);slide.querySelectorAll('video[data-trim-start]').forEach(video=>{const start=Number(video.dataset.trimStart||0),end=Number(video.dataset.trimEnd||0),synchronizedStart=()=>{const segmentDuration=end>start?end-start:Math.max(0,Number(video.duration||0)-start);video.currentTime=start+(segmentDuration>0?(elapsedMs/1000)%segmentDuration:0);};video.addEventListener('loadedmetadata',synchronizedStart);video.addEventListener('timeupdate',()=>{if(end>start&&video.currentTime>=end)video.currentTime=start;});});slide.style.transitionDelay=animate&&elapsedMs>0?`${-Math.min(450,elapsedMs)}ms`:'';if(animate&&elapsedMs<450)requestAnimationFrame(()=>slide.classList.add('is-visible'));else slide.classList.add('is-visible');
+  if(!item)return;const elements=playbackItemElements(item,orientation),settings=item.slide.document?.settings;slide.dataset.slideOrientation=item.slide.orientation||'landscape';slide.dataset.renderOrientation=orientation;display?.classList.toggle('display-player-portrait',orientation==='portrait');display?.classList.toggle('display-player-landscape',orientation==='landscape');const designed=Boolean(settings)||elements.some(element=>element.type==='wayfinding');display?.classList.toggle('has-slide-design',designed||matrixMode);slide.innerHTML=playerSettingsMarkup(settings)+elements.map(element=>elementMarkup(element,item.event,settings)).join('')||`<div class="player-empty-channel"><strong>${escapeHtml(item.slide.name)}</strong></div>`;KioskyMediaPlacement.hydrate(slide);slide.querySelectorAll('.player-layout-element').forEach((node,index)=>{const element=elements[index];if(element?.autoFontSize){node.dataset.autoFont='true';node.dataset.autoFontMax=element.fontSizeUnit==='pt'?'320':'240';if(element.responsiveText)node.dataset.autoFontResponsive='true';}});scheduleAutomaticTextFit(slide);applyPlaybackPdfBackground(slide,item.slide.document);slide.querySelectorAll('video[data-trim-start]').forEach(video=>{const start=Number(video.dataset.trimStart||0),end=Number(video.dataset.trimEnd||0),synchronizedStart=()=>{const segmentDuration=end>start?end-start:Math.max(0,Number(video.duration||0)-start);video.currentTime=start+(segmentDuration>0?(elapsedMs/1000)%segmentDuration:0);};video.addEventListener('loadedmetadata',synchronizedStart);video.addEventListener('timeupdate',()=>{if(end>start&&video.currentTime>=end)video.currentTime=start;});});slide.style.transitionDelay=animate&&elapsedMs>0?`${-Math.min(450,elapsedMs)}ms`:'';if(animate&&elapsedMs<450)requestAnimationFrame(()=>slide.classList.add('is-visible'));else slide.classList.add('is-visible');
 }
 
 function updatePlaybackClocks(root) {
@@ -2763,6 +2763,9 @@ function slideThumb(slide) {
   return `<span class="slide-thumb slide-thumb-designed type-${escapeHtml(slide.type)} ${slide.ratio === 'auto' ? 'is-auto' : ''}"><span class="slide-thumb-surface ${slide.ratio === 'portrait' ? 'is-portrait' : ''}">${slideDecorationsMarkup(settings)}${elements || `<span class="slide-thumb-empty">${escapeHtml(slideTypeLabels[slide.type] || 'Slide')}</span>`}</span>${slide.ratio === 'auto' ? '<i class="slide-thumb-auto-badge">AUTO</i>' : ''}</span>`;
 }
 
+function mediaContentMarkup(element,src,video=false,extra=''){
+  return `<span class="media-placement">${video?`<video src="${escapeHtml(src)}" ${KioskyMediaPlacement.attributes(element)} playsinline ${extra}></video>`:`<img src="${escapeHtml(src)}" alt="" ${KioskyMediaPlacement.attributes(element)} ${extra}>`}</span>`;
+}
 function previewTypography(value) {
   if(Array.isArray(value))return value.map(previewTypography);
   if(!value||typeof value!=='object')return value;
@@ -2779,8 +2782,8 @@ function thumbnailElementMarkup(element, settings) {
   if (element.type === 'weather') content = '<span class="slide-thumb-weather">☀ 21°</span>';
   if (element.type === 'qr-code') content = qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background);
   if (element.type === 'countdown') content = `<span class="slide-thumb-countdown">${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</span>`;
-  if (element.type === 'image') content = element.src ? `<img src="${escapeHtml(element.src)}" alt="">` : '<span class="slide-thumb-symbol">▧</span>';
-  if (element.type === 'video') content = element.src ? `<video src="${escapeHtml(element.src)}" muted preload="metadata"></video>` : '<span class="slide-thumb-symbol">▶</span>';
+  if (element.type === 'image') content = element.src ? mediaContentMarkup(element,element.src) : '<span class="slide-thumb-symbol">▧</span>';
+  if (element.type === 'video') content = element.src ? mediaContentMarkup(element,element.src,true,'muted preload="metadata"') : '<span class="slide-thumb-symbol">▶</span>';
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
   if (element.type === 'event') content = `<span class="slide-thumb-event"><small>Herzlich willkommen zu</small><strong>${escapeHtml(element.event || element.text || 'Veranstaltung')}</strong><i>Einlass: 18:30 · Beginn: 19:30 · Pause: 20:15 · Ende: 22:00</i></span>`;
   if (element.type === 'event-field') content = escapeHtml(`${element.prefix || ''}${element.fallback || 'Veranstaltungsfeld'}`);
@@ -3136,6 +3139,7 @@ function renderSlideLibrary() {
       <span class="slide-card-actions">${canEditContent ? `<button type="button" data-add-library-slide="${escapeHtml(slide.id)}" title="Zum Kanal hinzufügen">＋</button>` : ''}<button type="button" data-version-library-slide="${escapeHtml(slide.id)}" title="Versionen anzeigen">Versionen</button>${canEditContent ? `<button type="button" data-edit-library-slide="${escapeHtml(slide.id)}" title="Slide bearbeiten">Bearbeiten</button>` : ''}</span>
     </div>`).join('') || '<p class="property-note">Noch keine passende Slide vorhanden.</p>';
 
+  KioskyMediaPlacement.hydrate(library);
   library.querySelectorAll('.slide-library-card').forEach(card => {
     card.addEventListener('dragstart', event => {
       if (!canEditContent || event.target.closest('input, button, label')) { event.preventDefault(); return; }
@@ -3437,6 +3441,7 @@ function renderPlaylist() {
   document.querySelector('#channel-duration-summary').textContent = formatDuration(totalDuration);
   document.querySelector('#preview-slide-count').textContent = `${state.playlist.length} Slides im Kanal`;
 
+  KioskyMediaPlacement.hydrate(playlist);
   playlist.querySelectorAll('[data-remove-index]').forEach(button => button.addEventListener('click', () => {
     const removed = state.playlist.splice(Number(button.dataset.removeIndex), 1)[0];
     const slide = state.slides.find(item => item.id === removed.slideId);
@@ -3825,6 +3830,8 @@ function applyMediaAssetToElement(element, asset) {
   element.type = asset.type === 'video' ? 'video' : 'image';
   element.mediaAssetId = asset.id;
   element.src = asset.src;
+  element.mediaNaturalWidth = Number(asset.metadata?.width)||undefined;
+  element.mediaNaturalHeight = Number(asset.metadata?.height)||undefined;
   element.trimStart = asset.metadata?.trimStart || 0;
   element.trimEnd = asset.metadata?.trimEnd;
 }
@@ -3925,12 +3932,22 @@ function editorElementMarkup(element) {
   if (element.type === 'weather') return weatherElementMarkup(element);
   if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
   if (element.type === 'countdown') { const countdown=resolveEventCountdown(element,event);return `<div class="canvas-countdown" ${hiddenEventValueAttributes(!countdown.countdownMissing)}>${escapeHtml(element.prefix || '')}${countdownText(countdown)}${escapeHtml(element.suffix || '')}</div>`; }
-  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?`<img src="${escapeHtml(src)}" alt=""${(element.menuPdfImage || element.mediaFit === 'contain')?' style="object-fit:contain"':''}>`:'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
-  if (element.type === 'video') return element.src ? `<video src="${escapeHtml(element.src)}" ${element.muted ? 'muted' : ''}${element.mediaFit === 'contain' ? ' style="object-fit:contain"' : ''} autoplay loop></video>` : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
+  if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?mediaContentMarkup(element,src):'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
+  if (element.type === 'video') return element.src ? mediaContentMarkup(element,element.src,true,`${element.muted!==false?'muted':''} autoplay loop`) : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
   if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Sommerkonzert',element)}</div>`;
   if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="canvas-text-content" ${hiddenEventValueAttributes(presentation.present)}>${escapeHtml(presentation.text)}</div>`; }
   return `<div class="canvas-text-content" contenteditable="true" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
+}
+
+try{document.querySelector('#editor-snap-enabled').checked=localStorage.getItem('kiosky-editor-snapping')!=='false';}catch{}
+document.querySelector('#editor-snap-enabled').addEventListener('change',event=>{try{localStorage.setItem('kiosky-editor-snapping',String(event.target.checked));}catch{}});
+function showEditorSnapGuides(canvas,guides={}){
+  canvas.querySelector('.editor-snap-guides')?.remove();
+  if(guides.x==null&&guides.y==null)return;
+  const overlay=document.createElement('div');overlay.className='editor-snap-guides';overlay.setAttribute('aria-hidden','true');
+  for(const axis of ['x','y'])if(guides[axis]!=null){const line=document.createElement('i');line.className=`editor-snap-line axis-${axis}`;line.style[axis==='x'?'left':'top']=`calc(${guides[axis]}% - ${guides[axis]===100?1:0}px)`;overlay.append(line);}
+  canvas.append(overlay);
 }
 
 function renderEditorCanvas() {
@@ -3938,6 +3955,7 @@ function renderEditorCanvas() {
   if(!state.selectedEditorElementIds)state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
   const selectedEvent=editorSelectedEvent();
   canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${element.id}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}<button class="canvas-rotate-handle" type="button" aria-label="Element drehen">↻</button><button class="canvas-element-handle" type="button" aria-label="Element verschieben">⠿</button>${selected?'<button class="canvas-delete-button" type="button" aria-label="Element löschen">×</button><i class="resize-handle nw"></i><i class="resize-handle ne"></i><i class="resize-handle sw"></i><i class="resize-handle se"></i>':''}</div>`;}).join('');
+  KioskyMediaPlacement.hydrate(canvas);
   hydrateWeatherElements(canvas);
   scheduleAutomaticTextFit(canvas);
 
@@ -3967,13 +3985,20 @@ function renderEditorCanvas() {
       if(!state.selectedEditorElementIds.has(element.id))state.selectedEditorElementIds=new Set([element.id]);state.selectedEditorElementId = element.id;pushEditorHistory();
       const selected=state.editorElements.filter(item=>state.selectedEditorElementIds.has(item.id)&&!item.locked),origins=new Map(selected.map(item=>[item.id,{x:item.x,y:item.y}]));
       const canvasRect = canvas.getBoundingClientRect();
-      const startX=event.clientX,startY=event.clientY;
+      const startX=event.clientX,startY=event.clientY,pointerId=event.pointerId;
+      const geometry=KioskyEditorAlignment,movingIds=new Set(selected.map(item=>item.id));
+      const visualBox=item=>{const bounds=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`).getBoundingClientRect();return{x:(bounds.left-canvasRect.left)/canvasRect.width*100,y:(bounds.top-canvasRect.top)/canvasRect.height*100,width:bounds.width/canvasRect.width*100,height:bounds.height/canvasRect.height*100};};
+      const box=geometry.bounds(selected.map(visualBox));
+      const others=state.editorElements.filter(item=>!movingIds.has(item.id)).map(visualBox).filter(box=>box.width>0&&box.height>0);
+      try{handle.setPointerCapture(pointerId);}catch{}
       const move = moveEvent => {
-        const dx=(moveEvent.clientX-startX)/canvasRect.width*100,dy=(moveEvent.clientY-startY)/canvasRect.height*100;selected.forEach(item=>{const origin=origins.get(item.id);item.x=Math.max(0,Math.min(100-item.width,origin.x+dx));item.y=Math.max(0,Math.min(100-item.height,origin.y+dy));const selectedNode=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`);selectedNode.style.left=`${item.x}%`;selectedNode.style.top=`${item.y}%`;});
-        syncEditorProperties();
+        if(moveEvent.pointerId!==pointerId)return;moveEvent.preventDefault();
+        const movement=geometry.move(box,others,(moveEvent.clientX-startX)/canvasRect.width*100,(moveEvent.clientY-startY)/canvasRect.height*100,8/canvasRect.width*100,8/canvasRect.height*100,document.querySelector('#editor-snap-enabled').checked&&!moveEvent.altKey);
+        selected.forEach(item=>{const origin=origins.get(item.id);item.x=origin.x+movement.dx;item.y=origin.y+movement.dy;const selectedNode=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`);selectedNode.style.left=`${item.x}%`;selectedNode.style.top=`${item.y}%`;});
+        showEditorSnapGuides(canvas,movement.guides);syncEditorProperties();
       };
-      const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); renderEditorCanvas(); scheduleSlideAutosave(); };
-      window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop);
+      const stop = stopEvent => {if(stopEvent.pointerId!==pointerId)return;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',stop);window.removeEventListener('pointercancel',stop);renderEditorCanvas();scheduleSlideAutosave();};
+      window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',stop);window.addEventListener('pointercancel',stop);
     });
     const rotateHandle = node.querySelector('.canvas-rotate-handle');
     rotateHandle.addEventListener('pointerdown', event => {
@@ -4217,6 +4242,7 @@ function syncEditorProperties() {
   document.querySelector('#property-video-selection').textContent = element.type === 'video' ? selectedAsset?.name || (element.src ? 'Bestehendes Video · bitte bei Bedarf neu zuordnen' : 'Noch kein Video ausgewählt') : '';
   document.querySelector('#property-web-url').value = element.type === 'web' ? element.src || '' : '';
   document.querySelector('#property-video-muted').checked = element.muted !== false;
+  syncMediaPlacementProperties(element);
   document.querySelector('#property-x').value = Math.round(element.x);
   document.querySelector('#property-y').value = Math.round(element.y);
   document.querySelector('#property-width').value = Math.round(element.width);
@@ -4269,6 +4295,34 @@ function syncEditorProperties() {
   renderTickerProperties(element);
   renderWayfindingProperties(element);
 }
+
+function syncMediaPlacementProperties(element){
+  const visible=['image','video'].includes(element.type);document.querySelector('#media-placement-properties').hidden=!visible;
+  if(!visible)return;
+  const value=KioskyMediaPlacement.settings(element);document.querySelector('#property-media-fit').value=value.fit;
+  for(const [id,key] of [['zoom','zoom'],['zoom-number','zoom'],['x','x'],['y','y']])document.querySelector(`#property-media-${id}`).value=value[key];
+  for(const key of ['zoom','x','y'])document.querySelector(`#property-media-${key}-value`).textContent=`${value[key]} %`;
+}
+function refreshMediaPlacement(element){
+  const media=document.querySelector(`#slide-editor-canvas [data-editor-element="${CSS.escape(element.id)}"] .placed-media`);
+  if(media)KioskyMediaPlacement.apply(media,element);
+  syncMediaPlacementProperties(element);scheduleSlideAutosave();
+}
+for(const [id,key] of [['fit','mediaFit'],['zoom','mediaZoom'],['zoom-number','mediaZoom'],['x','mediaX'],['y','mediaY']]){
+  const input=document.querySelector(`#property-media-${id}`);
+  input.addEventListener(id==='fit'?'change':'input',()=>{
+    const value=id==='fit'?input.value:Math.max(id.startsWith('zoom')?10:0,Math.min(id.startsWith('zoom')?400:100,Number(input.value)||0));
+    const element=selectedEditorElement();if(!element||!['image','video'].includes(element.type)||element[key]===value)return;
+    if(input.tagName==='SELECT'||input.dataset.mediaHistoryCaptured!=='true')pushEditorHistory();
+    if(input.tagName!=='SELECT')input.dataset.mediaHistoryCaptured='true';
+    element[key]=value;refreshMediaPlacement(element);
+  });
+  for(const event of ['change','blur','pointerup','pointercancel'])input.addEventListener(event,()=>delete input.dataset.mediaHistoryCaptured);
+}
+document.querySelector('#media-placement-reset').addEventListener('click',()=>{
+  const element=selectedEditorElement();if(!element||!['image','video'].includes(element.type))return;
+  pushEditorHistory();Object.assign(element,{mediaFit:element.menuPdfImage?'contain':'cover',mediaZoom:100,mediaX:50,mediaY:50});refreshMediaPlacement(element);
+});
 
 function updateSelectedElement(property, value) {
   const element = selectedEditorElement();

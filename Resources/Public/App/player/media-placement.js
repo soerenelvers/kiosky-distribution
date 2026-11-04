@@ -1,0 +1,24 @@
+/* One placement model for editor, thumbnails, channel preview and player. */
+(function(root){
+  const number=(value,fallback,min,max)=>{const n=Number(value);return value==null||!Number.isFinite(n)?fallback:Math.max(min,Math.min(max,n));};
+  function settings(element={}){
+    return {fit:['cover','contain','none'].includes(element.mediaFit)?element.mediaFit:element.menuPdfImage?'contain':'cover',zoom:number(element.mediaZoom,100,10,400),x:number(element.mediaX,50,0,100),y:number(element.mediaY,50,0,100),width:number(element.mediaNaturalWidth,0,0,100000),height:number(element.mediaNaturalHeight,0,0,100000)};
+  }
+  function attributes(element){
+    const s=settings(element),pending=s.fit==='none'&&(!s.width||!s.height);
+    return `class="placed-media" data-media-fit="${s.fit}"${pending?' data-media-pending':''} style="--media-zoom:${s.zoom/100};--media-x:${s.x}%;--media-y:${s.y}%;--media-natural-width:${s.width};--media-natural-height:${s.height};object-fit:${s.fit==='none'?(pending?'contain':'fill'):s.fit}"`;
+  }
+  function update(media){
+    const width=media.videoWidth||media.naturalWidth,height=media.videoHeight||media.naturalHeight;
+    if(width>0&&height>0){media.style.setProperty('--media-natural-width',width);media.style.setProperty('--media-natural-height',height);media.removeAttribute('data-media-pending');media.style.objectFit='fill';}
+  }
+  function apply(media,element){
+    const s=settings(element);media.dataset.mediaFit=s.fit;const pending=s.fit==='none'&&(!s.width||!s.height);media.style.objectFit=s.fit==='none'?(pending?'contain':'fill'):s.fit;
+    for(const [key,value] of [['zoom',s.zoom/100],['x',s.x+'%'],['y',s.y+'%'],['natural-width',s.width],['natural-height',s.height]])media.style.setProperty('--media-'+key,value);
+    if(pending)media.setAttribute('data-media-pending','');else media.removeAttribute('data-media-pending');if(s.fit==='none')update(media);
+  }
+  function hydrate(scope){scope.querySelectorAll('.placed-media[data-media-fit="none"]').forEach(update);}
+  // Capture also covers template/version thumbnails rendered after the main library.
+  for(const event of ['load','loadedmetadata'])root.document?.addEventListener(event,e=>{if(e.target?.matches?.('.placed-media[data-media-fit="none"]'))update(e.target);},true);
+  root.KioskyMediaPlacement={settings,attributes,hydrate,apply};
+})(globalThis);

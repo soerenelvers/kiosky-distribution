@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.16.1-20261104190322%2B02b6567c">
+  <link rel="stylesheet" href="styles.css?v=3.17.0-20261104215307%2B15fdc711">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1375,12 +1375,12 @@
 
         <section class="editor-workspace">
           <div class="editor-toolbar">
-            <button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="underline"><u>U</u></button><span></span><button type="button" data-align="left">≡</button><button type="button" data-align="center">≣</button><button type="button" data-align="right">≡</button><span class="zoom-label">100 %</span>
+            <button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="underline"><u>U</u></button><span></span><button type="button" data-align="left">≡</button><button type="button" data-align="center">≣</button><button type="button" data-align="right">≡</button><label class="editor-snap-toggle" title="Alt gedrückt halten zum freien Verschieben"><input id="editor-snap-enabled" type="checkbox" checked> Einrasten</label>
           </div>
           <div class="editor-stage-wrap">
             <div class="slide-editor-canvas" id="slide-editor-canvas" data-ratio="landscape" aria-label="Slide-Arbeitsfläche"></div>
           </div>
-          <p class="editor-help">Elemente auf die Fläche ziehen, anklicken und frei positionieren. Text kann direkt auf der Slide bearbeitet werden.</p>
+          <p class="editor-help">Elemente verschieben und an Kanten oder Mittellinien einrasten. Alt gedrückt halten zum freien Verschieben. Text kann direkt auf der Slide bearbeitet werden.</p>
         </section>
 
         <aside class="editor-layers" aria-label="Ebenen">
@@ -1415,6 +1415,15 @@
             <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
             <div data-property-section="image" class="editor-media-property"><button class="media-library-picker" id="property-image-library" type="button"><span>▦</span><strong>Bild aus Mediendatenbank wählen</strong><small id="property-image-selection">Noch kein Bild ausgewählt</small></button><p class="property-note">Neue Bilder werden in der Mediendatenbank hochgeladen und dort einem Ordner zugeordnet.</p></div>
             <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><p class="property-note">Neue Videos werden zentral in der Mediendatenbank hochgeladen und gepflegt.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label></div>
+            <fieldset id="media-placement-properties" class="editor-media-placement" hidden>
+              <legend>Medienplatzierung</legend>
+              <label class="form-field"><span>Darstellung</span><select id="property-media-fit"><option value="cover">Inhalt beschneiden</option><option value="contain">Inhalt einpassen</option><option value="none">Originalgröße anzeigen</option></select></label>
+              <label class="range-field"><span>Zoom · <output id="property-media-zoom-value">100 %</output></span><input id="property-media-zoom" type="range" min="10" max="400" step="1" value="100"></label>
+              <div class="property-row"><label class="form-field"><span>Zoom %</span><input id="property-media-zoom-number" type="number" min="10" max="400" step="1" value="100"></label><button class="button button-secondary" id="media-placement-reset" type="button">Zurücksetzen</button></div>
+              <label class="range-field"><span>Inhalt horizontal · <output id="property-media-x-value">50 %</output></span><input id="property-media-x" type="range" min="0" max="100" step="1" value="50"></label>
+              <label class="range-field"><span>Inhalt vertikal · <output id="property-media-y-value">50 %</output></span><input id="property-media-y" type="range" min="0" max="100" step="1" value="50"></label>
+              <p class="property-note">Zoom und Position verändern die Darstellung innerhalb des Elements. Die Originaldatei bleibt erhalten. Elementgröße, Drehung und Deckkraft stellst du darunter ein.</p>
+            </fieldset>
             <div data-property-section="web"><label class="form-field"><span>Externe Website</span><input id="property-web-url" type="url" placeholder="https://example.org"></label><p class="property-note">Die Zielseite muss das Einbetten technisch erlauben.</p></div>
             <div data-property-section="wayfinding" id="wayfinding-properties"></div>
             <div class="property-row"><label class="form-field"><span>X</span><input id="property-x" type="number" min="0" max="100"></label><label class="form-field"><span>Y</span><input id="property-y" type="number" min="0" max="100"></label></div>
@@ -1681,8 +1690,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.16.1-20261104190322%2B02b6567c"></script>
-  <script src="player/fullscreen-control.js?v=3.16.1-20261104190322%2B02b6567c"></script>
-  <script src="app.js?v=3.16.1-20261104190322%2B02b6567c"></script>
+  <script src="runtime-config.js?v=3.17.0-20261104215307%2B15fdc711"></script>
+  <script src="player/fullscreen-control.js?v=3.17.0-20261104215307%2B15fdc711"></script>
+  <script src="player/media-placement.js?v=3.17.0-20261104215307%2B15fdc711"></script>
+  <script src="player/editor-alignment.js?v=3.17.0-20261104215307%2B15fdc711"></script>
+  <script src="app.js?v=3.17.0-20261104215307%2B15fdc711"></script>
 </body>
 </html>
