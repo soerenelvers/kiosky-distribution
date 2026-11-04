@@ -15,6 +15,8 @@
   const status = document.querySelector('#pairing-status');
   const error = document.querySelector('#error');
   let pollTimer = 0;
+  let creating = false;
+  let retryDelay = 3000;
 
   function read(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -77,7 +79,11 @@
   }
 
   async function createPairing() {
+    if (creating) return;
+    creating = true;
     window.clearTimeout(pollTimer);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
     error.hidden = true;
     code.textContent = '••••••';
     status.textContent = 'Kopplungscode wird erzeugt …';
@@ -85,17 +91,24 @@
       const response = await fetch(apiUrl('/api/player-pairings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ platform: 'Browser / Desktop Player', playerBaseUrl: runtime.playerBaseUrl || `${window.location.origin}/` })
+        body: JSON.stringify({ platform: 'Browser / Desktop Player', playerBaseUrl: runtime.playerBaseUrl || `${window.location.origin}/` }),
+        signal: controller.signal
       });
       if (!response.ok) throw new Error('Der Kopplungsdienst ist momentan nicht erreichbar.');
       const pairing = await response.json();
+      retryDelay = 3000;
       write(keys.pairing, JSON.stringify(pairing));
       code.textContent = pairing.code;
       status.textContent = 'Code ist 15 Minuten gültig · wartet auf Zuordnung …';
       poll(pairing);
     } catch (reason) {
       showError(reason instanceof Error ? reason.message : 'Code konnte nicht erzeugt werden.');
-      status.textContent = 'Bitte Netzwerkverbindung prüfen.';
+      status.textContent = 'Warte auf Verbindung · neuer Versuch …';
+      pollTimer = window.setTimeout(createPairing, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 30000);
+    } finally {
+      window.clearTimeout(timeout);
+      creating = false;
     }
   }
 

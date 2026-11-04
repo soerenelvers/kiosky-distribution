@@ -59,9 +59,13 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
         if (!$this->isSafeRelativePath($relativePath)) {
             return new Response('php://temp', 404);
         }
+        // Also retire files left behind by an older, manually overlaid installation.
+        if (in_array(strtolower($relativePath), ['launchers/kiosky-player-windows-x86.exe', 'launchers/kiosky-player-windows-x86.url'], true)) {
+            return new Response('php://temp', 404, ['Cache-Control'=>'no-store']);
+        }
 
         // Old Player Center links must not keep distributing unconfigured templates.
-        $legacyLaunchers = ['launchers/kiosky-player-windows-x64.exe'=>'windows-x64','launchers/kiosky-player-windows-x86.exe'=>'windows-x86','launchers/kiosky-player-linux-x64'=>'linux-x64','launchers/kiosky-player-macos-universal'=>'macos-universal'];
+        $legacyLaunchers = ['launchers/kiosky-player-windows-x64.exe'=>'windows-x64','launchers/kiosky-player-linux-x64'=>'linux-x64','launchers/kiosky-player-macos-universal'=>'macos-universal'];
         if (isset($legacyLaunchers[$relativePath])) {
             $base = $request->getUri()->getScheme().'://'.$request->getUri()->getAuthority().rtrim($sitePath,'/');
             try {

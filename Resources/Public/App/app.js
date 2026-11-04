@@ -500,8 +500,12 @@ async function renderDisplayPlayer(slug) {
       if(force||previous!==contentIdentity)startPlayback(true);else if(playerState?.playbackSync)startSynchronizedPlayback(false);
     }finally{statePollRunning=false;if(pendingForcedRefresh){pendingForcedRefresh=false;refreshPlayer(true);}}
   };
-  const initial=await fetchState();
-  if(!initial){document.body.innerHTML='<main class="player-error"><strong>Display nicht gefunden</strong><p>Bitte die Player-URL und den Geräteschlüssel prüfen.</p></main>';return;}
+  let initial=await fetchState(),initialRetryDelay=3000;
+  while(!initial){
+    document.body.innerHTML='<main class="player-error"><strong>Warte auf Display-Verbindung</strong><p>Der Player versucht es automatisch erneut. Falls die Verbindung ausbleibt, bitte Netzwerk, Player-URL und Geräteschlüssel prüfen.</p></main>';
+    await new Promise(resolve=>setTimeout(resolve,initialRetryDelay));
+    initialRetryDelay=Math.min(initialRetryDelay*2,30000);initial=await fetchState();
+  }
   renderShell(initial);contentIdentity=playbackIdentity(initial);document.querySelector('#player-clock').textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   applyEmergency();startPlayback(true);await handleCommands(initial.commands);
   setInterval(pollCommands,3000);setInterval(()=>refreshPlayer(),5000);
@@ -4882,7 +4886,7 @@ async function copyText(value) {
 function displayConfiguredResolution(display){return display.resolution||{width:1920,height:1080};}
 function displayEffectiveResolution(display){return display.resolutionMode==='native'&&display.detectedResolution?display.detectedResolution:displayConfiguredResolution(display);}
 function displayResolutionSummary(display){if(display.resolutionMode==='native'){const current=display.detectedResolution;return current?`Responsiv · aktuell ${current.width} × ${current.height}`:'Responsiv · native Browsergröße';}const configured=displayConfiguredResolution(display);return`Fest · ${configured.width} × ${configured.height}`;}
-function launcherDownloadMenu(display){const base=`/api/displays/${encodeURIComponent(display.id)}/launcher/`,desktop=kioskyRuntime.platform==='standalone'?`<strong>Zugeordneter Player für dieses Display</strong><a href="${base}windows-x64">Windows 64 Bit <small>.exe</small></a><a href="${base}windows-x86">Windows 32 Bit <small>Browserstart · .url · F11</small></a><a href="${base}linux-x64">Ubuntu / Debian 64 Bit</a><a href="${base}macos-universal">macOS <small>Apple Silicon & Intel · .app</small></a>`:'',pairing=`<button type="button" data-pair-player="${escapeHtml(display.id)}">Universal Player <small>Code koppeln</small></button>`,center=kioskyRuntime.playerCenterUrl||'/player';return`<details class="launcher-download"><summary title="Player einrichten" aria-label="Player für ${escapeHtml(display.name)} einrichten">↓</summary><div>${desktop}<strong>Universal Player</strong><a href="${escapeHtml(center)}" target="_blank" rel="noopener">Player Center öffnen <small>Downloads mit Kopplungscode</small></a>${pairing}<small>Der Universal Player zeigt beim ersten Start einen sechsstelligen Code. Diesen Code hier mit dem Display koppeln.</small></div></details>`;}
+function launcherDownloadMenu(display){const base=`/api/displays/${encodeURIComponent(display.id)}/launcher/`,desktop=kioskyRuntime.platform==='standalone'?`<strong>Zugeordneter Player für dieses Display</strong><a href="${base}windows-x64">Windows 64 Bit <small>.exe</small></a><a href="${base}linux-x64">Ubuntu / Debian 64 Bit</a><a href="${base}macos-universal">macOS <small>Apple Silicon & Intel · .app</small></a>`:'',pairing=`<button type="button" data-pair-player="${escapeHtml(display.id)}">Universal Player <small>Code koppeln</small></button>`,center=kioskyRuntime.playerCenterUrl||'/player';return`<details class="launcher-download"><summary title="Player einrichten" aria-label="Player für ${escapeHtml(display.name)} einrichten">↓</summary><div>${desktop}<strong>Universal Player</strong><a href="${escapeHtml(center)}" target="_blank" rel="noopener">Player Center öffnen <small>Downloads mit Kopplungscode</small></a>${pairing}<small>Der Universal Player zeigt beim ersten Start einen sechsstelligen Code. Diesen Code hier mit dem Display koppeln.</small></div></details>`;}
 
 function renderDisplays() {
   const grid = document.querySelector('#display-table');

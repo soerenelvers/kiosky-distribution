@@ -11,7 +11,6 @@ final class PlayerLauncher
     private const CAPACITY = 4096;
     private const PLATFORMS = [
         'windows-x64' => ['kiosky-player-windows-x64.exe', '.exe', 'application/vnd.microsoft.portable-executable'],
-        'windows-x86' => ['', '.url', 'application/internet-shortcut'],
         'linux-x64' => ['kiosky-player-linux-x64', '', 'application/octet-stream'],
         'macos-universal' => ['kiosky-player-macos-universal', '.app.zip', 'application/zip'],
     ];
@@ -27,23 +26,18 @@ final class PlayerLauncher
             throw new RuntimeException('Die Player-Adresse ist ungültig oder zu lang.', 422);
         }
         [$template, $extension, $type] = self::PLATFORMS[$platform];
-        if ($platform === 'windows-x86') {
-            $browserUrl = preg_replace_callback('/[\x80-\xff]+/', static fn(array $match): string => rawurlencode($match[0]), $playerUrl);
-            $body = "[InternetShortcut]\r\nURL=".$browserUrl."\r\n";
-        } else {
-            $path = rtrim($templateRoot, '/\\').'/'.$template;
-            if (!is_readable($path)) throw new RuntimeException('Die Player-Vorlage fehlt im Paket.', 503);
-            $body = @file_get_contents($path);
-            if ($body === false) throw new RuntimeException('Die Player-Vorlage kann nicht gelesen werden.', 503);
-            $offset = 0; $replacements = 0;
-            while (($position = strpos($body, self::MARKER, $offset)) !== false) {
-                if ($position + self::CAPACITY > strlen($body)) throw new RuntimeException('Die Player-Vorlage ist beschädigt.', 503);
-                $body = substr_replace($body, str_pad($playerUrl, self::CAPACITY, "\0"), $position, self::CAPACITY);
-                $offset = $position + self::CAPACITY; $replacements++;
-            }
-            if (!$replacements) throw new RuntimeException('Die Player-Vorlage ist ungültig.', 503);
-            if ($platform === 'macos-universal') $body = self::macApp($body);
+        $path = rtrim($templateRoot, '/\\').'/'.$template;
+        if (!is_readable($path)) throw new RuntimeException('Die Player-Vorlage fehlt im Paket.', 503);
+        $body = @file_get_contents($path);
+        if ($body === false) throw new RuntimeException('Die Player-Vorlage kann nicht gelesen werden.', 503);
+        $offset = 0; $replacements = 0;
+        while (($position = strpos($body, self::MARKER, $offset)) !== false) {
+            if ($position + self::CAPACITY > strlen($body)) throw new RuntimeException('Die Player-Vorlage ist beschädigt.', 503);
+            $body = substr_replace($body, str_pad($playerUrl, self::CAPACITY, "\0"), $position, self::CAPACITY);
+            $offset = $position + self::CAPACITY; $replacements++;
         }
+        if (!$replacements) throw new RuntimeException('Die Player-Vorlage ist ungültig.', 503);
+        if ($platform === 'macos-universal') $body = self::macApp($body);
         return ['body'=>$body, 'filename'=>'Kiosky-Universal-Player-'.$platform.$extension, 'contentType'=>$type];
     }
 

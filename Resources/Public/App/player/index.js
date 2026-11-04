@@ -19,19 +19,18 @@
   }
 
   function desktopCard(platform, name, icon, detail) {
-    const browserLink = platform === 'windows-x86';
     return `<article class="player-card">
       <div class="platform-icon">${icon}</div>
       <h3>${name}</h3>
-      <p>${detail} ${browserLink?'Browser-Verknüpfung ohne EXE. Vollbild über F11; beim ersten Start erscheint der Kopplungscode.':'Beim ersten Start erscheint der Kopplungscode; danach startet der Player automatisch im Vollbild.'}</p>
-      <div class="availability ready"><i></i>${browserLink?'Browserstart verfügbar':'Universal Player verfügbar'}</div>
-      <div class="actions"><a class="download" href="${downloads[platform]||`${downloadBase}${platform}`}"><span>${browserLink?'Browserstart herunterladen':'Player herunterladen'}<small>${browserLink?'.url · vorhandenen Browser verwenden':'Noch keinem Display zugeordnet'}</small></span><b>↓</b></a></div>
+      <p>${detail} Beim ersten Start erscheint der Kopplungscode; danach startet der Player automatisch im Vollbild.</p>
+      <div class="availability ready"><i></i>Universal Player verfügbar</div>
+      <div class="actions"><a class="download" href="${downloads[platform]||`${downloadBase}${platform}`}"><span>Player herunterladen<small>Noch keinem Display zugeordnet</small></span><b>↓</b></a></div>
     </article>`;
   }
 
   function loadCatalog() {
-    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit.')}${desktopCard('windows-x86','Windows Browserstart 32 Bit','⊞','Für Windows-Systeme mit 32 Bit.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Nach dem Download ausführbar machen.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11.')}`;
-    status.textContent = '5 Player-Angebote';
+    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit. Richtet beim ersten Start Autostart nach der Windows-Anmeldung ein; die Kopplung bleibt im eigenen Browserprofil gespeichert.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Nach dem Download ausführbar machen.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11.')}`;
+    status.textContent = '4 Player-Angebote';
   }
 
   document.querySelector('#copy-server').addEventListener('click', async event => {

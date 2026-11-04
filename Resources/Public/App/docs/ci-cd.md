@@ -91,7 +91,7 @@ Dieser Draft-PR ändert geschützte Pfade und ist selbst niemals auto-mergefähi
 
 ## Pflichtprüfungen
 
-`CI gate` verlangt `success` für alle vier Gruppen; übersprungene, abgebrochene
+`CI gate` verlangt `success` für alle fünf Gruppen; übersprungene, abgebrochene
 oder fehlgeschlagene Jobs werden nicht als Erfolg gewertet:
 
 1. **Application:** Frozen install, TypeScript, Anwendungstests, Release-Tests,
@@ -108,6 +108,10 @@ oder fehlgeschlagene Jobs werden nicht als Erfolg gewertet:
    Vorherige stabile ZIPs kommen mit einem ausschließlich lesenden Source-Token
    aus den GitHub Releases. Ein temporäres lokales VCS-Fixture benötigt keinen
    privaten Distributionsschlüssel. Fehlende vorherige Pakete brechen Tests ab.
+
+5. **Windows player:** tatsächliche x64-EXE auf einem isolierten Windows-Runner;
+   Benutzerinstallation, Autostart, spätere Serververfügbarkeit, Vollbild-/Profil-
+   Argumente, wiederholter Start und Autostart-Abwahl mit Browserfixture.
 
 Geplante Sicherheitsläufe verwenden denselben lesenden CI-Workflow. Es wird kein
 Sicherheitscheck nur wegen fehlender Lizenz stillschweigend als bestanden gewertet.

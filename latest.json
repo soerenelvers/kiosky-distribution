@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "cb4a23fe87457fabe9020b116c0df0029dde3774",
+  "source_commit": "dcef33a7529b3b0705bd9c6f8e45a1296a762823",
   "product": "kiosky",
-  "version": "3.13.4",
-  "released_at": "2026-11-03T23:18:35.996Z",
+  "version": "3.14.0",
+  "released_at": "2026-11-04T14:46:17.892Z",
   "channel": "stable",
-  "release_notes": "## [3.13.4] – 2026-11-03\n\n- WordPress-Playerdownloads serverseitig mit der tatsächlichen Kopplungsadresse versehen. Bisher wurde die unveränderte EXE-Vorlage mit `KIOSKY_PLAYER_URL_PLACEHOLDER` ausgeliefert, was beim Start einen DNS-Fehler erzeugte.\n- TYPO3-Player-Center auf konfigurierte Download-Endpunkte umstellen; alte Asset-Downloadlinks ebenfalls mit der Serveradresse ausliefern. Unterverzeichnis, Inhaltstyp, Downloadname, HEAD und nicht cachebare Antworten werden berücksichtigt.\n- macOS-Downloads beider CMS als vollständiges `.app.zip` mit ausführbarer Universal-Binary für Apple Silicon und Intel, passender App-Metadatei und gültigen ZIP-Zeitstempeln erzeugen.\n- Gemeldete Windows-32-Bit-EXE bis zur Klärung der Virenerkennung aus der aktuellen Auslieferung zurücknehmen. Stattdessen steht in allen Varianten eine sichtbare `.url`-Browserverknüpfung zur Verfügung; Vollbild dort über F11. Dies ist keine Bestätigung eines Fehlalarms oder eine Codesignierung.\n- URL- und Vorlagenprüfung sowie Regressionen für tatsächliche Download-Controller, native CMS-Routen, öffentliche Codekopplung, Playerzugriff und den nativen Linux-Start ergänzen. Nach Installation des Updates die Playerdateien neu herunterladen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.13.4",
+  "release_notes": "## [3.14.0] – 2026-11-04\n\n- Windows-64-Bit-Player installiert sich beim ersten Start unter `%LOCALAPPDATA%\\Kiosky\\Player` und richtet Autostart für den angemeldeten Windows-Benutzer ein. Nach Anmeldung und verfügbarer Serververbindung startet Edge beziehungsweise Chrome im Vollbild mit einem eigenen dauerhaften Profil; die Kopplung bleibt nach Browser-/PC-Neustart erhalten. Autostart lässt sich entfernen und wieder aktivieren.\n- Player-Center und Kopplungsseite verwenden versionsgebundene Skript-/CSS-Adressen, damit vorhandene Browser nach dem Update den neuen Stand laden.\n- Windows-32-Bit-Angebot einschließlich `.url`-Alternative aus Player Center, Displaymenü und Download-Routen aller drei Ausgaben entfernen.\n- Kopplungsseite und Player wiederholen fehlgeschlagene initiale API-Anfragen mit begrenztem Wiederholungsintervall. Ein beim Start noch nicht erreichbarer Dienst erfordert kein manuelles Neuladen.\n- Windows-Integrationstest führt die ausgelieferte EXE mit isolierter Browserfixture aus und prüft Benutzerinstallation, Autostart, Netzwerkverzögerung, Vollbild-/Profilargumente, Neustart und Opt-out. Browserregression prüft dauerhafte Kopplung und automatische Wiederverbindung für die gemeinsamen Standalone-/CMS-Oberflächen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.14.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.13.4",
+    "core_version": "3.14.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.13.4",
-    "typo3_extension_version": "3.13.4"
+    "wordpress_plugin_version": "3.14.0",
+    "typo3_extension_version": "3.14.0"
   },
   "components": {
     "core": {
-      "version": "3.13.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.4.zip?ref=v3.13.4",
-      "sha256": "8ec68947749fb239600864cbbcd325eeea88c8ade61aba12edb541d5b8d275eb"
+      "version": "3.14.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.14.0.zip?ref=v3.14.0",
+      "sha256": "7f4550539e628d1fb4b9a2404259a4d0b90b075068edffcc11174bc2c3b69a9a"
     },
     "standalone": {
-      "version": "3.13.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.13.4.zip?ref=v3.13.4",
-      "sha256": "8ec68947749fb239600864cbbcd325eeea88c8ade61aba12edb541d5b8d275eb"
+      "version": "3.14.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.14.0.zip?ref=v3.14.0",
+      "sha256": "7f4550539e628d1fb4b9a2404259a4d0b90b075068edffcc11174bc2c3b69a9a"
     },
     "wordpress": {
-      "version": "3.13.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.13.4.zip?ref=v3.13.4",
-      "sha256": "cde46e9b22e10b4c79a3410114c16e7fc96af0ce0a3876a0f4638f543e5a00b2",
+      "version": "3.14.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.14.0.zip?ref=v3.14.0",
+      "sha256": "93103fe468ec34a88bda7c29367090e20e91d79838e547af085f6502d05832c2",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.13.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.13.4.zip?ref=v3.13.4",
-      "sha256": "3bbc9372c510e930ff3ab7340f358c804975b65adfae1c72adeb55b7aeb960b1",
+      "version": "3.14.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.14.0.zip?ref=v3.14.0",
+      "sha256": "6f437b602767c9b24cc9a8ff3c48f41d41017e8791dbc204b856406ab933e7aa",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

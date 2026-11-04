@@ -256,3 +256,10 @@ Snapshot-/Zielprüfung, genau einen Speichervorgang und Viewer-Schutz. Der
 Medien-Smoke prüft den neuen Endpunkt zusätzlich in realen WordPress- und
 TYPO3-Installationen. Die Browserprüfung erwartet eine einzige Schreibanfrage
 beim Schließen und unveränderte Serverdaten nach einem Speicherfehler.
+
+## Windows-Player
+
+Build, Autostart und native Windows-CI sind in [windows-player.md](windows-player.md)
+beschrieben. `python tests/player-startup-browser-smoke.py` prüft nach dem Build
+die Kopplung über zwei echte persistente Chromium-Sitzungen und automatische
+Wiederholung bei verzögertem API-Start für alle drei gemeinsamen Transportvarianten.
