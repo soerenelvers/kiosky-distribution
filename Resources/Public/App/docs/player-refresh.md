@@ -76,3 +76,9 @@ liegen in Standalone unter `integration_settings` mit Präfix `player_playback:`
 im CMS-Zustand unter `playbackRevisions`. Zustellinformationen für ältere Player
 liegen unter `player_delivered:` bzw. `deliveredPlayerCommands`. Diese Laufzeitdaten
 werden nicht in übertragbare Inhalts-/Systempakete exportiert.
+
+## Standardauswahl, Rückfall und API-Vollbild ab 3.16.0
+
+Die Erweiterung um Standardslides, leere Zeitplankanäle, externe Displaybefehle
+und die Grenzen des Browser-Vollbilds ist in [player-control.md](player-control.md)
+beschrieben. Native Programmdateien benötigen weiterhin einen erneuten Download.

@@ -42,7 +42,7 @@ final class Api
             $state = $this->state();
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
-            if ($result[2] && preg_match('#^/api/(events|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
+            if ($result[2] && preg_match('#^/api/(events|slides|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
             if ($result[2]) {
                 $state['updatedAt'] = $this->now();
                 $this->store->save($state);
@@ -321,6 +321,10 @@ final class Api
         if ($path === '/api/slides/from-media' && $method === 'POST') {
             $this->license()->assertPath($state,'/api/media');
             $inputs=MediaSlides::inputs($body['mediaAssetIds']??null,$state['mediaAssets']??[]);
+            $tags=$body['tags'] ?? [];
+            if(!is_array($tags) || count($tags)>30)throw new RuntimeException('Bitte höchstens 30 Tags auswählen.',422);
+            foreach($tags as $tag)if(!is_string($tag) || strlen($tag)>320 || preg_match('//u',$tag)!==1 || preg_match_all('/./us',$tag)>80)throw new RuntimeException('Ungültiger Slide-Tag.',422);
+            $inputs=array_map(static fn(array $input): array => array_replace($input,['tags'=>$tags]),$inputs);
             $slides=[];
             foreach($inputs as $input)$slides[]=$this->saveSlide($state,$input);
             return $this->created(['slides'=>$slides]);
@@ -505,7 +509,7 @@ final class Api
         }
         if (preg_match('#^/api/operations/displays/([^/]+)/commands$#', $path, $match) && $method === 'POST') {
             $displayId=rawurldecode($match[1]);$this->required($this->active($state['displays']),$displayId,'Display');
-            if (!in_array($body['command'] ?? '',['sync','reload','identify'],true)) throw new RuntimeException('Unbekannter Player-Befehl.',422);
+            if (!in_array($body['command'] ?? '',['sync','reload','identify','fullscreen'],true)) throw new RuntimeException('Unbekannter Player-Befehl.',422);
             $command = $this->record(['displayId' => $displayId, 'command' => $body['command']]);
             $state['commands'][] = $command;
             return $this->created(['command' => $command]);
@@ -1402,6 +1406,14 @@ final class Api
         if ($path === '/api/v1' && $method === 'GET') {
             return $this->ok(['name' => 'Kiosky External Control API', 'version' => '1.0.0', 'documentation' => 'docs/external-api.md', 'openapi' => 'docs/openapi.yaml']);
         }
+        if(preg_match('#^/api/v1/displays/([^/]+)/commands$#',$path,$match)&&$method==='POST'){
+            $id=rawurldecode($match[1]);$this->required($this->active($state['displays']),$id,'Display');
+            if(!in_array($body['command'] ?? '',['reload','identify','fullscreen','sync'],true))throw new RuntimeException('Unbekannter Player-Befehl.',422);
+            $command=$this->record(['displayId'=>$id,'command'=>$body['command'],'status'=>'pending']);
+            $state['commands'][]=$command;
+            $this->audit($state,'external.display.command.queued',$id);
+            return $this->created(['command'=>$command]);
+        }
         $collections = [
             '/api/v1/displays' => 'displays',
             '/api/v1/display-groups' => 'groups',
@@ -1675,14 +1687,34 @@ final class Api
             $content = is_array($assignment['content'] ?? null) ? $assignment['content'] : [];
             if (($content['type'] ?? '') === 'channel') {
                 $channel = $this->first($this->active($state['channels']), fn(array $item): bool => $item['id'] === ($content['id'] ?? ''));
+                $directSlide = null;
             } elseif (($content['type'] ?? '') === 'slide') {
                 $directSlide = $this->first($this->active($state['slides']), fn(array $item): bool => $item['id'] === ($content['id'] ?? ''));
                 $channel = null;
             }
         }
+        $at=$this->now();
+        $available=$this->playableChannelItems($state,$channel,$display,$at);
+        $directRequested=$assignment?($assignment['content']['type'] ?? '')==='slide':!empty($selection['directSlideRequested']);
+        if(!$directRequested&&!$available){
+            foreach(array_unique([$matrixLayout['defaultChannelId'] ?? '',($display['defaultContentType'] ?? 'channel')==='channel'?($display['defaultChannelId'] ?? ''):'']) as $id){
+                if(!$id)continue;
+                $candidate=$this->first($this->active($state['channels']),static fn(array $c):bool=>$c['id']===$id);
+                $items=$this->playableChannelItems($state,$candidate,$display,$at);
+                if(!$items)continue;
+                $channel=$candidate;$available=$items;$assignment=null;
+                $selection=['channel'=>$channel,'directSlide'=>null,'sourceKey'=>'default:'.$id.':'.($channel['updatedAt'] ?? ''),'epoch'=>$channel['updatedAt'] ?? $at,'matrixMode'=>$matrixLayout && $id===($matrixLayout['defaultChannelId'] ?? '')];break;
+            }
+        }
+        if(!$directRequested&&!$available&&($display['defaultContentType'] ?? 'channel')==='slide'&&!empty($display['defaultSlideId'])){
+            $fallback=$this->first($this->active($state['slides']),static fn(array $slide):bool=>$slide['id']===$display['defaultSlideId']);
+            $items=$fallback?$this->playableChannelItems($state,['items'=>[['slideId'=>$fallback['id']]]],$display,$at):[];
+            if($items){$directSlide=$fallback;$channel=null;$assignment=null;$selection=['sourceKey'=>'default:'.$fallback['id'].':'.($fallback['updatedAt'] ?? ''),'epoch'=>$fallback['updatedAt'] ?? $at,'matrixMode'=>false];}
+        }
         $slides = [];
-        foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : ($channel['items'] ?? []) as $item) {
-            $slide = $this->first($this->active($state['slides']), fn(array $candidate): bool => $candidate['id'] === ($item['slideId'] ?? ''));
+        $playableSlidesById=array_column($this->active($state['slides']),null,'id');
+        foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
+            $slide = $playableSlidesById[$item['slideId'] ?? ''] ?? null;
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
             $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
@@ -1760,6 +1792,18 @@ final class Api
      * @param array<string,mixed>|null $matrix
      * @return array{channel:array<string,mixed>|null,directSlide:array<string,mixed>|null,sourceKey:string,epoch:string,matrixMode:bool}
      */
+    private function playableChannelItems(array $state,?array $channel,array $display,string $at): array
+    {
+        if(!$channel)return [];
+        $location=(string)($display['locationId'] ?? '');
+        if(!empty($channel['locationIds'])&&!in_array($location,$channel['locationIds'],true))return [];
+        $slides=array_column($this->active($state['slides']),null,'id');$time=strtotime($at);
+        return array_values(array_filter($channel['items'] ?? [],static function(array $item)use($slides,$time,$location):bool{
+            $slide=$slides[$item['slideId'] ?? ''] ?? null;
+            return $slide && (empty($slide['startsAt'])||strtotime($slide['startsAt'])<=$time) && (empty($slide['endsAt'])||strtotime($slide['endsAt'])>$time) && (empty($slide['locationIds'])||in_array($location,$slide['locationIds'],true));
+        }));
+    }
+
     private function resolvedChannelSelection(array $state, array $display, ?array $matrix): array
     {
         $now = $this->now();
@@ -1786,14 +1830,16 @@ final class Api
         });
         $schedule = $schedules[0] ?? null;
         $matrixMode = $matrix && (($schedule['targetType'] ?? '') === 'matrix' || (!$schedule && !empty($matrix['defaultChannelId'])));
-        $channelId = $schedule['channelId'] ?? ($matrixMode ? ($matrix['defaultChannelId'] ?? '') : ($display['defaultChannelId'] ?? ''));
+        $defaultSlide=($display['defaultContentType'] ?? 'channel')==='slide';
+        $channelId = $schedule['channelId'] ?? ($matrixMode ? ($matrix['defaultChannelId'] ?? '') : ($defaultSlide?'':($display['defaultChannelId'] ?? '')));
         $channel = $channelId ? $this->first($this->active($state['channels']), fn(array $item): bool => $item['id'] === $channelId) : null;
-        $slideId = ($schedule['contentType'] ?? '') === 'slide' ? ($schedule['slideId'] ?? $schedule['contentId'] ?? '') : '';
+        $slideId = ($schedule['contentType'] ?? '') === 'slide' ? ($schedule['slideId'] ?? $schedule['contentId'] ?? '') : (!$schedule&&!$matrixMode&&$defaultSlide?($display['defaultSlideId'] ?? ''):'');
         $directSlide = $slideId ? $this->first($this->active($state['slides']), fn(array $item): bool => $item['id'] === $slideId) : null;
         if ($directSlide) $channel = null;
         return [
             'channel' => $channel,
             'directSlide' => $directSlide,
+            'directSlideRequested' => $slideId !== '',
             'sourceKey' => $schedule ? 'schedule:' . $schedule['id'] : 'default:' . $channelId . ':' . ($channel['updatedAt'] ?? ''),
             'epoch' => (string)($schedule['startsAt'] ?? $directSlide['updatedAt'] ?? $channel['updatedAt'] ?? $now),
             'matrixMode' => (bool)$matrixMode,
@@ -1873,11 +1919,26 @@ final class Api
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
+    private function displayDefaults(array $state,array $body): array
+    {
+        $type=$body['defaultContentType'] ?? 'channel';
+        if(!in_array($type,['channel','slide'],true))throw new RuntimeException('Ungültiger Standardinhalt.',422);
+        $body['defaultContentType']=$type;
+        if($type==='slide'){
+            $id=$body['defaultSlideId'] ?? null;
+            if($id!==null&&(!is_string($id)||strlen($id)>100))throw new RuntimeException('Ungültige Standardslide.',422);
+            if($id)$this->required($this->active($state['slides']),(string)$id,'Standardslide');
+            $body['defaultSlideId']=$id;$body['defaultChannelId']=null;
+        }else{$body['defaultSlideId']=null;}
+        return $body;
+    }
+
     private function collectionRoute(array &$state, string $method, string $collection, string $singular, array $body): array
     {
         if ($method === 'GET') return $this->ok(['data' => $this->listCollection($state, $collection)]);
         if ($method === 'POST') {
             if ($collection === 'displays' && empty($body['playerKey'])) $body['playerKey'] = bin2hex(random_bytes(24));
+            if ($collection === 'displays') $body=$this->displayDefaults($state,$body);
             if ($collection === 'displays') $body += ['groupIds' => [], 'online' => false, 'cached' => false, 'channel' => 'Kein Standardkanal'];
             if ($collection === 'warnings') $body += ['status' => 'draft', 'source' => 'manual', 'targets' => []];
             if ($collection === 'schedules') {
@@ -1984,7 +2045,9 @@ final class Api
             $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
             $location = $locations[$item['locationId'] ?? ''] ?? null;
             [$matrix, $member] = $memberships[$item['id']] ?? [null, null];
-            $item['channel'] = $channel['name'] ?? 'Kein Standardkanal';
+            $item['defaultContentType']=$item['defaultContentType'] ?? 'channel';
+            $defaultSlide=$slides[$item['defaultSlideId'] ?? ''] ?? null;
+            $item['channel'] = ($item['defaultContentType']==='slide'?($defaultSlide['name'] ?? null):($channel['name'] ?? null)) ?? 'Kein Standardinhalt';
             $currentChannel = $channels[$item['channelId'] ?? ''] ?? null;
             $currentSlide = $slides[$item['slideId'] ?? ''] ?? null;
             $lastSeen = strtotime((string)($item['lastSeenAt'] ?? ''));
@@ -2004,6 +2067,7 @@ final class Api
     private function itemRoute(array &$state, string $method, string $collection, string $singular, string $id, array $body, bool $trash = false): array
     {
         if ($method === 'PUT') {
+            if($collection==='displays')$body=$this->displayDefaults($state,array_replace($this->required($state['displays'],$id,'Display'),$body));
             if ($collection === 'matrices') $this->validateMatrix($state, $body, $id);
             $record = $this->saveRecord($state, $collection, $body, $id);
             if ($collection === 'groups') $this->syncGroupMembers($state, $record);
@@ -2079,6 +2143,7 @@ final class Api
         $current = $id ? $this->required($state['slides'], $id, 'Slide') : null;
         if (isset($current['document']['menuPdf']) && !isset($body['document']['menuPdf'])) $body['document']['menuPdf']=$current['document']['menuPdf'];
         if (isset($current['document']['menu']) && !isset($body['document']['menu'])) $body['document']['menu'] = $current['document']['menu'];
+        if(AdvertisingService::formats(array_replace($current ?? [],$body)) && empty($body['endsAt'])) $body['endsAt']=$current['endsAt'] ?? gmdate('c',max(time(),strtotime((string)($body['startsAt'] ?? '')) ?: 0)+7*86400);
         $version = (int)($current['currentVersion'] ?? 0) + 1;
         $orientation = (string)($body['orientation'] ?? 'landscape');
         $body += ['width' => $orientation === 'portrait' ? 1080 : 1920, 'height' => $orientation === 'portrait' ? 1920 : 1080, 'status' => 'draft'];
@@ -2170,6 +2235,7 @@ final class Api
     {
         $this->purge($state[$collection], $id);
         if ($collection === 'channels') $this->removeChannelReferences($state, $id);
+        if($collection==='slides'){foreach($state['displays'] as &$display)if(($display['defaultSlideId'] ?? '')===$id)$display['defaultSlideId']=null;unset($display);}
         return $this->ok(['ok' => true], true);
     }
 

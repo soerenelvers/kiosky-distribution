@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "dcef33a7529b3b0705bd9c6f8e45a1296a762823",
+  "source_commit": "46cc97076e47c032ab30d2092e4c287124afa53d",
   "product": "kiosky",
-  "version": "3.14.0",
-  "released_at": "2026-11-04T14:46:17.892Z",
+  "version": "3.16.0",
+  "released_at": "2026-11-04T18:05:40.199Z",
   "channel": "stable",
-  "release_notes": "## [3.14.0] – 2026-11-04\n\n- Windows-64-Bit-Player installiert sich beim ersten Start unter `%LOCALAPPDATA%\\Kiosky\\Player` und richtet Autostart für den angemeldeten Windows-Benutzer ein. Nach Anmeldung und verfügbarer Serververbindung startet Edge beziehungsweise Chrome im Vollbild mit einem eigenen dauerhaften Profil; die Kopplung bleibt nach Browser-/PC-Neustart erhalten. Autostart lässt sich entfernen und wieder aktivieren.\n- Player-Center und Kopplungsseite verwenden versionsgebundene Skript-/CSS-Adressen, damit vorhandene Browser nach dem Update den neuen Stand laden.\n- Windows-32-Bit-Angebot einschließlich `.url`-Alternative aus Player Center, Displaymenü und Download-Routen aller drei Ausgaben entfernen.\n- Kopplungsseite und Player wiederholen fehlgeschlagene initiale API-Anfragen mit begrenztem Wiederholungsintervall. Ein beim Start noch nicht erreichbarer Dienst erfordert kein manuelles Neuladen.\n- Windows-Integrationstest führt die ausgelieferte EXE mit isolierter Browserfixture aus und prüft Benutzerinstallation, Autostart, Netzwerkverzögerung, Vollbild-/Profilargumente, Neustart und Opt-out. Browserregression prüft dauerhafte Kopplung und automatische Wiederverbindung für die gemeinsamen Standalone-/CMS-Oberflächen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.14.0",
+  "release_notes": "## [3.16.0] – 2026-11-04\n\n- Slide-Archiv direkt in der Bibliothek öffnen, durchsuchen und einzelne Slides wiederherstellen; Ablaufdaten und Verknüpfungen erhalten. Bild-/Icon-Zoom in der Wegweisung auf 10–250 % erweitern.\n\n- Standardinhalt je Display zwischen Kanal und einzelner Slide umschaltbar machen; bisherige Kanalzuweisungen bleiben Standard. Leere beziehungsweise nur gelöschte, abgelaufene oder noch nicht gültige Slides enthaltende Zeitplankanäle verwenden den Standardinhalt. Verfügbare Zeitplaninhalte übernehmen anschließend automatisch wieder.\n- Vollbildanforderung neben Neu laden und Identifizieren ergänzen. Alle drei Aktionen sowie Synchronisieren über die authentifizierte externe API bereitstellen; Companion-Modul 1.2.0 um passende Aktionen erweitern.\n- Windows-Launcher 2.1.0 um eine auf die konfigurierte Installation begrenzte Browsersteuerung ergänzen. Normale oder durch Browserrichtlinien eingeschränkte Player verlangen gegebenenfalls eine lokale Vollbildbestätigung; blockierte Anforderungen bleiben unbestätigt.\n- Migrationen für Standardslides und den zusätzlichen Playerbefehl ergänzen; neue Referenzen beim Import/Export umschreiben und bestehende Befehle beim Upgrade erhalten.\n\n- Bulk-Slide-Import um Tag-Auswahl und direkte Neuanlage erweitern; alle gewählten Dateien erhalten die Tags gemeinsam. WordPress verwendet weiterhin seinen nativen Medienbrowser.\n- Die Tags Werbung, Werbung quer und Werbung Hochkant in der gemeinsamen Auswahl bereitstellen. Fehlende Ablauffristen beim Taggen einmalig auf sieben Tage setzen; bestehende Fristen beim Bearbeiten erhalten.\n- Getaggte veröffentlichte Slides zusammen mit Veranstaltungswerbung automatisch in Werbung quer und Werbung Hochkant bündeln. Abgelaufene Slides aus der Wiedergabe und beim Abgleich aus den Kanälen entfernen, ohne Inhalte zu löschen.\n- Gesamtzahl der Slides je Werbekanal separat vom Veranstaltungslimit einstellbar machen. Die bestehende automatische Kanal-ID bleibt für Querformat erhalten; Hochkant erhält einen eigenen Kanal.\n- Regressionen für Fristerhalt, Formatzuordnung, Publikationsstatus, Kanalgrenzen, atomaren Import, native CMS-Tags und gemeinsame mobile Importdialoge ergänzen. Anleitung: [Werbung mit Tags](docs/tag-advertising.md).",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.16.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.14.0",
+    "core_version": "3.16.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.14.0",
-    "typo3_extension_version": "3.14.0"
+    "wordpress_plugin_version": "3.16.0",
+    "typo3_extension_version": "3.16.0"
   },
   "components": {
     "core": {
-      "version": "3.14.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.14.0.zip?ref=v3.14.0",
-      "sha256": "7f4550539e628d1fb4b9a2404259a4d0b90b075068edffcc11174bc2c3b69a9a"
+      "version": "3.16.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.0.zip?ref=v3.16.0",
+      "sha256": "3e5b4f0c12f7d3a0d3e17a73f21426bfc0554894f29d9ded59c266cae724d808"
     },
     "standalone": {
-      "version": "3.14.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.14.0.zip?ref=v3.14.0",
-      "sha256": "7f4550539e628d1fb4b9a2404259a4d0b90b075068edffcc11174bc2c3b69a9a"
+      "version": "3.16.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.0.zip?ref=v3.16.0",
+      "sha256": "3e5b4f0c12f7d3a0d3e17a73f21426bfc0554894f29d9ded59c266cae724d808"
     },
     "wordpress": {
-      "version": "3.14.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.14.0.zip?ref=v3.14.0",
-      "sha256": "93103fe468ec34a88bda7c29367090e20e91d79838e547af085f6502d05832c2",
+      "version": "3.16.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.16.0.zip?ref=v3.16.0",
+      "sha256": "4ddd43a4611a98285df0809c8a65a393e2230c66e9e659617ef5bfa95553c7df",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.14.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.14.0.zip?ref=v3.14.0",
-      "sha256": "6f437b602767c9b24cc9a8ff3c48f41d41017e8791dbc204b856406ab933e7aa",
+      "version": "3.16.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.16.0.zip?ref=v3.16.0",
+      "sha256": "0c6494ed751cc5cee07d69d8618c47f597193d66fa00e4f249e70614a653c1af",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

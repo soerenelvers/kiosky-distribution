@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.14.0-20261104144616%2Bdcef33a7">
+  <link rel="stylesheet" href="styles.css?v=3.16.0-20261104180538%2B46cc9707">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -281,7 +281,7 @@
 <select id="slide-tag-filter" aria-label="Slides nach Tag filtern"><option value="">Alle Tags</option></select>
 <nav id="slide-tag-folders" class="content-tag-folders" aria-label="Slides nach Tag-Ordner" hidden></nav>
             </div>
-            <div class="template-toolbar"><button class="button button-secondary" type="button" data-action="bulk-media-slides">▧ Bulk-Slide-Import</button><button class="button button-secondary" type="button" data-import-content-package>⇩ Importieren</button><button class="button button-secondary" type="button" data-action="url-slide">↗ Slide aus URL</button><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
+            <div class="template-toolbar"><button class="button button-secondary" type="button" id="open-slide-archive">Archiv öffnen</button><button class="button button-secondary" type="button" data-action="bulk-media-slides">▧ Bulk-Slide-Import</button><button class="button button-secondary" type="button" data-import-content-package>⇩ Importieren</button><button class="button button-secondary" type="button" data-action="url-slide">↗ Slide aus URL</button><button class="button button-secondary" type="button" data-action="blank-slide">＋ Ohne Vorlage starten</button><button class="button button-secondary" type="button" data-action="use-template">▧ Vorlage verwenden</button><button class="button button-secondary" type="button" data-action="manage-templates">⚙ Vorlagen verwalten</button></div>
             <div class="slide-bulk-toolbar">
               <label class="table-check"><input id="slide-select-all" type="checkbox"> Alle sichtbaren Slides</label>
               <span id="slide-selection-count">0 ausgewählt</span>
@@ -783,12 +783,13 @@
         </form>
         </div>
         <div class="settings-detail" data-settings-detail="advertising" hidden>
-          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Veranstaltungswerbung</h2><p>Erzeugt responsive Slides aus passenden Veranstaltungen und pflegt daraus automatisch den Werbekanal.</p></div></div>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Werbung</h2><p>Verbindet Veranstaltungswerbung und getaggte Slides in zwei automatischen Werbekanälen.</p></div></div>
           <form class="panel feature-settings-panel" id="advertising-settings-form">
-            <div class="panel-header"><div><p class="eyebrow">Werbekanal</p><h2>Generator konfigurieren</h2><p>Manuelle Slides und Kanäle werden von dieser Automatik nicht verändert.</p></div><span class="tag blue" id="advertising-status-tag">Deaktiviert</span></div>
+            <div class="panel-header"><div><p class="eyebrow">Werbekanal</p><h2>Generator konfigurieren</h2><p>Veröffentlichte Slides mit Werbe-Tags werden bis zu ihrem Ablauf automatisch zugeordnet. Ohne Ablaufdatum werden beim Taggen sieben Tage gesetzt.</p></div><span class="tag blue" id="advertising-status-tag">Deaktiviert</span></div>
             <div class="config-form-grid">
               <label class="toggle-label span-two"><input id="advertising-enabled" type="checkbox"> Automatische Werbung aktivieren</label>
-              <label class="form-field"><span>Name des Werbekanals</span><input id="advertising-channel-name" value="Werbung" maxlength="200"></label>
+              <label class="form-field"><span>Basisname der Werbekanäle (quer / Hochkant)</span><input id="advertising-channel-name" value="Werbung" maxlength="200"></label>
+              <label class="form-field"><span>Maximale Slides je Werbekanal</span><input id="advertising-maximum-slides" type="number" min="1" max="500" value="15"></label>
               <label class="form-field"><span>Nächste Veranstaltungen</span><input id="advertising-maximum-events" type="number" min="1" max="200" value="15"></label>
               <label class="form-field"><span>Anzeigedauer je Slide</span><input id="advertising-duration" type="number" min="3" max="600" value="12"></label>
               <label class="form-field"><span>Responsive Slide-Vorlage</span><select id="advertising-template"><option value="">Integrierte Werbevorlage</option></select></label>
@@ -797,7 +798,7 @@
               <label class="toggle-label"><input id="advertising-show-seconds" type="checkbox"> Sekunden anzeigen</label>
               <label class="toggle-label"><input id="advertising-hour12" type="checkbox"> 12-Stunden-Format verwenden</label>
             </div>
-            <fieldset class="advertising-event-types"><legend>Standorte des automatischen Werbekanals</legend><div id="advertising-location-options"></div><p class="property-note">Ohne Auswahl ist der Kanal an allen Standorten verfügbar.</p></fieldset>
+            <fieldset class="advertising-event-types"><legend>Standorte der automatischen Werbekanäle</legend><div id="advertising-location-options"></div><p class="property-note">Ohne Auswahl sind die Werbekanäle an allen Standorten verfügbar.</p></fieldset>
             <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Nur aktivierte Arten erzeugen Werbung. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
             <div class="advertising-summary" id="advertising-summary">Noch nicht geladen.</div>
             <div class="dialog-actions"><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
@@ -812,6 +813,7 @@
               <label class="form-field"><span>Standardansicht</span><select data-public-calendar-field="view"><option value="agenda">Agenda</option><option value="month">Klassischer Monatskalender</option><option value="categories">Kategorien-Explorer</option><option value="week">Wochenkalender mit Uhrzeiten</option><option value="day">Tagesfokus mit Wochenleiste</option></select></label>
               <label class="form-field"><span>Farben</span><select data-public-calendar-field="colorMode"><option value="theme">Automatisch aus dem Website-Theme</option><option value="custom">Individuell festlegen</option></select></label>
               <label class="form-field"><span>Überschrift der Terminliste</span><input id="public-calendar-upcoming-title" maxlength="120" value="Nächste Veranstaltungen"></label>
+              <label class="form-field"><span>Maximale Slides je Werbekanal</span><input id="advertising-maximum-slides" type="number" min="1" max="500" value="15"></label>
               <label class="form-field"><span>Nächste Veranstaltungen</span><input id="public-calendar-upcoming-count" type="number" min="1" max="50" value="10"></label>
               <label class="toggle-label"><input id="public-calendar-show-search" type="checkbox" checked> Volltextsuche anzeigen</label>
               <label class="toggle-label"><input id="public-calendar-show-upcoming" type="checkbox" checked> Terminliste neben dem Kalender anzeigen</label>
@@ -1297,6 +1299,17 @@
     </form>
   </dialog>
 
+  <dialog id="slide-archive-dialog" aria-labelledby="slide-archive-title">
+    <div class="dialog-content">
+      <div class="dialog-heading"><div><p class="eyebrow">Slides</p><h2 id="slide-archive-title">Slide-Archiv</h2></div></div>
+      <p class="property-note">Wiederhergestellte Slides sind erneut zuweisbar. Bisherige Zeiträume und Verknüpfungen bleiben erhalten. Abgelaufene Slides werden erst nach Anpassung ihres Zeitraums wieder ausgespielt; Werbe-Slides findest du im Werbemodul.</p>
+      <label class="form-field"><span>Archiv durchsuchen</span><input id="slide-archive-search" type="search" placeholder="Slide-Name"></label>
+      <p id="slide-archive-message" class="auth-message" role="status"></p>
+      <div id="slide-archive-list" aria-busy="false"></div>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" id="slide-archive-refresh">Aktualisieren</button><button class="button button-primary" type="button" data-close-dialog="slide-archive-dialog">Schließen</button></div>
+    </div>
+  </dialog>
+
   <dialog id="slide-tags-dialog" aria-labelledby="slide-tags-title">
     <form id="slide-tags-form" class="dialog-content">
       <div class="dialog-heading"><div><p class="eyebrow">Slides</p><h2 id="slide-tags-title">Tags auswählen</h2></div></div>
@@ -1560,7 +1573,7 @@
         <label class="form-field"><span>Veranstaltung</span><select id="channel-event"><option value="">Keine feste Veranstaltung</option></select></label>
         <label class="form-field"><span>Status</span><select id="channel-status"><option value="draft">Entwurf</option><option value="ready">Bereit</option><option value="published">Veröffentlicht</option><option value="paused">Pausiert</option></select></label>
       </div>
-      <fieldset class="display-group-choice"><legend>Standorte</legend><div id="channel-location-options"></div><p class="property-note">Ohne Auswahl ist der Kanal an allen Standorten verfügbar.</p></fieldset>
+      <fieldset class="display-group-choice"><legend>Standorte</legend><div id="channel-location-options"></div><p class="property-note">Ohne Auswahl sind die Werbekanäle an allen Standorten verfügbar.</p></fieldset>
       <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-channel-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-channel-button" hidden>Kanal archivieren</button><button class="button button-secondary" type="button" data-close-dialog="channel-dialog">Abbrechen</button><button class="button button-primary" type="submit">Kanal speichern</button></div>
     </form>
   </dialog>
@@ -1570,7 +1583,7 @@
       <button class="dialog-close" type="button" data-close-dialog="display-dialog" aria-label="Dialog schließen">×</button>
       <span class="dialog-icon">▣</span><p class="eyebrow">Endgerät</p><h2 id="display-dialog-title">Display hinzufügen</h2>
       <input id="display-edit-id" type="hidden">
-      <div class="form-grid"><label class="form-field"><span>Name</span><input id="display-name" type="text" placeholder="z. B. Foyer links" required></label><label class="form-field"><span>URL-Kennung</span><input id="display-slug" type="text" placeholder="foyer-links" required></label><label class="form-field"><span>Displaytyp</span><select id="display-type"><option value="standard">Standarddisplay</option><option value="led">LED-Display</option><option value="projection">Projektion</option><option value="touch">Touchdisplay</option></select></label><label class="form-field"><span>Ausrichtung</span><select id="display-orientation"><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label><label class="form-field span-two"><span>Auflösungsmodus</span><select id="display-resolution-mode"><option value="native">Responsiv · native Browsergröße</option><option value="fixed">Feste Zielauflösung</option></select><small id="display-resolution-help">Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.</small></label><div class="display-resolution-fields span-two" id="display-fixed-resolution-fields"><label class="form-field"><span>Breite (px)</span><input id="display-width" type="number" min="320" max="16384" value="1920"></label><label class="form-field"><span>Höhe (px)</span><input id="display-height" type="number" min="240" max="16384" value="1080"></label></div><label class="form-field"><span>Standardkanal</span><select id="display-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Standort</span><select id="display-location"><option value="">Kein Standort</option></select></label><label class="form-field"><span>Status</span><select id="display-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="toggle-label"><input id="display-cache-enabled" type="checkbox" checked> Offline-Cache aktiv</label></div>
+      <div class="form-grid"><label class="form-field"><span>Name</span><input id="display-name" type="text" placeholder="z. B. Foyer links" required></label><label class="form-field"><span>URL-Kennung</span><input id="display-slug" type="text" placeholder="foyer-links" required></label><label class="form-field"><span>Displaytyp</span><select id="display-type"><option value="standard">Standarddisplay</option><option value="led">LED-Display</option><option value="projection">Projektion</option><option value="touch">Touchdisplay</option></select></label><label class="form-field"><span>Ausrichtung</span><select id="display-orientation"><option value="landscape">Querformat</option><option value="portrait">Hochformat</option></select></label><label class="form-field span-two"><span>Auflösungsmodus</span><select id="display-resolution-mode"><option value="native">Responsiv · native Browsergröße</option><option value="fixed">Feste Zielauflösung</option></select><small id="display-resolution-help">Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.</small></label><div class="display-resolution-fields span-two" id="display-fixed-resolution-fields"><label class="form-field"><span>Breite (px)</span><input id="display-width" type="number" min="320" max="16384" value="1920"></label><label class="form-field"><span>Höhe (px)</span><input id="display-height" type="number" min="240" max="16384" value="1080"></label></div><label class="form-field"><span>Standardinhalt</span><select id="display-default-content-type"><option value="channel">Standardkanal</option><option value="slide">Standardslide</option></select></label><label class="form-field" id="display-default-slide-field" hidden><span>Standardslide</span><select id="display-default-slide"><option value="">Keine Standardslide</option></select></label><label class="form-field" id="display-default-channel-field"><span>Standardkanal</span><select id="display-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Standort</span><select id="display-location"><option value="">Kein Standort</option></select></label><label class="form-field"><span>Status</span><select id="display-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="toggle-label"><input id="display-cache-enabled" type="checkbox" checked> Offline-Cache aktiv</label></div>
       <fieldset class="display-group-choice"><legend>Display-Gruppen</legend><div id="display-group-options"></div></fieldset>
       <div class="display-url-preview"><span>Player-URL</span><code id="new-display-url">…</code></div>
       <section class="display-player-pairing" id="display-player-pairing" hidden>
@@ -1668,7 +1681,8 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.14.0-20261104144616%2Bdcef33a7"></script>
-  <script src="app.js?v=3.14.0-20261104144616%2Bdcef33a7"></script>
+  <script src="runtime-config.js?v=3.16.0-20261104180538%2B46cc9707"></script>
+  <script src="player/fullscreen-control.js?v=3.16.0-20261104180538%2B46cc9707"></script>
+  <script src="app.js?v=3.16.0-20261104180538%2B46cc9707"></script>
 </body>
 </html>

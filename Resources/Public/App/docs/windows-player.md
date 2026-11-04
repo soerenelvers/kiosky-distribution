@@ -88,3 +88,9 @@ Inhaltsanfragen. Die drei Transportvarianten teilen die Oberfläche; native CMS-
 Routen und Installationen werden zusätzlich in der CMS-CI geprüft. Ein physischer
 Windows-Neustart und die sichtbare Vollbilddarstellung auf einem Kundengerät
 sind gesonderte Abnahmeprüfungen.
+
+## Fernsteuerung ab Launcher 2.1.0 / Kiosky 3.16.0
+
+Die neue EXE enthält die Browsersteuerung für Vollbildanforderungen auf der eigenen
+Installation. Sie nutzt weiterhin denselben Profilpfad. Grenzen durch Browser und
+Richtlinien sowie API und Updateverfahren: [Displaysteuerung](player-control.md).

@@ -34,6 +34,30 @@ paths:
         '200':
           description: Displayliste
           content: { application/json: { schema: { $ref: '#/components/schemas/ListResponse' } } }
+  /displays/{displayId}/commands:
+    post:
+      tags: [Resources]
+      summary: Player neu laden, identifizieren, synchronisieren oder Vollbild anfordern
+      description: 201 bestätigt die Warteschlange. Für Vollbild kann eine lokale Bestätigung nötig sein.
+      parameters:
+        - in: path
+          name: displayId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command: { type: string, enum: [reload, identify, fullscreen, sync] }
+      responses:
+        '201': { description: Befehl in der Player-Warteschlange }
+        '401': { description: Authentifizierung fehlt oder ist ungültig }
+        '404': { description: Display nicht gefunden }
+        '422': { description: Ungültiger Befehl }
   /display-groups:
     get:
       tags: [Resources]

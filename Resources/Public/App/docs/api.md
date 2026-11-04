@@ -364,3 +364,14 @@ Passwort-Freigabe-Zugänge. Gemeinsamer Vertrag für alle drei Plattformen:
 Intervall 1–10080 ganze Minuten, Standardwert in der Oberfläche 15. Je PDF maximal
 20 MiB/20 Seiten, maximal 20 Abonnements. Servervoraussetzungen, Scheduler,
 Namenszuordnung, Kanalhoheit und Wiederherstellung: [Speisekarten](speisekarten.md).
+
+## Displaystandard und Playerbefehle ab 3.16.0
+
+`POST /api/displays` und `PUT /api/displays/{id}` akzeptieren
+`defaultContentType` (`channel` oder `slide`), `defaultChannelId` beziehungsweise
+`defaultSlideId`. Ohne Typ gilt weiterhin `channel`. Eine inaktive Auswahl wird
+nicht gespeichert. Gelöschte oder unbekannte Standardslides werden abgewiesen.
+`POST /api/operations/displays/{id}/commands` akzeptiert zusätzlich `fullscreen`.
+Maschinenzugänge verwenden den externen Endpunkt
+`POST /api/v1/displays/{id}/commands` für `reload`, `identify`, `fullscreen`, `sync`.
+Siehe [Displaysteuerung](player-control.md) für Rückfallverhalten und Browsergrenzen.

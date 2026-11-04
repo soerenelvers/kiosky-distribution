@@ -451,7 +451,7 @@ async function renderDisplayPlayer(slug) {
   window.addEventListener('resize',()=>scheduleAutomaticTextFit(document));
   const renderShell=state=>{const display=state.display;document.body.innerHTML=`<main class="display-player display-player-${display.orientation}"><div class="player-brand">KIOSKY</div><div class="player-matrix-canvas" id="player-matrix-canvas"><section id="player-slide" class="player-layout-slide"></section></div><div class="player-status"><span>${display.name}</span><span id="player-clock"></span></div></main><div class="player-offline-indicator" id="player-offline-indicator" hidden>Offline · gespeicherte Inhalte werden weiter abgespielt</div><aside class="emergency-takeover" id="player-emergency" hidden><div class="emergency-symbol">!</div><small id="player-emergency-type"></small><strong id="player-emergency-title"></strong><p id="player-emergency-message"></p><span>Bitte beachten Sie die Anweisungen des Personals.</span><div class="emergency-ticker" id="player-emergency-ticker" role="status" aria-label="Lauftext" hidden><span id="player-emergency-ticker-text"></span></div></aside>`;applyMatrixViewport();};
   const heartbeat=async(item,acknowledgedCommandIds=[])=>{
-    try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({channelId:playerState?.channel?.id,slideId:item?.slide?.id,version:`${playerDevice()} · Player 1.3`,cached:true,acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});return response.ok;}catch{return false;}
+    try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({channelId:playerState?.channel?.id||null,slideId:item?.slide?.id||null,version:`${playerDevice()} · Player 1.3`,cached:true,acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});return response.ok;}catch{return false;}
   };
   const showIdentification=()=>{
     const display=playerState?.display||{},details=playerState?.identification||{},groups=Array.isArray(details.groupNames)&&details.groupNames.length?details.groupNames.join(', '):'Keine Gruppe',pixelRatio=Number(window.devicePixelRatio||1),resolution=`${window.innerWidth} × ${window.innerHeight} px${pixelRatio!==1?` · Pixeldichte ${pixelRatio}`:''}`;
@@ -462,14 +462,29 @@ async function renderDisplayPlayer(slug) {
     clearTimeout(identificationTimer);
     identificationTimer=setTimeout(()=>overlay.classList.remove('is-visible'),20000);
   };
+  const pendingFullscreenIds=new Set();
+  const confirmFullscreen=async()=>{
+    const ids=[...pendingFullscreenIds];if(!ids.length)return true;
+    if(!await heartbeat(currentItem,ids))return false;
+    ids.forEach(id=>pendingFullscreenIds.delete(id));return true;
+  };
   const handleCommands=async commands=>{
-    const pending=Array.isArray(commands)?commands.filter(command=>typeof command.id==='string'&&['reload','sync','identify'].includes(command.command)):[];
+    const pending=Array.isArray(commands)?commands.filter(command=>typeof command.id==='string'&&['reload','sync','identify','fullscreen'].includes(command.command)):[];
     if(!pending.length)return;
-    // Acknowledge only this delivered batch; regular heartbeats cannot swallow a newly queued F5.
-    if(!await heartbeat(currentItem,pending.map(command=>command.id)))return;
-    if(pending.some(command=>command.command==='reload')){window.location.reload();return;}
-    if(pending.some(command=>command.command==='sync'))await refreshPlayer(true);
-    if(pending.some(command=>command.command==='identify'))showIdentification();
+    const fullscreen=pending.filter(command=>command.command==='fullscreen');
+    fullscreen.forEach(command=>pendingFullscreenIds.add(command.id));
+    if(fullscreen.length&&!document.querySelector('#player-fullscreen-request')){
+      if(await window.KioskyFullscreen?.request()){
+        if(await confirmFullscreen())window.KioskyFullscreen.clearPrompt();
+      }else window.KioskyFullscreen?.prompt(confirmFullscreen);
+    }
+    const regular=pending.filter(command=>command.command!=='fullscreen');
+    if(!regular.length)return;
+    // Acknowledge only this delivered batch; regular heartbeats cannot swallow queued commands.
+    if(!await heartbeat(currentItem,regular.map(command=>command.id)))return;
+    if(regular.some(command=>command.command==='reload')){window.location.reload();return;}
+    if(regular.some(command=>command.command==='sync'))await refreshPlayer(true);
+    if(regular.some(command=>command.command==='identify'))showIdentification();
   };
   const pollCommands=async()=>{
     if(commandPollRunning)return;
@@ -1853,6 +1868,7 @@ function renderAdvertisingSettings(status){
   document.querySelector('#advertising-enabled').checked=Boolean(settings.enabled);
   document.querySelector('#advertising-channel-name').value=settings.channelName||'Werbung';
   document.querySelector('#advertising-maximum-events').value=settings.maximumEvents||15;
+  document.querySelector('#advertising-maximum-slides').value=settings.maximumSlides??settings.maximumEvents??15;
   document.querySelector('#advertising-duration').value=settings.durationSeconds||12;
   document.querySelector('#advertising-show-date').checked=Boolean(settings.showDate);
   document.querySelector('#advertising-show-time').checked=settings.showTime!==false;
@@ -1863,7 +1879,7 @@ function renderAdvertisingSettings(status){
   document.querySelector('#advertising-status-tag').textContent=settings.enabled?'Aktiv':'Deaktiviert';
   document.querySelector('#advertising-status-tag').className=`tag ${settings.enabled?'green':'muted'}`;
   renderAdvertisingTypeOptions(types,selected);
-  document.querySelector('#advertising-summary').innerHTML=`<strong>${Number(status.generatedSlides||0)} Werbeslides</strong><span>${Number(status.eligibleEvents||0)} passende zukünftige Veranstaltungen · ${Number(status.channel?.itemCount||0)} Slides im Kanal</span>${status.lastSynchronizedAt?`<small>Zuletzt synchronisiert: ${escapeHtml(new Date(status.lastSynchronizedAt).toLocaleString('de-DE'))}</small>`:''}`;
+  document.querySelector('#advertising-summary').innerHTML=`<strong>${Number(status.generatedSlides||0)} generierte · ${Number(status.taggedSlides||0)} getaggte Werbeslides</strong><span>${Number(status.eligibleEvents||0)} passende zukünftige Veranstaltungen · ${(status.channels||[status.channel]).filter(Boolean).map(channel=>`${escapeHtml(channel.name)}: ${Number(channel.itemCount)} Slides`).join(' · ')}</span>${status.lastSynchronizedAt?`<small>Zuletzt synchronisiert: ${escapeHtml(new Date(status.lastSynchronizedAt).toLocaleString('de-DE'))}</small>`:''}`;
 }
 async function loadAdvertisingSettings(){
   if(!document.querySelector('#advertising-settings-form'))return;
@@ -1873,7 +1889,7 @@ function renderAdvertisingTypeOptions(types=state.advertisingAvailableTypes||[],
   const list=document.querySelector('#advertising-event-types');if(!list)return;
   list.innerHTML=types.map(type=>{const active=selected.has(type),assetId=state.advertisingTypeDefaultMedia?.[type],asset=state.mediaAssets?.find(item=>item.id===assetId&&!item.deletedAt&&item.type==='image');return`<article class="advertising-type-default ${active?'':'is-inactive'}"><div class="advertising-type-default-preview">${asset?`<img src="${escapeHtml(asset.src)}" alt="">`:'Kein<br>Standardbild'}</div><div class="advertising-type-default-body"><label class="toggle-label"><input type="checkbox" data-advertising-event-type value="${escapeHtml(type)}" ${active?'checked':''}> ${escapeHtml(type)}</label><small title="${escapeHtml(asset?.name||'')}">${escapeHtml(asset?.name||'Veranstaltungsspezifisches Bild erforderlich')}</small><div class="advertising-type-default-actions"><button class="button button-secondary" type="button" data-advertising-type-media="${escapeHtml(type)}" ${active?'':'disabled'}>${asset?'Bild ersetzen':'Bild auswählen / hochladen'}</button>${asset?`<button class="button button-ghost" type="button" data-advertising-type-media-remove="${escapeHtml(type)}" ${active?'':'disabled'}>Entfernen</button>`:''}</div></div></article>`;}).join('')||'<p class="property-note">Noch keine Veranstaltungsarten vorhanden. Sie erscheinen nach dem ersten Import.</p>';
 }
-function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:document.querySelector('#advertising-template').value||undefined,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
+function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumSlides:Number(document.querySelector('#advertising-maximum-slides').value),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:document.querySelector('#advertising-template').value||undefined,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
 document.querySelector('#advertising-event-types').addEventListener('change',event=>{if(event.target.matches('[data-advertising-event-type]'))renderAdvertisingTypeOptions(state.advertisingAvailableTypes,new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value)));});
 document.querySelector('#advertising-event-types').addEventListener('click',event=>{const select=event.target.closest('[data-advertising-type-media]'),remove=event.target.closest('[data-advertising-type-media-remove]');if(select){const type=select.dataset.advertisingTypeMedia;openMediaLibrary(asset=>{state.advertisingTypeDefaultMedia={...(state.advertisingTypeDefaultMedia||{}),[type]:asset.id};renderAdvertisingTypeOptions();},'image-only',`Standardbild für „${type}“ auswählen oder hochladen`);}if(remove){const type=remove.dataset.advertisingTypeMediaRemove;delete state.advertisingTypeDefaultMedia[type];renderAdvertisingTypeOptions();}});
 document.querySelector('#advertising-settings-form').addEventListener('submit',async event=>{event.preventDefault();try{const result=await apiRequest('/api/settings/advertising',{method:'PUT',body:JSON.stringify(advertisingPayload())});renderAdvertisingSettings(result);await loadContent();showToast('Werbung wurde gespeichert und synchronisiert.');}catch(error){showToast(error.message);}});
@@ -2871,10 +2887,10 @@ function slideForUi(record) {
 
 function tagInput(value){return[...new Set(String(value||'').split(',').map(tag=>tag.trim()).filter(Boolean))];}
 function contentTagMarkup(tags=[]){return tags.length?`<span class="content-tags">${tags.map(tag=>`<i>${escapeHtml(tag)}</i>`).join('')}</span>`:'';}
-function isAdvertisingContent(item){return Boolean(item?.automationKey?.startsWith('advertising:'))||(item?.tags||[]).some(tag=>String(tag).toLocaleLowerCase('de-DE')==='werbung');}
+function isAdvertisingContent(item){return Boolean(item?.automationKey?.startsWith('advertising:'))||(item?.tags||[]).some(tag=>String(tag).trim().toLocaleLowerCase('de-DE').replace(/\s+/g,' ').match(/^werbung(?: quer| hochkant)?$/));}
 function scopedSlides(){return state.slides.filter(slide=>state.contentScope==='advertising'?isAdvertisingContent(slide):!isAdvertisingContent(slide));}
 function scopedChannels(){return state.channels.filter(channel=>state.contentScope==='advertising'?isAdvertisingContent(channel):!isAdvertisingContent(channel));}
-function scopedTags(tags=[]){return state.contentScope==='advertising'?[...new Set([...tags,'Werbung'])]:tags.filter(tag=>String(tag).toLocaleLowerCase('de-DE')!=='werbung');}
+function scopedTags(tags=[]){return state.contentScope==='advertising'?[...new Set([...tags,'Werbung'])]:tags;}
 function applyContentScopeUi(){
   const advertising=state.contentScope==='advertising';
   document.querySelector('#content-module-eyebrow').textContent=advertising?'Werbemodul':'Content-Baukasten';
@@ -3098,6 +3114,7 @@ function renderSlideLibrary() {
   ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive', 'slide-bulk-tags', 'slide-bulk-export'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
   document.querySelector('#slide-bulk-delete').disabled = !state.selectedSlides.size || state.currentUser?.role !== 'admin';
   const canEditContent = state.currentUser?.role !== 'viewer';
+  document.querySelector('#open-slide-archive').hidden = !canEditContent;
   library.innerHTML = visibleSlides.map(slide => `
     <div class="slide-library-card ${state.selectedSlides.has(slide.id) ? 'is-selected' : ''}" draggable="${canEditContent}" data-slide-id="${escapeHtml(slide.id)}">
       ${canEditContent ? `<label class="slide-library-check"><input type="checkbox" data-slide-select="${escapeHtml(slide.id)}" aria-label="${escapeHtml(slide.title)} auswählen" ${state.selectedSlides.has(slide.id) ? 'checked' : ''}></label>` : '<span></span>'}
@@ -3119,6 +3136,51 @@ function renderSlideLibrary() {
   library.querySelectorAll('[data-version-library-slide]').forEach(button => button.addEventListener('click', () => openSlideVersions(state.slides.find(slide => slide.id === button.dataset.versionLibrarySlide))));
   library.querySelectorAll('[data-edit-library-slide]').forEach(button => button.addEventListener('click', () => openSlideEditor(state.slides.find(slide => slide.id === button.dataset.editLibrarySlide))));
 }
+
+// User-archived slides use the existing reversible trash API on every platform.
+let archivedSlides = [], slideArchiveBusy = false;
+function renderSlideArchive() {
+  const search = document.querySelector('#slide-archive-search').value.trim().toLocaleLowerCase('de-DE');
+  const visible = archivedSlides.filter(slide => String(slide.name || '').toLocaleLowerCase('de-DE').includes(search));
+  document.querySelector('#slide-archive-list').innerHTML = visible.map(slide => `<article class="slide-archive-row"><div><strong>${escapeHtml(slide.name)}</strong><small>Archiviert: ${escapeHtml(new Date(slide.deletedAt).toLocaleString('de-DE'))}</small></div><button class="button button-secondary" type="button" data-restore-archived-slide="${escapeHtml(slide.id)}" ${slideArchiveBusy ? 'disabled' : ''}>Wiederherstellen</button></article>`).join('') || `<p class="property-note">${search ? 'Keine passende archivierte Slide.' : 'Keine archivierten Slides vorhanden.'}</p>`;
+  document.querySelector('#slide-archive-refresh').disabled = slideArchiveBusy;
+  document.querySelector('#slide-archive-list').setAttribute('aria-busy', String(slideArchiveBusy));
+}
+async function loadSlideArchive() {
+  if (slideArchiveBusy || state.currentUser?.role === 'viewer') return;
+  slideArchiveBusy = true;
+  document.querySelector('#slide-archive-message').textContent = 'Archiv wird geladen …';
+  renderSlideArchive();
+  try {
+    const result = await apiRequest('/api/trash');
+    archivedSlides = (result.data || []).filter(item => item.type === 'slide');
+    document.querySelector('#slide-archive-message').textContent = '';
+  } catch (error) { document.querySelector('#slide-archive-message').textContent = error.message; }
+  finally { slideArchiveBusy = false; renderSlideArchive(); }
+}
+document.querySelector('#open-slide-archive').addEventListener('click', () => {
+  if (state.currentUser?.role === 'viewer') return;
+  archivedSlides = [];
+  document.querySelector('#slide-archive-search').value = '';
+  document.querySelector('#slide-archive-dialog').showModal();
+  loadSlideArchive();
+});
+document.querySelector('#slide-archive-refresh').addEventListener('click', loadSlideArchive);
+document.querySelector('#slide-archive-search').addEventListener('input', renderSlideArchive);
+document.querySelector('#slide-archive-list').addEventListener('click', async event => {
+  const button = event.target.closest('[data-restore-archived-slide]');
+  if (!button || slideArchiveBusy || state.currentUser?.role === 'viewer') return;
+  slideArchiveBusy = true;
+  document.querySelector('#slide-archive-message').textContent = 'Slide wird wiederhergestellt …';
+  renderSlideArchive();
+  try {
+    await apiRequest(`/api/trash/slide/${encodeURIComponent(button.dataset.restoreArchivedSlide)}`, { method: 'POST' });
+    archivedSlides = archivedSlides.filter(slide => slide.id !== button.dataset.restoreArchivedSlide);
+    await loadContent();
+    document.querySelector('#slide-archive-message').textContent = 'Slide wurde wiederhergestellt. Bestehende Gültigkeitszeiträume bleiben erhalten.';
+  } catch (error) { document.querySelector('#slide-archive-message').textContent = error.message; }
+  finally { slideArchiveBusy = false; renderSlideArchive(); }
+});
 
 function visibleLibrarySlides() {
   const search = document.querySelector('#slide-search').value.trim().toLowerCase();
@@ -3202,12 +3264,12 @@ function renderSlideTagOptions() {
 function openSlideTagPicker(mode) {
   if (state.currentUser?.role === 'viewer') return;
   const ids = mode === 'channels' ? [...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)) : mode === 'bulk' ? [...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)) : [];
-  if (mode !== 'editor' && !ids.length) return;
-  const selected = mode === 'editor' ? uniqueSlideTags(scopedTags(tagInput(document.querySelector('#slide-tags').value))) : [];
-  const available = uniqueSlideTags([...selected, ...scopedTags([...state.slides, ...state.channels].flatMap(item => item.tags || []))]).sort((a, b) => a.localeCompare(b, 'de'));
+  if (!['editor','import'].includes(mode) && !ids.length) return;
+  const selected = mode === 'import' ? scopedTags([]) : mode === 'editor' ? uniqueSlideTags(scopedTags(tagInput(document.querySelector('#slide-tags').value))) : [];
+  const available = uniqueSlideTags(['Werbung','Werbung quer','Werbung Hochkant',...selected, ...scopedTags([...state.slides, ...state.channels].flatMap(item => item.tags || []))]).sort((a, b) => a.localeCompare(b, 'de'));
   slideTagPicker = { mode, ids, available, selected: new Set(available.filter(tag => selected.some(value => value.toLocaleLowerCase('de-DE') === tag.toLocaleLowerCase('de-DE')))), saving: false };
   document.querySelector('#slide-tags-title').textContent = mode !== 'editor' ? 'Tags zuweisen' : 'Tags auswählen';
-  document.querySelector('#slide-tags-description').textContent = mode !== 'editor'
+  document.querySelector('#slide-tags-description').textContent = mode === 'import' ? 'Tags für alle ausgewählten Dateien wählen oder neu anlegen. Werbe-Tags setzen ohne vorhandenes Ablaufdatum sieben Tage. Die Slides werden als Entwürfe erstellt; für die automatische Ausspielung veröffentlichen.' : mode !== 'editor'
     ? `Tags zu ${ids.length} ausgewählten ${mode === 'channels' ? 'Kanälen' : 'Slides'} hinzufügen. Bereits zugewiesene Tags bleiben erhalten.`
     : 'Mehrere Tags auswählen oder neue Tags hinzufügen. Abgewählte Tags werden von dieser Slide entfernt.';
   document.querySelector('#slide-new-tag').value = '';
@@ -3237,6 +3299,12 @@ async function applySlidePickerTags(event) {
   const message = document.querySelector('#slide-tags-message');
   message.textContent = '';
   if (tags.length > 30) { message.textContent = 'Bitte höchstens 30 Tags auswählen.'; return; }
+  if (picker.mode === 'import') {
+    picker.saving=true;
+    const controls=[...document.querySelectorAll('#slide-tags-form input, #slide-tags-form button')];controls.forEach(control=>control.disabled=true);
+    try{await createSlidesFromMedia(picker.assets,tags);if(state.lastBulkSlideImportSucceeded)document.querySelector('#slide-tags-dialog').close();}finally{picker.saving=false;controls.forEach(control=>control.disabled=false);}
+    return;
+  }
   if (picker.mode === 'editor') {
     document.querySelector('#slide-tags').value = tags.join(', ');
     pushEditorHistory();
@@ -3279,6 +3347,7 @@ async function applySlidePickerTags(event) {
 }
 
 document.querySelector('#slide-select-tags').addEventListener('click', () => openSlideTagPicker('editor'));
+document.querySelector('#slide-tags-dialog').addEventListener('cancel',event=>{if(slideTagPicker?.saving)event.preventDefault();});
 document.querySelector('#slide-bulk-tags').addEventListener('click', () => openSlideTagPicker('bulk'));
 document.querySelector('#slide-add-tag').addEventListener('click', addSlidePickerTags);
 document.querySelector('#slide-new-tag').addEventListener('keydown', event => {
@@ -3494,6 +3563,8 @@ async function persistSlideEditor() {
   const id = idInput.value;
   const menuCard=state.editingMenuCard&&id?state.slides.find(slide=>slide.id===id):null;
   const result = await apiRequest(menuCard?`/api/menus/${id}/settings`:id ? `/api/slides/${id}` : '/api/slides', { method: id ? 'PUT' : 'POST', body: JSON.stringify(menuCard?{version:menuCard.currentVersion,name:payload.name,orientation:payload.orientation,designOrientation:payload.document.designOrientation,layoutDocument:payload.document}:payload) });
+  const endField=document.querySelector('#slide-ends-at');
+  if(!payload.endsAt && result.slide.endsAt && !endField.value)endField.value=slideDateTimeInputValue(result.slide.endsAt);
   idInput.value = result.slide.id;
   document.querySelector('#slide-editor-title').textContent = 'Slide bearbeiten';
   document.querySelector('#archive-slide-button').hidden = state.currentUser?.role === 'viewer'||state.editingMenuCard;
@@ -3914,7 +3985,7 @@ function wayfindingCellConfig(cell, rowIndex, column, label) {
   let detail = '';
   if (kind === 'text') detail = `<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="text" value="${escapeHtml(cell.text || '')}" placeholder="Text"><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="textStyle">${Object.entries(wayfindingTextStyles).map(([value, text]) => `<option value="${value}" ${cell.textStyle === value ? 'selected' : ''}>${text}</option>`).join('')}</select><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="align"><option value="left" ${cell.align === 'left' ? 'selected' : ''}>Linksbündig</option><option value="center" ${cell.align === 'center' ? 'selected' : ''}>Mittig</option><option value="right" ${cell.align === 'right' ? 'selected' : ''}>Rechtsbündig</option></select><div class="wayfinding-checks"><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="bold" ${cell.bold ? 'checked' : ''}> Fett</label><label><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="underline" ${cell.underline ? 'checked' : ''}> Unterstrichen</label></div><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
   if (kind === 'arrow') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="direction">${Object.entries(directionGlyphs).map(([value, glyph]) => `<option value="${value}" ${cell.direction === value ? 'selected' : ''}>${glyph} ${value.replaceAll('-', ' ')}</option>`).join('')}</select>`;
-  if (kind === 'image') detail = `<button class="mini-button" type="button" data-way-media="${rowIndex}:${column}">${cell.src ? 'Bild ersetzen' : 'Aus Mediathek wählen'}</button><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageFit"><option value="cover" ${cell.imageFit !== 'contain' ? 'selected' : ''}>Zuschneiden / füllen</option><option value="contain" ${cell.imageFit === 'contain' ? 'selected' : ''}>Vollständig einpassen</option></select><label class="range-field">Zoom <input type="range" min="100" max="250" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageZoom" value="${Number(cell.imageZoom || 100)}"></label><label class="range-field">Horizontal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageX" value="${Number(cell.imageX ?? 50)}"></label><label class="range-field">Vertikal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageY" value="${Number(cell.imageY ?? 50)}"></label>`;
+  if (kind === 'image') detail = `<button class="mini-button" type="button" data-way-media="${rowIndex}:${column}">${cell.src ? 'Bild ersetzen' : 'Aus Mediathek wählen'}</button><select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageFit"><option value="cover" ${cell.imageFit !== 'contain' ? 'selected' : ''}>Zuschneiden / füllen</option><option value="contain" ${cell.imageFit === 'contain' ? 'selected' : ''}>Vollständig einpassen</option></select><label class="range-field">Zoom (${Number(cell.imageZoom || 100)} %) <input type="range" min="10" max="250" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageZoom" value="${Number(cell.imageZoom || 100)}"></label><label class="range-field">Horizontal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageX" value="${Number(cell.imageX ?? 50)}"></label><label class="range-field">Vertikal <input type="range" min="0" max="100" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="imageY" value="${Number(cell.imageY ?? 50)}"></label>`;
   if (kind === 'countdown') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetSource"><option value="manual" ${!['event','daily'].includes(cell.targetSource) ? 'selected' : ''}>Manuelle Zielzeit</option><option value="event" ${cell.targetSource === 'event' ? 'selected' : ''}>Zeit aus Veranstaltung</option><option value="daily" ${cell.targetSource === 'daily' ? 'selected' : ''}>Täglich zu einer Uhrzeit</option></select>${cell.targetSource === 'event' ? `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select>` : cell.targetSource === 'daily' ? `<label class="form-field"><span>Tägliche Zielzeit</span><input type="time" step="60" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="dailyTime" value="${escapeHtml(cell.dailyTime || '12:00')}"></label>` : `<input type="datetime-local" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="targetTime" value="${escapeHtml(cell.targetTime || '')}">`}<input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor, z. B. Noch "><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="suffix" value="${escapeHtml(cell.suffix || '')}" placeholder="Text danach, z. B. bis zum Einlass"><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="showSeconds" ${cell.showSeconds !== false ? 'checked' : ''}> Sekunden anzeigen</label><label class="form-field"><span>Schriftgröße (pt)</span><input type="number" min="0.5" max="1000" step="0.01" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${textFontPoints(cell,68)}"></label><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
   if (kind === 'event-field') detail = `<select data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="eventField">${eventTimeFieldOptions(cell.eventField)}</select><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="prefix" value="${escapeHtml(cell.prefix || '')}" placeholder="Text davor"><input data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fallback" value="${escapeHtml(cell.fallback || '')}" placeholder="Vorlagenplatzhalter · bei fehlendem Wert unsichtbar"><label class="form-field"><span>Schriftgröße (pt)</span><input type="number" min="0.5" max="1000" step="0.01" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${textFontPoints(cell,42)}"></label><label class="toggle-label"><input type="checkbox" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="autoFontSize" ${cell.autoFontSize?'checked':''}> Schrift automatisch einpassen</label>`;
   if(kind==='text') detail+=`<label class="form-field"><span>Schriftgröße (pt)</span><input type="number" min="0.5" max="1000" step="0.01" data-way-row="${rowIndex}" data-way-column="${column}" data-way-field="fontSize" value="${textFontPoints(cell,textStylePixels(cell))}"></label>`;
@@ -4491,14 +4562,20 @@ function updateMediaMultiSelection() {
   button.disabled = !count || Boolean(state.bulkSlideImporting);
   button.textContent = `${count} Slide${count === 1 ? '' : 's'} erstellen`;
 }
-async function createSlidesFromMedia(assets) {
+function requestMediaSlideImport(assets){
+  document.querySelector('#media-dialog').close();
+  openSlideTagPicker('import');slideTagPicker.assets=assets;
+}
+async function createSlidesFromMedia(assets,tags=[]) {
   if (state.bulkSlideImporting) return;
+  state.lastBulkSlideImportSucceeded=false;
   state.bulkSlideImporting = true;
   document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => { button.disabled = true; });
   updateMediaMultiSelection();
   try {
-    const result = await apiRequest('/api/slides/from-media', { method: 'POST', body: JSON.stringify({ mediaAssetIds: assets.map(asset => asset.id) }) });
+    const result = await apiRequest('/api/slides/from-media', { method: 'POST', body: JSON.stringify({ mediaAssetIds: assets.map(asset => asset.id),tags }) });
     document.querySelector('#media-dialog').close();
+    state.lastBulkSlideImportSucceeded=true;
     await loadContent();
     showToast(`${result.slides.length} Slides als Entwürfe erstellt. Du kannst sie jetzt bearbeiten und Kanälen hinzufügen.`);
   } catch (error) { showToast(error.message); }
@@ -4511,13 +4588,13 @@ async function createSlidesFromMedia(assets) {
 document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => button.addEventListener('click', async () => {
   try {
     await refreshMedia();
-    openMediaLibrary(createSlidesFromMedia, '', 'Bulk-Slide-Import: Eine Slide pro Bild oder Video (maximal 100)', { multiple: true });
+    openMediaLibrary(requestMediaSlideImport, '', 'Bulk-Slide-Import: Eine Slide pro Bild oder Video (maximal 100)', { multiple: true });
   } catch (error) { showToast(error.message); }
 }));
 document.querySelector('#media-create-slides').addEventListener('click', () => {
   const assets = [...state.mediaSelectedIds].map(id => state.mediaAssets.find(asset => asset.id === id && !asset.deletedAt));
   if (assets.some(asset => !asset)) { showToast('Ein ausgewähltes Medium ist nicht mehr verfügbar. Bitte die Auswahl erneuern.'); return; }
-  void createSlidesFromMedia(assets);
+  void requestMediaSlideImport(assets);
 });
 document.querySelector('[data-action="open-media-library"]').addEventListener('click', () => openMediaLibrary());
 document.querySelector('#media-search').addEventListener('input', () => renderMediaBrowser('media', true));
@@ -4858,7 +4935,7 @@ function playerUrl(displayOrSlug) {
 }
 
 state.locations=[];state.matrices=[];state.trash=[];state.displayPage=1;
-async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${state.channels.map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
+async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${state.channels.map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#display-default-slide').innerHTML=`<option value="">Keine Standardslide</option>${state.slides.map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name)}</option>`).join('')}`;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
 
 function displayTheme(channel) {
   if (channel === 'Restaurant') return 'restaurant';
@@ -4898,7 +4975,7 @@ function renderDisplays() {
   const query=document.querySelector('#display-search').value.trim().toLowerCase(),status=document.querySelector('#display-status-filter').value,location=document.querySelector('#display-location-filter').value,group=document.querySelector('#display-group-filter').value,matrix=document.querySelector('#display-matrix-filter').value;
   const filtered=state.displays.filter(display=>(!query||`${display.name} ${display.location||''} ${display.channel||''}`.toLowerCase().includes(query))&&(!status||(status==='online'?display.online:status==='offline'?!display.online&&display.status!=='disabled':display.status===status))&&(!location||display.locationId===location)&&(!group||(display.groupIds||[]).includes(group))&&(!matrix||(matrix==='yes'?display.matrix:!display.matrix)));
   const pageSize=25,pages=Math.max(1,Math.ceil(filtered.length/pageSize));state.displayPage=Math.min(Math.max(1,state.displayPage),pages);const rows=filtered.slice((state.displayPage-1)*pageSize,state.displayPage*pageSize);
-  grid.innerHTML=`<div class="admin-row admin-head"><span>Name</span><span>Status</span><span>Typ / Auflösung</span><span>Standort</span><span>Gruppe</span><span>Inhalt</span><span>Matrix</span><span>Aktionen</span></div>${rows.map(display=>{const groups=state.groups.filter(item=>(display.groupIds||[]).includes(item.id)).map(item=>item.name);return`<div class="admin-row"><span><strong>${escapeHtml(display.name)}</strong><small>${escapeHtml(display.slug)}</small></span><span><b class="status-pill ${display.online?'online':display.status==='disabled'?'disabled':''}">${display.status==='disabled'?'Deaktiviert':display.online?'Online':'Offline'}</b><small>${display.lastSeenAt?formatLastSeen(display.lastSeenAt):'Noch nie verbunden'}</small></span><span>${escapeHtml(display.displayType||'standard')}<small>${escapeHtml(displayResolutionSummary(display))} · ${display.orientation==='portrait'?'Hoch':'Quer'}</small></span><span>${escapeHtml(display.location||'Ohne Standort')}</span><span>${escapeHtml(groups.join(', ')||'Ohne Gruppe')}</span><span>${escapeHtml(display.channel||'Kein Inhalt')}</span><span>${display.matrix?`<b class="matrix-badge">${escapeHtml(display.matrix.name)} · ${display.matrix.row+1}/${display.matrix.column+1}</b>`:'–'}</span><span class="row-actions"><button type="button" data-reload-display="${escapeHtml(display.id)}" ${state.currentUser?.role==='viewer'?'hidden':''} title="Browser des Players vollständig neu laden (F5)">Player neu laden (F5)</button><button class="identify-display-action" type="button" data-identify-display="${escapeHtml(display.id)}" title="Informationen auf dem Display anzeigen">Display identifizieren</button><button type="button" data-copy-display="${escapeHtml(display.id)}" title="URL kopieren">⧉</button><button type="button" data-open-display="${escapeHtml(display.id)}" title="Player öffnen">↗</button>${launcherDownloadMenu(display)}<button type="button" data-edit-display="${escapeHtml(display.id)}" title="Bearbeiten">✎</button><button class="danger-action" type="button" data-delete-display="${escapeHtml(display.id)}" title="Display löschen">⌫ Löschen</button></span></div>`;}).join('')||'<p class="property-note">Keine Displays passen zu den Filtern.</p>'}`;
+  grid.innerHTML=`<div class="admin-row admin-head"><span>Name</span><span>Status</span><span>Typ / Auflösung</span><span>Standort</span><span>Gruppe</span><span>Inhalt</span><span>Matrix</span><span>Aktionen</span></div>${rows.map(display=>{const groups=state.groups.filter(item=>(display.groupIds||[]).includes(item.id)).map(item=>item.name);return`<div class="admin-row"><span><strong>${escapeHtml(display.name)}</strong><small>${escapeHtml(display.slug)}</small></span><span><b class="status-pill ${display.online?'online':display.status==='disabled'?'disabled':''}">${display.status==='disabled'?'Deaktiviert':display.online?'Online':'Offline'}</b><small>${display.lastSeenAt?formatLastSeen(display.lastSeenAt):'Noch nie verbunden'}</small></span><span>${escapeHtml(display.displayType||'standard')}<small>${escapeHtml(displayResolutionSummary(display))} · ${display.orientation==='portrait'?'Hoch':'Quer'}</small></span><span>${escapeHtml(display.location||'Ohne Standort')}</span><span>${escapeHtml(groups.join(', ')||'Ohne Gruppe')}</span><span>${escapeHtml(display.channel||'Kein Inhalt')}</span><span>${display.matrix?`<b class="matrix-badge">${escapeHtml(display.matrix.name)} · ${display.matrix.row+1}/${display.matrix.column+1}</b>`:'–'}</span><span class="row-actions"><button type="button" data-reload-display="${escapeHtml(display.id)}" ${state.currentUser?.role==='viewer'?'hidden':''} title="Browser des Players vollständig neu laden (F5)">Player neu laden (F5)</button><button type="button" data-fullscreen-display="${escapeHtml(display.id)}" ${state.currentUser?.role==='viewer'?'hidden':''} title="Vollbild auf dem Player aktivieren">Vollbild (F11)</button><button class="identify-display-action" type="button" data-identify-display="${escapeHtml(display.id)}" title="Informationen auf dem Display anzeigen">Display identifizieren</button><button type="button" data-copy-display="${escapeHtml(display.id)}" title="URL kopieren">⧉</button><button type="button" data-open-display="${escapeHtml(display.id)}" title="Player öffnen">↗</button>${launcherDownloadMenu(display)}<button type="button" data-edit-display="${escapeHtml(display.id)}" title="Bearbeiten">✎</button><button class="danger-action" type="button" data-delete-display="${escapeHtml(display.id)}" title="Display löschen">⌫ Löschen</button></span></div>`;}).join('')||'<p class="property-note">Keine Displays passen zu den Filtern.</p>'}`;
   document.querySelector('#display-page-info').textContent=`${filtered.length} Displays · Seite ${state.displayPage} von ${pages}`;
 
   grid.querySelectorAll('[data-copy-display]').forEach(button => button.addEventListener('click', async () => {
@@ -4909,6 +4986,11 @@ function renderDisplays() {
   grid.querySelectorAll('[data-reload-display]').forEach(button=>button.addEventListener('click',async()=>{
     const display=state.displays.find(item=>item.id===button.dataset.reloadDisplay);if(!display)return;button.disabled=true;
     try{await apiRequest(`/api/operations/displays/${encodeURIComponent(display.id)}/commands`,{method:'POST',body:JSON.stringify({command:'reload'})});showToast(`Browser-Refresh für „${display.name}“ angefordert. Aktive Player übernehmen ihn beim nächsten Befehlsabruf.`);}
+    catch(error){showToast(error.message);}finally{button.disabled=false;}
+  }));
+  grid.querySelectorAll('[data-fullscreen-display]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{await apiRequest(`/api/operations/displays/${encodeURIComponent(button.dataset.fullscreenDisplay)}/commands`,{method:'POST',body:JSON.stringify({command:'fullscreen'})});showToast('Vollbild angefordert. Normale Browser können eine lokale Bestätigung verlangen.');}
     catch(error){showToast(error.message);}finally{button.disabled=false;}
   }));
   grid.querySelectorAll('[data-identify-display]').forEach(button=>button.addEventListener('click',async()=>{const display=state.displays.find(item=>item.id===button.dataset.identifyDisplay);button.disabled=true;try{await apiRequest(`/api/operations/displays/${display.id}/commands`,{method:'POST',body:JSON.stringify({command:'identify'})});showToast(`Identifikation wird auf „${display.name}“ angezeigt, sobald der Player erreichbar ist.`);}catch(error){showToast(error.message);}finally{button.disabled=false;}}));
@@ -4982,6 +5064,12 @@ function syncDisplayResolutionFields(display=null){
   document.querySelector('#display-resolution-help').textContent=fixed?'Der Player nutzt diese feste Zielauflösung für Planung und Matrix-Berechnung.':detected?`Zuletzt vom Browser gemeldet: ${detected.width} × ${detected.height} px${display.devicePixelRatio?` · Pixeldichte ${display.devicePixelRatio}`:''}.`:'Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.';
 }
 
+function renderDisplayDefaultFields(){
+  const slide=document.querySelector('#display-default-content-type').value==='slide';
+  document.querySelector('#display-default-slide-field').hidden=!slide;
+  document.querySelector('#display-default-channel-field').hidden=slide;
+}
+document.querySelector('#display-default-content-type').addEventListener('change',renderDisplayDefaultFields);
 function openDisplayDialog(displayId = null) {
   const display = state.displays.find(item => item.id === displayId);
   document.querySelector('#display-dialog-title').textContent = display ? 'Display bearbeiten' : 'Display hinzufügen';
@@ -4995,6 +5083,9 @@ function openDisplayDialog(displayId = null) {
   document.querySelector('#display-width').value=display?.resolution?.width||1920;
   document.querySelector('#display-height').value=display?.resolution?.height||1080;
   document.querySelector('#display-channel').value = display?.defaultChannelId || '';
+  document.querySelector('#display-default-content-type').value=display?.defaultContentType||'channel';
+  document.querySelector('#display-default-slide').value=display?.defaultSlideId||'';
+  renderDisplayDefaultFields();
   document.querySelector('#display-location').value=display?.locationId||'';
   document.querySelector('#display-status').value=display?.status||'active';
   document.querySelector('#display-cache-enabled').checked=display?.cacheEnabled!==false;
@@ -5036,7 +5127,7 @@ document.querySelector('#display-form').addEventListener('submit', async event =
   const editId = document.querySelector('#display-edit-id').value;
   if (state.displays.some(display => display.slug === slug && display.id !== editId)) { event.preventDefault(); showToast('Diese URL-Kennung ist bereits vergeben.'); return; }
   const selectedGroups = [...document.querySelectorAll('#display-group-options input:checked')].map(input => input.value);
-  const payload={name,slug,orientation:document.querySelector('#display-orientation').value,displayType:document.querySelector('#display-type').value,resolutionMode:document.querySelector('#display-resolution-mode').value,width:Number(document.querySelector('#display-width').value)||1920,height:Number(document.querySelector('#display-height').value)||1080,defaultChannelId:document.querySelector('#display-channel').value||undefined,locationId:document.querySelector('#display-location').value||undefined,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin',status:document.querySelector('#display-status').value,cacheEnabled:document.querySelector('#display-cache-enabled').checked,groupIds:selectedGroups};
+  const payload={name,slug,orientation:document.querySelector('#display-orientation').value,displayType:document.querySelector('#display-type').value,resolutionMode:document.querySelector('#display-resolution-mode').value,width:Number(document.querySelector('#display-width').value)||1920,height:Number(document.querySelector('#display-height').value)||1080,defaultContentType:document.querySelector('#display-default-content-type').value,defaultSlideId:document.querySelector('#display-default-content-type').value==='slide'?document.querySelector('#display-default-slide').value||undefined:undefined,defaultChannelId:document.querySelector('#display-default-content-type').value==='channel'?document.querySelector('#display-channel').value||undefined:undefined,locationId:document.querySelector('#display-location').value||undefined,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin',status:document.querySelector('#display-status').value,cacheEnabled:document.querySelector('#display-cache-enabled').checked,groupIds:selectedGroups};
   try{await apiRequest(editId?`/api/displays/${editId}`:'/api/displays',{method:editId?'PUT':'POST',body:JSON.stringify(payload)});displayDialog.close();await loadDisplays();showToast(`Display „${name}“ wurde gespeichert.`);}catch(error){showToast(error.message);}
 });
 

@@ -213,3 +213,13 @@ Die effektive Inhaltsreihenfolge eines Displays ist:
 4. Standardkanal des Displays
 
 Eine zielende Sicherheitswarnung wird zusätzlich als Overlay ausgeliefert und übersteuert die normale Darstellung im Player.
+
+## Playerbefehle ab 3.16.0
+
+`POST /api/v1/displays/{displayId}/commands` mit
+`{"command":"reload"}`, `{"command":"identify"}`, `{"command":"fullscreen"}`
+oder `{"command":"sync"}` reiht einen Befehl ein (201, Objekt `command`).
+Authentifizierung und plattformspezifische Basisadressen gelten unverändert.
+Vollbild wird eingeschaltet; Browser können eine lokale Bestätigung verlangen.
+201 bestätigt die Annahme, nicht die Ausführung. Details, Standardauswahl und
+Rückfall bei leeren Zeitplankanälen: [Displaysteuerung](player-control.md).

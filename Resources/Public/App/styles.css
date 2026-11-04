@@ -506,11 +506,11 @@ dialog:not(.slide-editor-dialog) { max-height: calc(100dvh - 28px); overflow-y: 
 .management-tabs button.is-active{color:var(--accent-dark);border-color:var(--accent-dark)}
 .display-tab-panel{display:none}.display-tab-panel.is-active{display:block}
 .management-toolbar{display:grid;grid-template-columns:minmax(240px,1fr) repeat(4,minmax(130px,auto));gap:10px}
-.admin-data-table{min-width:760px;overflow:auto}
+.admin-data-table{min-width:0;width:100%;overflow:auto}
 .admin-row{display:grid;grid-template-columns:minmax(210px,1.5fr) repeat(6,minmax(110px,1fr)) 390px;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #e8ecea;font-size:13px}
 .admin-row.admin-head{position:sticky;top:0;background:#f5f8fc;color:#63716c;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
 .admin-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis}.admin-row strong{display:block}.admin-row small{display:block;color:#718079;margin-top:2px}
-.admin-row .row-actions{display:flex;justify-content:flex-end;gap:5px;overflow:visible}
+.admin-row .row-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:5px;overflow:visible}
 .admin-row .row-actions button,.table-pagination button{border:1px solid #d8dfdc;background:#fff;border-radius:8px;min-width:34px;height:34px;cursor:pointer}
 .admin-row .row-actions .identify-display-action{width:auto;padding:0 10px;color:#176347;border-color:#a9ccbd;background:#eff8f4;font-weight:750}
 .admin-row .row-actions .danger-action{width:auto;padding:0 9px;color:#8a2828;border-color:#ebc7c5;background:#fff7f6}
@@ -1515,3 +1515,25 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 .media-multi-footer .button { min-height: 44px; }
 
 .media-asset-actions:has(.media-multi-choice) { grid-column: 1 / -1; grid-row: auto; flex-wrap: wrap; }
+
+/* Display actions and defaults remain reachable without horizontal scrolling on phones. */
+@media(max-width:700px){
+  #display-table .admin-head{display:none}
+  #display-table .admin-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  #display-table .admin-row>span:first-child,#display-table .row-actions{grid-column:1/-1}
+  #display-table .row-actions{justify-content:flex-start}
+  #display-table .admin-row>span:nth-child(n+2):nth-child(-n+7)::before{display:block;margin-bottom:4px;font-size:11px;color:#60706a;font-weight:700}
+  #display-table .admin-row>span:nth-child(2)::before{content:'Status'}
+  #display-table .admin-row>span:nth-child(3)::before{content:'Typ / Auflösung'}
+  #display-table .admin-row>span:nth-child(4)::before{content:'Standort'}
+  #display-table .admin-row>span:nth-child(5)::before{content:'Gruppe'}
+  #display-table .admin-row>span:nth-child(6)::before{content:'Inhalt'}
+  #display-table .admin-row>span:nth-child(7)::before{content:'Matrix'}
+  #display-table .row-actions button,#display-table .launcher-download summary{min-height:44px}
+}
+
+#slide-archive-dialog { width: min(760px, calc(100vw - 24px)); }
+.slide-archive-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border, #ddd); }
+.slide-archive-row > div { min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
+.slide-archive-row small { display: block; margin-top: 4px; }
+.slide-archive-row button, #slide-archive-dialog .dialog-actions button { min-height: 44px; }

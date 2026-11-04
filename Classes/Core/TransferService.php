@@ -251,7 +251,7 @@ final class TransferService
         if (!is_string($value)) return $value;
         $keys = [
             'eventId' => 'events', 'slideId' => 'slides', 'slideSourceId' => 'slides', 'channelId' => 'channels',
-            'defaultChannelId' => 'channels', 'contentId' => null, 'locationId' => 'locations', 'displayId' => 'displays',
+            'defaultSlideId'=>'slides','defaultSlideSourceId'=>'slides','defaultChannelId' => 'channels', 'contentId' => null, 'locationId' => 'locations', 'displayId' => 'displays',
             'groupId' => 'groups', 'matrixId' => 'matrices', 'templateId' => 'templates', 'folderId' => 'mediaFolders',
             'parentId' => 'mediaFolders', 'locationIds' => 'locations', 'mediaAssetId' => 'mediaAssets', 'presetId' => 'presets', 'providerId' => null,
         ];
