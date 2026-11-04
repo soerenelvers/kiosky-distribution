@@ -2971,6 +2971,7 @@ function applyActiveChannel() {
   setAutosaveStatus('channel', channel ? 'saved' : 'idle', channel ? 'Alle Änderungen gespeichert' : 'Autosave bereit');
   renderPlaylist();
   renderChannelOverview();
+  renderSlideBulkAddButton();
 }
 
 async function loadContent(preferredChannelId = state.activeChannelId) {
@@ -3082,15 +3083,26 @@ for(const action of ['rename','duplicate','archive','delete'])document.querySele
 document.querySelector('#channel-bulk-export').addEventListener('click',async event=>{try{await flushChannelAutosave();await exportContentPackage({channels:[...state.selectedChannels]},event.currentTarget);}catch(error){showToast(error.message);}});
 document.querySelector('#channel-bulk-tags').addEventListener('click',()=>openSlideTagPicker('channels'));
 
-function addSlideToPlaylist(slideId, insertAt = state.playlist.length) {
-  const slide = state.slides.find(item => item.id === slideId);
-  if (!slide) return;
-  const duration = slide.type === 'video' ? 18 : 12;
-  state.playlist.splice(insertAt, 0, { slideId, duration });
+function renderSlideBulkAddButton(){
+  const button=document.querySelector('#slide-bulk-add-channel'),canEdit=state.currentUser?.role!=='viewer';
+  button.hidden=!canEdit;button.disabled=!canEdit||!state.selectedSlides.size||!activeChannel();button.title=activeChannel()?`Zu „${activeChannel().name}“ hinzufügen`:'Zuerst einen Kanal auswählen';
+}
+function addSlidesToPlaylist(slideIds, insertAt = state.playlist.length) {
+  if (state.currentUser?.role === 'viewer' || !activeChannel()) { showToast('Bitte zuerst einen bearbeitbaren Kanal auswählen.'); return; }
+  const slides = [...new Set(slideIds)].map(id => state.slides.find(slide => slide.id === id)).filter(Boolean);
+  if (!slides.length) return;
+  state.playlist.splice(insertAt, 0, ...slides.map(slide => ({ slideId: slide.id, duration: slide.type === 'video' ? 18 : 12 })));
   commitChannelHistoryStep();
-  saveChannelState({ immediate: true, successMessage: `„${slide.title}“ wurde hinzugefügt und gespeichert.` });
+  saveChannelState({ immediate: true, successMessage: `${slides.length} Slide(s) wurden hinzugefügt und gespeichert.` });
   renderPlaylist();
 }
+function addSlideToPlaylist(slideId, insertAt = state.playlist.length) { addSlidesToPlaylist([slideId], insertAt); }
+function draggedLibrarySlideIds(transfer) {
+  const multiple=transfer.getData('application/x-kiosky-slides');
+  if(multiple){try{const ids=JSON.parse(multiple);return Array.isArray(ids)?ids.filter(id=>typeof id==='string'):[];}catch{return [];}}
+  const single=transfer.getData('application/x-kiosky-slide');return single?[single]:[];
+}
+document.querySelector('#slide-bulk-add-channel').addEventListener('click',()=>addSlidesToPlaylist(state.slides.filter(slide=>state.selectedSlides.has(slide.id)).map(slide=>slide.id)));
 
 function renderSlideLibrary() {
   renderContentTagFolders('slides');
@@ -3114,6 +3126,7 @@ function renderSlideLibrary() {
   ['slide-bulk-rename', 'slide-bulk-duplicate', 'slide-bulk-archive', 'slide-bulk-tags', 'slide-bulk-export'].forEach(id => { document.querySelector(`#${id}`).disabled = !state.selectedSlides.size; });
   document.querySelector('#slide-bulk-delete').disabled = !state.selectedSlides.size || state.currentUser?.role !== 'admin';
   const canEditContent = state.currentUser?.role !== 'viewer';
+  renderSlideBulkAddButton();
   document.querySelector('#open-slide-archive').hidden = !canEditContent;
   library.innerHTML = visibleSlides.map(slide => `
     <div class="slide-library-card ${state.selectedSlides.has(slide.id) ? 'is-selected' : ''}" draggable="${canEditContent}" data-slide-id="${escapeHtml(slide.id)}">
@@ -3126,6 +3139,8 @@ function renderSlideLibrary() {
   library.querySelectorAll('.slide-library-card').forEach(card => {
     card.addEventListener('dragstart', event => {
       if (!canEditContent || event.target.closest('input, button, label')) { event.preventDefault(); return; }
+      const ids=state.selectedSlides.has(card.dataset.slideId)?state.slides.filter(slide=>state.selectedSlides.has(slide.id)).map(slide=>slide.id):[card.dataset.slideId];
+      event.dataTransfer.setData('application/x-kiosky-slides', JSON.stringify(ids));
       event.dataTransfer.setData('application/x-kiosky-slide', card.dataset.slideId);
       event.dataTransfer.effectAllowed = 'copy';
       card.classList.add('dragging');
@@ -3451,12 +3466,13 @@ function renderPlaylist() {
     item.addEventListener('dragover', event => { event.preventDefault(); item.classList.add('drag-over'); });
     item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
     item.addEventListener('drop', event => {
-      event.preventDefault();
+      event.preventDefault();event.stopPropagation();
       item.classList.remove('drag-over');
-      const librarySlide = event.dataTransfer.getData('application/x-kiosky-slide');
+      if (!canEditContent) return;
+      const librarySlides = draggedLibrarySlideIds(event.dataTransfer);
       const destination = Number(item.dataset.playlistIndex);
-      if (librarySlide) {
-        addSlideToPlaylist(librarySlide, destination);
+      if (librarySlides.length) {
+        addSlidesToPlaylist(librarySlides, destination);
         return;
       }
       const sourceValue = event.dataTransfer.getData('application/x-kiosky-playlist-index');
@@ -3478,8 +3494,8 @@ if (playlistDrop) {
   playlistDrop.addEventListener('drop', event => {
     event.preventDefault();
     playlistDrop.classList.remove('drag-over');
-    const slideId = event.dataTransfer.getData('application/x-kiosky-slide');
-    if (slideId) addSlideToPlaylist(slideId);
+    const ids = draggedLibrarySlideIds(event.dataTransfer);
+    if (ids.length) addSlidesToPlaylist(ids);
   });
   playlistDrop.addEventListener('click', () => document.querySelector('#slide-search').focus());
 }

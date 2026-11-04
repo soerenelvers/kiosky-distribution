@@ -223,3 +223,9 @@ Authentifizierung und plattformspezifische Basisadressen gelten unverändert.
 Vollbild wird eingeschaltet; Browser können eine lokale Bestätigung verlangen.
 201 bestätigt die Annahme, nicht die Ausführung. Details, Standardauswahl und
 Rückfall bei leeren Zeitplankanälen: [Displaysteuerung](player-control.md).
+
+### Gespeicherte Presets ausführen (3.16.1)
+
+`POST /api/v1/presets/{id}/execute` mit `{}` führt aktuelle Zustands-Presets einschließlich `config.channelUpdates` und `config.assignments` wie die Oberfläche aus. Sie verwenden ihre gespeicherten Zuweisungen; ein zusätzliches `targets` überschreibt diese nicht. Auch reine Kanalzustände ohne Displayzuweisung sind ausführbar. Jeder erfolgreiche Aufruf schreibt genau einen Ausführungsnachweis; Fehler rollen den gesamten Zustand zurück.
+
+Warn-Presets übernehmen ohne `targets` die gespeicherten Ziele (einschließlich der Zeichenketten aus dem Editor), ihr Design und `durationMinutes`. Explizite API-Ziele überschreiben bei Warnungen die gespeicherten Ziele. Ältere Kanal-ID- und Reset-Presets bleiben verfügbar. Companion 1.2.1 bietet „Im Preset gespeicherte Ziele“ als Standard; vorhandene Aktionen mit expliziter Zielauswahl bleiben kompatibel.

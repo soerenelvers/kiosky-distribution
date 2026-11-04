@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "46cc97076e47c032ab30d2092e4c287124afa53d",
+  "source_commit": "02b6567c56dfe89579e4ec7a745aa4cf7ab12119",
   "product": "kiosky",
-  "version": "3.16.0",
-  "released_at": "2026-11-04T18:05:40.199Z",
+  "version": "3.16.1",
+  "released_at": "2026-11-04T19:03:23.982Z",
   "channel": "stable",
-  "release_notes": "## [3.16.0] – 2026-11-04\n\n- Slide-Archiv direkt in der Bibliothek öffnen, durchsuchen und einzelne Slides wiederherstellen; Ablaufdaten und Verknüpfungen erhalten. Bild-/Icon-Zoom in der Wegweisung auf 10–250 % erweitern.\n\n- Standardinhalt je Display zwischen Kanal und einzelner Slide umschaltbar machen; bisherige Kanalzuweisungen bleiben Standard. Leere beziehungsweise nur gelöschte, abgelaufene oder noch nicht gültige Slides enthaltende Zeitplankanäle verwenden den Standardinhalt. Verfügbare Zeitplaninhalte übernehmen anschließend automatisch wieder.\n- Vollbildanforderung neben Neu laden und Identifizieren ergänzen. Alle drei Aktionen sowie Synchronisieren über die authentifizierte externe API bereitstellen; Companion-Modul 1.2.0 um passende Aktionen erweitern.\n- Windows-Launcher 2.1.0 um eine auf die konfigurierte Installation begrenzte Browsersteuerung ergänzen. Normale oder durch Browserrichtlinien eingeschränkte Player verlangen gegebenenfalls eine lokale Vollbildbestätigung; blockierte Anforderungen bleiben unbestätigt.\n- Migrationen für Standardslides und den zusätzlichen Playerbefehl ergänzen; neue Referenzen beim Import/Export umschreiben und bestehende Befehle beim Upgrade erhalten.\n\n- Bulk-Slide-Import um Tag-Auswahl und direkte Neuanlage erweitern; alle gewählten Dateien erhalten die Tags gemeinsam. WordPress verwendet weiterhin seinen nativen Medienbrowser.\n- Die Tags Werbung, Werbung quer und Werbung Hochkant in der gemeinsamen Auswahl bereitstellen. Fehlende Ablauffristen beim Taggen einmalig auf sieben Tage setzen; bestehende Fristen beim Bearbeiten erhalten.\n- Getaggte veröffentlichte Slides zusammen mit Veranstaltungswerbung automatisch in Werbung quer und Werbung Hochkant bündeln. Abgelaufene Slides aus der Wiedergabe und beim Abgleich aus den Kanälen entfernen, ohne Inhalte zu löschen.\n- Gesamtzahl der Slides je Werbekanal separat vom Veranstaltungslimit einstellbar machen. Die bestehende automatische Kanal-ID bleibt für Querformat erhalten; Hochkant erhält einen eigenen Kanal.\n- Regressionen für Fristerhalt, Formatzuordnung, Publikationsstatus, Kanalgrenzen, atomaren Import, native CMS-Tags und gemeinsame mobile Importdialoge ergänzen. Anleitung: [Werbung mit Tags](docs/tag-advertising.md).",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.16.0",
+  "release_notes": "## [3.16.1] – 2026-11-04\n\n- Aktuelle Zustands-Presets mit Kanalaktionen und gespeicherten Zuweisungen auch über externe API und Companion ausführen. Warn-Presets mit gespeicherten Zielen, Design und Laufzeit übernehmen. Companion 1.2.1 verwendet standardmäßig die Preset-Ziele.\n- CMS-Ausführungshistorie auf die letzten 100 Einträge begrenzen und OpenAPI für Aufrufe mit gespeicherten Zielen aktualisieren.\n- Mehrfachauswahl von Slides gemeinsam per Drag-and-drop oder über „Zu Kanal hinzufügen“ in den aktiven Kanal übernehmen; Reihenfolge erhalten und jede Aktion einmal speichern.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.16.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.16.0",
+    "core_version": "3.16.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.16.0",
-    "typo3_extension_version": "3.16.0"
+    "wordpress_plugin_version": "3.16.1",
+    "typo3_extension_version": "3.16.1"
   },
   "components": {
     "core": {
-      "version": "3.16.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.0.zip?ref=v3.16.0",
-      "sha256": "3e5b4f0c12f7d3a0d3e17a73f21426bfc0554894f29d9ded59c266cae724d808"
+      "version": "3.16.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.1.zip?ref=v3.16.1",
+      "sha256": "2251f58772c6b51671b1a7497f1fa59eeaf7f57dbdbfb0906216a610268ac95a"
     },
     "standalone": {
-      "version": "3.16.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.0.zip?ref=v3.16.0",
-      "sha256": "3e5b4f0c12f7d3a0d3e17a73f21426bfc0554894f29d9ded59c266cae724d808"
+      "version": "3.16.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.16.1.zip?ref=v3.16.1",
+      "sha256": "2251f58772c6b51671b1a7497f1fa59eeaf7f57dbdbfb0906216a610268ac95a"
     },
     "wordpress": {
-      "version": "3.16.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.16.0.zip?ref=v3.16.0",
-      "sha256": "4ddd43a4611a98285df0809c8a65a393e2230c66e9e659617ef5bfa95553c7df",
+      "version": "3.16.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.16.1.zip?ref=v3.16.1",
+      "sha256": "8232024907957123f61ce4d724ec4a9d9b5fca43a997a9f015c1749ff34b29b8",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.16.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.16.0.zip?ref=v3.16.0",
-      "sha256": "0c6494ed751cc5cee07d69d8618c47f597193d66fa00e4f249e70614a653c1af",
+      "version": "3.16.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.16.1.zip?ref=v3.16.1",
+      "sha256": "4c0ffdef2e0dfac35c6b9c00fb2b9437bf65ae475b0ae30286d38053708e19f8",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

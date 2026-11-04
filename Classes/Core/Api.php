@@ -518,26 +518,7 @@ final class Api
             $preset = $this->required($state['presets'], rawurldecode($match[1]), 'Preset');
             $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
             if (($preset['type'] ?? '') !== 'emergency') {
-                $channelUpdates = is_array($config['channelUpdates'] ?? null) ? $config['channelUpdates'] : [];
-                $assignmentInputs = is_array($config['assignments'] ?? null) ? $config['assignments'] : [];
-                if (!$channelUpdates && !$assignmentInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
-                $updatedChannels = [];
-                foreach ($channelUpdates as $update) {
-                    if (!is_array($update)) continue;
-                    $channel = $this->required($state['channels'], (string)($update['channelId'] ?? ''), 'Kanal');
-                    $slideIds = array_values(array_unique(array_map('strval', is_array($update['slideIds'] ?? null) ? $update['slideIds'] : [])));
-                    if (!$slideIds) throw new RuntimeException('Ein Kanalzustand enthält keine Slides.', 422);
-                    foreach ($slideIds as $slideId) $this->required($state['slides'], $slideId, 'Slide');
-                    $channel['items'] = array_map(static fn(string $slideId): array => ['slideId' => $slideId, 'durationSeconds' => 12, 'transition' => 'inherit'], $slideIds);
-                    $updatedChannels[] = $this->saveRecord($state, 'channels', $channel, (string)$channel['id']);
-                }
-                $assignments = [];
-                foreach ($assignmentInputs as $input) {
-                    if (!is_array($input)) continue;
-                    $assignments[] = $this->saveAssignment($state, ['target' => ['type' => $input['targetType'] ?? '', 'id' => $input['targetId'] ?? ''], 'content' => ['type' => $input['contentType'] ?? '', 'id' => $input['contentId'] ?? ''], 'priority' => 500]);
-                }
-                $execution = $this->record(['presetId' => $preset['id'], 'targets' => array_map(static fn(array $item): array => $item['target'], $assignments), 'result' => ['action' => 'state_applied', 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
-                $state['presetExecutions'][] = $execution;
+                $execution = $this->executeStatePreset($state,$preset);
                 return $this->ok(['result' => $execution['result']], true);
             }
             $targets = !empty($body['targets']) ? array_values(array_map('strval', $body['targets'])) : array_values(array_map('strval', $config['targets'] ?? []));
@@ -1481,7 +1462,16 @@ final class Api
         if (preg_match('#^/api/v1/presets/([^/]+)/execute$#', $path, $match) && $method === 'POST') {
             $preset = $this->required($state['presets'], rawurldecode($match[1]), 'Preset');
             $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
-            $targets = $this->externalTargets($body['targets'] ?? $config['targets'] ?? []);
+            if (($preset['type'] ?? '') !== 'emergency' && (array_key_exists('channelUpdates',$config)||array_key_exists('assignments',$config))) {
+                $execution=$this->executeStatePreset($state,$preset);
+                return $this->created(['execution'=>$execution]);
+            }
+            $storedTargets=array_map(static function($value){
+                if (!is_string($value)) return $value;
+                if (in_array($value,['all','global'],true)) return ['type'=>'global','id'=>'global'];
+                $parts=explode(':',$value,2);return count($parts)===2?['type'=>$parts[0],'id'=>$parts[1]]:['type'=>'group','id'=>$value];
+            },is_array($config['targets'] ?? null)?$config['targets']:[]);
+            $targets = $this->externalTargets($body['targets'] ?? $storedTargets);
             if (!$targets) throw new RuntimeException('Mindestens ein Ziel ist erforderlich.');
             foreach ($targets as $target) $this->assertExternalTarget($state,$target);
             $type = (string)($preset['type'] ?? 'channel');
@@ -1492,7 +1482,20 @@ final class Api
                     $targets
                 )];
             } elseif ($type === 'emergency') {
-                $result = ['action' => 'emergency_activated', 'alert' => $this->externalWarning($state, array_replace($config, $body, ['targets' => $targets]), 'external_preset')];
+                $value=array_replace($config,$body);$duration=(float)($value['durationMinutes'] ?? 0);
+                $this->endExternalWarnings($state);
+                $warning=$this->saveRecord($state,'warnings',[
+                    'source'=>'external_preset','warningType'=>$value['warningType'] ?? $value['type'] ?? 'info',
+                    'title'=>$value['title'] ?? $preset['name'],'instructions'=>$value['instructions'] ?? $value['message'] ?? '',
+                    'description'=>$value['description'] ?? '', 'severity'=>max(0,min(5,(int)($value['severity'] ?? 3))),
+                    'priority'=>max(0,min(1000,(int)($value['priority'] ?? 900))),
+                    'document'=>is_array($value['document'] ?? null)?$value['document']:[],
+                    'returnBehavior'=>in_array($value['returnBehavior'] ?? '',['resume_previous','standard_content'],true)?$value['returnBehavior']:'resume_current_schedule',
+                    'targets'=>array_map(static fn(array $target):string=>$target['type']==='global'?'global':$target['type'].':'.$target['id'],$targets),
+                    'startsAt'=>$this->now(),'endsAt'=>$duration>0?gmdate('c',time()+(int)($duration*60)):null,
+                    'status'=>'active','publishedAt'=>$this->now()
+                ]);
+                $result=['action'=>'emergency_activated','alert'=>$warning];
             } else {
                 $removed = $this->clearAssignmentTargets($state, $targets);
                 if (($body['endEmergency'] ?? true) !== false) $this->endExternalWarnings($state);
@@ -1563,7 +1566,34 @@ final class Api
         if (!$collection || !$this->first($this->active($state[$collection]), fn(array $item): bool => $item['id'] === $target['id'])) throw new RuntimeException('Das Ausspielungsziel wurde nicht gefunden.');
     }
 
-    /** @return array<int,array{type:string,id:string}> */
+    /** @return array<string,mixed> */
+    private function executeStatePreset(array &$state,array $preset): array
+    {
+        $config=is_array($preset['config'] ?? null)?$preset['config']:[];
+        $channelUpdates = is_array($config['channelUpdates'] ?? null) ? $config['channelUpdates'] : [];
+        $assignmentInputs = is_array($config['assignments'] ?? null) ? $config['assignments'] : [];
+        if (!$channelUpdates && !$assignmentInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
+        $updatedChannels = [];
+        foreach ($channelUpdates as $update) {
+            if (!is_array($update)) continue;
+            $channel = $this->required($state['channels'], (string)($update['channelId'] ?? ''), 'Kanal');
+            $slideIds = array_values(array_unique(array_map('strval', is_array($update['slideIds'] ?? null) ? $update['slideIds'] : [])));
+            if (!$slideIds) throw new RuntimeException('Ein Kanalzustand enthält keine Slides.', 422);
+            foreach ($slideIds as $slideId) $this->required($state['slides'], $slideId, 'Slide');
+            $channel['items'] = array_map(static fn(string $slideId): array => ['slideId' => $slideId, 'durationSeconds' => 12, 'transition' => 'inherit'], $slideIds);
+            $updatedChannels[] = $this->saveRecord($state, 'channels', $channel, (string)$channel['id']);
+        }
+        $assignments = [];
+        foreach ($assignmentInputs as $input) {
+            if (!is_array($input)) continue;
+            $assignments[] = $this->saveAssignment($state, ['target' => ['type' => $input['targetType'] ?? '', 'id' => $input['targetId'] ?? ''], 'content' => ['type' => $input['contentType'] ?? '', 'id' => $input['contentId'] ?? ''], 'priority' => 500]);
+        }
+        $execution = $this->record(['presetId' => $preset['id'], 'targets' => array_map(static fn(array $item): array => $item['target'], $assignments), 'result' => ['action' => 'state_applied', 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
+        $state['presetExecutions'][] = $execution;
+        $state['presetExecutions'] = array_slice($state['presetExecutions'], -100);
+        return $execution;
+    }
+
     private function externalTargets(mixed $value): array
     {
         if (!is_array($value)) return [];
@@ -1634,7 +1664,7 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed>|null */
     private function activeEmergency(array $state): ?array
     {
-        return $this->first(array_reverse($state['warnings']), static fn(array $item): bool => ($item['status'] ?? '') === 'active' && in_array($item['source'] ?? '', ['external_api', 'external_preset'], true));
+        return $this->first(array_reverse($state['warnings']), static fn(array $item): bool => ($item['status'] ?? '') === 'active' && in_array($item['source'] ?? '', ['external_api', 'external_preset'], true) && (empty($item['startsAt']) || strtotime($item['startsAt'])<=time()) && (empty($item['endsAt']) || strtotime($item['endsAt'])>time()));
     }
 
     /** @param array<string,mixed> $state */
