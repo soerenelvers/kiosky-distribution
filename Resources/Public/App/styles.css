@@ -1560,3 +1560,11 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 html:has(body.player-mode),body.player-mode,body.player-mode *{scrollbar-width:none}
 body.player-mode::-webkit-scrollbar,body.player-mode *::-webkit-scrollbar{display:none}
 html:has(body.player-mode){overflow:hidden;height:100%}
+
+/* Anchor clock zoom at its selected corner, including background and padding. */
+.slide-clock,.wayfinding-clock{transform:scale(var(--clock-scale,1));transform-origin:bottom right}
+.slide-clock.top-left,.wayfinding-clock.top-left{transform-origin:top left}
+.slide-clock.top-right,.wayfinding-clock.top-right{transform-origin:top right}
+.slide-clock.bottom-left,.wayfinding-clock.bottom-left{transform-origin:bottom left}
+
+[data-slide-setting="clock.scale"]{width:100%;min-height:44px}

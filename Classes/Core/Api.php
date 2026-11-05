@@ -2088,6 +2088,7 @@ final class Api
             $item['currentSlideId'] = $item['slideId'] ?? null;
             $item['currentSlideName'] = $currentSlide['name'] ?? null;
             $item['location'] = $location['name'] ?? null;
+            $item['clockTimezone'] = $location['timezone'] ?? $item['timezone'] ?? 'Europe/Berlin';
             $item['resolution'] = ['width' => (int)($item['width'] ?? 1920), 'height' => (int)($item['height'] ?? 1080)];
             $item['matrix'] = $matrix && $member ? ['id' => $matrix['id'], 'name' => $matrix['name'], 'row' => (int)($member['row'] ?? 0), 'column' => (int)($member['column'] ?? 0)] : null;
             return $item;

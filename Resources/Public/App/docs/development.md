@@ -281,3 +281,9 @@ prüft den echten Linux-Download, die erste Kopplung und das erneute Abspielen
 nach Browserende und Start über den erzeugten Autostart-Eintrag. Beide verwenden
 isolierte Datenbanken, Python Playwright und Chromium unter `/usr/bin/chromium`.
 Native CMS-Installation und Upgrades werden zusätzlich in CI geprüft.
+
+Die Uhr-Overlay-Regression `python3 tests/clock-overlay-browser-smoke.py` prüft nach
+`pnpm build` alle drei UI-Transporte: Standort-/Geräte-Zeitzonen, vier Stunden
+Geräteuhrabweichung, Standortwechsel, Zoom auf Desktop/Smartphone/Tablet und
+dauerhafte Speicherung von Zoom und Standort-Zeitzone. Einrichtung wie bei den
+anderen Chromium-/Playwright-Browserprüfungen.
