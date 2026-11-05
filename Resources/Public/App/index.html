@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.18.0-20261105101627%2B2c60cec9">
+  <link rel="stylesheet" href="styles.css?v=3.19.0-20261105171907%2B1cc9322c">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -792,16 +792,16 @@
               <label class="form-field"><span>Maximale Slides je Werbekanal</span><input id="advertising-maximum-slides" type="number" min="1" max="500" value="15"></label>
               <label class="form-field"><span>Nächste Veranstaltungen</span><input id="advertising-maximum-events" type="number" min="1" max="200" value="15"></label>
               <label class="form-field"><span>Anzeigedauer je Slide</span><input id="advertising-duration" type="number" min="3" max="600" value="12"></label>
-              <label class="form-field"><span>Responsive Slide-Vorlage</span><select id="advertising-template"><option value="">Integrierte Werbevorlage</option></select></label>
+              <label class="form-field"><span>Responsive Slide-Vorlage</span><select id="advertising-template"><option value="">Automatisch anpassbare Werbevorlage erstellen</option></select></label>
               <label class="toggle-label"><input id="advertising-show-date" type="checkbox"> Datum anzeigen</label>
               <label class="toggle-label"><input id="advertising-show-time" type="checkbox" checked> Uhrzeiten anzeigen</label>
               <label class="toggle-label"><input id="advertising-show-seconds" type="checkbox"> Sekunden anzeigen</label>
               <label class="toggle-label"><input id="advertising-hour12" type="checkbox"> 12-Stunden-Format verwenden</label>
             </div>
             <fieldset class="advertising-event-types"><legend>Standorte der automatischen Werbekanäle</legend><div id="advertising-location-options"></div><p class="property-note">Ohne Auswahl sind die Werbekanäle an allen Standorten verfügbar.</p></fieldset>
-            <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Nur aktivierte Arten erzeugen Werbung. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
+            <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Manuelle Veranstaltungen ohne Veranstaltungsart werden automatisch einbezogen. Bei Veranstaltungen mit einer Art gelten die aktivierten Arten. Abgesagte, archivierte und abgelaufene Veranstaltungen werden nicht beworben. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
             <div class="advertising-summary" id="advertising-summary">Noch nicht geladen.</div>
-            <div class="dialog-actions"><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
+            <div class="dialog-actions"><button class="button button-secondary" id="advertising-edit-template" type="button">Werbevorlage bearbeiten</button><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
           </form>
         </div>
         <div class="settings-detail" data-settings-detail="calendar" hidden>
@@ -1691,10 +1691,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
-  <script src="player/fullscreen-control.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
-  <script src="player/media-placement.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
-  <script src="player/editor-alignment.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
-  <script src="app.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
+  <script src="runtime-config.js?v=3.19.0-20261105171907%2B1cc9322c"></script>
+  <script src="player/fullscreen-control.js?v=3.19.0-20261105171907%2B1cc9322c"></script>
+  <script src="player/media-placement.js?v=3.19.0-20261105171907%2B1cc9322c"></script>
+  <script src="player/editor-alignment.js?v=3.19.0-20261105171907%2B1cc9322c"></script>
+  <script src="app.js?v=3.19.0-20261105171907%2B1cc9322c"></script>
 </body>
 </html>

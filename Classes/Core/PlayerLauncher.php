@@ -12,6 +12,7 @@ final class PlayerLauncher
     private const PLATFORMS = [
         'windows-x64' => ['kiosky-player-windows-x64.exe', '.exe', 'application/vnd.microsoft.portable-executable'],
         'linux-x64' => ['kiosky-player-linux-x64', '', 'application/octet-stream'],
+        'linux-mint-x64' => ['kiosky-player-linux-x64', '', 'application/octet-stream'],
         'macos-universal' => ['kiosky-player-macos-universal', '.app.zip', 'application/zip'],
     ];
 

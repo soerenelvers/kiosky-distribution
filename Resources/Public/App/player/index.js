@@ -29,8 +29,8 @@
   }
 
   function loadCatalog() {
-    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit. Richtet beim ersten Start Autostart nach der Windows-Anmeldung ein; die Kopplung bleibt im eigenen Browserprofil gespeichert.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Nach dem Download ausführbar machen.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11.')}`;
-    status.textContent = '4 Player-Angebote';
+    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit. Richtet beim ersten Start Autostart nach der Windows-Anmeldung ein; die Kopplung bleibt im eigenen Browserprofil gespeichert.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Mit Autostart und dauerhaftem Profil; nach dem Download ausführbar machen.')}${desktopCard('linux-mint-x64','Linux Mint Player','⌘','Für Linux Mint und LMDE, 64 Bit: Cinnamon, MATE und Xfce. Mit Autostart und dauerhafter Kopplung. Firefox, Chromium oder Chrome werden unterstützt.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11.')}`;
+    status.textContent = '5 Player-Angebote';
   }
 
   document.querySelector('#copy-server').addEventListener('click', async event => {

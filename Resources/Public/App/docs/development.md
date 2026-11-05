@@ -271,3 +271,13 @@ Build, Autostart und native Windows-CI sind in [windows-player.md](windows-playe
 beschrieben. `python tests/player-startup-browser-smoke.py` prüft nach dem Build
 die Kopplung über zwei echte persistente Chromium-Sitzungen und automatische
 Wiederholung bei verzögertem API-Start für alle drei gemeinsamen Transportvarianten.
+
+## Werbung und Linux-Player prüfen
+
+Nach `pnpm build` prüft `python3 tests/advertising-browser-smoke.py` manuelle
+Veranstaltungen, Werbevorlagen und deren Bearbeitung auf Desktop, Smartphone
+und Tablet in allen drei UI-Transporten. `python3 tests/linux-player-browser-smoke.py`
+prüft den echten Linux-Download, die erste Kopplung und das erneute Abspielen
+nach Browserende und Start über den erzeugten Autostart-Eintrag. Beide verwenden
+isolierte Datenbanken, Python Playwright und Chromium unter `/usr/bin/chromium`.
+Native CMS-Installation und Upgrades werden zusätzlich in CI geprüft.

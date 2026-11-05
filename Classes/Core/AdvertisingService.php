@@ -67,12 +67,17 @@ final class AdvertisingService
     }
 
     /** Callbacks use Api's regular persistence helpers, including slide version creation. */
-    public static function synchronize(array &$state, callable $saveSlide, callable $saveChannel): array
+    public static function synchronize(array &$state, callable $saveSlide, callable $saveChannel, ?callable $saveTemplate = null): array
     {
         $settings = self::settings($state);
         $events = $settings['enabled'] ? self::eligible($state,$settings) : [];
         $template = !empty($settings['templateId']) ? self::find($state['templates'],(string)$settings['templateId']) : null;
         if (($template['status'] ?? '') === 'archived' || !empty($template['deletedAt'])) $template = null;
+        if (!$template && $settings['enabled']) foreach ($state['templates'] as $candidate) if (!empty($candidate['document']['advertisingTemplate']) && empty($candidate['deletedAt']) && ($candidate['status'] ?? '')!=='archived') { $template=$candidate; $settings['templateId']=$template['id']; $state['advertisingSettings']=$settings; break; }
+        if (!$template && $settings['enabled'] && $saveTemplate) {
+            $template = $saveTemplate(['name'=>'Werbung · Veranstaltung','description'=>'Anpassbare Werbevorlage für Querformat und Hochkant. Bild und Eventdaten werden automatisch befüllt.','orientation'=>'auto','status'=>'active','document'=>self::template()],null);
+            $settings['templateId']=$template['id']; $state['advertisingSettings']=$settings;
+        }
         $base = $template['document'] ?? self::template();
         $existing = [];
         foreach ($state['slides'] as $index=>$slide) if (!empty($slide['automationKey'])) $existing[$slide['automationKey']] = $index;
@@ -83,7 +88,7 @@ final class AdvertisingService
         foreach ($events as $event) {
             $key = 'advertising:event:'.$event['id']; $active[$key] = true;
             $document = $base;
-            $fallback = $fallbacks[self::normalizeType((string)$event['eventType'])] ?? null;
+            $fallback = $fallbacks[self::normalizeType((string)($event['eventType'] ?? ''))] ?? null;
             $hasImage = !empty($event['imageUrl']);
             $document['elements'] = self::elements($document['elements'] ?? [],$settings,$fallback,$hasImage);
             foreach (($document['responsiveLayouts'] ?? []) as $orientation=>$layout) {
@@ -91,7 +96,7 @@ final class AdvertisingService
             }
             $document['advertisingConfigHash'] = hash('sha256',json_encode([$document,$settings['showDate'],$settings['showTime'],$settings['showSeconds'],$settings['hour12'],$hasImage,$fallback['id'] ?? null,$fallback['updatedAt'] ?? null],JSON_THROW_ON_ERROR));
             $body = ['name'=>'Werbung · '.$event['title'],'eventId'=>$event['id'],'orientation'=>'auto','type'=>'event','document'=>$document,'status'=>'published','endsAt'=>$event['eventEnd'] ?? $event['eventStart'] ?? gmdate('c',time()+7*86400),
-                'tags'=>['Werbung','Automatisch','Veranstaltung',$event['eventType'],'Veranstaltung:'.($event['externalNumber'] ?? $event['id'])],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
+                'tags'=>['Werbung','Automatisch','Veranstaltung',...(!empty($event['eventType'])?[$event['eventType']]:[]),'Veranstaltung:'.($event['externalNumber'] ?? $event['id'])],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
             $index = $existing[$key] ?? null;
             $current = $index === null ? null : $state['slides'][$index];
             if (!$current || ($current['document']['advertisingConfigHash'] ?? '') !== $document['advertisingConfigHash']) $saved = $saveSlide($body,$current['id'] ?? null);
@@ -156,7 +161,7 @@ final class AdvertisingService
         $types = array_flip(array_map([self::class,'normalizeType'],$settings['eventTypes']));
         $today = (new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd');
         $events = array_values(array_filter($state['events'],static function(array $event) use ($types,$today): bool {
-            if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || !isset($types[self::normalizeType((string)($event['eventType'] ?? ''))])) return false;
+            if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || (!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]) && (!empty($event['sourceId']) || self::normalizeType((string)($event['eventType'] ?? ''))!==''))) return false;
             $boundary = strtotime((string)($event['eventEnd'] ?? $event['eventStart'] ?? ''));
             return $boundary !== false ? $boundary >= time() : substr(preg_replace('/\D/','',(string)($event['date'] ?? '')),0,8) >= $today;
         }));
@@ -166,9 +171,11 @@ final class AdvertisingService
 
     private static function template(): array
     {
-        return ['designOrientation'=>'landscape','settings'=>['background'=>['mode'=>'gradient','color1'=>'#17342b','color2'=>'#315b49','direction'=>'135deg'],'logo'=>['src'=>'','position'=>'top-left'],'clock'=>['enabled'=>false,'position'=>'bottom-right']],
+        $document = ['advertisingTemplate'=>true,'designOrientation'=>'landscape','settings'=>['background'=>['mode'=>'gradient','color1'=>'#17342b','color2'=>'#315b49','direction'=>'135deg'],'logo'=>['src'=>'','position'=>'top-left'],'clock'=>['enabled'=>false,'position'=>'bottom-right']],
             'elements'=>[['id'=>'advertising-image','type'=>'image','x'=>0,'y'=>0,'width'=>100,'height'=>100,'src'=>'','background'=>'#17342b','opacity'=>100,'padding'=>0,'radius'=>0],
                 ['id'=>'advertising-event','type'=>'event','x'=>8,'y'=>55,'width'=>84,'height'=>35,'background'=>'rgba(0,0,0,.58)','color'=>'#ffffff','fontSize'=>40.5,'fontSizeUnit'=>'pt','responsiveText'=>true,'autoFontSize'=>true,'align'=>'center','fontWeight'=>700,'padding'=>24,'radius'=>16]]];
+        $document['responsiveLayouts']=['landscape'=>$document['elements'],'portrait'=>array_map(static fn(array $element): array => ($element['type'] ?? '')==='event'?array_replace($element,['y'=>58,'height'=>34,'fontSize'=>30]):$element,$document['elements'])];
+        return $document;
     }
 
     private static function normalizeType(string $value): string

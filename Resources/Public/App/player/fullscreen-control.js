@@ -20,6 +20,12 @@
     if(await nativeFullscreen())return true;
     return userGesture?false:domFullscreen();
   }
+  function start(){
+    void request();
+    const enter=()=>{void request(true);};
+    document.addEventListener('pointerdown',enter,{once:true});
+    document.addEventListener('keydown',enter,{once:true});
+  }
   function prompt(accept){
     if(document.querySelector('#player-fullscreen-request'))return;
     const panel=document.createElement('aside'),button=document.createElement('button'),status=document.createElement('p');
@@ -35,5 +41,5 @@
     });
     panel.append(status,button);document.body.append(panel);
   }
-  window.KioskyFullscreen={request,prompt,clearPrompt:()=>document.querySelector('#player-fullscreen-request')?.remove()};
+  window.KioskyFullscreen={request,start,prompt,clearPrompt:()=>document.querySelector('#player-fullscreen-request')?.remove()};
 })();

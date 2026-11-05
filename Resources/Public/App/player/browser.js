@@ -1,4 +1,5 @@
 (() => {
+  window.KioskyFullscreen?.start();
   const runtime = window.KioskyPlayerRuntime || {};
   const apiUrl = path => {
     if (!runtime.apiEndpoint) return path;

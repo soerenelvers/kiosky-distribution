@@ -12,3 +12,6 @@ h1{font-size:clamp(42px,7vw,76px);line-height:.96;letter-spacing:-.055em;margin:
 .actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.actions button{appearance:none;border:0;border-radius:11px;padding:13px 18px;background:var(--mint);color:#092019;font:inherit;font-weight:750;cursor:pointer}.actions button.quiet{background:#1d2d28;color:#e4ece8}
 .error{color:#ffb694;margin:22px 0 0}
 @media(max-width:620px){main{padding:14px}.player-panel{padding:34px 20px}.brand{margin-bottom:40px}.pairing-code{letter-spacing:.12em}.actions{display:grid}.actions button{width:100%}}
+
+html,body{scrollbar-width:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+@media(max-height:700px){main{padding:12px}.player-panel{padding:20px}.brand{margin-bottom:16px}h1{font-size:36px;margin-bottom:14px}.lead{margin-bottom:14px;font-size:16px}.pairing-code{padding:12px;font-size:48px}.status{margin:12px 0}.eyebrow{margin-bottom:10px}}

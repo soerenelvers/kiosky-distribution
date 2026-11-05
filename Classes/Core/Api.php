@@ -42,7 +42,7 @@ final class Api
             $state = $this->state();
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
-            if ($result[2] && preg_match('#^/api/(events|slides|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
+            if ($result[2] && preg_match('#^/api/(events|slides|templates|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
             if ($result[2]) {
                 $state['updatedAt'] = $this->now();
                 $this->store->save($state);
@@ -854,7 +854,8 @@ final class Api
         if(!$this->license()->allows($state,'advertising'))return ['ran'=>false];
         return AdvertisingService::synchronize($state,
             function(array $body, ?string $id) use (&$state): array { return $this->saveSlide($state,$body,$id); },
-            function(array $body, ?string $id) use (&$state): array { return $this->saveRecord($state,'channels',$body,$id); });
+            function(array $body, ?string $id) use (&$state): array { return $this->saveRecord($state,'channels',$body,$id); },
+            function(array $body, ?string $id) use (&$state): array { return $this->saveRecord($state,'templates',$body,$id); });
     }
 
     private function crewBrain(): CrewBrainService

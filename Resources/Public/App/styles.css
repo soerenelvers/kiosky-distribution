@@ -1555,3 +1555,8 @@ body[data-user-role="viewer"] [data-import-content-package] { display:none; }
 .editor-snap-line.axis-y { left:0; right:0; height:1px; background:#ed3b9b; }
 .canvas-element-handle,.canvas-rotate-handle,.resize-handle { touch-action:none; }
 @media(pointer:coarse){.canvas-element-handle,.canvas-rotate-handle { min-width:44px; min-height:44px; }}
+
+/* Kiosk playback never exposes document scrollbars. Administration remains scrollable. */
+html:has(body.player-mode),body.player-mode,body.player-mode *{scrollbar-width:none}
+body.player-mode::-webkit-scrollbar,body.player-mode *::-webkit-scrollbar{display:none}
+html:has(body.player-mode){overflow:hidden;height:100%}

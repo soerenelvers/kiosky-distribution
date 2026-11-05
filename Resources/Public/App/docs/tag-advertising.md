@@ -57,3 +57,25 @@ Kanalnamen. Eigene manuelle Kanäle werden nicht umbenannt oder gelöscht.
 
 Rollback entfernt bereits vergebene Tags/Ablaufdaten nicht. Die neue Einstellung
 und der zusätzliche Kanal benötigen keine Datenbankschemaänderung.
+
+
+## Werbung aus manuell angelegten Veranstaltungen
+
+Nach dem Aktivieren unter Einstellungen → Werbung erzeugt Kiosky die Kanäle
+„Werbung quer“ und „Werbung Hochkant“. Manuelle Veranstaltungen ohne
+Veranstaltungsart werden automatisch berücksichtigt. Ist eine Veranstaltungsart
+hinterlegt, muss diese in den Werbeeinstellungen ausgewählt sein. Der bisherige Statusfilter bleibt erhalten: Auch Veranstaltungen „Zu prüfen“
+werden berücksichtigt; abgesagte, archivierte, gelöschte und abgelaufene
+Veranstaltungen bleiben ausgeschlossen.
+
+Beim ersten Aktivieren wird „Werbung · Veranstaltung“ als bearbeitbare Vorlage
+in der Vorlagenbibliothek gespeichert und ausgewählt. Über „Werbevorlage
+bearbeiten“ öffnest du den Slide-Editor. Bild und Eventdaten stammen aus der
+jeweiligen Veranstaltung; zusätzliche Eventfelder kannst du im Editor ergänzen.
+Speichere über „Vorlage aktualisieren“. Änderungen werden in die automatisch
+generierten Werbeslides übernommen. Eine selbst ausgewählte Vorlage bleibt
+maßgeblich. Synchronisieren erzeugt keine doppelten Kanäle oder Vorlagen.
+
+Die Werbung endet mit dem Veranstaltungsende, ersatzweise mit dem Beginn.
+Die Begrenzungen für nächste Veranstaltungen und Slides je Kanal gelten weiter.
+Diese Funktion ist in Standalone, WordPress und TYPO3 identisch.
