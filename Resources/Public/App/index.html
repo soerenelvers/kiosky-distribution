@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.17.0-20261104215307%2B15fdc711">
+  <link rel="stylesheet" href="styles.css?v=3.18.0-20261105101627%2B2c60cec9">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1457,13 +1457,14 @@
                 <label class="form-field"><span>Event-Zeitpunkt</span><select id="property-countdown-event-field"><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass / Öffnung</option><option value="eventStart">Beginn</option><option value="breakStart">Pause beginnt</option><option value="breakEnd">Pause endet / Weiter geht es</option><option value="eventEnd">Ende</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="schedule">Ablaufpunkt der Veranstaltung</option></select></label>
                 <div id="property-countdown-schedule-fields" hidden><label class="form-field"><span>Nächster Ablaufpunkt</span><select id="property-countdown-schedule-category"><option value="">Alle öffentlichen Kategorien</option><option value="access">Einlass</option><option value="setup">Aufbau</option><option value="rehearsal">Probe</option><option value="event">Programm / Veranstaltung</option><option value="break">Pause</option><option value="hospitality">Gastronomie</option><option value="teardown">Abbau</option><option value="other">Sonstiges</option></select></label><label class="form-field"><span>Bezeichnung (optional, exakter Name)</span><input id="property-countdown-schedule-caption" maxlength="200" placeholder="z. B. Zweiter Teil"></label><label class="form-field"><span>Zeitpunkt des Ablaufpunkts</span><select id="property-countdown-schedule-edge"><option value="start">Beginn</option><option value="end">Ende</option></select></label></div>
                 <div class="countdown-offset-fields"><label class="form-field"><span>Offset</span><select id="property-countdown-offset-direction"><option value="-1">Früher (−)</option><option value="1">Später (+)</option></select></label><label class="form-field"><span>Minuten</span><input id="property-countdown-offset-minutes" type="number" inputmode="numeric" min="0" max="10080" value="0"></label><label class="form-field"><span>Sekunden</span><input id="property-countdown-offset-seconds" type="number" inputmode="numeric" min="0" max="59" value="0"></label></div>
-                <p class="property-note">Zielzeit = Event-Zeitpunkt + Offset. Beispiel: Pausenende 21:20 minus 7 Minuten → 21:13. Fehlende Event-Zeiten bleiben unsichtbar; erreichte feste Ziele zeigen null.</p>
+                <p class="property-note">Zielzeit = Event-Zeitpunkt + Offset. Beispiel: Pausenende 21:20 minus 7 Minuten → 21:13. Fehlende Event-Zeiten bleiben unsichtbar.</p>
               </div>
               <label class="form-field"><span>Text davor</span><input id="property-countdown-prefix" type="text" placeholder="z. B. Noch "></label>
               <label class="form-field"><span>Text danach</span><input id="property-countdown-suffix" type="text" placeholder="z. B. bis zum Einlass"></label>
-              <label class="form-field"><span>Anzeigeformat</span><select id="property-countdown-format"><option value="clock">Stunden : Minuten : Sekunden</option><option value="minutes">Verbleibende Minuten als Text</option></select></label>
-              <label class="toggle-label"><input id="property-countdown-show-seconds" type="checkbox" checked> Sekunden anzeigen</label>
-              <p class="property-note">Nach Erreichen der täglichen Uhrzeit startet der Countdown automatisch für den nächsten Tag neu.</p>
+              <label class="form-field"><span>Anzeigeformat</span><select id="property-countdown-format"><option value="hhmm">Stunden : Minuten (HH:MM)</option><option value="hhmmss">Stunden : Minuten : Sekunden (HH:MM:SS)</option><option value="mmss">Minuten : Sekunden (MM:SS)</option><option value="hours">Stunden als Text</option><option value="minutes">Minuten als Text</option><option value="seconds">Sekunden als Text</option></select></label>
+              <label class="toggle-label"><input id="property-countdown-hide-on-end" type="checkbox"> Nach Ablauf ausblenden</label>
+              <label class="form-field"><span>Wenn nach Ablauf sichtbar</span><select id="property-countdown-end-behavior"><option value="countup">Verstrichene Zeit hochzählen (+)</option><option value="stop">Bei null stehen bleiben</option><option value="next_day">Zur nächsten täglichen Zielzeit zählen</option></select></label>
+              <p class="property-note">Ausblenden betrifft das gesamte Countdown-Element einschließlich Text und Hintergrund. Tägliche Countdowns beginnen um Mitternacht für den neuen Tag. „Nächste tägliche Zielzeit“ zählt unmittelbar zum folgenden Tag weiter.</p>
             </div>
             <label class="form-field" id="property-background-field"><span>Element-Hintergrund</span><select id="property-background-mode"><option value="color">Farbe</option><option value="transparent">Transparent</option></select><input id="property-background" aria-label="Hintergrundfarbe" type="color" value="#315b49"></label>
           </div>
@@ -1690,10 +1691,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.17.0-20261104215307%2B15fdc711"></script>
-  <script src="player/fullscreen-control.js?v=3.17.0-20261104215307%2B15fdc711"></script>
-  <script src="player/media-placement.js?v=3.17.0-20261104215307%2B15fdc711"></script>
-  <script src="player/editor-alignment.js?v=3.17.0-20261104215307%2B15fdc711"></script>
-  <script src="app.js?v=3.17.0-20261104215307%2B15fdc711"></script>
+  <script src="runtime-config.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
+  <script src="player/fullscreen-control.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
+  <script src="player/media-placement.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
+  <script src="player/editor-alignment.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
+  <script src="app.js?v=3.18.0-20261105101627%2B2c60cec9"></script>
 </body>
 </html>

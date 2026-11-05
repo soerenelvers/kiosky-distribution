@@ -1,5 +1,13 @@
 # Lokale Entwicklung
 
+Die Countdown-Regression `python tests/countdown-browser-smoke.py` prüft nach
+`pnpm build` alle drei UI-Transporte mit echtem Chromium: Formate, Ausblenden des
+gesamten Elements, Hochzählen, täglicher Neustart, nächster Ablaufpunkt,
+verschachtelte Countdowns, gespeicherte Einstellungen und Smartphone-/Tablet-Bedienung.
+Erforderlich sind Python mit Playwright und Chromium unter `/usr/bin/chromium`.
+Server und Datenbank sind isolierte Fixtures; native CMS-Speicherung und Upgrades
+laufen zusätzlich in der regulären CI.
+
 ## Voraussetzungen
 
 - Node.js 22.5 oder neuer
