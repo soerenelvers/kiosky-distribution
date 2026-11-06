@@ -5475,7 +5475,7 @@ function schedulePayload(entry, overrides={}) {
   return {
     targetType:entry.targetType,targetId:entry.targetId,contentType:entry.contentType||'channel',contentId:entry.contentId||entry.channelId,
     startsAt:entry.startsAt,endsAt:entry.endsAt,recurrence:entry.recurrence,
-    recurrenceStartsAt:entry.recurrenceStartsAt,recurrenceEndsAt:entry.recurrenceEndsAt,recurrenceInterval:entry.recurrenceInterval,recurrenceWeekdays:entry.recurrenceWeekdays,
+    recurrenceStartsAt:entry.recurrenceStartsAt,recurrenceEndsAt:entry.recurrenceEndsAt,recurrenceTimezone:entry.recurrenceTimezone,recurrenceInterval:entry.recurrenceInterval,recurrenceWeekdays:entry.recurrenceWeekdays,
     priority:entry.priority,stackOrder:entry.stackOrder,...overrides,status:'published',active:true
   };
 }

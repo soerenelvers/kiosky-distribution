@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "91511bbd6cb118faa341f2b4116faf4cfe16b6e9",
+  "source_commit": "25c9bb1bc7142eb6f9ba7e6232ac7901cdc1db66",
   "product": "kiosky",
-  "version": "3.21.0",
-  "released_at": "2026-11-06T11:27:30.060Z",
+  "version": "3.22.0",
+  "released_at": "2026-11-06T13:39:48.593Z",
   "channel": "stable",
-  "release_notes": "## [3.21.0] – 2026-11-06\n\n- Automatische Playerupdates über den verbundenen Kiosky-Server für Windows, Linux/Mint und macOS ergänzen. HTTPS, feste Plattformzuordnung, begrenzte Downloads, SHA-256-Prüfung und Versionssperre gegen Downgrades verwenden. Nach geprüftem Austausch automatisch neu starten; Kopplung, Profile und Autostart erhalten. Bei fehlgeschlagenem Start die vorherige Version wiederherstellen.\n- Raspberry-Pi-Images um einen rootseitigen Timer für geprüfte Updates der festgelegten Player-/Dienstdateien ergänzen. WLAN, Displaykopplung und Browserprofil bleiben erhalten. Die SD-Karte wird nicht neu beschrieben; Systempakete nutzen weiterhin ihre bestehende Aktualisierung. Neue Images als Beta 1.0.0-beta.2 anbieten; bisherige Player/Images benötigen einmalig die neue Installation.\n- Browser-Player nach einem neueren Kiosky-Release automatisch neu laden. Den Updatekanal ohne GitHub-Anmeldung aus Standalone-, WordPress- und TYPO3-Paketen bereitstellen.\n- Native Windows- und macOS-Prüfungen sowie Linux- und Pi-Regressionen für gültige Updates, Daten-/Autostarterhalt, beschädigte Downloads, Downgrades und Rollback ergänzen. Große Image-Artefakttransfers zeitlich begrenzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.21.0",
+  "release_notes": "## [3.22.0] – 2026-11-06\n\n### Added\n- Windows-/Linux-Player-Instanzen mit eigener Kopplung, Monitorzuordnung, Autostart und unabhängigen automatischen Updates; vorhandene Standardprofile bleiben erhalten.\n- Native Windows-Instanzverwaltung (Startmenü/F10) und lokale Linux-Instanzverwaltung im Anwendungsmenü; Wartezustand bei fehlendem Monitor.\n- Externe API für echte Zeitzuweisungen an Displays/Gruppen mit Slides/Kanälen, Uhrzeit- oder Datumsmodus und Kalenderwiederholungen.\n- Companion 1.3.0 mit Zeitplanaktionen, Zeitvariablen und gezieltem Löschen von Zeitzuweisungen.\n\n### Fixed\n- Standalone berücksichtigt Wiederholungen bei der Wiedergabe; beide CMSs beachten Wiederholungsgrenzen, Wochentage und Intervalle.\n- Neue API-Zeitpläne behalten ihre lokalen Uhrzeiten bei Sommerzeitwechseln. Nach Ablauf greift die bestehende Zeitplan-/Standardauswahl.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.22.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.21.0",
+    "core_version": "3.22.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.21.0",
-    "typo3_extension_version": "3.21.0"
+    "wordpress_plugin_version": "3.22.0",
+    "typo3_extension_version": "3.22.0"
   },
   "components": {
     "core": {
-      "version": "3.21.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.21.0.zip?ref=v3.21.0",
-      "sha256": "b60b1a6245cef42adfe3c03140c5d460c7f054c4e6cf61b97f0323334f5c9b3e"
+      "version": "3.22.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.0.zip?ref=v3.22.0",
+      "sha256": "5b701ccde398d217dae9ad95b20f45f005b5fea9ffb7d0ac023a6d36e02df2d3"
     },
     "standalone": {
-      "version": "3.21.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.21.0.zip?ref=v3.21.0",
-      "sha256": "b60b1a6245cef42adfe3c03140c5d460c7f054c4e6cf61b97f0323334f5c9b3e"
+      "version": "3.22.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.0.zip?ref=v3.22.0",
+      "sha256": "5b701ccde398d217dae9ad95b20f45f005b5fea9ffb7d0ac023a6d36e02df2d3"
     },
     "wordpress": {
-      "version": "3.21.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.21.0.zip?ref=v3.21.0",
-      "sha256": "457c2bffb2a2b67973805875f0d00683aeb0ac05a4062e695d514db9800fda7b",
+      "version": "3.22.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.22.0.zip?ref=v3.22.0",
+      "sha256": "e4a3e5a6a30ace6503b585b23703cfcb6add8006022a4fd88e3c3ff58bffa92d",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.21.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.21.0.zip?ref=v3.21.0",
-      "sha256": "03e6b915b6fe9ed0f9faf1f5882a8c75d44840a0f3d289ec71171f4d841fd63c",
+      "version": "3.22.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.22.0.zip?ref=v3.22.0",
+      "sha256": "fa1b4ff83d34bea95bd7a89c56fed273ca6eb34c1aa045c8b589c7fb4814db81",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -229,3 +229,55 @@ Rückfall bei leeren Zeitplankanälen: [Displaysteuerung](player-control.md).
 `POST /api/v1/presets/{id}/execute` mit `{}` führt aktuelle Zustands-Presets einschließlich `config.channelUpdates` und `config.assignments` wie die Oberfläche aus. Sie verwenden ihre gespeicherten Zuweisungen; ein zusätzliches `targets` überschreibt diese nicht. Auch reine Kanalzustände ohne Displayzuweisung sind ausführbar. Jeder erfolgreiche Aufruf schreibt genau einen Ausführungsnachweis; Fehler rollen den gesamten Zustand zurück.
 
 Warn-Presets übernehmen ohne `targets` die gespeicherten Ziele (einschließlich der Zeichenketten aus dem Editor), ihr Design und `durationMinutes`. Explizite API-Ziele überschreiben bei Warnungen die gespeicherten Ziele. Ältere Kanal-ID- und Reset-Presets bleiben verfügbar. Companion 1.2.1 bietet „Im Preset gespeicherte Ziele“ als Standard; vorhandene Aktionen mit expliziter Zielauswahl bleiben kompatibel.
+
+## Zeitplanung über API und Companion (ab 3.22.0)
+
+`GET /schedules` listet die regulären Zeitzuweisungen. `POST /schedules` legt einen
+veröffentlichten Eintrag an, `GET /schedules/{id}` liest ihn, `PUT /schedules/{id}`
+ersetzt seine Einstellungen mit einem vollständigen Auftrag, `DELETE /schedules/{id}`
+entfernt ihn. Antwort auf POST/PUT/GET: `{ "entry": { "id": "…", … } }`.
+Die Einträge stehen auch in der normalen Zeitplanung. Es entstehen keine Overrides;
+nach dem Ende greift wieder die normale Auswahl aus Zeitplan und Standardinhalt.
+Bestehende aktive Warnungen und API-Overrides haben weiterhin ihre bisherige Priorität.
+
+Beispiel für heute, 19:00 bis 20:30 Uhr in Deutschland:
+
+```json
+{
+  "target": { "type": "display", "id": "DISPLAY-ID" },
+  "content": { "type": "slide", "id": "SLIDE-ID" },
+  "timing": {
+    "mode": "time", "startTime": "19:00", "endTime": "20:30",
+    "timezone": "Europe/Berlin", "recurrence": "once"
+  }
+}
+```
+
+- Zieltyp `display` oder `group`, Inhaltstyp `slide` oder `channel`.
+- Bei `mode: time`: `date` optional als `YYYY-MM-DD` (ohne Angabe heute in der
+  gewählten Zeitzone), `startTime`/`endTime` als `HH:mm` oder `HH:mm:ss`.
+  Eine frühere Enduhrzeit bedeutet den Folgetag; gleiche Uhrzeiten sind ungültig.
+- Bei `mode: datetime`: `startsAt` und `endsAt` als ISO-Zeitpunkte mit Offset,
+  etwa `2026-11-06T19:00:00+01:00`. Zeitzonenlose Zeitpunkte werden abgelehnt.
+- `timezone` ist eine IANA-Zeitzone, Vorgabe `Europe/Berlin`. Wiederholungen bleiben
+  an der lokalen Uhrzeit, auch bei Sommerzeitwechsel. Nicht existierende Uhrzeiten
+  werden beim Anlegen abgelehnt, spätere betroffene Wiederholungen übersprungen.
+  Doppelte lokale Uhrzeiten beginnen beim ersten Auftreten.
+- `recurrence`: `once`, `daily`, `weekly` oder `interval` (alle N Tage).
+  `interval` (1–365) bestimmt Tage bzw. Wochen. Wöchentlich optional `weekdays`,
+  z.B. `[1,3,5]` für Montag, Mittwoch, Freitag (0=Sonntag); leer = Startwochentag.
+- Optionale ISO-Grenzen `from` und `until` begrenzen Wiederholungen;
+  das Ende ist exklusiv. Wiederkehrende Zeitfenster müssen kürzer als 24 Stunden sein.
+- Optional auf oberster Ebene: `priority` (`normal`, `high`, `takeover`),
+  `active` (Boolean, Vorgabe true), `description` (bis 2000 Zeichen).
+- Endzeit und Grenzen sind exklusiv. Überlappungen verwenden die bestehende
+  Stapelreihenfolge der Zeitplanung; PUT behält die bestehende Stapelposition.
+  Jeder POST erzeugt einen neuen Eintrag. Zum Ändern die zurückgelieferte ID verwenden.
+
+In **Companion 4.1+/5**, Modul **1.3.0**, stehen „Zeitplanung: Slide zuweisen“,
+„Zeitplanung: Kanal zuweisen“ und „Zeitplanung: Zeitzuweisung löschen“ bereit.
+Die Variable `last_schedule_id` enthält die zuletzt mit dieser Modulinstanz erzeugte ID
+(bis Modulneustart). Freie Zeit-/Datumsfelder unterstützen Companion-Variablen.
+Die Moduldatei aus `integrations/companion/releases/kiosky-control-1.3.0.tgz`
+importieren und an der bestehenden Verbindung Version 1.3.0 auswählen.
+Die bisherigen Aktionen „Slide anzeigen“/„Kanal anzeigen“ bleiben direkte Overrides.

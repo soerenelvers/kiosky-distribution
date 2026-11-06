@@ -16,6 +16,7 @@ security:
 tags:
   - name: Resources
   - name: Channels
+  - name: Schedules
   - name: Assignments
   - name: Emergencies
   - name: Presets
@@ -116,6 +117,51 @@ paths:
         '200': { description: Aktualisierter Kanal }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InvalidInput' }
+  /schedules:
+    get:
+      tags: [Schedules]
+      summary: Reguläre Zeitzuweisungen auflisten
+      responses:
+        '200': { description: Zeitzuweisungen, content: { application/json: { schema: { $ref: '#/components/schemas/ListResponse' } } } }
+    post:
+      tags: [Schedules]
+      summary: Veröffentlichten Zeitplaneintrag anlegen
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ScheduleInput' } } }
+      responses:
+        '201': { description: Zeitzuweisung unter entry mit neuer ID }
+        '401': { description: Ungültiger API-Zugang }
+        '403': { description: API oder Zeitplanung nicht freigegeben }
+        '422': { description: Ungültige Zeitangaben oder nicht verfügbares Ziel/Inhalt }
+  /schedules/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Schedules]
+      summary: Zeitzuweisung lesen
+      responses:
+        '200': { description: Zeitzuweisung unter entry }
+        '404': { description: Zeitzuweisung nicht gefunden }
+    put:
+      tags: [Schedules]
+      summary: Zeitzuweisung vollständig ersetzen (Stapelposition bleibt erhalten)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ScheduleInput' } } }
+      responses:
+        '200': { description: Aktualisierte Zeitzuweisung unter entry }
+        '404': { description: Zeitzuweisung nicht gefunden }
+        '422': { description: Ungültiger Auftrag }
+    delete:
+      tags: [Schedules]
+      summary: Zeitzuweisung löschen
+      responses:
+        '200': { description: Entfernt }
+        '404': { description: Zeitzuweisung nicht gefunden }
   /assignments:
     get:
       tags: [Assignments]
@@ -298,6 +344,36 @@ components:
         priority: { type: integer, minimum: 0, maximum: 1000, default: 100 }
         startsAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
+    ScheduleInput:
+      type: object
+      required: [target, content, timing]
+      properties:
+        target:
+          type: object
+          required: [type, id]
+          properties:
+            type: { type: string, enum: [display, group] }
+            id: { type: string, minLength: 1, maxLength: 100 }
+        content: { $ref: '#/components/schemas/Content' }
+        timing:
+          type: object
+          required: [mode]
+          properties:
+            mode: { type: string, enum: [time, datetime] }
+            date: { type: string, format: date, description: Bei Uhrzeiten optional; Vorgabe heute in der gewählten Zeitzone. }
+            startTime: { type: string, description: Bei mode time erforderlich; HH:mm oder HH:mm:ss. }
+            endTime: { type: string, description: Bei mode time erforderlich; frühere Uhrzeit bedeutet Folgetag. }
+            startsAt: { type: string, format: date-time, description: Bei mode datetime erforderlich; mit Offset. }
+            endsAt: { type: string, format: date-time, description: Exklusives Ende bei mode datetime; mit Offset. }
+            timezone: { type: string, default: Europe/Berlin }
+            recurrence: { type: string, enum: [once, daily, weekly, interval], default: once }
+            interval: { type: integer, minimum: 1, maximum: 365, default: 1 }
+            weekdays: { type: array, uniqueItems: true, items: { type: integer, minimum: 0, maximum: 6 } }
+            from: { type: string, format: date-time }
+            until: { type: string, format: date-time, description: Exklusive Wiederholungsgrenze. }
+        priority: { type: string, enum: [normal, high, takeover], default: normal }
+        active: { type: boolean, default: true }
+        description: { type: string, maxLength: 2000 }
     DirectAssignmentInput:
       type: object
       additionalProperties: false

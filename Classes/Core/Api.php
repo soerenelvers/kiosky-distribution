@@ -11,6 +11,7 @@ require_once __DIR__.'/LicenseClient.php';
 require_once __DIR__.'/SlideEventSelection.php';
 require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
+require_once __DIR__.'/ExternalSchedule.php';
 
 final class Api
 {
@@ -1388,6 +1389,24 @@ final class Api
         if ($path === '/api/v1' && $method === 'GET') {
             return $this->ok(['name' => 'Kiosky External Control API', 'version' => '1.0.0', 'documentation' => 'docs/external-api.md', 'openapi' => 'docs/openapi.yaml']);
         }
+        if ($path === '/api/v1/schedules' && $method === 'GET') return $this->ok(['data'=>$state['schedules']]);
+        $scheduleMatch=[];
+        if (($path === '/api/v1/schedules' && $method === 'POST') || (preg_match('#^/api/v1/schedules/([^/]+)$#',$path,$scheduleMatch) && in_array($method,['GET','PUT','DELETE'],true))) {
+            $id=isset($scheduleMatch[1])?rawurldecode($scheduleMatch[1]):null;
+            $current=$id?$this->required($state['schedules'],$id,'Zeitzuweisung'):null;
+            if($method==='GET')return $this->ok(['entry'=>$current]);
+            if($method==='DELETE'){
+                $state['schedules']=array_values(array_filter($state['schedules'],static fn(array $entry):bool=>$entry['id']!==$id));
+                $this->audit($state,'external.schedule.deleted',$id);return $this->ok(['ok'=>true],true);
+            }
+            $input=ExternalSchedule::input($body);
+            $this->required($this->active($state[$input['targetType']==='display'?'displays':'groups']),$input['targetId'],'Ziel');
+            $selected=$this->required($this->active($state[$input['contentType']==='slide'?'slides':'channels']),$input['contentId'],'Inhalt');
+            if(($selected['status'] ?? '')==='archived')throw new RuntimeException('Inhalt ist archiviert.',422);
+            $this->audit($state,$id?'external.schedule.updated':'external.schedule.created',$id ?? $input['targetId']);
+            if($id)return $this->ok(['entry'=>$this->saveRecord($state,'schedules',array_replace($current,$input),$id)],true);
+            return $this->collectionRoute($state,'POST','schedules','entry',$input);
+        }
         if(preg_match('#^/api/v1/displays/([^/]+)/commands$#',$path,$match)&&$method==='POST'){
             $id=rawurldecode($match[1]);$this->required($this->active($state['displays']),$id,'Display');
             if(!in_array($body['command'] ?? '',['reload','identify','fullscreen','sync'],true))throw new RuntimeException('Unbekannter Player-Befehl.',422);
@@ -1925,21 +1944,7 @@ final class Api
     /** @param array<string,mixed> $schedule */
     private function scheduleActive(array $schedule, string $nowValue): bool
     {
-        try {
-            $now = new \DateTimeImmutable($nowValue);
-            $start = new \DateTimeImmutable((string)($schedule['startsAt'] ?? ''));
-            $end = new \DateTimeImmutable((string)($schedule['endsAt'] ?? ''));
-        } catch (Throwable) {
-            return false;
-        }
-        if ($end <= $start) return false;
-        $recurrence = (string)($schedule['recurrence'] ?? 'once');
-        if ($recurrence === 'once') return $start <= $now && $end > $now;
-        if ($now < $start) return false;
-        $duration = $end->getTimestamp() - $start->getTimestamp();
-        $period = $recurrence === 'weekly' ? 7 * 86400 : 86400;
-        $elapsed = $now->getTimestamp() - $start->getTimestamp();
-        return ($elapsed % $period) < $duration;
+        return ExternalSchedule::active($schedule,$nowValue);
     }
 
     private function milliseconds(string $value, string $fallback): int
