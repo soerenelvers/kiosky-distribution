@@ -5392,6 +5392,7 @@ document.querySelector('#matrix-form').addEventListener('submit',async event=>{e
 // Display scheduler
 const dayKeys=['mo','di','mi','do','fr','sa','so'];
 state.scheduleEntries=[];state.scheduleTargetOrder=[];state.scheduleDay=dayKeys[(new Date().getDay()+6)%7];state.scheduleView='day';state.scheduleEntrySavePromise=null;state.scheduleEntrySnapshot='';
+state.scheduleTargetSearch='';
 state.scheduleOnlineOnly=false;
 try { state.scheduleOnlineOnly=localStorage.getItem('kiosky.scheduleOnlineOnly')==='true'; } catch {}
 document.querySelector('#schedule-online-only').checked=state.scheduleOnlineOnly;
@@ -5467,10 +5468,13 @@ function orderedScheduleTargets() {
 }
 
 function visibleScheduleTargets() {
-  const targets=orderedScheduleTargets();
-  if(!state.scheduleOnlineOnly)return targets;
-  const catalog=scheduleTargetCatalog(),online=new Set(state.displays.filter(display=>display.online===true).map(display=>display.id));
-  return targets.filter(key=>catalog[key].displayIds.some(id=>online.has(id)));
+  const targets=orderedScheduleTargets(),query=String(state.scheduleTargetSearch||'').trim().toLowerCase();
+  if(!state.scheduleOnlineOnly&&!query)return targets;
+  const catalog=scheduleTargetCatalog(),online=new Set(state.displays.filter(display=>display.online===true).map(display=>display.id)),names=new Map(state.displays.map(display=>[display.id,display.name]));
+  return targets.filter(key=>{
+    const item=catalog[key];
+    return(!state.scheduleOnlineOnly||item.displayIds.some(id=>online.has(id)))&&(!query||`${item.label} ${item.kind} ${item.displayIds.map(id=>names.get(id)||'').join(' ')}`.toLowerCase().includes(query));
+  });
 }
 
 function mergeVisibleScheduleOrder(next) {
@@ -5480,7 +5484,7 @@ function mergeVisibleScheduleOrder(next) {
 }
 
 function scheduleListEntries(block) {
-  const visible=state.scheduleOnlineOnly?new Set(visibleScheduleTargets()):null;
+  const visible=state.scheduleOnlineOnly||state.scheduleTargetSearch?new Set(visibleScheduleTargets()):null;
   return block.entries.filter(entry=>entry.targetType!=='unassigned'&&(!visible||visible.has(scheduleTargetValue(entry))));
 }
 
@@ -5499,6 +5503,11 @@ async function refreshScheduleOnlineStatus(reportErrors=false) {
   } finally { state.scheduleOnlineLoading=false; }
 }
 
+document.querySelector('#schedule-target-search').addEventListener('input',event=>{
+  state.scheduleTargetSearch=event.target.value;
+  document.querySelector('.schedule-target-scroll').scrollTop=0;
+  renderSchedule();
+});
 document.querySelector('#schedule-online-only').addEventListener('change',event=>{
   state.scheduleOnlineOnly=event.target.checked;
   try { localStorage.setItem('kiosky.scheduleOnlineOnly',String(state.scheduleOnlineOnly)); } catch {}
@@ -5784,7 +5793,7 @@ function renderScheduleWeek(canvas,catalog,targets,readOnly) {
   canvas.className='visual-schedule is-week-view';
   canvas.innerHTML=`<div class="schedule-week-columns"><div class="schedule-week-corner"></div>${dayKeys.map((day,index)=>{const date=new Date(weekStart);date.setDate(date.getDate()+index);return`<div class="schedule-week-day"><span>${date.toLocaleDateString('de-DE',{weekday:'short'})}</span><small>${date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</small></div>`;}).join('')}</div>`;
   const cardMarkup=(block,index,dayStart)=>{const recurrenceLabel=block.recurrence==='daily'?' · täglich':block.recurrence==='weekly'?' · wöchentlich':'',name=block.contentName||block.channelName,deleteButton=readOnly?'':`<button class="schedule-block-delete" type="button" aria-label="${escapeHtml(name)} löschen">×</button>`;return`<article class="schedule-week-card ${scheduleBlockType(block)} priority-${escapeHtml(block.priority)}" data-week-block-index="${index}" tabindex="0" role="button" aria-label="${escapeHtml(name)} bearbeiten"><strong>${escapeHtml(name)}</strong><small>${scheduleWeekCellTimeLabel(block,dayStart)}${recurrenceLabel}</small>${deleteButton}</article>`;};
-  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target];return`<div class="schedule-lane schedule-week-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="${readOnly?'false':'true'}" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div>${dayKeys.map((day,index)=>{const dayStart=new Date(weekStart);dayStart.setDate(dayStart.getDate()+index);const dayEnd=new Date(dayStart);dayEnd.setDate(dayEnd.getDate()+1);const dayBlocks=blocks.map((block,blockIndex)=>({block,blockIndex})).filter(({block})=>new Date(block.startsAt)<dayEnd&&new Date(block.endsAt)>dayStart&&block.entries.some(entry=>scheduleTargetValue(entry)===target));return`<div class="schedule-week-day-cell" data-target="${escapeHtml(target)}" data-week-day="${day}" aria-label="${dayStart.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})} · ${escapeHtml(item.label)}">${dayBlocks.length?dayBlocks.map(({block,blockIndex})=>cardMarkup(block,blockIndex,dayStart)).join(''):'<span class="schedule-week-empty">Ganztägig zuweisen</span>'}</div>`;}).join('')}</div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
+  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target];return`<div class="schedule-lane schedule-week-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="${readOnly?'false':'true'}" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div>${dayKeys.map((day,index)=>{const dayStart=new Date(weekStart);dayStart.setDate(dayStart.getDate()+index);const dayEnd=new Date(dayStart);dayEnd.setDate(dayEnd.getDate()+1);const dayBlocks=blocks.map((block,blockIndex)=>({block,blockIndex})).filter(({block})=>new Date(block.startsAt)<dayEnd&&new Date(block.endsAt)>dayStart&&block.entries.some(entry=>scheduleTargetValue(entry)===target));return`<div class="schedule-week-day-cell" data-target="${escapeHtml(target)}" data-week-day="${day}" aria-label="${dayStart.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})} · ${escapeHtml(item.label)}">${dayBlocks.length?dayBlocks.map(({block,blockIndex})=>cardMarkup(block,blockIndex,dayStart)).join(''):'<span class="schedule-week-empty">Ganztägig zuweisen</span>'}</div>`;}).join('')}</div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleTargetSearch?'Keine passenden Displays, Gruppen oder Matrizen. Suche ändern oder Filter zurücksetzen.':state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
   if(!readOnly)canvas.querySelectorAll('.schedule-week-day-cell').forEach(cell=>{
     cell.addEventListener('dragover',event=>{if(event.dataTransfer.types.includes('application/x-kiosky-schedule-row'))return;event.preventDefault();cell.classList.add('drag-over');});
     cell.addEventListener('dragleave',()=>cell.classList.remove('drag-over'));
@@ -5804,7 +5813,7 @@ function renderSchedule() {
   canvas.className='visual-schedule';
   canvas.innerHTML=`<div class="schedule-hours">${Array.from({length:24},(_,hour)=>`<div class="schedule-hour">${String(hour).padStart(2,'0')}:00</div>`).join('')}</div>`;
   const blockMarkup=(block,index,stackLevel)=>{const window=scheduleBlockWindow(block),recurrenceLabel=block.recurrence==='daily'?' · täglich':block.recurrence==='weekly'?' · wöchentlich':'',name=block.contentName||block.channelName,deleteButton=readOnly?'':`<button class="schedule-block-delete" type="button" aria-label="${escapeHtml(name)} löschen">×</button>`;return`<div class="schedule-block ${scheduleBlockType(block)} priority-${escapeHtml(block.priority)}" data-block-index="${index}" data-stack-level="${stackLevel}" tabindex="0" role="button" style="left:${window.visibleStart/14.4}%;width:${Math.max(1,window.visibleEnd-window.visibleStart)/14.4}%;z-index:${100+stackLevel}" aria-label="${escapeHtml(name)} bearbeiten und verschieben"><button class="schedule-resize-handle start" type="button" aria-label="Startzeit ändern"></button><strong>${escapeHtml(name)}</strong><small>${scheduleTimeRangeLabel(block.startsAt,block.endsAt)}${recurrenceLabel}</small>${deleteButton}<button class="schedule-resize-handle end" type="button" aria-label="Endzeit ändern"></button></div>`;};
-  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target],targetBlocks=blocks.map((block,index)=>({block,index,stackOrder:scheduleBlockStackOrder(block,target)})).filter(({block})=>block.entries.some(entry=>scheduleTargetValue(entry)===target)).sort((a,b)=>a.stackOrder-b.stackOrder);return`<div class="schedule-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="true" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div><div class="schedule-lane-track" data-target="${escapeHtml(target)}">${targetBlocks.map(({block,index},stackLevel)=>blockMarkup(block,index,stackLevel)).join('')}</div></div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
+  canvas.insertAdjacentHTML('beforeend',targets.map(target=>{const item=catalog[target],targetBlocks=blocks.map((block,index)=>({block,index,stackOrder:scheduleBlockStackOrder(block,target)})).filter(({block})=>block.entries.some(entry=>scheduleTargetValue(entry)===target)).sort((a,b)=>a.stackOrder-b.stackOrder);return`<div class="schedule-lane" data-schedule-row="${escapeHtml(target)}"><div class="schedule-lane-label" draggable="true" data-schedule-row-handle="${escapeHtml(target)}" title="Ziehen, um die Reihenfolge zu ändern"><span class="schedule-row-grip">⠿</span><span class="target-icon">${scheduleTargetIcon(item)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></span></div><div class="schedule-lane-track" data-target="${escapeHtml(target)}">${targetBlocks.map(({block,index},stackLevel)=>blockMarkup(block,index,stackLevel)).join('')}</div></div>`;}).join('')||`<div class="schedule-empty-targets">${state.scheduleTargetSearch?'Keine passenden Displays, Gruppen oder Matrizen. Suche ändern oder Filter zurücksetzen.':state.scheduleOnlineOnly?'Keine Online-Displays. Schalte den Filter aus, um alle Ziele anzuzeigen.':'Bitte zuerst ein Display, eine Displaygruppe oder ein Matrix-Display anlegen.'}</div>`);
   if(!readOnly)canvas.querySelectorAll('.schedule-lane-track').forEach(track=>{
     track.addEventListener('dragover',event=>{event.preventDefault();track.classList.add('drag-over');});
     track.addEventListener('dragleave',()=>track.classList.remove('drag-over'));

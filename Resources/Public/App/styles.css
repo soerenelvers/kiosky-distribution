@@ -411,7 +411,7 @@ dialog:not(.slide-editor-dialog) { max-height: calc(100dvh - 28px); overflow-y: 
 
 @media (max-width: 900px) {
   body.navigation-open { overflow: hidden; }
-  .app-shell, .app-shell.sidebar-collapsed { grid-template-columns: minmax(0,1fr); }
+  .app-shell:not(.sidebar-collapsed), .app-shell.sidebar-collapsed { grid-template-columns: minmax(0,1fr); }
   .sidebar, .app-shell.sidebar-collapsed .sidebar { position: fixed; top: 0; left: 0; width: min(320px, 86vw); height: 100dvh; padding-top: 24px; overflow-y: auto; opacity: 1; visibility: visible; transform: translateX(-105%); pointer-events: auto; box-shadow: 18px 0 45px rgba(8,20,16,.28); }
   .sidebar.is-open, .app-shell.sidebar-collapsed .sidebar.is-open { transform: translateX(0); }
   .sidebar-close { display: grid; place-items: center; }
@@ -1568,3 +1568,22 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .slide-clock.bottom-left,.wayfinding-clock.bottom-left{transform-origin:bottom left}
 
 [data-slide-setting="clock.scale"]{width:100%;min-height:44px}
+
+/* Keep schedule targets and content independently scrollable, including touch screens. */
+.schedule-target-filters { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin-bottom:12px; }
+.schedule-target-search { flex:1 1 260px; min-width:0; max-width:480px; }
+.schedule-target-search input { min-width:0; width:100%; }
+.schedule-target-filters .schedule-online-filter { margin:0; }
+.schedule-canvas-wrap { overflow-x:hidden; }
+.schedule-target-scroll { max-height:clamp(240px,58dvh,700px); overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; border-radius:10px; }
+.schedule-target-scroll:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+.schedule-target-scroll .visual-schedule { overflow:visible; }
+.schedule-target-scroll .schedule-hours,.schedule-target-scroll .schedule-week-columns { position:sticky; top:0; z-index:5; background:#f5f8fc; }
+.schedule-target-scroll .schedule-lane,.schedule-target-scroll .schedule-lane-track { isolation:isolate; }
+.schedule-target-scroll .schedule-lane-label { position:sticky; left:0; z-index:3; }
+.schedule-content-list { max-height:min(46dvh,480px); overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; align-content:start; }
+@media (max-width:780px) {
+  .schedule-target-search { flex-basis:100%; max-width:none; }
+  .schedule-target-search input { font-size:16px; }
+  .schedule-content-list { max-height:30dvh; }
+}
