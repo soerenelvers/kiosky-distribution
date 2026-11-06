@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "9df0238ad41cdadc2e74d121133c37653300356f",
+  "source_commit": "1199556f52a897cf396999e91cc7232ffdc58e34",
   "product": "kiosky",
-  "version": "3.22.1",
-  "released_at": "2026-11-06T15:07:16.096Z",
+  "version": "3.22.2",
+  "released_at": "2026-11-06T18:05:37.353Z",
   "channel": "stable",
-  "release_notes": "## [3.22.1] – 2026-11-06\n\n- Lauftexte ohne fortlaufende Layout-Neuberechnungen animieren; identische Wege und Richtungen beibehalten.\n- Editor-Ziehen/-Skalieren/-Drehen und automatische Textanpassung pro Frame bündeln; letzte Eingabe vor dem Speichern übernehmen und Observer sauber abbauen.\n- Unveränderte Uhr-/Countdown-Texte und Warnungsdesigns bei Hintergrundaktualisierungen beibehalten.\n- Bis zu zwei Bilder des nächsten Slides mit begrenztem Dekodierbudget vorladen; Datensparmodus, Display-Cache und kleine Gerätespeicher berücksichtigen.\n- Gemeinsame Frontend-Optimierungen und reproduzierbare Performance-/Bedienungsprüfungen für Standalone, WordPress und TYPO3 bereitstellen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.22.1",
+  "release_notes": "## [3.22.2] – 2026-11-06\n\n- Zeitzuweisungen mit ISO-Zeitzonenoffset in Standalone korrekt mit UTC vergleichen, einschließlich bestehender Einträge.\n- CMS-Gruppenmitgliedschaften bei Display-Änderungen und Gruppen-Umbenennungen erhalten und beidseitig abgleichen.\n- CMS-Kanal-/Slide-Verweise nach Zeitplanänderungen abgleichen und ältere widersprüchliche Verweise beim Ausspielen berücksichtigen.\n- Warnungen oberhalb von Presets, Presets oberhalb aktiver Zeitzuweisungen und diese oberhalb des Display-Standards ausspielen. Warnungen beenden Presets beim Aktivieren nicht mehr automatisch.\n- CMS-Warnungs-Presets übernehmen die konfigurierte Laufzeit auch beim Start aus der Oberfläche.\n- API-Reset und Preset-Stopp erhalten aktive Warnungen standardmäßig; ausdrückliches Beenden bleibt möglich.\n- Nicht mehr spielbare Einzel-Slides/Kanäle geben die folgende Ausspielebene frei. Standardkanäle und Standardslides bleiben als Rückfall erhalten.\n- Gleichzeitige Display-/Gruppen-Zeitzuweisungen eindeutig auflösen und dieselbe Vertragsprüfung für Standalone sowie beide nativen CMS-Adapter ergänzen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.22.2",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.22.1",
+    "core_version": "3.22.2",
     "api_version": "1",
-    "wordpress_plugin_version": "3.22.1",
-    "typo3_extension_version": "3.22.1"
+    "wordpress_plugin_version": "3.22.2",
+    "typo3_extension_version": "3.22.2"
   },
   "components": {
     "core": {
-      "version": "3.22.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.1.zip?ref=v3.22.1",
-      "sha256": "e8e86b68ecd2c1fee88f73cb716e307daecea6e5d12749a4e1c6ba0268063833"
+      "version": "3.22.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.2.zip?ref=v3.22.2",
+      "sha256": "c5495d5f63c82a7eb444ce2a71298240356b36712a1269cd193dea220f86cf38"
     },
     "standalone": {
-      "version": "3.22.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.1.zip?ref=v3.22.1",
-      "sha256": "e8e86b68ecd2c1fee88f73cb716e307daecea6e5d12749a4e1c6ba0268063833"
+      "version": "3.22.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.2.zip?ref=v3.22.2",
+      "sha256": "c5495d5f63c82a7eb444ce2a71298240356b36712a1269cd193dea220f86cf38"
     },
     "wordpress": {
-      "version": "3.22.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.22.1.zip?ref=v3.22.1",
-      "sha256": "107ce3ab2695537425025af85abb291b8a9e953d1dba28f8fd14318327b3a203",
+      "version": "3.22.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.22.2.zip?ref=v3.22.2",
+      "sha256": "ba1bc0f72a2700593de385a1c25180d3e9c665bd875cf2effcc515ef0eb3d688",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.22.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.22.1.zip?ref=v3.22.1",
-      "sha256": "e82b6a530b75d043cda1ba580bb461b908c49a6c22f55805072b8b6bf5a09d85",
+      "version": "3.22.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.22.2.zip?ref=v3.22.2",
+      "sha256": "61e5ba5bef25439c1d53f478fd36909a1f6b5ab409a5916fb3067826e621bc72",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

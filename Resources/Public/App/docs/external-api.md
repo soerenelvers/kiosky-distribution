@@ -177,7 +177,7 @@ Content-Type: application/json
 }
 ```
 
-Bei Kanal-Presets kann `channelId` in der Anfrage den im Preset hinterlegten Kanal überschreiben. Bei Warn-Presets können `warningType`, `title` und `instructions` überschrieben werden. Ein Reset-Preset entfernt die externen Zuweisungen der Ziele und beendet standardmäßig die aktive Warnung; mit `"endEmergency": false` bleibt sie aktiv.
+Bei Kanal-Presets kann `channelId` in der Anfrage den im Preset hinterlegten Kanal überschreiben. Bei Warn-Presets können `warningType`, `title` und `instructions` überschrieben werden. Ein Reset-Preset entfernt die externen Zuweisungen der Ziele. Aktive Warnungen bleiben ab 3.22.2 standardmäßig erhalten; nur ein ausdrückliches `"endEmergency": true` beendet sie. Dasselbe gilt beim Preset-Stopp für `"endWarnings": true`.
 
 ```http
 GET /api/v1/preset-executions

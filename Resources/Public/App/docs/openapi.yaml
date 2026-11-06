@@ -416,14 +416,14 @@ components:
         priority: { type: integer, minimum: 0, maximum: 1000 }
         startsAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
-        endEmergency: { type: boolean, description: Ohne Angabe true bei alten Reset-Presets. }
+        endEmergency: { type: boolean, description: Warnungen beim Reset nur mit ausdrücklich true beenden. }
     PresetStopInput:
       type: object
       additionalProperties: false
       required: [targets]
       properties:
         targets: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/Target' } }
-        endWarnings: { type: boolean, description: Ohne Angabe werden externe Warnungen beendet. }
+        endWarnings: { type: boolean, description: Warnungen beim Preset-Stopp nur mit ausdrücklich true beenden. }
     ListResponse:
       type: object
       required: [data]

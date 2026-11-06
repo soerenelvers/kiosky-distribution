@@ -525,7 +525,8 @@ final class Api
             $targets = !empty($body['targets']) ? array_values(array_map('strval', $body['targets'])) : array_values(array_map('strval', $config['targets'] ?? []));
             if (!$targets) throw new RuntimeException('Das Preset enthält keine Zielbereiche.');
             $warning = $this->saveRecord($state, 'warnings', [
-                'source' => 'manual', 'warningType' => $config['warningType'] ?? 'info',
+                'source' => 'preset:'.$preset['id'], 'warningType' => $config['warningType'] ?? 'info',
+                'startsAt'=>$this->now(),'endsAt'=>(float)($config['durationMinutes'] ?? 0)>0?gmdate('c',time()+(int)((float)$config['durationMinutes']*60)):null,
                 'severity' => (int)($config['severity'] ?? 3), 'title' => $config['title'] ?? $preset['name'],
                 'description' => $config['description'] ?? '', 'instructions' => $config['instructions'] ?? '',
                 'priority' => (int)($config['priority'] ?? 900), 'targets' => $targets,
@@ -1503,7 +1504,7 @@ final class Api
                 )];
             } elseif ($type === 'emergency') {
                 $value=array_replace($config,$body);$duration=(float)($value['durationMinutes'] ?? 0);
-                $this->endExternalWarnings($state);
+                $this->endExternalWarnings($state,'preset');
                 $warning=$this->saveRecord($state,'warnings',[
                     'source'=>'external_preset','warningType'=>$value['warningType'] ?? $value['type'] ?? 'info',
                     'title'=>$value['title'] ?? $preset['name'],'instructions'=>$value['instructions'] ?? $value['message'] ?? '',
@@ -1518,8 +1519,8 @@ final class Api
                 $result=['action'=>'emergency_activated','alert'=>$warning];
             } else {
                 $removed = $this->clearAssignmentTargets($state, $targets);
-                if (($body['endEmergency'] ?? true) !== false) $this->endExternalWarnings($state);
-                $result = ['action' => 'reset', 'removedAssignments' => $removed, 'emergencyEnded' => ($body['endEmergency'] ?? true) !== false];
+                if (($body['endEmergency'] ?? false) === true) $this->endExternalWarnings($state);
+                $result = ['action' => 'reset', 'removedAssignments' => $removed, 'emergencyEnded' => ($body['endEmergency'] ?? false) === true];
             }
             $execution = $this->record(['presetId' => $preset['id'], 'targets' => $targets, 'result' => $result, 'executedAt' => $this->now()]);
             $state['presetExecutions'][] = $execution;
@@ -1531,7 +1532,7 @@ final class Api
         if ($path === '/api/v1/presets/stop' && $method === 'POST') {
             $targets = $this->externalTargets($body['targets'] ?? []);
             $removed = $this->clearAssignmentTargets($state, $targets);
-            if (($body['endWarnings'] ?? true) !== false) $this->endExternalWarnings($state);
+            if (($body['endWarnings'] ?? false) === true) $this->endExternalWarnings($state);
             return $this->ok(['removedAssignments' => $removed], true);
         }
         if ($path === '/api/v1/warnings/webhook' && $method === 'POST') {
@@ -1666,7 +1667,7 @@ final class Api
         $start = $this->externalDate($input['startsAt'] ?? null,'startsAt');
         $end = $this->externalDate($input['endsAt'] ?? null,'endsAt');
         if ($start && $end && strtotime($end) <= strtotime($start)) throw new RuntimeException('endsAt muss nach startsAt liegen.',422);
-        if ($publish && in_array($source,['external_api','external_preset'],true)) $this->endExternalWarnings($state);
+        if ($publish && in_array($source,['external_api','external_preset'],true)) $this->endExternalWarnings($state,$source==='external_preset'?'preset':'warning');
         return $this->saveRecord($state, 'warnings', [
             'source' => $source, 'startsAt' => $start, 'endsAt' => $end,
             'warningType' => (string)($input['warningType'] ?? $input['type'] ?? 'custom'),
@@ -1684,14 +1685,15 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed>|null */
     private function activeEmergency(array $state): ?array
     {
-        return $this->first(array_reverse($state['warnings']), static fn(array $item): bool => ($item['status'] ?? '') === 'active' && in_array($item['source'] ?? '', ['external_api', 'external_preset'], true) && (empty($item['startsAt']) || strtotime($item['startsAt'])<=time()) && (empty($item['endsAt']) || strtotime($item['endsAt'])>time()));
+        $alerts=array_values(array_filter(array_reverse($state['warnings']),static fn(array $item):bool=>($item['status'] ?? '')==='active'&&(in_array($item['source'] ?? '',['external_api','external_preset'],true)||self::presetWarning($item))&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())));
+        usort($alerts,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));return $alerts[0] ?? null;
     }
 
     /** @param array<string,mixed> $state */
-    private function endExternalWarnings(array &$state): void
+    private function endExternalWarnings(array &$state,string $layer='all'): void
     {
         foreach ($state['warnings'] as &$warning) {
-            if (($warning['status'] ?? '') === 'active' && in_array($warning['source'] ?? '', ['external_api', 'external_preset'], true)) {
+            if (($warning['status'] ?? '') === 'active' && ($layer==='preset'?($warning['source'] ?? '')==='external_preset':($layer==='warning'?($warning['source'] ?? '')==='external_api':(in_array($warning['source'] ?? '',['external_api','external_preset'],true)||self::presetWarning($warning))))) {
                 $warning['status'] = 'ended';
                 $warning['endedAt'] = $this->now();
             }
@@ -1734,33 +1736,12 @@ final class Api
         $channel = $selection['channel'];
         $directSlide = $selection['directSlide'] ?? null;
         if ($assignment) {
-            $content = is_array($assignment['content'] ?? null) ? $assignment['content'] : [];
-            if (($content['type'] ?? '') === 'channel') {
-                $channel = $this->first($this->active($state['channels']), fn(array $item): bool => $item['id'] === ($content['id'] ?? ''));
-                $directSlide = null;
-            } elseif (($content['type'] ?? '') === 'slide') {
-                $directSlide = $this->first($this->active($state['slides']), fn(array $item): bool => $item['id'] === ($content['id'] ?? ''));
-                $channel = null;
-            }
+            $content=is_array($assignment['content'] ?? null)?$assignment['content']:[];
+            $override=$this->playbackContent($state,$display,(string)($content['type'] ?? ''),(string)($content['id'] ?? ''),$this->now());
+            if($override){$selection=array_replace($selection,$override);$channel=$override['channel'];$directSlide=$override['directSlide'];}
+            else $assignment=null;
         }
-        $at=$this->now();
-        $available=$this->playableChannelItems($state,$channel,$display,$at);
-        $directRequested=$assignment?($assignment['content']['type'] ?? '')==='slide':!empty($selection['directSlideRequested']);
-        if(!$directRequested&&!$available){
-            foreach(array_unique([$matrixLayout['defaultChannelId'] ?? '',($display['defaultContentType'] ?? 'channel')==='channel'?($display['defaultChannelId'] ?? ''):'']) as $id){
-                if(!$id)continue;
-                $candidate=$this->first($this->active($state['channels']),static fn(array $c):bool=>$c['id']===$id);
-                $items=$this->playableChannelItems($state,$candidate,$display,$at);
-                if(!$items)continue;
-                $channel=$candidate;$available=$items;$assignment=null;
-                $selection=['channel'=>$channel,'directSlide'=>null,'sourceKey'=>'default:'.$id.':'.($channel['updatedAt'] ?? ''),'epoch'=>$channel['updatedAt'] ?? $at,'matrixMode'=>$matrixLayout && $id===($matrixLayout['defaultChannelId'] ?? '')];break;
-            }
-        }
-        if(!$directRequested&&!$available&&($display['defaultContentType'] ?? 'channel')==='slide'&&!empty($display['defaultSlideId'])){
-            $fallback=$this->first($this->active($state['slides']),static fn(array $slide):bool=>$slide['id']===$display['defaultSlideId']);
-            $items=$fallback?$this->playableChannelItems($state,['items'=>[['slideId'=>$fallback['id']]]],$display,$at):[];
-            if($items){$directSlide=$fallback;$channel=null;$assignment=null;$selection=['sourceKey'=>'default:'.$fallback['id'].':'.($fallback['updatedAt'] ?? ''),'epoch'=>$fallback['updatedAt'] ?? $at,'matrixMode'=>false];}
-        }
+        $available=$selection['available'] ?? [];
         $slides = [];
         $playableSlidesById=array_column($this->active($state['slides']),null,'id');
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
@@ -1776,11 +1757,13 @@ final class Api
             }
             $slides[] = $item + ['slide' => $slide, 'event' => $event];
         }
-        $targets = ['global', 'display:' . $display['id']];
-        foreach ($display['groupIds'] ?? [] as $groupId) $targets[] = 'group:' . $groupId;
+        $targets = ['global','all', 'display:' . $display['id']];
+        foreach ($display['groupIds'] ?? [] as $groupId){$targets[]='group:'.$groupId;$targets[]=$groupId;}
         if (!empty($display['locationId'])) $targets[] = 'location:' . $display['locationId'];
         if ($matrixLayout) $targets[] = 'matrix:' . $matrixLayout['id'];
-        $warning = $this->first(array_reverse($state['warnings']), fn(array $item): bool => ($item['status'] ?? '') === 'active' && (empty($item['startsAt']) || strtotime($item['startsAt']) <= time()) && (empty($item['endsAt']) || strtotime($item['endsAt']) > time()) && count(array_intersect($targets, $item['targets'] ?? [])) > 0);
+        $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())&&count(array_intersect($targets,$item['targets'] ?? []))>0));
+        usort($warningCandidates,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));
+        $warning=$warningCandidates[0] ?? null;
         $emergency = $warning ? [
             'id' => $warning['id'], 'type' => $warning['warningType'] ?? 'info', 'title' => $warning['title'] ?? '',
             'message' => $warning['instructions'] ?? ($warning['description'] ?? ''), 'description' => $warning['description'] ?? '',
@@ -1876,24 +1859,43 @@ final class Api
             $created = strcmp((string)($b['createdAt'] ?? ''), (string)($a['createdAt'] ?? ''));
             if ($created !== 0) return $created;
             $ranks = ['normal' => 1, 'high' => 2, 'takeover' => 3];
-            return ($ranks[$b['priority'] ?? 'normal'] ?? 0) <=> ($ranks[$a['priority'] ?? 'normal'] ?? 0);
+            return (($ranks[$b['priority'] ?? 'normal'] ?? 0) <=> ($ranks[$a['priority'] ?? 'normal'] ?? 0)) ?: (['display'=>3,'matrix'=>2,'group'=>1][$b['targetType'] ?? ''] ?? 0) <=> (['display'=>3,'matrix'=>2,'group'=>1][$a['targetType'] ?? ''] ?? 0);
         });
         $schedule = $schedules[0] ?? null;
-        $matrixMode = $matrix && (($schedule['targetType'] ?? '') === 'matrix' || (!$schedule && !empty($matrix['defaultChannelId'])));
-        $defaultSlide=($display['defaultContentType'] ?? 'channel')==='slide';
-        $channelId = $schedule['channelId'] ?? ($matrixMode ? ($matrix['defaultChannelId'] ?? '') : ($defaultSlide?'':($display['defaultChannelId'] ?? '')));
-        $channel = $channelId ? $this->first($this->active($state['channels']), fn(array $item): bool => $item['id'] === $channelId) : null;
-        $slideId = ($schedule['contentType'] ?? '') === 'slide' ? ($schedule['slideId'] ?? $schedule['contentId'] ?? '') : (!$schedule&&!$matrixMode&&$defaultSlide?($display['defaultSlideId'] ?? ''):'');
-        $directSlide = $slideId ? $this->first($this->active($state['slides']), fn(array $item): bool => $item['id'] === $slideId) : null;
-        if ($directSlide) $channel = null;
-        return [
-            'channel' => $channel,
-            'directSlide' => $directSlide,
-            'directSlideRequested' => $slideId !== '',
-            'sourceKey' => $schedule ? 'schedule:' . $schedule['id'] : 'default:' . $channelId . ':' . ($channel['updatedAt'] ?? ''),
-            'epoch' => (string)($schedule['startsAt'] ?? $directSlide['updatedAt'] ?? $channel['updatedAt'] ?? $now),
-            'matrixMode' => (bool)$matrixMode,
-        ];
+        $candidates=[];
+        if($schedule){$type=$schedule['contentType'] ?? (!empty($schedule['slideId'])?'slide':'channel');$id=$schedule['contentId'] ?? $schedule[$type.'Id'] ?? ''; $candidates[]=['type'=>$type,'id'=>$id,'sourceKey'=>'schedule:'.$schedule['id'],'epoch'=>$schedule['startsAt'],'matrixMode'=>$matrix&&($schedule['targetType'] ?? '')==='matrix'];}
+        if(!empty($matrix['defaultChannelId']))$candidates[]=['type'=>'channel','id'=>$matrix['defaultChannelId'],'matrixMode'=>true];
+        $type=($display['defaultContentType'] ?? 'channel')==='slide'?'slide':'channel';
+        $id=$display[$type==='slide'?'defaultSlideId':'defaultChannelId'] ?? '';
+        if($id)$candidates[]=['type'=>$type,'id'=>$id,'matrixMode'=>false];
+        foreach($candidates as $candidate){
+            $selected=$this->playbackContent($state,$display,(string)$candidate['type'],(string)$candidate['id'],$now);
+            if(!$selected)continue;
+            $record=$selected['directSlide'] ?? $selected['channel'];
+            return $selected+['sourceKey'=>$candidate['sourceKey'] ?? 'default:'.$candidate['id'].':'.($record['updatedAt'] ?? ''),'epoch'=>$candidate['epoch'] ?? $record['updatedAt'] ?? $now,'matrixMode'=>(bool)$candidate['matrixMode']];
+        }
+        return ['channel'=>null,'directSlide'=>null,'available'=>[],'sourceKey'=>'default:empty','epoch'=>$now,'matrixMode'=>false];
+    }
+
+    private function playbackContent(array $state,array $display,string $type,string $id,string $at): ?array
+    {
+        if(!$id||!in_array($type,['channel','slide'],true))return null;
+        $record=$this->first($this->active($state[$type==='slide'?'slides':'channels']),static fn(array $item):bool=>$item['id']===$id);
+        if(!$record)return null;
+        $channel=$type==='channel'?$record:null;$direct=$type==='slide'?$record:null;
+        $items=$this->playableChannelItems($state,$channel ?? ['items'=>[['slideId'=>$id,'durationSeconds'=>12,'transition'=>'none']]],$display,$at);
+        return $items?['channel'=>$channel,'directSlide'=>$direct,'available'=>$items]:null;
+    }
+
+    private static function presetWarning(array $warning): bool
+    {
+        return ($warning['source'] ?? '')==='external_preset'||str_starts_with((string)($warning['source'] ?? ''),'preset:');
+    }
+    private static function compareWarnings(array $a,array $b): int
+    {
+        return (int)self::presetWarning($a)<=>(int)self::presetWarning($b)
+            ?: (int)($b['priority'] ?? 0)<=>(int)($a['priority'] ?? 0)
+            ?: strcmp((string)($b['publishedAt'] ?? $b['createdAt'] ?? ''),(string)($a['publishedAt'] ?? $a['createdAt'] ?? ''));
     }
 
     /** @param array<string,mixed> $state @return array<string,mixed>|null */
@@ -2006,7 +2008,7 @@ final class Api
     {
         $items = $this->active($state[$collection]);
         if ($collection === 'groups') {
-            return array_map(fn(array $item): array => $item + ['displayIds' => [], 'status' => 'active'], $items);
+            return array_map(fn(array $item):array=>array_replace($item,['displayIds'=>array_values(array_column(array_filter($this->active($state['displays']),static fn(array $display):bool=>in_array($item['id'],$display['groupIds'] ?? [],true)),'id'))])+['status'=>'active'],$items);
         }
         if ($collection === 'locations') {
             $counts = [];
@@ -2034,6 +2036,8 @@ final class Api
             $slides = [];
             foreach ($state['slides'] as $record) $slides[$record['id']] ??= $record;
             return array_map(function (array $item) use ($channels, $slides): array {
+                $type=$item['contentType'] ?? (!empty($item['slideId'])?'slide':'channel');$id=$item['contentId'] ?? $item[$type.'Id'] ?? '';
+                $item['channelId']=$type==='channel'?$id:null;$item['slideId']=$type==='slide'?$id:null;
                 $channel = $channels[$item['channelId'] ?? ''] ?? null;
                 $slide = $slides[$item['slideId'] ?? ''] ?? null;
                 $item['contentType'] = $item['contentType'] ?? ($slide ? 'slide' : 'channel');
@@ -2104,6 +2108,7 @@ final class Api
     private function itemRoute(array &$state, string $method, string $collection, string $singular, string $id, array $body, bool $trash = false): array
     {
         if ($method === 'PUT') {
+            if($collection==='groups'&&!array_key_exists('displayIds',$body))$body['displayIds']=array_values(array_column(array_filter($this->active($state['displays']),static fn(array $display):bool=>in_array($id,$display['groupIds'] ?? [],true)),'id'));
             if($collection==='displays')$body=$this->displayDefaults($state,array_replace($this->required($state['displays'],$id,'Display'),$body));
             if ($collection === 'matrices') $this->validateMatrix($state, $body, $id);
             $record = $this->saveRecord($state, $collection, $body, $id);
@@ -2204,9 +2209,19 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='schedules'){
+            $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');
+            $contentId=$body['contentId'] ?? $body[$type.'Id'] ?? $merged['contentId'] ?? $merged[$type.'Id'] ?? '';
+            $body=array_replace($body,['contentType'=>$type,'contentId'=>$contentId,'channelId'=>$type==='channel'?$contentId:null,'slideId'=>$type==='slide'?$contentId:null]);
+        }
         $record = $this->record(array_replace($current, $body), $id);
         $index = $this->index($state[$collection], $record['id']);
         if ($index === null) $state[$collection][] = $record; else $state[$collection][$index] = $record;
+        if($collection==='displays')foreach($state['groups'] as &$group){
+            $members=$group['displayIds'] ?? [];$included=in_array($record['id'],$members,true);$wanted=in_array($group['id'],$record['groupIds'] ?? [],true);
+            if($included!==$wanted){$group['displayIds']=$wanted?[...$members,$record['id']]:array_values(array_diff($members,[$record['id']]));$group['updatedAt']=$this->now();}
+        }
+        unset($group);
         $this->audit($state, $collection . '.saved', (string)$record['id']);
         return $record;
     }

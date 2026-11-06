@@ -103,3 +103,31 @@ Standardslides und `fullscreen` nicht. Vorhandene Datenbank-Backups beibehalten.
 Unter **Slides & Kanäle → Archiv öffnen** können bearbeitungsberechtigte Nutzer archivierte Slides suchen und wiederherstellen. Die Wiederherstellung erhält Verknüpfungen, Status und Gültigkeitszeiträume. Abgelaufene Slides benötigen weiterhin eine gültige Endzeit; Werbe-Slides erscheinen im Werbemodul. Endgültig gelöschte Slides sind nicht wiederherstellbar.
 
 Bilder und Icons in Wegweisungszeilen können über **Zoom** zwischen 10 % und 250 % skaliert werden. 100 % ist die bisherige Ausgangsgröße; kleinere Werte verkleinern das Motiv in der bestehenden Zelle. Vorschau, gespeicherte Slide und Player verwenden denselben Faktor.
+
+## Ausspielreihenfolge ab 3.22.2
+
+1. Aktive Warnung für das Display bzw. seine Gruppe, seinen Standort oder seine Matrix.
+2. Aktives Preset beziehungsweise eine externe Direktzuweisung.
+3. Aktive, veröffentlichte Zeitzuweisung für Display, Gruppe oder Matrix.
+4. Standardkanal oder Standardslide des Displays (bei einer Matrix zunächst deren Standardkanal).
+
+Warnungen überlagern Presets unabhängig von deren numerischer Priorität. Innerhalb
+derselben Warnungs-/Preset-Ebene bleiben Priorität und Veröffentlichungszeit relevant.
+Beim Ende einer Warnung wird das weiterhin aktive Preset wieder sichtbar. Nach dem
+Aufheben eines Presets greift die aktuell gültige Zeitzuweisung; nach deren Ende
+wieder der Standard.
+
+Ein nicht mehr ausspielbarer Inhalt blockiert die folgende Ebene nicht: abgelaufene,
+zukünftige, archivierte, gelöschte oder am Standort nicht verfügbare Einzel-Slides
+sowie Kanäle ohne aktuell spielbare Slides werden übersprungen. Ein leeres Preset
+fällt auf die Zeitzuweisung zurück; ein leerer oberster Zeitplaneintrag auf den Standard.
+Die gespeicherten Zuweisungen und Verknüpfungen werden dabei erhalten.
+
+ISO-Zeitangaben mit Offset (`+01:00`, `+02:00`) werden zeitlich mit UTC verglichen.
+Vorhandene CMS-Zeitplaneinträge werden anhand von `contentType`/`contentId` gelesen;
+beim Speichern werden `channelId`/`slideId` passend abgeglichen. Bei vollständig
+identischer Stapelzeit, Erstellungszeit und Priorität gilt Display vor Matrix vor Gruppe.
+
+Die CMS-Ausgaben halten Gruppenmitgliedschaften bei Änderungen am Display und an der Gruppe in beiden Richtungen synchron; reine Gruppen-Umbenennungen behalten die Mitglieder.
+
+API-Reset-Presets und `/api/v1/presets/stop` erhalten aktive Warnungen standardmäßig. Ein ausdrückliches `endEmergency: true` bzw. `endWarnings: true` oder die separate Warnung-beenden-Aktion beendet sie weiterhin.
