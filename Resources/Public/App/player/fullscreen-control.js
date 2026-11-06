@@ -1,6 +1,17 @@
 (() => {
   const extensionId='nlboncnanjoobakmbginlgmganglphlf';
   const nativeFullscreen=()=>new Promise(resolve=>{
+    const embedded=window.chrome?.webview;
+    if(typeof embedded?.postMessage==='function'){
+      if(window.top&&window.top!==window){resolve(false);return;}
+      let done=false;
+      const finish=ok=>{if(done)return;done=true;clearTimeout(timeout);embedded.removeEventListener('message',receive);resolve(ok);};
+      const receive=event=>{if(event.data?.type==='kiosky:fullscreen')finish(event.data.ok===true);};
+      const timeout=setTimeout(()=>finish(false),4000);
+      embedded.addEventListener('message',receive);
+      try{embedded.postMessage('kiosky:fullscreen');}catch{finish(false);}
+      return;
+    }
     const runtime=window.chrome?.runtime;
     if(typeof runtime?.sendMessage!=='function'){resolve(false);return;}
     let finished=false;
@@ -21,8 +32,9 @@
     return userGesture?false:domFullscreen();
   }
   function start(){
-    void request();
-    const enter=()=>{void request(true);};
+    const clearRetry=()=>{document.removeEventListener?.('pointerdown',enter);document.removeEventListener?.('keydown',enter);};
+    const enter=()=>{void request(true).then(ok=>{if(ok)clearRetry();});};
+    void request().then(ok=>{if(ok)clearRetry();});
     document.addEventListener('pointerdown',enter,{once:true});
     document.addEventListener('keydown',enter,{once:true});
   }

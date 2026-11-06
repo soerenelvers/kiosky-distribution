@@ -1,5 +1,7 @@
-## [3.19.1] – 2026-11-05
+## [3.20.0] – 2026-11-05
 
-- Standort-Zeitzone im Standortdialog konfigurierbar machen und beim Bearbeiten erhalten; die Browser-Zeitzone überschreibt sie nicht mehr.
-- Uhr-Overlays verwenden die Zeitzone des Display-Standorts, ersatzweise die Display-Zeitzone, und im Player die bereits synchronisierte Serverzeit. Standortänderungen und Sommerzeit werden berücksichtigt; die Geräte-Zeitzone beeinflusst die Anzeige nicht mehr. Gemeinsame Umsetzung für Standalone, WordPress und TYPO3.
-- Zoom-Regler von 50 bis 300 Prozent für das Uhr-Overlay mit direkter Vorschau, proportional skaliertem Hintergrund und fester Verankerung an der gewählten Ecke. Bestehende Slides bleiben bei 100 Prozent.
+- Unter `/player` modellbezogene Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 sowie eine Konfigurationsdatei mit der Browser-Player-Adresse der jeweiligen Installation anbieten. Separate unveränderliche Beta-Veröffentlichung mit Prüfsummen und Quellnachweis; Hardwareabnahme steht aus. Gemeinsame Downloadseite für Standalone, WordPress und TYPO3.
+
+- Windows-Player mit eigenem Win32-Fenster und eingebetteter WebView2-Engine statt externem Edge-/Chrome-Aufruf. Offiziellen Loader und Runtime-Installer einbetten, getrenntes Datenprofil, begrenzte Wiederherstellung nach Browser-/Rendererfehlern und datensparsame Ereignisprotokolle ergänzen. Native Windows-Abnahme einschließlich Profilübernahme und gezielter Wiederherstellung in die verpflichtende CI aufnehmen.
+- Medien beim Slidewechsel und beim Schließen der Vorschau ausdrücklich entladen: Video-/Audio-Decoder stoppen, Quellen lösen und Iframes zurücksetzen. Gemeinsame Oberfläche für Standalone, WordPress und TYPO3.
+- Vollbildbrücke für das eingebettete Fenster ergänzen; bestehende Browser-Player und deren Erweiterung bleiben unterstützt.

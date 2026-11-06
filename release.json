@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "7620cef8e6cf92eb42514c10a20c7dd33a6be8dc",
+  "source_commit": "40141d5d508af88c51ec09e9f9fe95d324f20ae6",
   "product": "kiosky",
-  "version": "3.19.1",
-  "released_at": "2026-11-05T18:42:18.205Z",
+  "version": "3.20.0",
+  "released_at": "2026-11-06T00:10:21.777Z",
   "channel": "stable",
-  "release_notes": "## [3.19.1] – 2026-11-05\n\n- Standort-Zeitzone im Standortdialog konfigurierbar machen und beim Bearbeiten erhalten; die Browser-Zeitzone überschreibt sie nicht mehr.\n- Uhr-Overlays verwenden die Zeitzone des Display-Standorts, ersatzweise die Display-Zeitzone, und im Player die bereits synchronisierte Serverzeit. Standortänderungen und Sommerzeit werden berücksichtigt; die Geräte-Zeitzone beeinflusst die Anzeige nicht mehr. Gemeinsame Umsetzung für Standalone, WordPress und TYPO3.\n- Zoom-Regler von 50 bis 300 Prozent für das Uhr-Overlay mit direkter Vorschau, proportional skaliertem Hintergrund und fester Verankerung an der gewählten Ecke. Bestehende Slides bleiben bei 100 Prozent.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.19.1",
+  "release_notes": "## [3.20.0] – 2026-11-05\n\n- Unter `/player` modellbezogene Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 sowie eine Konfigurationsdatei mit der Browser-Player-Adresse der jeweiligen Installation anbieten. Separate unveränderliche Beta-Veröffentlichung mit Prüfsummen und Quellnachweis; Hardwareabnahme steht aus. Gemeinsame Downloadseite für Standalone, WordPress und TYPO3.\n\n- Windows-Player mit eigenem Win32-Fenster und eingebetteter WebView2-Engine statt externem Edge-/Chrome-Aufruf. Offiziellen Loader und Runtime-Installer einbetten, getrenntes Datenprofil, begrenzte Wiederherstellung nach Browser-/Rendererfehlern und datensparsame Ereignisprotokolle ergänzen. Native Windows-Abnahme einschließlich Profilübernahme und gezielter Wiederherstellung in die verpflichtende CI aufnehmen.\n- Medien beim Slidewechsel und beim Schließen der Vorschau ausdrücklich entladen: Video-/Audio-Decoder stoppen, Quellen lösen und Iframes zurücksetzen. Gemeinsame Oberfläche für Standalone, WordPress und TYPO3.\n- Vollbildbrücke für das eingebettete Fenster ergänzen; bestehende Browser-Player und deren Erweiterung bleiben unterstützt.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.20.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.19.1",
+    "core_version": "3.20.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.19.1",
-    "typo3_extension_version": "3.19.1"
+    "wordpress_plugin_version": "3.20.0",
+    "typo3_extension_version": "3.20.0"
   },
   "components": {
     "core": {
-      "version": "3.19.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.19.1.zip?ref=v3.19.1",
-      "sha256": "a7f190147d26c0da5af0c87fd01b3496811672f9b40237184f26be68f4fdf2db"
+      "version": "3.20.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.20.0.zip?ref=v3.20.0",
+      "sha256": "9580a7456f52bd4e6403549b1494836fc7688475a7eaf46a4ba9192f5ac02cd9"
     },
     "standalone": {
-      "version": "3.19.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.19.1.zip?ref=v3.19.1",
-      "sha256": "a7f190147d26c0da5af0c87fd01b3496811672f9b40237184f26be68f4fdf2db"
+      "version": "3.20.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.20.0.zip?ref=v3.20.0",
+      "sha256": "9580a7456f52bd4e6403549b1494836fc7688475a7eaf46a4ba9192f5ac02cd9"
     },
     "wordpress": {
-      "version": "3.19.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.19.1.zip?ref=v3.19.1",
-      "sha256": "a4f092e98ec50ea9cb27d7736be9add8f2e08d2b0d59d6fae812fecefda6cf94",
+      "version": "3.20.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.20.0.zip?ref=v3.20.0",
+      "sha256": "dc58bcd7feccb86c4506d99834cd7135e48434727b85ce8a9d9a5d0f758f7b1b",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.19.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.19.1.zip?ref=v3.19.1",
-      "sha256": "ad6ef5ab413fb026a753b4a76b0bc1a03829a05a7f34717e7367165f4d0f3039",
+      "version": "3.20.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.20.0.zip?ref=v3.20.0",
+      "sha256": "c8aa4bf902af991500934e2ff2441b1384d7ade18a6ce672e33e6a9a80583649",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -1,96 +1,127 @@
-# Windows-Player ab Kiosky 3.14.0
+# Windows-Player ab Kiosky 3.20.0
 
-## Einrichtung
+Der Windows-64-Bit-Player verwendet ab Version 3.0.0 ein eigenes Win32-Fenster mit
+eingebetteter Microsoft-WebView2-Engine. Er startet direkt im Vollbild. Die
+Runtime-Prozesse heißen `msedgewebview2.exe`; Edge/Chrome werden nicht als externe
+Browserfenster gestartet. Standalone, WordPress und TYPO3 liefern dieselbe native
+Vorlage mit der Adresse der jeweiligen Installation aus.
 
-1. Kiosky auf 3.14.0 aktualisieren und unter `/player` den Windows-64-Bit-Player neu herunterladen. Derselbe Player wird von Standalone, WordPress und TYPO3 mit der jeweiligen Serveradresse bereitgestellt.
-2. Die heruntergeladene EXE einmal starten. Sie kopiert sich nach `%LOCALAPPDATA%\Kiosky\Player\KioskyPlayer.exe` und setzt unter `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run` den Eintrag `Kiosky Display Player`. Administratorrechte sind nicht erforderlich.
-3. Den angezeigten Code in Kiosky einem Display zuweisen. Danach startet der Inhalt im Vollbild. Der Player benötigt Edge oder Chrome; Edge wird bevorzugt.
-4. Bei jeder weiteren Windows-Anmeldung startet die installierte Kopie automatisch, wartet auf die Erreichbarkeit des Kiosky-Servers und öffnet das gespeicherte Display im Vollbild. Die ursprüngliche Datei im Downloadordner wird dann nicht mehr benötigt.
+## Installieren oder vom bisherigen Player wechseln
 
-Windows muss einen Benutzer anmelden. Windows-Autologin und Energieoptionen werden nicht eingerichtet. Ein in Windows ausdrücklich deaktivierter Start wird nicht über die Windows-Freigabeliste hinweg aktiviert.
+1. Kiosky aktualisieren und den **Windows-64-Bit-Player** im Player-Center neu
+   herunterladen. Ein Server-/Pluginupdate ersetzt eine bereits installierte
+   Windows-EXE nicht automatisch.
+2. Das bisherige Kiosky-Playerfenster schließen und die neue EXE einmal starten.
+   Sie installiert sich benutzerbezogen nach
+   `%LOCALAPPDATA%\Kiosky\Player\KioskyPlayer.exe`.
+3. Fehlt eine geeignete stabile WebView2-Laufzeit, deren einmalige Einrichtung
+   bestätigen. Der mitgelieferte offizielle Microsoft-Bootstrapper benötigt dazu
+   Internetzugriff. Ein automatischer Windows-Start installiert keine Runtime
+   ohne Bestätigung. Kiosky fordert keine Administratorrechte an.
+4. Ein neues Display über den Kopplungscode zuweisen. Bei unveränderter
+   Server-/Startadresse werden die LocalStorage-Daten des bisherigen dedizierten
+   Kiosky-Edge-Profils übernommen. Dessen Profil muss dabei geschlossen sein.
+   Originaldaten werden nicht gelöscht und können für einen Rückwechsel dienen.
+5. Nach Windows-Abmeldung und erneuter Anmeldung startet die installierte Kopie
+   wieder mit demselben Profil. Die Downloadkopie wird nicht mehr benötigt.
 
-## Kopplung und Profil
+Es gibt ein Playerfenster und einen Autostarteintrag pro Windows-Benutzer. Ein
+weiterer Start öffnet keine zweite speicherverbrauchende Wiedergabe. Ein Download
+für eine andere Kiosky-Installation ersetzt die Startadresse und verwendet den
+zu dieser Adresse gehörenden Profilordner.
 
-Der Player verwendet ein dauerhaftes, separates Browserprofil unter
-`%LOCALAPPDATA%\Kiosky\Player\Profiles`. Der Profilordner wird aus der eingebetteten
-Startadresse abgeleitet; erneute Downloads derselben Adresse behalten ihn bei.
-Edge-Kiosk-/InPrivate-Modus wird vermieden, weil er die Kopplung beim Beenden
-verwerfen würde. Beim ersten Wechsel vom bisherigen Player kann deshalb eine
-neue Kopplung nötig sein. Danach bleibt sie in diesem Profil gespeichert.
+Windows muss einen Benutzer anmelden. Windows-Autologin und systemweite
+Energieoptionen werden nicht eingerichtet. Ein durch Windows deaktivierter
+Autostart wird nicht an der Windows-Freigabeliste vorbei aktiviert.
 
-Es gibt einen Autostart-Player je Windows-Benutzer. Ein Download für eine andere
-Kiosky-Installation ersetzt die installierte Startadresse und verwendet ein eigenes
-Profil. Den Player vor einem Wechsel der Installation beenden.
+## Daten und Wiederherstellung
 
-Ist der Server beim Start noch nicht erreichbar, prüft ein einzelner Bootstrapprozess
-die Verbindung mit einem Intervall von 3 bis maximal 30 Sekunden. TLS-Prüfung bleibt
-aktiv. Sobald der Server erreichbar ist, startet der Browser und der Bootstrapprozess
-endet. Die Weboberfläche wiederholt auch fehlgeschlagene Kopplungs- und initiale
-Inhaltsanfragen. Bereits geladene Inhalte verwenden weiterhin den bestehenden
-Offline-Cache; ein vollständiger Offline-Start ohne erreichbare Startseite ist
-mit diesem browserbasierten Launcher nicht garantiert.
+Die adressgebundenen Profile bleiben unter
+`%LOCALAPPDATA%\Kiosky\Player\Profiles`. Die eingebettete Engine verwendet darin
+`WebView2`; das ursprüngliche Edge-Profil bleibt unverändert erhalten. Es werden
+nur LocalStorage-Daten des dedizierten Kiosky-Profils migriert, keine privaten
+Browserprofile oder deren Anmeldungen. Eine geänderte Serveradresse/Origin kann
+wie bisher eine neue Kopplung erfordern.
 
-## Autostart ausschalten oder wieder einschalten
+Bei Navigation-/Renderer-/Browser-Prozessfehlern stellt der native Host seine
+Wiedergabe mit Pausen von 1 bis maximal 30 Sekunden wieder her. Das dauerhafte
+Profil wird dabei nicht zurückgesetzt. Netzwerkfehler und HTTP-Serverfehler
+werden wiederholt; ist die Weboberfläche bereits geladen, verwendet sie ihre
+vorhandenen Wiederholungs- und Cachefunktionen. Ein vollständiger Offline-Start
+ist ohne eine zuvor erreichbare Startseite nicht zugesichert.
+
+Beim Slidewechsel werden Video-/Audio-Decoder und Iframes ausdrücklich entladen.
+Der HTTP-Diskcache der Engine ist auf 64 MiB begrenzt; das ist keine RAM-Obergrenze.
+Große Videos, Webseiten und Grafiken sowie Treiber und das systemweite Commit-
+Limit bestimmen den tatsächlichen Speicherbedarf. `0xe0000008` ist ein Chromium-
+Out-of-Memory-Code; der Enginewechsel allein beweist keine Behebung jeder
+möglichen Ursache auf einem konkreten Windows-10-PC.
+
+## Vollbild und Fernsteuerung
+
+F11 schaltet zwischen eigenem Vollbildfenster und Fenstermodus um. Der vorhandene
+Kiosky-Vollbildbefehl setzt das eigene Fenster wieder auf Vollbild, ohne eine
+Browsererweiterung. Die native Vollbildbrücke akzeptiert nur die konfigurierte
+Origin; externe Webseiten können weiterhin als Slide-Inhalt in Frames laufen.
+Alt+F4 schließt den Player. Autostart und Kopplungsdaten bleiben dabei erhalten.
+
+TLS-Prüfung und Browser-Sandbox bleiben aktiv. Es werden keine Virenschutz-
+Ausnahmen eingerichtet. Die äußere, individuell mit einer URL gebundene Kiosky-
+EXE ist weiterhin nicht Authenticode-signiert. Die unverändert eingebetteten
+Microsoft-Komponenten tragen Microsoft-Signaturen; die Windows-CI prüft deren
+Vertrauensketten. Lizenztexte: [Microsoft-Komponenten](windows-webview2-third-party-license.txt).
+
+## Autostart und Grafikmodus
 
 In PowerShell:
 
 ```powershell
 & "$env:LOCALAPPDATA\Kiosky\Player\KioskyPlayer.exe" --remove-autostart
-```
-
-Entfernt nur den eigenen Autostarteintrag und merkt die Abwahl im Playerordner.
-Das Browserprofil und die Kopplung bleiben erhalten. Ein späterer manueller Start
-aktiviert Autostart nicht erneut. Zum Wiedereinschalten:
-
-```powershell
 & "$env:LOCALAPPDATA\Kiosky\Player\KioskyPlayer.exe" --enable-autostart
 ```
 
-Zur vollständigen Deinstallation zuerst Autostart entfernen, den Playerbrowser
-beenden und danach den Ordner `%LOCALAPPDATA%\Kiosky\Player` löschen.
-`--install-only` richtet die Benutzerinstallation ohne Browserstart ein.
+Die Abwahl wird im Playerordner gespeichert und durch manuelle Starts nicht
+rückgängig gemacht. `--install-only` richtet die Kopie und den Autostart ohne
+Browserstart ein. Die eigene Run-Zeichenfolge steht unter
+`HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run` als
+`Kiosky Display Player` und verweist auf die installierte Kopie, nicht den Download.
 
-## Unterstützte Downloads
+Bei einem gezielt untersuchten Grafiktreiberproblem kann der Grafikmodus für
+diesen Player umgestellt werden. Zuerst das laufende Playerfenster schließen:
 
-Windows 10/11 mit 64 Bit, Linux 64 Bit und macOS bleiben verfügbar. Windows 32 Bit
-wird einschließlich der bisherigen `.url`-Alternative nicht mehr angeboten;
-alte 32-Bit-Downloadrouten antworten mit 404. Die aktuellen Pakete enthalten keine
-32-Bit-Vorlage. Historische Releases werden nicht überschrieben.
-
-## Build und Nachweise
-
-Die native Vorlage wird aus `assets/launchers/player-launcher-windows.c` mit
-MinGW-w64 neu gebaut:
-
-```sh
-pnpm build:player:windows
+```powershell
+& "$env:LOCALAPPDATA\Kiosky\Player\KioskyPlayer.exe" --software-rendering
+& "$env:LOCALAPPDATA\Kiosky\Player\KioskyPlayer.exe" --hardware-rendering
 ```
 
-`KIOSKY_WINDOWS_CC` und `KIOSKY_WINDOWS_WINDRES` können die Pfade für GCC und windres
-setzen. Der Build verwendet statisches Linken, Unicode, ASLR/NX, ein Manifest ohne
-Rechteerhöhung und lesbare Versionsinformationen. Es werden weder Packer noch
-Virenschutz-Ausnahmen eingesetzt. Die Ausgabe ist weiterhin nicht Authenticode-
-signiert. `windows-player-build.json` dokumentiert Compiler sowie SHA-256 von
-Quellen, Buildskript und ausgelieferter Vorlage; die Tests erkennen veraltete Builds.
-Die individuelle Serveradresse wird nach dem Build in einen reservierten Slot
-gepatcht, deshalb beziehen sich diese Prüfsummen auf die Vorlage.
+Der Standard bleibt Hardwarebeschleunigung; gesunde Player werden nicht pauschal
+auf Software-Decodierung umgestellt. Der gewählte Modus bleibt für Autostart
+bestehen. Software-Darstellung kann bei hochauflösenden Videos mehr CPU benötigen.
 
-`tests/windows-player-native.ps1` führt die echte ausgelieferte Windows-EXE auf
-einem wegwerfbaren Windows-CI-Runner aus. Eine Browserfixture protokolliert die
-übergebenen Argumente. Der Test prüft stabile Kopie, Benutzerautostart, spätere
-Serververfügbarkeit, Profilwiederverwendung, Vollbildargument, Entfernen und
-Wiedereinschalten. Er ist Teil des obligatorischen CI-Gates.
+## Diagnose und Abnahme
 
-Nach `pnpm build` prüft `python tests/player-startup-browser-smoke.py` mit echtem
-Chromium die Kopplung nach vollständigem Schließen und Wiederöffnen desselben
-Plattenprofils sowie automatische Wiederholung fehlgeschlagener Kopplungs- und
-Inhaltsanfragen. Die drei Transportvarianten teilen die Oberfläche; native CMS-
-Routen und Installationen werden zusätzlich in der CMS-CI geprüft. Ein physischer
-Windows-Neustart und die sichtbare Vollbilddarstellung auf einem Kundengerät
-sind gesonderte Abnahmeprüfungen.
+`player.log` und höchstens eine rotierte `player.previous.log` liegen im
+Installationsordner. Sie enthalten Fehlerart, Zeitpunkt, freien RAM/Commit und
+Browser-Privatspeicher. URLs und Kopplungsschlüssel werden nicht protokolliert.
 
-## Fernsteuerung ab Launcher 2.1.0 / Kiosky 3.16.0
+`pnpm build:player:windows` erstellt die native Vorlage mit MinGW-w64. Quell-,
+Komponenten- und Ausgabe-Hashes stehen in `windows-player-build.json`, SDK- und
+Downloadnachweise in `vendor/webview2/provenance.json`. Alle Komponenten sind
+gepinnt; der Build benötigt keinen dynamischen SDK-Download.
 
-Die neue EXE enthält die Browsersteuerung für Vollbildanforderungen auf der eigenen
-Installation. Sie nutzt weiterhin denselben Profilpfad. Grenzen durch Browser und
-Richtlinien sowie API und Updateverfahren: [Displaysteuerung](player-control.md).
+Die verpflichtende Windows-CI verwendet die echte EXE und Runtime auf einem
+frischen Wegwerf-Runner: Profilübernahme aus echtem Edge, Wiederanmeldung mit
+bestehender Kopplung, Autostart, F11/Vollbild, Herkunftsgrenzen, kontrollierte
+Renderer-/Runtimeausfälle und Medienlast. Debugging ist ausschließlich im lokalen
+Testprozess aktiviert. Die frühere Browsererweiterung wird für ältere installierte
+Player weiterhin unterstützt und separat geprüft.
+
+Zusätzlich prüft `python3 tests/player-media-memory-browser-smoke.py` generierte
+Video-/Iframe-Wechsel in lokalem Chromium. Privater Prozessspeicher ist je nach
+Sandbox nicht auslesbar; ein JavaScript-Heap-Test ersetzt keine Windows-RAM-
+Langzeitmessung. Ein Langzeittest auf dem betroffenen Windows-10-Gerät bleibt
+für die konkrete Fehlerursache erforderlich.
+
+Zur Deinstallation Autostart entfernen, das eigene Playerfenster schließen und
+den eigenen Installationsordner löschen. Andere Browserprofile werden nicht
+verändert. Windows-32-Bit-Downloads bleiben eingestellt.
