@@ -487,6 +487,9 @@ function createPlayerWakeLock(navigatorObject,documentObject) {
 
 async function renderDisplayPlayer(slug) {
   document.body.className = 'player-mode';
+  const updateBase=new URL(kioskyRuntime.playerBaseUrl||'/',window.location.href);
+  updateBase.pathname=updateBase.pathname.replace(/\/kiosky-player\/?$/,'/').replace(/\/?$/,'/kiosky-player-update/');updateBase.search='';updateBase.hash='';
+  window.KioskyAutomaticUpdates?.start({endpoint:updateBase.toString(),currentVersion:appAssetVersion.match(/^\d+\.\d+\.\d+/)?.[0]||''});
   window.KioskyFullscreen?.start();
   const keepDisplayAwake=createPlayerWakeLock(navigator,document);
   keepDisplayAwake();

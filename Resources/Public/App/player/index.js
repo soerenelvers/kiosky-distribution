@@ -6,7 +6,7 @@
   const serverAddress = document.querySelector('#server-address');
   const status = document.querySelector('#catalog-status');
   const grid = document.querySelector('#player-grid');
-  const piRelease='https://github.com/soerenelvers/kiosky/releases/download/raspberry-pi-v1.0.0-beta.1';
+  const piRelease='https://github.com/soerenelvers/kiosky/releases/download/raspberry-pi-v1.0.0-beta.2';
   serverAddress.textContent = window.location.origin;
 
   function browserCard() {
@@ -23,14 +23,14 @@
     return `<article class="player-card">
       <div class="platform-icon">${icon}</div>
       <h3>${name}</h3>
-      <p>${detail} Beim ersten Start erscheint der Kopplungscode; danach startet der Player automatisch im Vollbild.</p>
+      <p>${detail} Beim ersten Start erscheint der Kopplungscode; danach startet der Player automatisch im Vollbild und prüft bei HTTPS-Verbindung regelmäßig auf Playerupdates.</p>
       <div class="availability ready"><i></i>Universal Player verfügbar</div>
       <div class="actions"><a class="download" href="${downloads[platform]||`${downloadBase}${platform}`}"><span>Player herunterladen<small>Noch keinem Display zugeordnet</small></span><b>↓</b></a></div>
     </article>`;
   }
 
   function loadCatalog() {
-    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit. Eigenes Playerfenster mit eingebetteter WebView2-Engine, Vollbild und Benutzerautostart. Eine fehlende Microsoft-Laufzeit wird beim ersten manuellen Start nach Bestätigung eingerichtet.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Mit Autostart und dauerhaftem Profil; nach dem Download ausführbar machen.')}${desktopCard('linux-mint-x64','Linux Mint Player','⌘','Für Linux Mint und LMDE, 64 Bit: Cinnamon, MATE und Xfce. Mit Autostart und dauerhafter Kopplung. Firefox, Chromium oder Chrome werden unterstützt.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11.')}`;
+    grid.innerHTML = `${browserCard()}${desktopCard('windows-x64','Windows Player','⊞','Für Windows 10 und 11, 64 Bit. Eigenes Playerfenster mit eingebetteter WebView2-Engine, Vollbild und Benutzerautostart. Eine fehlende Microsoft-Laufzeit wird beim ersten manuellen Start nach Bestätigung eingerichtet.')}${desktopCard('linux-x64','Linux Player','⌘','Für Ubuntu und Debian, 64 Bit. Mit Autostart und dauerhaftem Profil; nach dem Download ausführbar machen.')}${desktopCard('linux-mint-x64','Linux Mint Player','⌘','Für Linux Mint und LMDE, 64 Bit: Cinnamon, MATE und Xfce. Mit Autostart und dauerhafter Kopplung. Firefox, Chromium oder Chrome werden unterstützt.')}${desktopCard('macos-universal','macOS Player','⌘','Als App für Apple Silicon und Intel-Macs ab macOS 11. Mit Benutzerautostart, dauerhaftem Profil und automatischen Playerupdates. Chrome, Edge oder Chromium erforderlich.')}`;
     status.textContent = '5 Player-Angebote';
     document.querySelector('#pi-grid').innerHTML = [
       ['zero2w','Raspberry Pi Zero 2 W','Für einfache Bild- und Textslides mit 512 MB RAM.'],

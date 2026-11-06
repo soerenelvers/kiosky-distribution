@@ -1,7 +1,6 @@
-## [3.20.0] – 2026-11-05
+## [3.21.0] – 2026-11-06
 
-- Unter `/player` modellbezogene Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 sowie eine Konfigurationsdatei mit der Browser-Player-Adresse der jeweiligen Installation anbieten. Separate unveränderliche Beta-Veröffentlichung mit Prüfsummen und Quellnachweis; Hardwareabnahme steht aus. Gemeinsame Downloadseite für Standalone, WordPress und TYPO3.
-
-- Windows-Player mit eigenem Win32-Fenster und eingebetteter WebView2-Engine statt externem Edge-/Chrome-Aufruf. Offiziellen Loader und Runtime-Installer einbetten, getrenntes Datenprofil, begrenzte Wiederherstellung nach Browser-/Rendererfehlern und datensparsame Ereignisprotokolle ergänzen. Native Windows-Abnahme einschließlich Profilübernahme und gezielter Wiederherstellung in die verpflichtende CI aufnehmen.
-- Medien beim Slidewechsel und beim Schließen der Vorschau ausdrücklich entladen: Video-/Audio-Decoder stoppen, Quellen lösen und Iframes zurücksetzen. Gemeinsame Oberfläche für Standalone, WordPress und TYPO3.
-- Vollbildbrücke für das eingebettete Fenster ergänzen; bestehende Browser-Player und deren Erweiterung bleiben unterstützt.
+- Automatische Playerupdates über den verbundenen Kiosky-Server für Windows, Linux/Mint und macOS ergänzen. HTTPS, feste Plattformzuordnung, begrenzte Downloads, SHA-256-Prüfung und Versionssperre gegen Downgrades verwenden. Nach geprüftem Austausch automatisch neu starten; Kopplung, Profile und Autostart erhalten. Bei fehlgeschlagenem Start die vorherige Version wiederherstellen.
+- Raspberry-Pi-Images um einen rootseitigen Timer für geprüfte Updates der festgelegten Player-/Dienstdateien ergänzen. WLAN, Displaykopplung und Browserprofil bleiben erhalten. Die SD-Karte wird nicht neu beschrieben; Systempakete nutzen weiterhin ihre bestehende Aktualisierung. Neue Images als Beta 1.0.0-beta.2 anbieten; bisherige Player/Images benötigen einmalig die neue Installation.
+- Browser-Player nach einem neueren Kiosky-Release automatisch neu laden. Den Updatekanal ohne GitHub-Anmeldung aus Standalone-, WordPress- und TYPO3-Paketen bereitstellen.
+- Native Windows- und macOS-Prüfungen sowie Linux- und Pi-Regressionen für gültige Updates, Daten-/Autostarterhalt, beschädigte Downloads, Downgrades und Rollback ergänzen. Große Image-Artefakttransfers zeitlich begrenzen.

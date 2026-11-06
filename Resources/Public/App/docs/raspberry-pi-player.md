@@ -21,7 +21,7 @@ Hardwareabnahme; ein erfolgreich gebautes Image ersetzt diese Prüfung nicht.
 
 1. Unter `/player` das passende `kiosky-player-<modell>.img.xz` herunterladen.
    **Anleitung und SHA-256-Prüfsummen** öffnet die dauerhafte
-   [Image-Vorabversion](https://github.com/soerenelvers/kiosky/releases/tag/raspberry-pi-v1.0.0-beta.1).
+   [Image-Vorabversion](https://github.com/soerenelvers/kiosky/releases/tag/raspberry-pi-v1.0.0-beta.2).
    Für das private Repository ist eine GitHub-Anmeldung mit Zugriffsberechtigung nötig.
    `SHA256SUMS.txt` herunterladen und die Prüfsumme vergleichen. Diese Images sind
    ausdrücklich Beta-Versionen; die Hardwareabnahme steht noch aus.
@@ -70,6 +70,11 @@ legen und neu starten. Der Wechsel auf eine andere Serveradresse kann eine neue 
 erfordern, weil Browserdaten an den Serverursprung gebunden sind.
 
 ## Betrieb und Updates
+
+Images ab 1.0.0-beta.2 enthalten zusätzlich den [automatischen Komponenten-Updater](player-updates.md).
+Er bezieht geprüfte Kiosky-Dateien direkt vom verbundenen HTTPS-Server, erhält
+WLAN/Kopplung und stellt bei Dienstfehlern den vorherigen Stand wieder her.
+Bestehende Images ohne diesen Timer benötigen einmalig die neue Installation.
 
 Systemd startet den Browser automatisch und startet ihn nach einem Absturz neu.
 Das dauerhafte Profil liegt unter `/var/lib/kiosky/chromium`; privates Surfen und
@@ -121,7 +126,7 @@ veröffentlicht werden.
 Der manuell gestartete Workflow **Raspberry Pi player images** baut alle vier Images
 auf ARM64-Runnern. Auf Pull Requests laufen nur die Konfigurations-/Paketprüfungen.
 Zum Veröffentlichen auf `main` muss der Repository-Owner `publish=true`, die separate
-Image-Version `1.0.0-beta.1` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
+Image-Version `1.0.0-beta.2` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
 Die neueste CI des exakten Main-Commits einschließlich `CI gate` muss erfolgreich sein.
 Der Publisher prüft alle vier Artefakte, Quellcommit, Builder und SHA-256-Prüfsummen.
 Er erstellt eine unveränderliche **Vorabversion**, ohne den neuesten Kiosky-Stable-Release

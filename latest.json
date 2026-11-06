@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "40141d5d508af88c51ec09e9f9fe95d324f20ae6",
+  "source_commit": "91511bbd6cb118faa341f2b4116faf4cfe16b6e9",
   "product": "kiosky",
-  "version": "3.20.0",
-  "released_at": "2026-11-06T00:10:21.777Z",
+  "version": "3.21.0",
+  "released_at": "2026-11-06T11:27:30.060Z",
   "channel": "stable",
-  "release_notes": "## [3.20.0] – 2026-11-05\n\n- Unter `/player` modellbezogene Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 sowie eine Konfigurationsdatei mit der Browser-Player-Adresse der jeweiligen Installation anbieten. Separate unveränderliche Beta-Veröffentlichung mit Prüfsummen und Quellnachweis; Hardwareabnahme steht aus. Gemeinsame Downloadseite für Standalone, WordPress und TYPO3.\n\n- Windows-Player mit eigenem Win32-Fenster und eingebetteter WebView2-Engine statt externem Edge-/Chrome-Aufruf. Offiziellen Loader und Runtime-Installer einbetten, getrenntes Datenprofil, begrenzte Wiederherstellung nach Browser-/Rendererfehlern und datensparsame Ereignisprotokolle ergänzen. Native Windows-Abnahme einschließlich Profilübernahme und gezielter Wiederherstellung in die verpflichtende CI aufnehmen.\n- Medien beim Slidewechsel und beim Schließen der Vorschau ausdrücklich entladen: Video-/Audio-Decoder stoppen, Quellen lösen und Iframes zurücksetzen. Gemeinsame Oberfläche für Standalone, WordPress und TYPO3.\n- Vollbildbrücke für das eingebettete Fenster ergänzen; bestehende Browser-Player und deren Erweiterung bleiben unterstützt.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.20.0",
+  "release_notes": "## [3.21.0] – 2026-11-06\n\n- Automatische Playerupdates über den verbundenen Kiosky-Server für Windows, Linux/Mint und macOS ergänzen. HTTPS, feste Plattformzuordnung, begrenzte Downloads, SHA-256-Prüfung und Versionssperre gegen Downgrades verwenden. Nach geprüftem Austausch automatisch neu starten; Kopplung, Profile und Autostart erhalten. Bei fehlgeschlagenem Start die vorherige Version wiederherstellen.\n- Raspberry-Pi-Images um einen rootseitigen Timer für geprüfte Updates der festgelegten Player-/Dienstdateien ergänzen. WLAN, Displaykopplung und Browserprofil bleiben erhalten. Die SD-Karte wird nicht neu beschrieben; Systempakete nutzen weiterhin ihre bestehende Aktualisierung. Neue Images als Beta 1.0.0-beta.2 anbieten; bisherige Player/Images benötigen einmalig die neue Installation.\n- Browser-Player nach einem neueren Kiosky-Release automatisch neu laden. Den Updatekanal ohne GitHub-Anmeldung aus Standalone-, WordPress- und TYPO3-Paketen bereitstellen.\n- Native Windows- und macOS-Prüfungen sowie Linux- und Pi-Regressionen für gültige Updates, Daten-/Autostarterhalt, beschädigte Downloads, Downgrades und Rollback ergänzen. Große Image-Artefakttransfers zeitlich begrenzen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.21.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.20.0",
+    "core_version": "3.21.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.20.0",
-    "typo3_extension_version": "3.20.0"
+    "wordpress_plugin_version": "3.21.0",
+    "typo3_extension_version": "3.21.0"
   },
   "components": {
     "core": {
-      "version": "3.20.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.20.0.zip?ref=v3.20.0",
-      "sha256": "9580a7456f52bd4e6403549b1494836fc7688475a7eaf46a4ba9192f5ac02cd9"
+      "version": "3.21.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.21.0.zip?ref=v3.21.0",
+      "sha256": "b60b1a6245cef42adfe3c03140c5d460c7f054c4e6cf61b97f0323334f5c9b3e"
     },
     "standalone": {
-      "version": "3.20.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.20.0.zip?ref=v3.20.0",
-      "sha256": "9580a7456f52bd4e6403549b1494836fc7688475a7eaf46a4ba9192f5ac02cd9"
+      "version": "3.21.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.21.0.zip?ref=v3.21.0",
+      "sha256": "b60b1a6245cef42adfe3c03140c5d460c7f054c4e6cf61b97f0323334f5c9b3e"
     },
     "wordpress": {
-      "version": "3.20.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.20.0.zip?ref=v3.20.0",
-      "sha256": "dc58bcd7feccb86c4506d99834cd7135e48434727b85ce8a9d9a5d0f758f7b1b",
+      "version": "3.21.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.21.0.zip?ref=v3.21.0",
+      "sha256": "457c2bffb2a2b67973805875f0d00683aeb0ac05a4062e695d514db9800fda7b",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.20.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.20.0.zip?ref=v3.20.0",
-      "sha256": "c8aa4bf902af991500934e2ff2441b1384d7ade18a6ce672e33e6a9a80583649",
+      "version": "3.21.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.21.0.zip?ref=v3.21.0",
+      "sha256": "03e6b915b6fe9ed0f9faf1f5882a8c75d44840a0f3d289ec71171f4d841fd63c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

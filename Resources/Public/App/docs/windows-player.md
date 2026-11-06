@@ -9,8 +9,9 @@ Vorlage mit der Adresse der jeweiligen Installation aus.
 ## Installieren oder vom bisherigen Player wechseln
 
 1. Kiosky aktualisieren und den **Windows-64-Bit-Player** im Player-Center neu
-   herunterladen. Ein Server-/Pluginupdate ersetzt eine bereits installierte
-   Windows-EXE nicht automatisch.
+   herunterladen und einmal starten. Bisherige EXEs enthalten noch keinen
+   Updater. Der neue Player ab Kiosky 3.21.0 übernimmt danach neue Player-Versionen
+   automatisch vom verbundenen HTTPS-Server. [Ablauf und Rücknahme](player-updates.md).
 2. Das bisherige Kiosky-Playerfenster schließen und die neue EXE einmal starten.
    Sie installiert sich benutzerbezogen nach
    `%LOCALAPPDATA%\Kiosky\Player\KioskyPlayer.exe`.
@@ -112,8 +113,7 @@ gepinnt; der Build benötigt keinen dynamischen SDK-Download.
 Die verpflichtende Windows-CI verwendet die echte EXE und Runtime auf einem
 frischen Wegwerf-Runner: Profilübernahme aus echtem Edge, Wiederanmeldung mit
 bestehender Kopplung, Autostart, F11/Vollbild, Herkunftsgrenzen, kontrollierte
-Renderer-/Runtimeausfälle und Medienlast. Debugging ist ausschließlich im lokalen
-Testprozess aktiviert. Die frühere Browsererweiterung wird für ältere installierte
+Renderer-/Runtimeausfälle und Medienlast. Debugging und Browserrichtlinien-Änderungen sind dafür nicht erforderlich. Die frühere Browsererweiterung wird für ältere installierte
 Player weiterhin unterstützt und separat geprüft.
 
 Zusätzlich prüft `python3 tests/player-media-memory-browser-smoke.py` generierte

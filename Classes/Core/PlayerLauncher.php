@@ -38,11 +38,18 @@ final class PlayerLauncher
             $offset = $position + self::CAPACITY; $replacements++;
         }
         if (!$replacements) throw new RuntimeException('Die Player-Vorlage ist ungültig.', 503);
-        if ($platform === 'macos-universal') $body = self::macApp($body);
+        $versionFile=rtrim($templateRoot,'/\\').'/../build-info.json';
+        $version=is_readable($versionFile) ? (json_decode((string)file_get_contents($versionFile),true)['version'] ?? '') : trim((string)@file_get_contents(__DIR__.'/../../../VERSION'));
+        if(!preg_match('/^\d+\.\d+\.\d+$/',$version))throw new RuntimeException('Player-Versionsmetadaten fehlen.',503);
+        $base=preg_replace('#/(?:player/browser\.html|kiosky-player(?:-browser)?/?)$#','/',$url['path'] ?? '/');
+        $endpoint=$url['scheme'].'://'.$url['host'].(isset($url['port'])?':'.$url['port']:'').rtrim($base,'/').'/kiosky-player-update/';
+        $config=['version'=>$version,'endpoint'=>$endpoint,'binding'=>hash('sha256',$playerUrl)];
+        if ($platform === 'macos-universal') $body = self::macApp($body,$config+['player_url'=>$playerUrl],$templateRoot);
+        else $body.="\nKIOSKY_UPDATE_CONFIG_V1\n".json_encode($config,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n";
         return ['body'=>$body, 'filename'=>'Kiosky-Universal-Player-'.$platform.$extension, 'contentType'=>$type];
     }
 
-    private static function macApp(string $binary): string
+    private static function macApp(string $binary,array $config,string $templateRoot): string
     {
         $app = 'Kiosky Display Player.app/'; $contents = $app.'Contents/';
         $info = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
@@ -56,8 +63,32 @@ final class PlayerLauncher
         return self::zip([
             [$app, '', 040755], [$contents, '', 040755], [$contents.'MacOS/', '', 040755],
             [$contents.'Info.plist', $info, 0100644], [$contents.'PkgInfo', 'APPL????', 0100644],
-            [$contents.'MacOS/Kiosky Display Player', $binary, 0100755],
+            [$contents.'Resources/', '', 040755],
+            [$contents.'Resources/player.json',json_encode($config,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),0100600],
+            [$contents.'Resources/macos-player.sh',self::macScript($templateRoot),0100755],
+            [$contents.'Resources/legacy-player',$binary,0100755],
+            [$contents.'MacOS/Kiosky Display Player',"#!/bin/sh\nexec /bin/sh \"\$(dirname \"\$0\")/../Resources/macos-player.sh\" \"\$(dirname \"\$0\")/../Resources/player.json\"\n",0100755],
         ]);
+    }
+
+    private static function macScript(string $root): string {
+        $path=rtrim($root,'/\\').'/../player-updates/macos-player.sh';
+        if(!is_readable($path))$path=__DIR__.'/../../../assets/launchers/macos-player.sh';
+        $data=@file_get_contents($path);
+        if($data===false)throw new RuntimeException('Player-Updater fehlt.',503);
+        return $data;
+    }
+
+    public static function update(string $platform,bool $file,string $root): array {
+        $names=['windows-x64'=>'windows-x64.bin','linux-x64'=>'linux-x64.bin','macos-universal'=>'macos-player.sh','raspberry-pi'=>'raspberry-pi.json'];
+        if($platform==='web'&&!$file)$names['web']='';
+        if(!isset($names[$platform]))throw new RuntimeException('Playerupdate nicht verfügbar.',404);
+        $directory=rtrim($root,'/\\').'/../player-updates/';
+        $catalog=json_decode((string)@file_get_contents($directory.'catalog.json'),true);
+        if(!is_array($catalog)||!isset($catalog[$platform]))throw new RuntimeException('Playerupdate fehlt im Paket.',503);
+        $body=$file?@file_get_contents($directory.$names[$platform]):json_encode($catalog[$platform],JSON_UNESCAPED_SLASHES);
+        if(!is_string($body))throw new RuntimeException('Playerupdate nicht lesbar.',503);
+        return ['body'=>$body,'contentType'=>$file?'application/octet-stream':'application/json; charset=utf-8'];
     }
 
     /** Stored ZIP, including executable mode; no optional PHP ZIP extension needed. */

@@ -33,6 +33,14 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         if ($sitePath !== '/' && str_starts_with($uriPath,$sitePath)) $uriPath = substr($uriPath,strlen($sitePath));
         $path = '/' . trim($uriPath, '/') . '/';
         $base = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($sitePath,'/');
+        if($path==='/kiosky-player-update/') {
+            if(!in_array(strtoupper($request->getMethod()),['GET','HEAD'],true))return new Response('php://temp',405,['Allow'=>'GET, HEAD']);
+            $query=$request->getQueryParams();
+            try{$update=PlayerLauncher::update(is_string($query['platform']??null)?$query['platform']:'',($query['file']??'')==='1',(string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'));}
+            catch(\RuntimeException $error){return new JsonResponse(['error'=>['message'=>$error->getMessage()]],$error->getCode()?:503,['Cache-Control'=>'no-store']);}
+            $response=new Response('php://temp',200,['Content-Type'=>$update['contentType'],'Content-Length'=>(string)strlen($update['body']),'Cache-Control'=>'no-store','X-Content-Type-Options'=>'nosniff']);
+            if(strtoupper($request->getMethod())==='GET')$response->getBody()->write($update['body']);return $response;
+        }
         if (preg_match('#^/kiosky-player-download/([^/]+)/$#', $path, $match)) {
             if (!in_array(strtoupper($request->getMethod()), ['GET','HEAD'], true)) return new Response('php://temp',405,['Allow'=>'GET, HEAD']);
             try {
