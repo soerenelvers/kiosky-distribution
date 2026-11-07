@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "3c1f1224a64b78ff111295cfa37e34f8bd767235",
+  "source_commit": "9e6c2d6292c43539c06426418bcca8b6cc22860d",
   "product": "kiosky",
-  "version": "3.24.0",
-  "released_at": "2026-11-07T15:01:46.693Z",
+  "version": "3.25.0",
+  "released_at": "2026-11-07T16:48:04.142Z",
   "channel": "stable",
-  "release_notes": "## [3.24.0] – 2026-11-07\n\n- Alle Slide-Elementtypen direkt mit Maus oder Touch verschieben und über acht sichtbare Eck-/Kantengriffe skalieren; Größenänderungen berücksichtigen Drehungen und überlagerte Inhalte.\n- Jede Ebene gezielt über die Elementliste löschen, sperren und entsperren. Neue Veranstaltungsfelder sind beweglich; vorhandene Sperren und Rückgängig bleiben erhalten.\n- Abgebrochene Gesten zurücksetzen und Bewegungen als einzelne Rückgängig-Schritte behandeln; Text per Doppelklick bearbeiten.\n- Eventdaten mit frei bearbeitbarer Überschrift und einzeln auswählbaren Veranstaltungsdetails versehen; bestehende Darstellungen sowie gemeinsame Vorlagen-/Player-Ausgabe erhalten.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.24.0",
+  "release_notes": "## [3.25.0] – 2026-11-07\n\n- Ticket-Link des ausgewählten, aktuellen, heutigen oder nächsten Events als dynamischen QR-Code im Eventfeld, QR-Code-Element und Eventdaten einbinden; fehlende oder ungültige Links ausblenden.\n- Neue Event-Tabelle mit Checkbox-Auswahl öffentlicher Veranstaltungsfelder, frei bearbeitbarer Überschrift, optionalen Feldbezeichnungen und konfigurierbarer Leerwertdarstellung.\n- Jede Eventdaten-/Tabellenzeile einzeln ausrichten; leere Felder ausblenden und nachrücken lassen, Platz freihalten oder eigenen Ersatztext anzeigen.\n- QR-Codes bis 2953 UTF-8-Bytes lokal und ohne Abschneiden erzeugen; SVG-Cache begrenzen und lange Links unabhängig per Scanner prüfen.\n- Gemeinsame Editor-, Vorschau- und Playerdarstellung sowie Event-Tabellen-Funktionsschalter in Standalone, WordPress und TYPO3 bereitstellen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.25.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.24.0",
+    "core_version": "3.25.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.24.0",
-    "typo3_extension_version": "3.24.0"
+    "wordpress_plugin_version": "3.25.0",
+    "typo3_extension_version": "3.25.0"
   },
   "components": {
     "core": {
-      "version": "3.24.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.24.0.zip?ref=v3.24.0",
-      "sha256": "34ddda088e153dc7266c81ceb044498acf2f8b57fcd6b2b8db92656e7a6f4c88"
+      "version": "3.25.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.25.0.zip?ref=v3.25.0",
+      "sha256": "35ea9ce6f7fe5eaffc0e2a00a755ba6d21e5a8f1f008ec4b772747994119d202"
     },
     "standalone": {
-      "version": "3.24.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.24.0.zip?ref=v3.24.0",
-      "sha256": "34ddda088e153dc7266c81ceb044498acf2f8b57fcd6b2b8db92656e7a6f4c88"
+      "version": "3.25.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.25.0.zip?ref=v3.25.0",
+      "sha256": "35ea9ce6f7fe5eaffc0e2a00a755ba6d21e5a8f1f008ec4b772747994119d202"
     },
     "wordpress": {
-      "version": "3.24.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.24.0.zip?ref=v3.24.0",
-      "sha256": "35788271e03ecb9f1232ec0bd7d2b63bde64bfdf1db9158dba6f8654e9048289",
+      "version": "3.25.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.25.0.zip?ref=v3.25.0",
+      "sha256": "4236a67b1a1de4ab846d693781b78af1d2377bd93f759763eef67db17a5fa4d7",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.24.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.24.0.zip?ref=v3.24.0",
-      "sha256": "e2c80bfab5ece0f7dfc20e4384ea0530cf747ee94dd31da2eaf6f955fcf13e5c",
+      "version": "3.25.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.25.0.zip?ref=v3.25.0",
+      "sha256": "bda6195cd3e58eeeaefe6ed2e7d18d554e757b050ef8a8a068fb6bcea077a43c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

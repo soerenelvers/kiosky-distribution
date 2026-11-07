@@ -837,6 +837,7 @@ final class Api
         if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $this->license()->features($state),'licensedModules'=>$this->license()->grants($state), 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
             $allowed = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
+            $allowed=array_merge($allowed,array_map(static fn(string $type):string=>'editor_'.$type,['text','ticker','weather','qr-code','countdown','image','video','web','event','event-table','event-field','wayfinding','alert-icon']));
             foreach($allowed as $key){$module=LicenseClient::feature($key);if(($body[$key] ?? null)===true&&$module&&!$this->license()->allows($state,$module))throw new RuntimeException('Dieses Modul ist nicht lizenziert.',403);}
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             if (($body['menus'] ?? null)===false && isset($state['menuShare'])) $state['menuShare']['secret']=bin2hex(random_bytes(32));

@@ -54,3 +54,38 @@ in Vorlagen erhalten und wird in Vorschau, Miniatur und Player gleich ausgewerte
 Bestehende Eventblöcke behalten ihren bisherigen Begrüßungstext und Zeitblock,
 bis ihre Einstellungen verändert werden. Die zusätzlichen Dokumentfelder
 `eventHeading` und `eventDetails` benötigen keine Datenbankmigration.
+
+## Ticket-QR und Event-Tabelle
+
+Ein „Eventfeld“ kann **Ticket-Link als QR-Code** anzeigen. Alternativ bietet das
+QR-Code-Element die Quelle **Ticket-Link des Events**. Beide lesen den Link aus
+dem für die Slide ausgewählten Event; die Modi verknüpft, aktuell, heute und
+nächstes Event gelten auch hier. Ändert sich das Event oder sein Ticket-Link,
+übernimmt der Player die Änderung bei seiner nächsten Inhaltsaktualisierung.
+Ohne gültigen HTTP-/HTTPS-Link wird kein QR-Code ausgegeben. Ein früherer Link
+oder der statische Beispiel-Link wird nicht verwendet.
+
+Das Element **Event-Tabelle** stellt die unter „Angezeigte Details“ angehakten
+Felder zeilenweise dar. Überschrift, Schrift, Größe und Position sind editierbar.
+Bezeichnungen können abgeschaltet und leere Felder wahlweise ausgelassen oder
+als Strich gezeigt werden. Pro angehaktem Feld lassen sich die Ausrichtung
+(links, zentriert, rechts oder vom Element übernehmen) und „Wenn leer“ ändern:
+Ausblenden lässt folgende Zeilen nachrücken; Platz freihalten erhält eine leere
+Zeile; Ersatztext zeigt einen frei wählbaren Text. Beim Ticket-QR reserviert
+„Platz freihalten“ dessen quadratische Fläche. Diese Optionen stehen auch im
+Element „Eventdaten“ zur Verfügung und bleiben in Vorlagen und Duplikaten erhalten. Zur Auswahl stehen die öffentlichen Veranstaltungsdaten
+inklusive Beschreibung, Bild, Ticket-Link, Ticket-QR und Abendkassenverfügbarkeit.
+Interne Notizen und Synchronisationsdaten werden nicht an Player weitergegeben.
+Auch „Eventdaten“ bietet diese zusätzlichen Felder an.
+
+QR-Codes entstehen lokal ohne externe Dienste. Sie unterstützen bis zu 2953
+UTF-8-Bytes; längere Links werden nicht abgeschnitten. Bei langen Links den QR-Code
+entsprechend groß platzieren und am späteren Display mit einem Telefon prüfen.
+Die SVG-Erzeugung verwendet einen auf 24 Einträge beziehungsweise eine Million
+Zeichen begrenzten Cache. Vorlagen und Duplikate behalten die Event-Feldwahl;
+eine Datenbankmigration ist für diese Ergänzungen nicht notwendig.
+
+Die unabhängige QR-Prüfung `tests/qr-code-readback.py` vergleicht die Matrizen mit
+`qrcode==8.2` und liest alle Testlinks mit `zxing-cpp==2.3.0` zurück (Pillow nötig).
+`tests/event-ticket-table-browser.py` prüft Editor, Speichern und echten Player
+mit allen drei UI-Transporten sowie Änderungen und fehlende Ticket-Links.

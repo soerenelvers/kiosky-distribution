@@ -24,7 +24,8 @@ const apiUrl = path => {
 const assetUrl = path => runtimeUrl(kioskyRuntime.assetBaseUrl, path);
 const appAssetVersion=new URL(document.currentScript?.src||window.location.href).searchParams.get('v')||'';
 
-function qrElementPayload(element = {}) {
+function qrElementPayload(element = {},event=null) {
+  if(element.qrKind==='event-ticket')return eventTicketUrl(event);
   const escapeWifi = value => String(value || '').replaceAll('\\', '\\\\').replaceAll(';', '\\;').replaceAll(',', '\\,').replaceAll(':', '\\:').replaceAll('"', '\\"');
   if (element.qrKind === 'wifi') {
     const encryption = element.wifiEncryption === 'WEP' ? 'WEP' : element.wifiEncryption === 'nopass' ? 'nopass' : 'WPA';
@@ -35,16 +36,20 @@ function qrElementPayload(element = {}) {
   return String(element.qrValue || '').trim();
 }
 
+const qrMarkupCache=new Map();let qrMarkupCacheSize=0;
 function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
   const bytes = [...new TextEncoder().encode(String(value || ''))];
-  const version = 8, size = 49, dataCodewords = 194, blockDataLength = 97, eccLength = 24;
+  const profiles=[{version:8,lengths:[97,97],ecc:24,align:[6,24,42]}, {version:12,lengths:[92,92,93,93],ecc:24,align:[6,32,58]}, {version:20,lengths:[107,107,107,108,108,108,108,108],ecc:28,align:[6,34,62,90]}, {version:30,lengths:[...Array(5).fill(115),...Array(10).fill(116)],ecc:30,align:[6,26,52,78,104,130]}, {version:40,lengths:[...Array(19).fill(118),...Array(6).fill(119)],ecc:30,align:[6,30,58,86,114,142,170]}];
+  const profile=profiles.find(p=>bytes.length<=p.lengths.reduce((a,b)=>a+b,0)-(p.version<10?2:3));
+  const key=JSON.stringify([value,foreground,background]);if(qrMarkupCache.has(key))return qrMarkupCache.get(key);
   if (!bytes.length) return '<span class="qr-placeholder">QR<small>Inhalt eintragen</small></span>';
-  if (bytes.length > 192) return '<span class="qr-placeholder">QR<small>Inhalt ist zu lang</small></span>';
+  if (!profile) return '<span class="qr-placeholder">QR<small>Inhalt ist zu lang</small></span>';
 
+  const {version,lengths,ecc:eccLength,align}=profile,size=version*4+17,dataCodewords=lengths.reduce((a,b)=>a+b,0);
   const bits = [];
   const appendBits = (number, length) => { for (let index = length - 1; index >= 0; index -= 1) bits.push((number >>> index) & 1); };
   appendBits(4, 4);
-  appendBits(bytes.length, 8);
+  appendBits(bytes.length, version<10?8:16);
   bytes.forEach(byte => appendBits(byte, 8));
   appendBits(0, Math.min(4, dataCodewords * 8 - bits.length));
   while (bits.length % 8) bits.push(0);
@@ -69,7 +74,7 @@ function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
     });
     generator = next;
   }
-  const blocks = [data.slice(0, blockDataLength), data.slice(blockDataLength)];
+  let blockOffset=0;const blocks=lengths.map(length=>{const block=data.slice(blockOffset,blockOffset+length);blockOffset+=length;return block;});
   const eccBlocks = blocks.map(block => {
     const remainder = new Array(eccLength).fill(0);
     block.forEach(byte => {
@@ -80,7 +85,7 @@ function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
     return remainder;
   });
   const codewords = [];
-  for (let index = 0; index < blockDataLength; index += 1) blocks.forEach(block => codewords.push(block[index]));
+  for (let index=0;index<Math.max(...lengths);index+=1)blocks.forEach(block=>{if(index<block.length)codewords.push(block[index]);});
   for (let index = 0; index < eccLength; index += 1) eccBlocks.forEach(block => codewords.push(block[index]));
 
   const modules = Array.from({ length: size }, () => new Array(size).fill(null));
@@ -92,7 +97,7 @@ function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
     }
   };
   finder(0, 0); finder(size - 7, 0); finder(0, size - 7);
-  [6, 24, 42].forEach(row => [6, 24, 42].forEach(column => {
+  align.forEach(row => align.forEach(column => {
     if (modules[row][column] !== null) return;
     for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) modules[row + dy][column + dx] = Math.max(Math.abs(dx), Math.abs(dy)) === 2 || (!dx && !dy);
   }));
@@ -138,7 +143,9 @@ function qrSvgMarkup(value, foreground = '#111111', background = '#ffffff') {
   const quiet = 4, viewSize = size + quiet * 2;
   const paths = [];
   modules.forEach((row, y) => row.forEach((dark, x) => { if (dark) paths.push(`M${x + quiet} ${y + quiet}h1v1h-1z`); }));
-  return `<svg class="generated-qr-code" viewBox="0 0 ${viewSize} ${viewSize}" role="img" aria-label="QR-Code" shape-rendering="crispEdges"><path fill="${escapeHtml(background)}" d="M0 0h${viewSize}v${viewSize}H0z"/><path fill="${escapeHtml(foreground)}" d="${paths.join('')}"/></svg>`;
+  const markup=`<svg class="generated-qr-code" viewBox="0 0 ${viewSize} ${viewSize}" role="img" aria-label="QR-Code" shape-rendering="crispEdges"><path fill="${escapeHtml(background)}" d="M0 0h${viewSize}v${viewSize}H0z"/><path fill="${escapeHtml(foreground)}" d="${paths.join('')}"/></svg>`;
+  while(qrMarkupCache.size&&(qrMarkupCache.size>=24||qrMarkupCacheSize+markup.length>1_000_000)){const key=qrMarkupCache.keys().next().value;qrMarkupCacheSize-=qrMarkupCache.get(key).length;qrMarkupCache.delete(key);}
+  qrMarkupCache.set(key,markup);qrMarkupCacheSize+=markup.length;return markup;
 }
 
 function slideEventDay(time) { return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time)); }
@@ -339,7 +346,7 @@ weatherElementObserver.observe(document.documentElement, { childList: true, subt
 
 function eventFieldDisplayValue(event, field, options={}) {
   const value = event?.[field];
-  if (!value) return '';
+  if (value===undefined||value===null||value==='') return '';
   if (['setupStart', 'admissionStart', 'eventStart', 'breakStart', 'breakEnd', 'eventEnd', 'boxOfficeOpenAt'].includes(field)) {
     const date=new Date(value);
     if(!Number.isNaN(date.valueOf()))return new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',...(options.showSeconds?{second:'2-digit'}:{}),hour12:Boolean(options.hour12)}).format(date);
@@ -353,12 +360,63 @@ function eventFieldDisplayValue(event, field, options={}) {
 }
 
 function eventFieldPresentation(event,field,options={}){
-  const value=eventFieldDisplayValue(event,field,options),present=value!=='';
+  const value=field==='ticketQr'?eventTicketUrl(event):eventDetailValue(event,field,options),present=value!=='';
   return{value,present,text:`${options.prefix||''}${present?value:options.fallback||'–'}${options.suffix||''}`};
 }
 function hiddenEventValueAttributes(present){return present?'':'data-event-value-missing="true" aria-hidden="true"';}
 
-const eventDetailLabels={title:'Titel',subtitle:'Untertitel',date:'Datum',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',setupStart:'Aufbau',venue:'Spielort',room:'Raum / Saal',organizer:'Veranstalter',eventType:'Kategorie',remainingTickets:'Ticketstatus',boxOfficeOpenAt:'Abendkasse ab',publicNotes:'Öffentlicher Hinweis'};
+const eventDetailLabels={title:'Titel',subtitle:'Untertitel',date:'Datum',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',setupStart:'Aufbau',venue:'Spielort',room:'Raum / Saal',organizer:'Veranstalter',eventType:'Kategorie',remainingTickets:'Ticketstatus',boxOfficeOpenAt:'Abendkasse ab',publicNotes:'Öffentlicher Hinweis',description:'Beschreibung',externalNumber:'Veranstaltungsnummer',status:'Status',ticketUrl:'Ticket-Link',ticketQr:'Ticket-Link als QR-Code',imageUrl:'Veranstaltungsbild',boxOfficeAvailable:'Abendkasse verfügbar'};
+function eventTicketUrl(event){
+  const value=String(event?.ticketUrl||'').trim();
+  if(!value||/[\u0000-\u001f\u007f]/.test(value)||new TextEncoder().encode(value).length>2953)return '';
+  try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?value:'';}catch{return '';}
+}
+function eventQrMarkup(element,event){
+  const payload=qrElementPayload(element,event);
+  return element.qrKind==='event-ticket'&&!payload?'':qrSvgMarkup(payload,element.qrForeground,element.background);
+}
+function eventFieldContent(event,element){
+  return element.field==='ticketQr'?eventQrMarkup({...element,qrKind:'event-ticket',background:element.qrBackground||'#ffffff'},event):escapeHtml(eventFieldPresentation(event,element.field,element).text);
+}
+function eventImageMarkup(event){
+  const src=String(event?.imageUrl||'').trim();
+  try{if(!src||!['http:','https:'].includes(new URL(src,window.location.href).protocol)||/[\u0000-\u001f\u007f]/.test(src))return '';}catch{return '';}
+  return `<img class="event-table-image" src="${escapeHtml(src)}" alt="${escapeHtml(event?.title||'Veranstaltungsbild')}" loading="lazy" decoding="async">`;
+}
+function eventDetailValue(event,field,options={}){
+  if(!event)return '';
+  if(field==='boxOfficeAvailable')return Object.hasOwn(event,field)?event[field]?'Ja':'Nein':'';
+  if(field==='status')return ({draft:'Entwurf',review:'Zu prüfen',ready:'Bereit',published:'Veröffentlicht',sold_out:'Ausverkauft',cancelled:'Abgesagt',ended:'Beendet',archived:'Archiviert'})[event.status]||String(event.status||'');
+  if(field==='date'&&!event.date&&event.eventStart){const date=new Date(event.eventStart);if(!Number.isNaN(date.valueOf()))return new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'medium'}).format(date);}
+  return eventFieldDisplayValue(event,field,options);
+}
+function eventTableFields(element){
+  const defaults=['title','subtitle','date','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room'];
+  return [...new Set((Array.isArray(element.eventDetails)?element.eventDetails:defaults).filter(field=>Object.hasOwn(eventDetailLabels,field)))];
+}
+function eventDetailOptions(element,field){
+  const row=element.eventDetailSettings?.[field]||{},align=['left','center','right'].includes(row.align)?row.align:['left','center','right'].includes(element.align)?element.align:'left';
+  return{align,empty:['collapse','space','placeholder'].includes(row.empty)?row.empty:element.eventTableShowEmpty===true?'placeholder':'collapse',placeholder:String(row.placeholder??'–')};
+}
+function eventDetailContent(event,field,element){
+  if(field==='ticketQr')return eventQrMarkup({qrKind:'event-ticket',qrForeground:element.qrForeground||'#111111',background:'#ffffff'},event);
+  if(field==='imageUrl')return eventImageMarkup(event);
+  const value=eventDetailValue(event,field,element);return String(value).trim()?escapeHtml(value):'';
+}
+function eventDetailRow(event,field,element){
+  const options=eventDetailOptions(element,field),value=eventDetailContent(event,field,element),present=Boolean(value);
+  return{...options,present,visible:present||options.empty!=='collapse',content:present?value:options.empty==='space'?'&#160;':escapeHtml(options.placeholder)||'&#160;'};
+}
+function eventTableMarkup(event,element={}){
+  const labels=element.eventTableLabels!==false;
+  const rows=eventTableFields(element).map(field=>{
+    const row=eventDetailRow(event,field,element);if(!row.visible)return '';
+    const content=field==='ticketQr'&&(row.present||row.empty==='space')?`<span class="event-table-qr${!row.present?' event-qr-empty':''}">${row.content}</span>`:row.content;
+    return `<tr data-event-table-field="${field}"${!row.present?' data-event-empty="'+row.empty+'"':''}>${labels?`<th scope="row" style="text-align:${row.align}">${!row.present&&row.empty==='space'?'&#160;':escapeHtml(eventDetailLabels[field])}</th>`:''}<td style="text-align:${row.align}">${content}</td></tr>`;
+  }).join('');
+  return `<section class="event-data-table">${element.eventHeading?`<strong class="event-free-heading">${escapeHtml(element.eventHeading)}</strong>`:''}<table aria-label="Veranstaltungsdaten"><tbody>${rows}</tbody></table></section>`;
+}
+
 function eventDetailsForElement(element){
   return Array.isArray(element.eventDetails)?element.eventDetails.filter(field=>Object.hasOwn(eventDetailLabels,field)):['title',...(element.showDate?['date']:[]),...(element.showTime===false?[]:['admissionStart','eventStart','breakStart','breakEnd','eventEnd'])];
 }
@@ -372,11 +430,14 @@ function eventWelcomeBlockMarkup(event,fallbackTitle='Veranstaltung',options={})
     return `${heading?`<small class="event-free-heading">${escapeHtml(heading)}</small>`:''}<strong>${escapeHtml(event?.title||fallbackTitle)}</strong>${date?`<em>${escapeHtml(date)}</em>`:''}${options.showTime===false?'':`<span>${schedule}</span>`}`;
   }
   const parts=fields.map(field=>{
-    const value=eventFieldDisplayValue(event,field,options)||(field==='title'?fallbackTitle:'');
-    if(!value&&custom)return '';
-    if(field==='title')return `<strong>${escapeHtml(value)}</strong>`;
-    if(field==='subtitle'||field==='date')return value?`<em>${escapeHtml(value)}</em>`:'';
-    return `<span class="event-detail-line" data-event-detail-output="${field}"><b>${escapeHtml(eventDetailLabels[field])}:</b> ${escapeHtml(value||'–')}</span>`;
+    const row=eventDetailRow(event,field,options);if(!row.visible)return '';
+    const attrs=`data-event-detail-output="${field}" style="text-align:${row.align}"${!row.present?' data-event-empty="'+row.empty+'"':''}`;
+    if(!row.present&&field==='ticketQr'&&row.empty==='space')return `<div class="event-detail-media" ${attrs}><span class="event-table-qr event-qr-empty">&#160;</span></div>`;
+    if(!row.present)return `<span class="event-detail-line event-detail-empty" ${attrs}>${row.empty==='space'?'':`<b>${escapeHtml(eventDetailLabels[field])}:</b> `}${row.content}</span>`;
+    if(field==='imageUrl'||field==='ticketQr')return `<div class="event-detail-media" ${attrs}>${field==='ticketQr'?`<span class="event-table-qr">${row.content}</span>`:row.content}</div>`;
+    if(field==='title')return `<strong ${attrs}>${row.content}</strong>`;
+    if(field==='subtitle'||field==='date')return `<em ${attrs}>${row.content}</em>`;
+    return `<span class="event-detail-line" ${attrs}><b>${escapeHtml(eventDetailLabels[field])}:</b> ${row.content}</span>`;
   });
   return `${heading?`<small class="event-free-heading">${escapeHtml(heading)}</small>`:''}${parts.join('')}`;
 }
@@ -395,7 +456,7 @@ function fitAutomaticText(root=document){
   root.querySelectorAll?.('[data-auto-font="true"]').forEach(node=>{
     const outer=node.classList.contains('canvas-element')||node.classList.contains('player-layout-element');
     const container=outer?node:node.parentElement;
-    const target=outer?(node.querySelector('.canvas-text-content,.canvas-event-content,.canvas-countdown,.weather-mini-widget,.player-countdown span')||node):node;
+    const target=outer?(node.querySelector('.canvas-text-content,.canvas-event-content,.event-data-table,.canvas-countdown,.weather-mini-widget,.player-countdown span')||node):node;
     if(!container||!target||container.clientWidth<2||container.clientHeight<2)return;
     const surface=node.closest('.slide-editor-canvas,.player-layout-slide,.slide-thumb-surface');
     const scale=node.dataset.autoFontResponsive==='true'&&surface?surface.clientWidth/(Number(getComputedStyle(surface).getPropertyValue('--slide-font-reference'))||1920):1;
@@ -456,7 +517,7 @@ function overlayClockTime(context={},timestamp=Date.now()) {
 function overlayClockScale(clock){const scale=Number(clock?.scale??100);return (Number.isFinite(scale)?Math.max(50,Math.min(300,scale)):100)/100;}
 
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable" style="--clock-scale:${overlayClockScale(element.clock)}">${overlayClockTime()}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" style="${style}">${qrSvgMarkup(qrElementPayload(element),element.qrForeground,element.background)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element.countdownMode==='event'&&(element.hideOnEnd||element.countdownEndBehavior)?countdown:element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${escapeHtml(presentation.text)}</div>`;}if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))} style="${style}">${eventQrMarkup(element,event)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element.countdownMode==='event'&&(element.hideOnEnd||element.countdownEndBehavior)?countdown:element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${eventFieldContent(event,element)}</div>`;}if(element.type==='event-table')return `<div class="player-layout-element player-event-table" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventTableMarkup(event,element)}</div>`;if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}" style="--clock-scale:${overlayClockScale(settings.clock)}">${overlayClockTime()}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -1870,7 +1931,7 @@ function renderModuleSwitching(){
   list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''} ${!licenseAllows(licenseModuleForFeature(view))?'disabled':''}><span>${!licenseAllows(licenseModuleForFeature(view))?'Nicht lizenziert':view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
-const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
+const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-table':'Event-Tabelle','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
 function editorElementEnabled(type,settings=state.featureSettings||{}){return settings[`editor_${type}`]!==false;}
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
@@ -2902,7 +2963,7 @@ state.channelRedo = [];
 state.channelHistoryCurrent = null;
 
 const slideTypeLabels = {
-  custom: 'Eigene Slide', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
+  custom: 'Eigene Slide', 'event-table':'Event-Tabelle', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
 };
 const orientationLabels = { auto: 'Automatisch / responsiv', landscape: 'Querformat', portrait: 'Hochformat' };
 
@@ -2913,7 +2974,8 @@ function escapeHtml(value) {
 function slideThumb(slide) {
   const defaults = defaultSlideSettings();
   const settings = { ...defaults, ...(slide.settings || {}), background: { ...defaults.background, ...(slide.settings?.background || {}) }, logo: { ...defaults.logo, ...(slide.settings?.logo || {}) }, clock: { ...defaults.clock, ...(slide.settings?.clock || {}) } };
-  const elements = (slide.elements || []).map(element => thumbnailElementMarkup(element, settings)).join('');
+  const event=selectSlideEvent(state.events||[],slide.document?.eventSelection||{},(state.events||[]).find(event=>event.id===slide.eventId)||null);
+  const elements = (slide.elements || []).map(element => thumbnailElementMarkup(element, settings,event)).join('');
   return `<span class="slide-thumb slide-thumb-designed type-${escapeHtml(slide.type)} ${slide.ratio === 'auto' ? 'is-auto' : ''}"><span class="slide-thumb-surface ${slide.ratio === 'portrait' ? 'is-portrait' : ''}">${slideDecorationsMarkup(settings)}${elements || `<span class="slide-thumb-empty">${escapeHtml(slideTypeLabels[slide.type] || 'Slide')}</span>`}</span>${slide.ratio === 'auto' ? '<i class="slide-thumb-auto-badge">AUTO</i>' : ''}</span>`;
 }
 
@@ -2927,20 +2989,21 @@ function previewTypography(value) {
   if(result.fontSizeUnit==='pt')result.responsiveText=true;
   return result;
 }
-function thumbnailElementMarkup(element, settings) {
+function thumbnailElementMarkup(element, settings,event=null) {
   element=previewTypography(element);
   const style = `left:${Number(element.x || 0)}%;top:${Number(element.y || 0)}%;width:${Number(element.width || 40)}%;height:${Number(element.height || 20)}%;background:${escapeHtml(element.background || 'transparent')};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(element,24,`${Math.max(3,textFontPixels(element,24)/8)}px`)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Math.max(0, Number(element.padding || 0) / 8)}px;border-radius:${Math.max(0, Number(element.radius || 0) / 8)}px`;
   let content = escapeHtml(element.text || '');
   if (element.type === 'wayfinding') content = wayfindingMarkup(element, settings);
   if (element.type === 'ticker') content = `<span class="slide-thumb-ticker">⇠ ${escapeHtml(tickerElementItems(element).map(item => item.kind === 'text' ? item.text : item.kind === 'countdown' ? 'Countdown' : item.kind === 'qr-code' ? 'QR-Code' : item.icon || 'Icon').join(' · '))}</span>`;
   if (element.type === 'weather') content = '<span class="slide-thumb-weather">☀ 21°</span>';
-  if (element.type === 'qr-code') content = qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background);
+  if (element.type === 'qr-code') content = eventQrMarkup(element,event);
   if (element.type === 'countdown') content = `<span class="slide-thumb-countdown" ${hiddenEventValueAttributes(!countdownHidden(element))}>${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</span>`;
   if (element.type === 'image') content = element.src ? mediaContentMarkup(element,element.src) : '<span class="slide-thumb-symbol">▧</span>';
   if (element.type === 'video') content = element.src ? mediaContentMarkup(element,element.src,true,'muted preload="metadata"') : '<span class="slide-thumb-symbol">▶</span>';
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
-  if (element.type === 'event') content = `<span class="slide-thumb-event"><small>Herzlich willkommen zu</small><strong>${escapeHtml(element.event || element.text || 'Veranstaltung')}</strong><i>Einlass: 18:30 · Beginn: 19:30 · Pause: 20:15 · Ende: 22:00</i></span>`;
-  if (element.type === 'event-field') content = escapeHtml(`${element.prefix || ''}${element.fallback || 'Veranstaltungsfeld'}`);
+  if (element.type === 'event') content = `<span class="slide-thumb-event">${eventWelcomeBlockMarkup(event,element.event||element.text||'Veranstaltung',element)}</span>`;
+  if (element.type === 'event-table') content = eventTableMarkup(event,element);
+  if (element.type === 'event-field') content = element.field==='ticketQr'?eventFieldContent(event,element):escapeHtml(event?eventFieldPresentation(event,element.field,element).text:`${element.prefix||''}${element.fallback||'Veranstaltungsfeld'}`);
   return `<span class="slide-thumb-element type-${escapeHtml(element.type)}" style="${style}">${content}</span>`;
 }
 
@@ -3852,6 +3915,7 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'qr-code') return { ...base, qrKind: 'link', qrValue: 'https://example.org', wifiSsid: '', wifiPassword: '', wifiEncryption: 'WPA', wifiHidden: false, qrForeground: '#111111', background: '#ffffff', x: 64, y: 18, width: 24, height: 42, padding: 8 };
   if (type === 'countdown') return { ...base, countdownMode: 'daily', countdownDailyTime: '18:00', targetTime: '', prefix: 'Noch ', suffix: '', showSeconds: true, countdownFormat:'hhmmss', countdownEndBehavior:'countup', hideOnEnd:false, fontSize: 52, fontWeight: 700, color: '#ffffff', background: 'transparent', align: 'center', width: 48, height: 18 };
   if (type === 'event') return { ...base, eventHeading:'', event: '', text: '', fontSize: 38, color: '#ffffff', width: 80, height: 32 };
+  if (type === 'event-table') return {...base,eventHeading:'',eventDetails:['title','subtitle','date','eventStart','eventEnd','venue','room'],eventTableLabels:true,width:80,height:70,fontSize:28};
   if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: false, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
   if (type === 'alert-icon') { const picker=document.querySelector('#alert-icon-picker'),key=picker?.value||'general-warning',alt=picker?.selectedOptions?.[0]?.textContent||'Warnsymbol'; return { ...base, type: 'image', src: assetUrl(`/media/alerts/${key}.svg`), alt, background: 'transparent', width: 24, height: 36 }; }
@@ -4086,13 +4150,14 @@ function editorElementMarkup(element) {
   if (element.type === 'wayfinding') return wayfindingMarkup(element,state.editorSlideSettings,event);
   if (element.type === 'ticker') return `<div class="canvas-ticker ${element.tickerDirection==='right'?'is-right':''}" style="--ticker-duration:${Math.max(3,Math.min(60,Number(element.tickerDuration||15)))}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div>`;
   if (element.type === 'weather') return weatherElementMarkup(element);
-  if (element.type === 'qr-code') return `<div class="canvas-qr-code">${qrSvgMarkup(qrElementPayload(element), element.qrForeground, element.background)}</div>`;
+  if (element.type === 'qr-code') return `<div class="canvas-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))}>${eventQrMarkup(element,event)}</div>`;
   if (element.type === 'countdown') { const countdown=resolveEventCountdown(element,event);return `<div class="canvas-countdown" data-editor-countdown="${escapeHtml(encodeURIComponent(JSON.stringify(element.countdownMode==='event'&&(element.hideOnEnd||element.countdownEndBehavior)?countdown:element)))}" ${hiddenEventValueAttributes(!countdownHidden(countdown))}>${escapeHtml(element.prefix || '')}${countdownText(countdown)}${escapeHtml(element.suffix || '')}</div>`; }
   if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?mediaContentMarkup(element,src):'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? mediaContentMarkup(element,element.src,true,`${element.muted!==false?'muted':''} autoplay loop`) : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
+  if (element.type === 'event-table') return `<div class="canvas-event-table" ${hiddenEventValueAttributes(Boolean(event))}>${eventTableMarkup(event,element)}</div>`;
   if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Veranstaltung',element)}</div>`;
-  if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="canvas-text-content" ${hiddenEventValueAttributes(presentation.present)}>${escapeHtml(presentation.text)}</div>`; }
+  if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="${element.field==='ticketQr'?'canvas-qr-code':'canvas-text-content'}" ${hiddenEventValueAttributes(presentation.present)}>${eventFieldContent(event,element)}</div>`; }
   return `<div class="canvas-text-content" contenteditable="false" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
 }
 
@@ -4196,7 +4261,7 @@ function renderEditorCanvas() {
   const canvas = document.querySelector('#slide-editor-canvas');
   if(!state.selectedEditorElementIds)state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
   const selectedEvent=editorSelectedEvent();
-  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${escapeHtml(element.id)}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}</div>`;}).join('');
+  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=['event','event-table'].includes(element.type)&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${escapeHtml(element.id)}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}</div>`;}).join('');
   KioskyMediaPlacement.hydrate(canvas);
   hydrateWeatherElements(canvas);
   scheduleAutomaticTextFit(canvas);
@@ -4433,8 +4498,8 @@ function syncEditorProperties() {
   renderSlideSettingsProperties();
   if (!element) return;
   document.querySelector('#property-element-type').textContent = slideTypeLabels[element.type] || 'Element';
-  document.querySelectorAll('[data-property-section]').forEach(section => { section.hidden = section.dataset.propertySection !== element.type && !(section.dataset.propertySection === 'text' && ['event','event-field','ticker','countdown','weather'].includes(element.type)); });
-  document.querySelector('#property-text-field').hidden = ['ticker','weather','event','event-field'].includes(element.type);
+  document.querySelectorAll('[data-property-section]').forEach(section => { section.hidden = section.dataset.propertySection !== element.type && !(section.dataset.propertySection==='event'&&element.type==='event-table') && !(section.dataset.propertySection === 'text' && ['event','event-table','event-field','ticker','countdown','weather'].includes(element.type)); });
+  document.querySelector('#property-text-field').hidden = ['ticker','weather','event','event-table','event-field'].includes(element.type);
   document.querySelector('#property-text').value = element.text || '';
   document.querySelector('#property-font-size').value = textFontPoints(element,24);
   document.querySelector('#property-responsive-text').checked=Boolean(element.responsiveText);
@@ -4443,7 +4508,17 @@ function syncEditorProperties() {
   document.querySelector('#property-color').value = element.color || '#ffffff';
   document.querySelector('#property-event').value = element.event || '';
   document.querySelector('#property-event-heading').value=element.eventHeading??'Herzlich willkommen zu';
-  const details=new Set(eventDetailsForElement(element));document.querySelectorAll('[data-event-detail]').forEach(input=>{input.checked=details.has(input.dataset.eventDetail);});
+  document.querySelector('#property-event-table-labels').checked=element.eventTableLabels!==false;
+  document.querySelector('#property-event-table-empty').checked=element.eventTableShowEmpty===true;
+  const details=new Set(element.type==='event-table'?eventTableFields(element):eventDetailsForElement(element));document.querySelectorAll('[data-event-detail]').forEach(input=>{input.checked=details.has(input.dataset.eventDetail);});
+  for(const field of Object.keys(eventDetailLabels)){
+    const row=element.eventDetailSettings?.[field]||{};
+    document.querySelector(`[data-event-row-options="${field}"]`).hidden=!details.has(field);
+    document.querySelector(`[data-event-row-align="${field}"]`).value=['left','center','right'].includes(row.align)?row.align:'inherit';
+    document.querySelector(`[data-event-row-empty="${field}"]`).value=['collapse','space','placeholder'].includes(row.empty)?row.empty:'inherit';
+    document.querySelector(`[data-event-row-placeholder="${field}"]`).value=row.placeholder??'';
+    document.querySelector(`[data-event-row-placeholder-label="${field}"]`).hidden=eventDetailOptions(element,field).empty!=='placeholder';
+  }
   document.querySelector('#property-event-field').value = element.field || 'title';
   document.querySelector('#property-event-prefix').value = element.prefix || '';
   document.querySelector('#property-event-fallback').value = element.fallback || '';
@@ -4481,7 +4556,11 @@ function syncEditorProperties() {
   document.querySelector('#property-wifi-hidden').checked = Boolean(element.wifiHidden);
   document.querySelector('#property-qr-foreground').value = element.qrForeground || '#111111';
   const wifiQr = element.type === 'qr-code' && element.qrKind === 'wifi';
-  document.querySelector('#property-qr-value-field').hidden = wifiQr;
+  document.querySelector('#property-qr-value-field').hidden = wifiQr||element.qrKind==='event-ticket';
+  const dynamicQr=element.type==='qr-code'&&element.qrKind==='event-ticket'||element.type==='event-field'&&element.field==='ticketQr';
+  for(const id of ['property-event-prefix','property-event-fallback'])document.getElementById(id).closest('label').hidden=element.type==='event-field'&&element.field==='ticketQr';
+  document.querySelector('#property-event-ticket-note').hidden=!dynamicQr;
+  document.querySelector('#property-event-ticket-note').textContent=eventTicketUrl(editorSelectedEvent())?'Der Ticket-Link des ausgewählten Events wird automatisch übernommen.':'Kein gültiger Ticket-Link für dieses Event. Der QR-Code bleibt auf dem Player ausgeblendet.';
   document.querySelector('#property-qr-wifi-fields').hidden = !wifiQr;
   document.querySelector('#property-countdown-mode').value = element.countdownMode || 'daily';
   document.querySelector('#property-countdown-daily-time').value = element.countdownDailyTime || '18:00';
@@ -4543,6 +4622,7 @@ function updateSelectedElement(property, value) {
   if (element[property] === value && (property!=='fontSize'||element.fontSizeUnit==='pt')) return;
   pushEditorHistory();
   if(property==='fontSize')element.fontSizeUnit='pt';
+  if(property==='field'&&value==='ticketQr'){element.width=24;element.height=document.querySelector('#editor-ratio').value==='portrait'?13.5:42.67;}
   element[property] = value;
   renderEditorCanvas();
   scheduleSlideAutosave();
@@ -4647,10 +4727,15 @@ document.querySelector('#editor-layer-list').addEventListener('click', event => 
   }
 });
 
-document.querySelectorAll('[data-event-detail]').forEach(input=>input.addEventListener('change',()=>{const element=selectedEditorElement();if(element?.type!=='event')return;pushEditorHistory();element.eventDetails=[...document.querySelectorAll('[data-event-detail]:checked')].map(input=>input.dataset.eventDetail);renderEditorCanvas();scheduleSlideAutosave();}));
+document.querySelector('#event-detail-choices').innerHTML=Object.entries(eventDetailLabels).map(([field,label])=>`<div class="event-detail-choice"><label class="toggle-label"><input type="checkbox" data-event-detail="${field}"> ${escapeHtml(label)}</label><div class="event-detail-row-settings" data-event-row-options="${field}"><label class="form-field"><span>Ausrichtung</span><select data-event-row-align="${field}" aria-label="${escapeHtml(label)}: Ausrichtung"><option value="inherit">Wie Element</option><option value="left">Links</option><option value="center">Zentriert</option><option value="right">Rechts</option></select></label><label class="form-field"><span>Wenn leer</span><select data-event-row-empty="${field}" aria-label="${escapeHtml(label)}: Wenn leer"><option value="inherit">Wie Element</option><option value="collapse">Ausblenden · nachrücken</option><option value="space">Platz freihalten</option><option value="placeholder">Ersatztext anzeigen</option></select></label><label class="form-field event-detail-placeholder" data-event-row-placeholder-label="${field}"><span>Ersatztext</span><input type="text" maxlength="2000" data-event-row-placeholder="${field}" aria-label="${escapeHtml(label)}: Ersatztext" placeholder="–"></label></div></div>`).join('');
+document.querySelectorAll('[data-event-detail]').forEach(input=>input.addEventListener('change',()=>{const element=selectedEditorElement();if(!['event','event-table'].includes(element?.type))return;pushEditorHistory();element.eventDetails=[...document.querySelectorAll('[data-event-detail]:checked')].map(input=>input.dataset.eventDetail);renderEditorCanvas();scheduleSlideAutosave();}));
+for(const [attribute,key] of [['align','align'],['empty','empty'],['placeholder','placeholder']])document.querySelectorAll(`[data-event-row-${attribute}]`).forEach(input=>input.addEventListener(attribute==='placeholder'?'input':'change',()=>{
+  const element=selectedEditorElement(),field=input.getAttribute(`data-event-row-${attribute}`);if(!['event','event-table'].includes(element?.type))return;
+  pushEditorHistory();element.eventDetails??=eventDetailsForElement(element);element.eventDetailSettings??={};element.eventDetailSettings[field]={...element.eventDetailSettings[field],[key]:input.value};renderEditorCanvas();scheduleSlideAutosave();
+}));
 
 const propertyBindings = [
-  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value],
+  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
   ['property-x', 'x', Number], ['property-y', 'y', Number], ['property-width', 'width', Number], ['property-height', 'height', Number], ['property-background', 'background', value => value],
