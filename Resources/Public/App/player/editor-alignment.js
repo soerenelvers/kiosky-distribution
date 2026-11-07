@@ -21,5 +21,21 @@
     const x=axis(box.x,box.width,dx,xs,toleranceX,enabled),y=axis(box.y,box.height,dy,ys,toleranceY,enabled);
     return{dx:x.delta,dy:y.delta,guides:{x:x.guide,y:y.guide}};
   }
-  root.KioskyEditorAlignment={bounds,move};
+  function resize(element,edge,dx,dy,canvasWidth,canvasHeight){
+    const angle=Number(element.rotation||0)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
+    const localX=c*dx+s*dy,localY=-s*dx+c*dy;
+    const horizontal=edge.includes('w')?-1:edge.includes('e')?1:0,vertical=edge.includes('n')?-1:edge.includes('s')?1:0;
+    const w=element.width/100*canvasWidth,h=element.height/100*canvasHeight,cx=(element.x+element.width/2)/100*canvasWidth,cy=(element.y+element.height/2)/100*canvasHeight;
+    const calculate=t=>{
+      const width=horizontal?Math.max(Math.min(w,canvasWidth*.05),Math.min(canvasWidth,w+horizontal*localX*t)):w;
+      const height=vertical?Math.max(Math.min(h,canvasHeight*.05),Math.min(canvasHeight,h+vertical*localY*t)):h;
+      const sx=horizontal*(width-w)/2,sy=vertical*(height-h)/2;
+      return{x:(cx+c*sx-s*sy-width/2)/canvasWidth*100,y:(cy+s*sx+c*sy-height/2)/canvasHeight*100,width:width/canvasWidth*100,height:height/canvasHeight*100};
+    };
+    const inside=value=>{const b=bounds([{...value,rotation:element.rotation}],canvasWidth,canvasHeight);return b.x>=-1e-7&&b.y>=-1e-7&&b.x+b.width<=100+1e-7&&b.y+b.height<=100+1e-7;};
+    const proposed=calculate(1);if(!inside(element)||inside(proposed))return proposed;
+    let low=0,high=1;for(let i=0;i<28;i++){const middle=(low+high)/2;if(inside(calculate(middle)))low=middle;else high=middle;}
+    return calculate(low);
+  }
+  root.KioskyEditorAlignment={bounds,move,resize};
 })(globalThis);

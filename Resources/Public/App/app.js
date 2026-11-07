@@ -358,18 +358,27 @@ function eventFieldPresentation(event,field,options={}){
 }
 function hiddenEventValueAttributes(present){return present?'':'data-event-value-missing="true" aria-hidden="true"';}
 
-function eventWelcomeBlockMarkup(event, fallbackTitle = 'Veranstaltung',options={}) {
-  const time = field => eventFieldDisplayValue(event, field,options);
-  const pauseStart = time('breakStart'), pauseEnd = time('breakEnd');
-  const pause = pauseStart && pauseEnd && pauseStart !== pauseEnd ? `${pauseStart}–${pauseEnd}` : pauseStart || pauseEnd || '–';
-  const schedule = [
-    ['Einlass', time('admissionStart') || '–'],
-    ['Beginn', time('eventStart') || '–'],
-    ['Pause', pause],
-    ['Ende', time('eventEnd') || '–']
-  ].map(([label, value]) => `<b>${label}:</b> ${escapeHtml(value)}`).join(' · ');
-  const date=options.showDate?eventFieldDisplayValue(event,'date'):'';
-  return `<small>Herzlich willkommen zu</small><strong>${escapeHtml(event?.title || fallbackTitle)}</strong>${date?`<em>${escapeHtml(date)}</em>`:''}${options.showTime===false?'':`<span>${schedule}</span>`}`;
+const eventDetailLabels={title:'Titel',subtitle:'Untertitel',date:'Datum',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',setupStart:'Aufbau',venue:'Spielort',room:'Raum / Saal',organizer:'Veranstalter',eventType:'Kategorie',remainingTickets:'Ticketstatus',boxOfficeOpenAt:'Abendkasse ab',publicNotes:'Öffentlicher Hinweis'};
+function eventDetailsForElement(element){
+  return Array.isArray(element.eventDetails)?element.eventDetails.filter(field=>Object.hasOwn(eventDetailLabels,field)):['title',...(element.showDate?['date']:[]),...(element.showTime===false?[]:['admissionStart','eventStart','breakStart','breakEnd','eventEnd'])];
+}
+function eventWelcomeBlockMarkup(event,fallbackTitle='Veranstaltung',options={}){
+  const fields=eventDetailsForElement(options),custom=Array.isArray(options.eventDetails),heading=options.eventHeading??'Herzlich willkommen zu';
+  if(!custom){
+    const time=field=>eventFieldDisplayValue(event,field,options),pauseStart=time('breakStart'),pauseEnd=time('breakEnd');
+    const pause=pauseStart&&pauseEnd&&pauseStart!==pauseEnd?`${pauseStart}–${pauseEnd}`:pauseStart||pauseEnd||'–';
+    const schedule=[['Einlass',time('admissionStart')||'–'],['Beginn',time('eventStart')||'–'],['Pause',pause],['Ende',time('eventEnd')||'–']].map(([label,value])=>`<b>${label}:</b> ${escapeHtml(value)}`).join(' · ');
+    const date=options.showDate?eventFieldDisplayValue(event,'date'):'';
+    return `${heading?`<small class="event-free-heading">${escapeHtml(heading)}</small>`:''}<strong>${escapeHtml(event?.title||fallbackTitle)}</strong>${date?`<em>${escapeHtml(date)}</em>`:''}${options.showTime===false?'':`<span>${schedule}</span>`}`;
+  }
+  const parts=fields.map(field=>{
+    const value=eventFieldDisplayValue(event,field,options)||(field==='title'?fallbackTitle:'');
+    if(!value&&custom)return '';
+    if(field==='title')return `<strong>${escapeHtml(value)}</strong>`;
+    if(field==='subtitle'||field==='date')return value?`<em>${escapeHtml(value)}</em>`:'';
+    return `<span class="event-detail-line" data-event-detail-output="${field}"><b>${escapeHtml(eventDetailLabels[field])}:</b> ${escapeHtml(value||'–')}</span>`;
+  });
+  return `${heading?`<small class="event-free-heading">${escapeHtml(heading)}</small>`:''}${parts.join('')}`;
 }
 
 // Coalesce high-frequency input and resize notifications into one frame.
@@ -411,7 +420,7 @@ function scheduleAutomaticTextFit(root=document){
   }
   if(document.fonts?.status==='loading'&&!task.fontsPending){task.fontsPending=true;document.fonts.ready.then(()=>{task.fontsPending=false;if(typographyTasks.get(root)===task)task();}).catch(()=>{task.fontsPending=false;});}
   if(root.matches?.('.slide-editor-canvas,.player-layout-slide')&&!typographyObservers.has(root)&&typeof ResizeObserver!=='undefined'){
-    const observer=new ResizeObserver(()=>task());observer.observe(root);typographyObservers.set(root,observer);
+    const observer=new ResizeObserver(()=>{task();if(root.id==='slide-editor-canvas')positionEditorTransformControls(root);});observer.observe(root);typographyObservers.set(root,observer);
   }
   task();
 }
@@ -3097,7 +3106,7 @@ function populateContentEventOptions() {
   const options = state.events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(event.title)}</option>`).join('');
   document.querySelector('#channel-event').innerHTML = `<option value="">Keine feste Veranstaltung</option>${options}`;
   document.querySelector('#slide-event').innerHTML = `<option value="">Keine feste Veranstaltung</option>${options}`;
-  document.querySelector('#property-event').innerHTML = state.events.map(event => `<option value="${escapeHtml(event.title)}">${escapeHtml(event.title)}</option>`).join('') || '<option value="">Keine Veranstaltung vorhanden</option>';
+
 }
 
 function applyActiveChannel() {
@@ -3842,8 +3851,8 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'weather') return { ...base, weatherMode: 'temperature', fontSize: 32, fontWeight: 600, color: '#ffffff', background: '#315b49', x: 78, y: 6, width: 16, height: 12, padding: 6, radius: 10 };
   if (type === 'qr-code') return { ...base, qrKind: 'link', qrValue: 'https://example.org', wifiSsid: '', wifiPassword: '', wifiEncryption: 'WPA', wifiHidden: false, qrForeground: '#111111', background: '#ffffff', x: 64, y: 18, width: 24, height: 42, padding: 8 };
   if (type === 'countdown') return { ...base, countdownMode: 'daily', countdownDailyTime: '18:00', targetTime: '', prefix: 'Noch ', suffix: '', showSeconds: true, countdownFormat:'hhmmss', countdownEndBehavior:'countup', hideOnEnd:false, fontSize: 52, fontWeight: 700, color: '#ffffff', background: 'transparent', align: 'center', width: 48, height: 18 };
-  if (type === 'event') return { ...base, event: 'Sommerkonzert', text: 'Sommerkonzert', fontSize: 38, color: '#ffffff', width: 80, height: 32 };
-  if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: true, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
+  if (type === 'event') return { ...base, eventHeading:'', event: '', text: '', fontSize: 38, color: '#ffffff', width: 80, height: 32 };
+  if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: false, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
   if (type === 'alert-icon') { const picker=document.querySelector('#alert-icon-picker'),key=picker?.value||'general-warning',alt=picker?.selectedOptions?.[0]?.textContent||'Warnsymbol'; return { ...base, type: 'image', src: assetUrl(`/media/alerts/${key}.svg`), alt, background: 'transparent', width: 24, height: 36 }; }
   if (type === 'video') return { ...base, src: '', muted: true, width: 52, height: 48 };
@@ -3860,7 +3869,7 @@ function selectedEditorElement() {
 
 function editorElementLabel(element) {
   const type = slideTypeLabels[element.type] || 'Element';
-  const detail = element.type === 'event-field'
+  const detail = element.type==='event' ? element.eventHeading||editorSelectedEvent()?.title||element.event||'Event-Auswahl der Slide' : element.type === 'event-field'
     ? document.querySelector(`#property-event-field option[value="${CSS.escape(element.field || 'title')}"]`)?.textContent
     : element.type === 'image' || element.type === 'video'
       ? state.mediaAssets.find(asset => asset.id === element.mediaAssetId)?.name
@@ -3890,6 +3899,8 @@ function renderEditorLayers() {
         ${overlapCount ? `<em title="Überlagert ${overlapCount} weitere Ebene${overlapCount === 1 ? '' : 'n'}">⋂ ${overlapCount}</em>` : ''}
       </button>
       <span class="editor-layer-order">
+        <button type="button" data-layer-lock aria-label="${escapeHtml(label.type)} ${element.locked?'entsperren':'sperren'}" title="${element.locked?'Entsperren':'Position sperren'}" aria-pressed="${Boolean(element.locked)}">${element.locked?'🔒':'🔓'}</button>
+        <button type="button" data-layer-delete aria-label="${escapeHtml(label.type)}${label.detail?' · '+escapeHtml(label.detail):''} löschen" title="Element löschen">×</button>
         <button type="button" data-layer-direction="1" aria-label="${escapeHtml(label.type)} nach vorne" ${index === state.editorElements.length - 1 ? 'disabled' : ''}>↑</button>
         <button type="button" data-layer-direction="-1" aria-label="${escapeHtml(label.type)} nach hinten" ${index === 0 ? 'disabled' : ''}>↓</button>
       </span>
@@ -4080,9 +4091,9 @@ function editorElementMarkup(element) {
   if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?mediaContentMarkup(element,src):'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? mediaContentMarkup(element,element.src,true,`${element.muted!==false?'muted':''} autoplay loop`) : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
-  if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Sommerkonzert',element)}</div>`;
+  if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Veranstaltung',element)}</div>`;
   if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="canvas-text-content" ${hiddenEventValueAttributes(presentation.present)}>${escapeHtml(presentation.text)}</div>`; }
-  return `<div class="canvas-text-content" contenteditable="true" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
+  return `<div class="canvas-text-content" contenteditable="false" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
 }
 
 try{document.querySelector('#editor-snap-enabled').checked=localStorage.getItem('kiosky-editor-snapping')!=='false';}catch{}
@@ -4095,70 +4106,119 @@ function showEditorSnapGuides(canvas,guides={}){
   canvas.append(overlay);
 }
 
+function selectEditorElement(id,additive=false){
+  if(additive){state.selectedEditorElementIds.has(id)?state.selectedEditorElementIds.delete(id):state.selectedEditorElementIds.add(id);}
+  else if(!state.selectedEditorElementIds.has(id))state.selectedEditorElementIds=new Set([id]);
+  state.selectedEditorElementId=state.selectedEditorElementIds.has(id)?id:[...state.selectedEditorElementIds][0]||null;
+  state.showSlideSettings=false;
+  const canvas=document.querySelector('#slide-editor-canvas');
+  canvas.querySelectorAll('[data-editor-element]').forEach(node=>node.classList.toggle('is-selected',state.selectedEditorElementIds.has(node.dataset.editorElement)));
+  renderEditorTransformControls(canvas);renderEditorLayers();syncEditorProperties();
+}
+function deleteEditorElement(id){
+  if(!state.editorElements.some(element=>element.id===id))return;
+  pushEditorHistory();state.editorElements=state.editorElements.filter(element=>element.id!==id);
+  state.selectedEditorElementIds.delete(id);
+  if(state.selectedEditorElementId===id)state.selectedEditorElementId=[...state.selectedEditorElementIds][0]||null;
+  renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Element wurde entfernt und die Slide gespeichert.'});
+}
+function toggleEditorElementLock(id){
+  const element=state.editorElements.find(item=>item.id===id);if(!element)return;
+  pushEditorHistory();element.locked=!element.locked;renderEditorCanvas();scheduleSlideAutosave();
+}
+function positionEditorTransformControls(canvas){
+  const element=selectedEditorElement(),node=element&&canvas.querySelector(`[data-editor-element="${CSS.escape(element.id)}"]`),controls=canvas.querySelector('[data-editor-controls]'),toolbar=canvas.querySelector('[data-editor-toolbar]');
+  if(!node||!controls||!toolbar)return;
+  const width=Math.max(88,node.offsetWidth),height=Math.max(88,node.offsetHeight);
+  controls.classList.toggle('is-small',width!==node.offsetWidth||height!==node.offsetHeight);
+  Object.assign(controls.style,{left:Math.max(0,Math.min(canvas.clientWidth-width,node.offsetLeft+(node.offsetWidth-width)/2))+'px',top:Math.max(0,Math.min(canvas.clientHeight-height,node.offsetTop+(node.offsetHeight-height)/2))+'px',width:width+'px',height:height+'px',transform:`rotate(${Number(element.rotation||0)}deg)`});
+  const rect=node.getBoundingClientRect(),surface=canvas.getBoundingClientRect();
+  toolbar.style.left=Math.max(0,Math.min(surface.width-toolbar.offsetWidth,rect.left-surface.left))+'px';
+  const controlRect=controls.getBoundingClientRect(),above=controlRect.top-surface.top-toolbar.offsetHeight-4,below=controlRect.bottom-surface.top+4;
+  toolbar.style.top=Math.max(0,Math.min(surface.height-toolbar.offsetHeight,above>=0?above:below+toolbar.offsetHeight<=surface.height?below:controlRect.top-surface.top+32))+'px';
+}
+function renderEditorTransformControls(canvas){
+  canvas.querySelectorAll('[data-editor-controls],[data-editor-toolbar]').forEach(node=>node.remove());
+  const element=selectedEditorElement();if(!element)return;
+  const controls=document.createElement('div');controls.className='editor-transform-controls';controls.dataset.editorControls=element.id;
+  if(!element.locked)controls.innerHTML=Object.entries({nw:'oben links',n:'oben',ne:'oben rechts',e:'rechts',se:'unten rechts',s:'unten',sw:'unten links',w:'links'}).map(([edge,label])=>`<button type="button" class="resize-handle ${edge}" data-editor-resize="${edge}" aria-label="Größe ändern: ${label}"></button>`).join('');
+  const toolbar=document.createElement('div');toolbar.className='editor-transform-toolbar';toolbar.dataset.editorToolbar=element.id;
+  toolbar.innerHTML=element.locked?'<button type="button" data-editor-unlock aria-label="Element entsperren" title="Element entsperren">🔒</button>':'<button class="canvas-element-handle" type="button" aria-label="Element verschieben" title="Verschieben">⠿</button><button class="canvas-rotate-handle" type="button" aria-label="Element drehen" title="Drehen">↻</button>';
+  toolbar.innerHTML+='<button class="canvas-delete-button" type="button" aria-label="Element löschen" title="Element löschen">×</button>';
+  canvas.append(controls,toolbar);positionEditorTransformControls(canvas);
+  controls.querySelectorAll('[data-editor-resize]').forEach(handle=>handle.addEventListener('pointerdown',event=>startEditorTransform(event,element,'resize',handle.dataset.editorResize)));
+  toolbar.querySelector('.canvas-element-handle')?.addEventListener('pointerdown',event=>startEditorTransform(event,element,'move'));
+  toolbar.querySelector('.canvas-rotate-handle')?.addEventListener('pointerdown',event=>startEditorTransform(event,element,'rotate'));
+  toolbar.querySelector('[data-editor-unlock]')?.addEventListener('click',()=>toggleEditorElementLock(element.id));
+  toolbar.querySelector('.canvas-delete-button').addEventListener('click',()=>deleteEditorElement(element.id));
+  for(const overlay of [controls,toolbar])overlay.addEventListener('click',event=>event.stopPropagation());
+}
+function startEditorTransform(event,element,mode,edge=''){
+  if(event.button!==0||event.isPrimary===false||element.locked||state.editorGestureCancel||slideDialog.classList.contains('is-previewing'))return;
+  event.preventDefault();event.stopPropagation();
+  const canvas=document.querySelector('#slide-editor-canvas'),rect=canvas.getBoundingClientRect(),pointerId=event.pointerId,startX=event.clientX,startY=event.clientY;
+  const selected=mode==='move'?state.editorElements.filter(item=>state.selectedEditorElementIds.has(item.id)&&!item.locked):[element];
+  const originals=new Map(selected.map(item=>[item.id,{x:item.x,y:item.y,width:item.width,height:item.height,rotation:item.rotation||0}]));
+  const visualBox=item=>{const r=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`).getBoundingClientRect();return{x:(r.left-rect.left)/rect.width*100,y:(r.top-rect.top)/rect.height*100,width:r.width/rect.width*100,height:r.height/rect.height*100};};
+  const box=KioskyEditorAlignment.bounds(selected.map(visualBox)),movingIds=new Set(selected.map(item=>item.id)),others=state.editorElements.filter(item=>!movingIds.has(item.id)).map(visualBox);
+  const history={undo:[...(state.editorUndo||[])],redo:[...(state.editorRedo||[])],last:state.editorLastSnapshot};
+  const raw=originals.get(element.id),targetNode=canvas.querySelector(`[data-editor-element="${CSS.escape(element.id)}"]`);
+  const original={...raw,width:Math.max(raw.width,targetNode.offsetWidth/rect.width*100),height:Math.max(raw.height,targetNode.offsetHeight/rect.height*100)},centerX=rect.left+(original.x+original.width/2)/100*rect.width,centerY=rect.top+(original.y+original.height/2)/100*rect.height;
+  const startAngle=Math.atan2(startY-centerY,startX-centerX);let changed=false;
+  const capture=event.currentTarget;try{capture.setPointerCapture(pointerId);}catch{}
+  const applyMove=createFrameTask(moveEvent=>{
+    const dx=moveEvent.clientX-startX,dy=moveEvent.clientY-startY;
+    if(!changed&&Math.hypot(dx,dy)<3)return;
+    if(!changed){pushEditorHistory();changed=true;}
+    if(mode==='move'){
+      const movement=KioskyEditorAlignment.move(box,others,dx/rect.width*100,dy/rect.height*100,8/rect.width*100,8/rect.height*100,document.querySelector('#editor-snap-enabled').checked&&!moveEvent.altKey);
+      selected.forEach(item=>{const start=originals.get(item.id);item.x=start.x+movement.dx;item.y=start.y+movement.dy;});showEditorSnapGuides(canvas,movement.guides);
+    }else if(mode==='resize')Object.assign(element,KioskyEditorAlignment.resize(original,edge,dx,dy,rect.width,rect.height));
+    else element.rotation=((Math.round(original.rotation+(Math.atan2(moveEvent.clientY-centerY,moveEvent.clientX-centerX)-startAngle)*180/Math.PI)%360)+360)%360;
+    for(const item of selected){const node=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`);Object.assign(node.style,{left:item.x+'%',top:item.y+'%',width:item.width+'%',height:item.height+'%',transform:`rotate(${Number(item.rotation||0)}deg)`});}
+    positionEditorTransformControls(canvas);for(const key of ['x','y','width','height','rotation'])document.querySelector(`#property-${key}`).value=Math.round(Number(element[key]||0));
+  });
+  const move=moveEvent=>{if(moveEvent.pointerId===pointerId){moveEvent.preventDefault();applyMove(moveEvent);}};
+  const finish=(cancel=false,redraw=true)=>{
+    if(cancel){applyMove.cancel();for(const item of selected)Object.assign(item,originals.get(item.id));if(changed){state.editorUndo=history.undo;state.editorRedo=history.redo;state.editorLastSnapshot=history.last;syncEditorHistoryButtons();}}
+    else applyMove.flush();
+    window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',stop);window.removeEventListener('pointercancel',stop);window.removeEventListener('blur',cancelGesture);
+    try{if(capture.hasPointerCapture(pointerId))capture.releasePointerCapture(pointerId);}catch{}
+    state.editorGestureCancel=null;canvas.querySelector('.editor-snap-guides')?.remove();
+    if(changed){if(redraw)renderEditorCanvas();scheduleSlideAutosave();}
+  };
+  const cancelGesture=()=>finish(true),stop=stopEvent=>{if(stopEvent.pointerId===pointerId)finish(stopEvent.type==='pointercancel');};
+  state.editorGestureCancel=()=>finish(true,false);window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',stop);window.addEventListener('pointercancel',stop);window.addEventListener('blur',cancelGesture);
+}
+
 function renderEditorCanvas() {
+  state.editorGestureCancel?.();
   const canvas = document.querySelector('#slide-editor-canvas');
   if(!state.selectedEditorElementIds)state.selectedEditorElementIds=new Set(state.selectedEditorElementId?[state.selectedEditorElementId]:[]);
   const selectedEvent=editorSelectedEvent();
-  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${element.id}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}<button class="canvas-rotate-handle" type="button" aria-label="Element drehen">↻</button><button class="canvas-element-handle" type="button" aria-label="Element verschieben">⠿</button>${selected?'<button class="canvas-delete-button" type="button" aria-label="Element löschen">×</button><i class="resize-handle nw"></i><i class="resize-handle ne"></i><i class="resize-handle sw"></i><i class="resize-handle se"></i>':''}</div>`;}).join('');
+  canvas.innerHTML = slideDecorationsMarkup() + state.editorElements.map((element, index) => {const previewElement=previewTypography(element),selected=state.selectedEditorElementIds.has(element.id),missingEventField=element.type==='event-field'&&!eventFieldPresentation(selectedEvent,element.field,element).present,missingDynamicImage=element.type==='image'&&!element.src&&!selectedEvent?.imageUrl,missingEventBlock=element.type==='event'&&!selectedEvent,background=missingEventField||missingDynamicImage||missingEventBlock?'transparent':element.background||'transparent';return`<div class="canvas-element type-${escapeHtml(element.type)} ${selected ? 'is-selected' : ''} ${element.locked?'is-locked':''}" data-editor-element="${escapeHtml(element.id)}" ${automaticFontAttributes(previewElement)} style="left:${element.x}%;top:${element.y}%;width:${element.width}%;height:${element.height}%;z-index:${index + 1};background:${escapeHtml(background)};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(previewElement,24)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Number(element.padding || 0)}px;border-radius:${Number(element.radius || 0)}px;font-weight:${Number(element.fontWeight || 400)};line-height:${Number(element.lineHeight || 1.08)};letter-spacing:${Number(element.letterSpacing || 0)}px">${editorElementMarkup(previewElement)}</div>`;}).join('');
   KioskyMediaPlacement.hydrate(canvas);
   hydrateWeatherElements(canvas);
   scheduleAutomaticTextFit(canvas);
 
-  canvas.querySelectorAll('.canvas-element').forEach(node => {
-    node.addEventListener('click', event => {
-      event.stopPropagation();
-      if(event.shiftKey){if(state.selectedEditorElementIds.has(node.dataset.editorElement))state.selectedEditorElementIds.delete(node.dataset.editorElement);else state.selectedEditorElementIds.add(node.dataset.editorElement);}else state.selectedEditorElementIds=new Set([node.dataset.editorElement]);
-      state.selectedEditorElementId = state.selectedEditorElementIds.has(node.dataset.editorElement)?node.dataset.editorElement:[...state.selectedEditorElementIds][0]||null;
-      state.showSlideSettings = false;
-      renderEditorCanvas();
+  canvas.querySelectorAll('.canvas-element').forEach(node=>{
+    const element=state.editorElements.find(item=>item.id===node.dataset.editorElement);
+    node.addEventListener('pointerdown',event=>{
+      if(event.button!==0||event.isPrimary===false||state.editorGestureCancel||slideDialog.classList.contains('is-previewing')||event.target.closest('[contenteditable="true"],button,input,textarea,select'))return;
+      selectEditorElement(element.id,event.shiftKey||event.ctrlKey||event.metaKey);
+      if(state.selectedEditorElementIds.has(element.id))startEditorTransform(event,element,'move');
     });
-    node.querySelector('.canvas-delete-button')?.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();pushEditorHistory();deleteSelectedEditorElements();});
-    node.querySelectorAll('.resize-handle').forEach(resize=>resize.addEventListener('pointerdown',event=>{event.preventDefault();event.stopPropagation();const element=state.editorElements.find(item=>item.id===node.dataset.editorElement);if(element.locked)return;pushEditorHistory();const rect=canvas.getBoundingClientRect(),startX=event.clientX,startY=event.clientY,start={x:element.x,y:element.y,width:element.width,height:element.height},west=resize.classList.contains('nw')||resize.classList.contains('sw'),north=resize.classList.contains('nw')||resize.classList.contains('ne');const applyMove=createFrameTask(moveEvent=>{const dx=(moveEvent.clientX-startX)/rect.width*100,dy=(moveEvent.clientY-startY)/rect.height*100,newWidth=Math.max(5,Math.min(west?start.width-dx:start.width+dx,west?start.x+start.width:100-start.x)),newHeight=Math.max(5,Math.min(north?start.height-dy:start.height+dy,north?start.y+start.height:100-start.y));element.width=newWidth;element.height=newHeight;if(west)element.x=start.x+start.width-newWidth;if(north)element.y=start.y+start.height-newHeight;node.style.left=`${element.x}%`;node.style.top=`${element.y}%`;node.style.width=`${element.width}%`;node.style.height=`${element.height}%`;});const move=moveEvent=>{if(moveEvent.pointerId===event.pointerId)applyMove(moveEvent);};const stop=stopEvent=>{if(stopEvent.pointerId!==event.pointerId)return;applyMove.flush();window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',stop);window.removeEventListener('pointercancel',stop);renderEditorCanvas();scheduleSlideAutosave();};window.addEventListener('pointermove',move);window.addEventListener('pointerup',stop);window.addEventListener('pointercancel',stop);}));
-    const editable = node.querySelector('[contenteditable]');
-    if (editable) editable.addEventListener('input', () => {
-      const element = state.editorElements.find(item => item.id === node.dataset.editorElement);
-      pushEditorHistory();
-      element.text = editable.textContent;
-      document.querySelector('#property-text').value = element.text;
-      scheduleSlideAutosave();
-    });
-    const handle = node.querySelector('.canvas-element-handle');
-    handle.addEventListener('pointerdown', event => {
-      event.preventDefault(); event.stopPropagation();
-      const element = state.editorElements.find(item => item.id === node.dataset.editorElement);
-      if(element.locked){showToast('Dieses Vorlagenelement ist gesperrt. Entsperre es in den Eigenschaften.');return;}
-      if(!state.selectedEditorElementIds.has(element.id))state.selectedEditorElementIds=new Set([element.id]);state.selectedEditorElementId = element.id;pushEditorHistory();
-      const selected=state.editorElements.filter(item=>state.selectedEditorElementIds.has(item.id)&&!item.locked),origins=new Map(selected.map(item=>[item.id,{x:item.x,y:item.y}]));
-      const canvasRect = canvas.getBoundingClientRect();
-      const startX=event.clientX,startY=event.clientY,pointerId=event.pointerId;
-      const geometry=KioskyEditorAlignment,movingIds=new Set(selected.map(item=>item.id));
-      const visualBox=item=>{const bounds=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`).getBoundingClientRect();return{x:(bounds.left-canvasRect.left)/canvasRect.width*100,y:(bounds.top-canvasRect.top)/canvasRect.height*100,width:bounds.width/canvasRect.width*100,height:bounds.height/canvasRect.height*100};};
-      const box=geometry.bounds(selected.map(visualBox));
-      const others=state.editorElements.filter(item=>!movingIds.has(item.id)).map(visualBox).filter(box=>box.width>0&&box.height>0);
-      try{handle.setPointerCapture(pointerId);}catch{}
-      const applyMove = createFrameTask(moveEvent => {
-        const movement=geometry.move(box,others,(moveEvent.clientX-startX)/canvasRect.width*100,(moveEvent.clientY-startY)/canvasRect.height*100,8/canvasRect.width*100,8/canvasRect.height*100,document.querySelector('#editor-snap-enabled').checked&&!moveEvent.altKey);
-        selected.forEach(item=>{const origin=origins.get(item.id);item.x=origin.x+movement.dx;item.y=origin.y+movement.dy;const selectedNode=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`);selectedNode.style.left=`${item.x}%`;selectedNode.style.top=`${item.y}%`;});
-        showEditorSnapGuides(canvas,movement.guides);syncEditorProperties();
-      });
-      const move=moveEvent=>{if(moveEvent.pointerId!==pointerId)return;moveEvent.preventDefault();applyMove(moveEvent);};
-      const stop = stopEvent => {if(stopEvent.pointerId!==pointerId)return;applyMove.flush();window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',stop);window.removeEventListener('pointercancel',stop);renderEditorCanvas();scheduleSlideAutosave();};
-      window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',stop);window.addEventListener('pointercancel',stop);
-    });
-    const rotateHandle = node.querySelector('.canvas-rotate-handle');
-    rotateHandle.addEventListener('pointerdown', event => {
-      event.preventDefault(); event.stopPropagation();
-      const element = state.editorElements.find(item => item.id === node.dataset.editorElement);
-      if (element.locked) return;
-      pushEditorHistory();
-      const bounds = node.getBoundingClientRect(), centerX = bounds.left + bounds.width / 2, centerY = bounds.top + bounds.height / 2;
-      const applyMove = createFrameTask(moveEvent => { element.rotation = Math.round(Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX) * 180 / Math.PI + 90); node.style.transform = `rotate(${element.rotation}deg)`; document.querySelector('#property-rotation').value = element.rotation; });
-      const move=moveEvent=>{if(moveEvent.pointerId===event.pointerId)applyMove(moveEvent);};
-      const stop = stopEvent => { if(stopEvent.pointerId!==event.pointerId)return;applyMove.flush();window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop);window.removeEventListener('pointercancel',stop);renderEditorCanvas(); scheduleSlideAutosave(); };
-      window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop);window.addEventListener('pointercancel',stop);
-    });
+    node.addEventListener('click',event=>{event.stopPropagation();if(event.detail===0)selectEditorElement(element.id,event.shiftKey||event.ctrlKey||event.metaKey);});
+    const editable=node.querySelector('[contenteditable]');
+    if(editable){
+      node.addEventListener('dblclick',event=>{event.stopPropagation();selectEditorElement(element.id);editable.contentEditable='true';editable.focus();});
+      editable.addEventListener('input',()=>{pushEditorHistory();element.text=editable.textContent;document.querySelector('#property-text').value=element.text;scheduleSlideAutosave();});
+      editable.addEventListener('blur',()=>{editable.contentEditable='false';});
+    }
+    node.querySelectorAll('img,video').forEach(media=>{media.draggable=false;});
   });
-  canvas.onclick = () => { state.selectedEditorElementId = null;state.selectedEditorElementIds=new Set(); state.showSlideSettings = true; renderEditorCanvas(); };
+  canvas.onclick=event=>{if(event.target!==canvas)return;state.selectedEditorElementId=null;state.selectedEditorElementIds=new Set();state.showSlideSettings=true;renderEditorCanvas();};
+  renderEditorTransformControls(canvas);
   renderEditorLayers();
   syncEditorProperties();
 }
@@ -4374,18 +4434,20 @@ function syncEditorProperties() {
   if (!element) return;
   document.querySelector('#property-element-type').textContent = slideTypeLabels[element.type] || 'Element';
   document.querySelectorAll('[data-property-section]').forEach(section => { section.hidden = section.dataset.propertySection !== element.type && !(section.dataset.propertySection === 'text' && ['event','event-field','ticker','countdown','weather'].includes(element.type)); });
-  document.querySelector('#property-text-field').hidden = ['ticker', 'weather'].includes(element.type);
+  document.querySelector('#property-text-field').hidden = ['ticker','weather','event','event-field'].includes(element.type);
   document.querySelector('#property-text').value = element.text || '';
   document.querySelector('#property-font-size').value = textFontPoints(element,24);
   document.querySelector('#property-responsive-text').checked=Boolean(element.responsiveText);
   document.querySelector('#property-auto-font-size').checked=Boolean(element.autoFontSize);
   document.querySelector('#property-font-size').disabled=Boolean(element.autoFontSize);
   document.querySelector('#property-color').value = element.color || '#ffffff';
-  document.querySelector('#property-event').value = element.event || 'Sommerkonzert';
+  document.querySelector('#property-event').value = element.event || '';
+  document.querySelector('#property-event-heading').value=element.eventHeading??'Herzlich willkommen zu';
+  const details=new Set(eventDetailsForElement(element));document.querySelectorAll('[data-event-detail]').forEach(input=>{input.checked=details.has(input.dataset.eventDetail);});
   document.querySelector('#property-event-field').value = element.field || 'title';
   document.querySelector('#property-event-prefix').value = element.prefix || '';
   document.querySelector('#property-event-fallback').value = element.fallback || '';
-  document.querySelector('#property-event-locked').checked = element.locked !== false;
+  document.querySelector('#property-event-locked').checked = Boolean(element.locked);
   const selectedAsset = state.mediaAssets.find(asset => asset.id === element.mediaAssetId);
   document.querySelector('#property-image-selection').textContent = element.type === 'image' ? selectedAsset?.name || (element.src ? 'Bestehendes Bild · bitte bei Bedarf neu zuordnen' : 'Noch kein Bild ausgewählt') : '';
   document.querySelector('#property-video-selection').textContent = element.type === 'video' ? selectedAsset?.name || (element.src ? 'Bestehendes Video · bitte bei Bedarf neu zuordnen' : 'Noch kein Video ausgewählt') : '';
@@ -4531,7 +4593,7 @@ document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEve
 }));
 document.querySelectorAll('[data-command]').forEach(button => button.addEventListener('click', () => {
   const editable = document.querySelector('.canvas-element.is-selected [contenteditable]');
-  if (editable) { editable.focus(); document.execCommand(button.dataset.command); }
+  if (editable) { editable.contentEditable='true';editable.focus(); document.execCommand(button.dataset.command); }
 }));
 document.querySelectorAll('[data-align]').forEach(button => button.addEventListener('click', () => updateSelectedElement('align', button.dataset.align)));
 document.addEventListener('keydown',event=>{if(!slideDialog.open||document.querySelector('#slide-tags-dialog').open||document.querySelector('#content-package-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
@@ -4561,6 +4623,8 @@ document.querySelector('#editor-layer-list').addEventListener('click', event => 
   const row = event.target.closest('[data-layer-id]');
   if (!row) return;
   const id = row.dataset.layerId;
+  if(event.target.closest('[data-layer-delete]')){deleteEditorElement(id);return;}
+  if(event.target.closest('[data-layer-lock]')){toggleEditorElementLock(id);return;}
   if (select) {
     if (event.metaKey || event.ctrlKey || event.shiftKey) {
       state.selectedEditorElementIds.has(id) ? state.selectedEditorElementIds.delete(id) : state.selectedEditorElementIds.add(id);
@@ -4583,8 +4647,10 @@ document.querySelector('#editor-layer-list').addEventListener('click', event => 
   }
 });
 
+document.querySelectorAll('[data-event-detail]').forEach(input=>input.addEventListener('change',()=>{const element=selectedEditorElement();if(element?.type!=='event')return;pushEditorHistory();element.eventDetails=[...document.querySelectorAll('[data-event-detail]:checked')].map(input=>input.dataset.eventDetail);renderEditorCanvas();scheduleSlideAutosave();}));
+
 const propertyBindings = [
-  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value],
+  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
   ['property-x', 'x', Number], ['property-y', 'y', Number], ['property-width', 'width', Number], ['property-height', 'height', Number], ['property-background', 'background', value => value],

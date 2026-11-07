@@ -1,7 +1,6 @@
-## [3.23.0] – 2026-11-07
+## [3.24.0] – 2026-11-07
 
-- Veranstaltungswerbung direkt und mengenbegrenzt in die Werbekanäle einspielen, ohne Bibliotheks-Slides oder Versionen anzulegen; alle manuellen Veranstaltungsarten berücksichtigen.
-- Unabhängig bearbeitbare Werbevorlagen für Quer- und Hochformat, vorhandene Kanalzuweisungen und getaggte Werbung erhalten; nach Ablauf weitere Termine nachrücken lassen.
-- Website-Kalender in WordPress und TYPO3 um einzeln freigebbare Eventfelder, Bilder, Layoutwechsel und Suche über alle Termine erweitern; ausgeblendete Felder aus öffentlichen Daten entfernen.
-- Veranstaltungsbilder per externer URL oder Medienauswahl mit Upload setzen; in WordPress die native Mediathek und in TYPO3 den nativen FAL-Dateibrowser in allen Medienauswahldialogen verwenden.
-- Lange Kalenderlisten schrittweise laden, Werbeinhalte begrenzt erzeugen und virtuellen Player-Status ohne Bibliothekseinträge speichern (Standalone-Migration 042).
+- Alle Slide-Elementtypen direkt mit Maus oder Touch verschieben und über acht sichtbare Eck-/Kantengriffe skalieren; Größenänderungen berücksichtigen Drehungen und überlagerte Inhalte.
+- Jede Ebene gezielt über die Elementliste löschen, sperren und entsperren. Neue Veranstaltungsfelder sind beweglich; vorhandene Sperren und Rückgängig bleiben erhalten.
+- Abgebrochene Gesten zurücksetzen und Bewegungen als einzelne Rückgängig-Schritte behandeln; Text per Doppelklick bearbeiten.
+- Eventdaten mit frei bearbeitbarer Überschrift und einzeln auswählbaren Veranstaltungsdetails versehen; bestehende Darstellungen sowie gemeinsame Vorlagen-/Player-Ausgabe erhalten.

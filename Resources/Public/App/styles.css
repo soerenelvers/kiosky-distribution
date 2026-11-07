@@ -1591,3 +1591,39 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .event-image-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .event-image-preview { color:var(--muted); font-size:.75rem; }
 .event-image-preview img { display:block; width:auto; max-width:100%; max-height:180px; margin-top:8px; object-fit:contain; }
+
+/* Editor controls are above all content layers, including embedded websites. */
+.slide-editor-canvas .canvas-element { touch-action:none; cursor:move; }
+.slide-editor-canvas .canvas-element.is-locked { cursor:default; }
+.slide-editor-canvas .canvas-element iframe { pointer-events:none; }
+.slide-editor-canvas .canvas-element img,.slide-editor-canvas .canvas-element video { -webkit-user-drag:none; user-select:none; }
+.slide-editor-canvas [contenteditable="false"] { user-select:none; cursor:move; }
+.slide-editor-canvas [contenteditable="true"] { user-select:text; cursor:text; touch-action:auto; }
+.editor-transform-controls { position:absolute; z-index:2000; pointer-events:none; transform-origin:center; outline:1px solid var(--accent-light); }
+.editor-transform-controls .resize-handle { position:absolute; display:block; width:18px; height:18px; padding:0; min-width:0; min-height:0; border:2px solid #fff; border-radius:4px; background:var(--accent-dark); pointer-events:auto; touch-action:none; }
+.editor-transform-controls .resize-handle::before { content:""; position:absolute; inset:-7px; }
+.editor-transform-controls .nw { left:0; top:0; cursor:nwse-resize; }.editor-transform-controls .ne { right:0; top:0; cursor:nesw-resize; }
+.editor-transform-controls .sw { left:0; bottom:0; cursor:nesw-resize; }.editor-transform-controls .se { right:0; bottom:0; cursor:nwse-resize; }
+.editor-transform-controls .n { left:calc(50% - 9px); top:0; cursor:ns-resize; }.editor-transform-controls .s { left:calc(50% - 9px); bottom:0; cursor:ns-resize; }
+.editor-transform-controls .w { left:0; top:calc(50% - 9px); cursor:ew-resize; }.editor-transform-controls .e { right:0; top:calc(50% - 9px); cursor:ew-resize; }
+.editor-transform-toolbar { position:absolute; z-index:2001; display:flex; gap:2px; padding:2px; border-radius:6px; background:#fff; box-shadow:0 2px 8px #0003; touch-action:none; }
+.editor-transform-toolbar button { position:static; display:block; margin:0; width:40px; height:36px!important; min-width:0; min-height:0; border:0; border-radius:4px!important; color:var(--ink); background:var(--accent-light); cursor:pointer; }
+.editor-transform-toolbar .canvas-element-handle { cursor:move; }.editor-transform-toolbar .canvas-rotate-handle { cursor:grab; }
+.editor-transform-toolbar .canvas-delete-button { color:#fff; background:#a5282c; }
+.editor-layer-order { grid-template-columns:repeat(2,32px); gap:2px; }
+.editor-layer-order button { width:32px; height:32px; }
+.editor-layer-order [data-layer-delete] { color:#a5282c; font-size:1.1rem; }
+.event-detail-options { display:grid; gap:6px; margin:10px 0; padding:10px; border:1px solid var(--line); border-radius:6px; }
+.event-free-heading { white-space:pre-wrap; }
+@media(pointer:coarse){.editor-layer-order {grid-template-columns:repeat(2,44px)}.editor-layer-order button {width:44px;height:44px}.editor-transform-controls .resize-handle {width:24px;height:24px}.editor-transform-controls .resize-handle::before {inset:-10px}}
+.editor-transform-controls.is-small {outline:0}
+.editor-transform-controls .n,.editor-transform-controls .s {left:50%;transform:translateX(-50%)}
+.editor-transform-controls .w,.editor-transform-controls .e {top:50%;transform:translateY(-50%)}
+.editor-transform-controls {z-index:2002}
+.slide-editor-dialog.is-previewing .editor-transform-controls,.slide-editor-dialog.is-previewing .editor-transform-toolbar {display:none!important}
+.canvas-event-content .event-detail-line,.player-event-block .event-detail-line {white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:1100px){
+ .slide-editor-dialog .editor-tools,.slide-editor-dialog .editor-layers,.slide-editor-dialog .editor-properties {pointer-events:none}
+ .slide-editor-dialog.mobile-panel-tools .editor-tools,.slide-editor-dialog.mobile-panel-layers .editor-layers,.slide-editor-dialog.mobile-panel-properties .editor-properties {pointer-events:auto}
+}
+@media(pointer:coarse){.event-detail-options .toggle-label {min-height:44px}}

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.23.0-20261107123505%2Ba412790a">
+  <link rel="stylesheet" href="styles.css?v=3.24.0-20261107150145%2B3c1f1224">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1396,7 +1396,7 @@
           <div class="editor-stage-wrap">
             <div class="slide-editor-canvas" id="slide-editor-canvas" data-ratio="landscape" aria-label="Slide-Arbeitsfläche"></div>
           </div>
-          <p class="editor-help">Elemente verschieben und an Kanten oder Mittellinien einrasten. Alt gedrückt halten zum freien Verschieben. Text kann direkt auf der Slide bearbeitet werden.</p>
+          <p class="editor-help">Elemente direkt ziehen; Größe über Eck- und Kantengriffe ändern. Alt verhindert Einrasten. Text per Doppelklick oder im Eigenschaftenfeld bearbeiten. Gesperrte Elemente in der Liste entsperren.</p>
         </section>
 
         <aside class="editor-layers" aria-label="Ebenen">
@@ -1427,8 +1427,8 @@
             <label class="toggle-label" data-property-section="text"><input id="property-responsive-text" type="checkbox"> Responsive · Schrift proportional zur Slide skalieren</label>
             <p class="property-note" data-property-section="text">Punktgröße im Entwurf (1920 × 1080 bzw. 1080 × 1920). Responsive erhält die Proportionen in Vorschau und Player – auch bei 4K.</p>
             <label class="toggle-label" data-property-section="text"><input id="property-auto-font-size" type="checkbox"> Schrift automatisch an das Textfeld anpassen</label>
-            <label class="form-field" data-property-section="event"><span>Veranstaltung</span><select id="property-event"><option>Sommerkonzert</option><option>Jazz im Foyer</option><option>Kindertheater</option><option>Sinfonieorchester</option></select></label>
-            <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox" checked> Position in der Vorlage sperren</label></div>
+            <div data-property-section="event"><label class="form-field"><span>Freitext / Überschrift</span><textarea id="property-event-heading" rows="3" maxlength="2000" placeholder="Eigener Text; leer lassen zum Ausblenden"></textarea></label><label class="form-field"><span>Vorschautitel ohne Event</span><input id="property-event" placeholder="Veranstaltung"></label><fieldset class="event-detail-options"><legend>Angezeigte Details</legend><label class="toggle-label"><input type="checkbox" data-event-detail="title"> Titel</label><label class="toggle-label"><input type="checkbox" data-event-detail="subtitle"> Untertitel</label><label class="toggle-label"><input type="checkbox" data-event-detail="date"> Datum</label><label class="toggle-label"><input type="checkbox" data-event-detail="admissionStart"> Einlass</label><label class="toggle-label"><input type="checkbox" data-event-detail="eventStart"> Beginn</label><label class="toggle-label"><input type="checkbox" data-event-detail="breakStart"> Pause von</label><label class="toggle-label"><input type="checkbox" data-event-detail="breakEnd"> Pause bis</label><label class="toggle-label"><input type="checkbox" data-event-detail="eventEnd"> Ende</label><label class="toggle-label"><input type="checkbox" data-event-detail="setupStart"> Aufbau</label><label class="toggle-label"><input type="checkbox" data-event-detail="venue"> Spielort</label><label class="toggle-label"><input type="checkbox" data-event-detail="room"> Raum / Saal</label><label class="toggle-label"><input type="checkbox" data-event-detail="organizer"> Veranstalter</label><label class="toggle-label"><input type="checkbox" data-event-detail="eventType"> Kategorie</label><label class="toggle-label"><input type="checkbox" data-event-detail="remainingTickets"> Ticketstatus</label><label class="toggle-label"><input type="checkbox" data-event-detail="boxOfficeOpenAt"> Abendkasse</label><label class="toggle-label"><input type="checkbox" data-event-detail="publicNotes"> Öffentlicher Hinweis</label></fieldset><p class="property-note">Die Daten stammen aus der Event-Auswahl dieser Slide. Fehlende Werte bleiben unsichtbar. Die Auswahl gilt auch für Player und Vorlagen.</p></div>
+            <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox"> Position in der Vorlage sperren</label></div>
             <div data-property-section="image" class="editor-media-property"><button class="media-library-picker" id="property-image-library" type="button"><span>▦</span><strong>Bild aus Mediendatenbank wählen</strong><small id="property-image-selection">Noch kein Bild ausgewählt</small></button><p class="property-note">Neue Bilder werden in der Mediendatenbank hochgeladen und dort einem Ordner zugeordnet.</p></div>
             <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><p class="property-note">Neue Videos werden zentral in der Mediendatenbank hochgeladen und gepflegt.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label></div>
             <fieldset id="media-placement-properties" class="editor-media-placement" hidden>
@@ -1707,10 +1707,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.23.0-20261107123505%2Ba412790a"></script>
-  <script src="player/fullscreen-control.js?v=3.23.0-20261107123505%2Ba412790a"></script>
-  <script src="player/media-placement.js?v=3.23.0-20261107123505%2Ba412790a"></script>
-  <script src="player/editor-alignment.js?v=3.23.0-20261107123505%2Ba412790a"></script>
-  <script src="app.js?v=3.23.0-20261107123505%2Ba412790a"></script>
+  <script src="runtime-config.js?v=3.24.0-20261107150145%2B3c1f1224"></script>
+  <script src="player/fullscreen-control.js?v=3.24.0-20261107150145%2B3c1f1224"></script>
+  <script src="player/media-placement.js?v=3.24.0-20261107150145%2B3c1f1224"></script>
+  <script src="player/editor-alignment.js?v=3.24.0-20261107150145%2B3c1f1224"></script>
+  <script src="app.js?v=3.24.0-20261107150145%2B3c1f1224"></script>
 </body>
 </html>

@@ -12,7 +12,7 @@ Die Einstellungen liegen additiv im Elementdokument: `mediaFit` (`cover`, `conta
 
 ## Automatische Hilfslinien
 
-Beim Verschieben über den Verschiebegriff rasten Elemente an den Slidekanten, der horizontalen/vertikalen Mitte sowie Kanten und Mittelpunkten anderer Elemente ein. Passende Linien werden während des Verschiebens angezeigt und anschließend entfernt. Die Toleranz beträgt acht Bildschirm-Pixel je Achse, unabhängig von Slideformat und Editorgröße.
+Beim direkten Ziehen eines Elements oder Verschieben über den Verschiebegriff rasten Elemente an den Slidekanten, der horizontalen/vertikalen Mitte sowie Kanten und Mittelpunkten anderer Elemente ein. Passende Linien werden während des Verschiebens angezeigt und anschließend entfernt. Die Toleranz beträgt acht Bildschirm-Pixel je Achse, unabhängig von Slideformat und Editorgröße.
 
 Mehrfachauswahlen bleiben beim Verschieben zusammen. Die tatsächlichen gerenderten Begrenzungen einschließlich Drehung und CSS-Mindestgrößen werden berücksichtigt. Gesperrte Elemente bleiben stehen und können als Ausrichtungsreferenz dienen. **Einrasten** in der Editorleiste schaltet die Funktion aus oder ein; diese Browserpräferenz wird lokal gespeichert. **Alt** erlaubt für eine Bewegung freies Positionieren. Auf Touchgeräten stehen derselbe Verschiebegriff und der Einrasten-Schalter zur Verfügung. Numerische Positionsfelder und Tastaturverschiebung bleiben für genaue Korrekturen frei einstellbar. Das Einrasten gilt für Verschiebungen, nicht für Größenänderungen.
 
@@ -21,3 +21,36 @@ Hilfslinien werden nur als temporäre Editoroberfläche dargestellt und weder im
 ## Verifikation
 
 `pnpm test` prüft Standardwerte, Wertebereiche, Mittellinien/Kanten, Alt-Ausnahme, Fangabstand und gedrehte Gruppen. Nach `pnpm build` führt `python tests/editor-media-alignment-browser.py` die Oberfläche über Standalone-, WordPress- und TYPO3-Transport mit echten Bild-/Videodimensionen aus. Dafür sind Playwright, Pillow, FFmpeg und Chromium unter `/usr/bin/chromium` nötig. Die Prüfung umfasst Bildpixel, Originalgröße, Video-Wiedergabeposition, Speichern, Miniaturen, Kanalvorschau, Player sowie Maus-/Touch-Ereignisse und Smartphone-/Tablet-Layouts. Die nativen CMS-Routen werden zusätzlich durch die verpflichtende CMS-CI geprüft.
+
+
+## Elemente verschieben, skalieren und löschen ab 3.24.0
+
+Alle Elementtypen lassen sich direkt auf der Arbeitsfläche ziehen. Auswählen zeigt
+acht Eck-/Kantengriffe für Breite und Höhe. Die Griffe liegen über den Inhalten,
+auch bei überlappenden Ebenen und eingebetteten Webseiten; kleine Elemente erhalten
+einen größeren Griffbereich. Drehungen werden beim Skalieren berücksichtigt.
+Die schwebende Leiste bietet Verschieben, Drehen und gezieltes Löschen. Auf
+Touchgeräten funktionieren dieselben Gesten. Abgebrochene Gesten stellen die
+ursprüngliche Geometrie wieder her; eine Bewegung zählt als ein Rückgängig-Schritt.
+
+Jede Zeile der Elementliste bietet Löschen, Sperren/Entsperren und Ebenenreihenfolge.
+Der gezielte Löschknopf entfernt genau diese Ebene, auch wenn sie gesperrt ist.
+Rückgängig stellt sie wieder her. Eine Sperre schützt Verschieben, Größe und Drehung;
+vorhandene Sperren bleiben erhalten. Neue Veranstaltungsfelder starten ungesperrt.
+Text lässt sich per Doppelklick direkt bearbeiten oder im Eigenschaftenfeld ändern.
+
+## Eventdaten mit Freitext und ausgewählten Details
+
+Beim Element „Eventdaten“ ist „Freitext / Überschrift“ frei beschreibbar. Ein leeres
+Feld blendet die Überschrift aus. Über „Angezeigte Details“ werden Titel, Untertitel,
+Datum, Einlass, Beginn, Pausenzeiten, Ende, Aufbau, Spielort, Raum, Veranstalter,
+Kategorie, Ticketstatus, Abendkasse und öffentlicher Hinweis einzeln gewählt.
+Nicht vorhandene Werte werden bei dieser ausdrücklichen Auswahl ausgelassen.
+Mehrzeiliger Freitext und öffentliche Hinweise bleiben mehrzeilig darstellbar.
+
+Die Daten stammen weiterhin aus der Event-Auswahl der Slide (verknüpft, nächstes,
+aktuelles oder heutiges Event). Die Auswahl bleibt beim Speichern, Duplizieren und
+in Vorlagen erhalten und wird in Vorschau, Miniatur und Player gleich ausgewertet.
+Bestehende Eventblöcke behalten ihren bisherigen Begrüßungstext und Zeitblock,
+bis ihre Einstellungen verändert werden. Die zusätzlichen Dokumentfelder
+`eventHeading` und `eventDetails` benötigen keine Datenbankmigration.
