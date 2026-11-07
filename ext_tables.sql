@@ -50,7 +50,17 @@ CREATE TABLE tt_content (
   tx_kiosky_cal_show_status smallint(5) NOT NULL default '-1',
   tx_kiosky_cal_show_tickets smallint(5) NOT NULL default '-1',
   tx_kiosky_cal_show_remaining_tickets smallint(5) NOT NULL default '-1',
-  tx_kiosky_cal_show_details smallint(5) NOT NULL default '-1'
+  tx_kiosky_cal_show_details smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_subtitle smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_admission smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_break smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_end_time smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_image smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_public_notes smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_box_office smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_setup_time smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_show_event_number smallint(5) NOT NULL default '-1',
+  tx_kiosky_cal_allow_view_switch smallint(5) NOT NULL default '-1'
 );
 
 CREATE TABLE tx_kiosky_domain_model_location (

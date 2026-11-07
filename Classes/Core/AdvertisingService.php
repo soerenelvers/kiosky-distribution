@@ -11,7 +11,7 @@ final class AdvertisingService
 {
     private const DEFAULTS = ['enabled'=>false,'maximumSlides'=>15,'maximumEvents'=>15,'eventTypes'=>[],'eventTypeDefaultMedia'=>[],
         'durationSeconds'=>12,'showDate'=>false,'showTime'=>true,'showSeconds'=>false,'hour12'=>false,
-        'channelName'=>'Werbung','locationIds'=>[]];
+        'channelName'=>'Werbung','locationIds'=>[],'templateLandscapeId'=>null,'templatePortraitId'=>null];
 
     public static function settings(array $state): array
     {
@@ -28,11 +28,15 @@ final class AdvertisingService
     public static function saveSettings(array &$state, array $input): void
     {
         if(isset($input['maximumSlides']) && (filter_var($input['maximumSlides'],FILTER_VALIDATE_INT)===false || (int)$input['maximumSlides']<1 || (int)$input['maximumSlides']>500))throw new RuntimeException('Slides je Werbekanal müssen zwischen 1 und 500 liegen.',422);
+        $previous=self::settings($state);
+        $legacyChanged=!empty($input['templateId'])&&$input['templateId']!==($previous['templateId'] ?? null)&&!array_key_exists('templateLandscapeId',$input)&&!array_key_exists('templatePortraitId',$input);
+        foreach(['templateId','templateLandscapeId','templatePortraitId'] as $key)if(!array_key_exists($key,$input))$input[$key]=$previous[$key] ?? null;
+        if($legacyChanged)$input['templateLandscapeId']=$input['templatePortraitId']=$input['templateId'];
         $settings = self::settings(['advertisingSettings'=>array_intersect_key($input,self::DEFAULTS + ['templateId'=>null])]);
         foreach (['enabled','showDate','showTime','showSeconds','hour12'] as $key) {
             if (isset($input[$key]) && !is_bool($input[$key])) throw new RuntimeException('Ungültige Werbeeinstellung: '.$key,422);
         }
-        if (!empty($settings['templateId'])) {
+        if ((empty($settings['templateLandscapeId'])||empty($settings['templatePortraitId'])) && !empty($settings['templateId'])) {
             $template = self::find($state['templates'], (string)$settings['templateId']);
             if (!$template || ($template['status'] ?? '') === 'archived' || !empty($template['deletedAt'])) throw new RuntimeException('Die ausgewählte Werbevorlage wurde nicht gefunden.',422);
         }
@@ -46,6 +50,7 @@ final class AdvertisingService
         }
         foreach ($settings['locationIds'] as $id) if (!self::find($state['locations'],$id)) throw new RuntimeException('Ein ausgewählter Standort wurde nicht gefunden.',422);
         $settings['eventTypeDefaultMedia'] = $media;
+        foreach(['templateLandscapeId','templatePortraitId'] as $field)if(!empty($settings[$field])){ $t=self::find($state['templates'],(string)$settings[$field]);if(!$t||!empty($t['deletedAt'])||($t['status'] ?? '')==='archived')throw new RuntimeException('Die ausgewählte Werbevorlage wurde nicht gefunden.',422); }
         $state['advertisingSettings'] = $settings;
     }
 
@@ -54,13 +59,14 @@ final class AdvertisingService
         $settings = self::settings($state);
         $types = self::strings(array_map(static fn(array $event): string => (string)($event['eventType'] ?? ''),$state['events']),10000);
         sort($types,SORT_NATURAL | SORT_FLAG_CASE);
+        $playlists=['landscape'=>self::playlist($state,'landscape'),'portrait'=>self::playlist($state,'portrait')];
         $status = ['settings'=>$settings,'availableEventTypes'=>$types,'eligibleEvents'=>count(self::eligible($state,$settings)),
-            'generatedSlides'=>count(array_filter($state['slides'],static fn(array $slide): bool => str_starts_with($slide['automationKey'] ?? '', 'advertising:event:') && ($slide['status'] ?? '') !== 'archived' && empty($slide['deletedAt'])))];
+            'generatedSlides'=>max(array_map(static fn(array $items):int=>count(array_filter($items,static fn(array $i):bool=>!empty($i['slide']['virtual']))),$playlists))];
         $status['channels'] = [];
-        foreach ($state['channels'] as $channel) if (in_array($channel['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true)) $status['channels'][]=['id'=>$channel['id'],'name'=>$channel['name'],'itemCount'=>count($channel['items'] ?? []),'orientation'=>$channel['orientation']];
+        foreach ($state['channels'] as $channel) if (in_array($channel['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true)) $status['channels'][]=['id'=>$channel['id'],'name'=>$channel['name'],'itemCount'=>count($playlists[$channel['orientation']] ?? []),'orientation'=>$channel['orientation']];
         $status['taggedSlides']=count(array_filter($state['slides'],static fn(array $slide): bool => empty($slide['deletedAt']) && !str_starts_with($slide['automationKey'] ?? '', 'advertising:event:') && self::formats($slide)));
         foreach ($state['channels'] as $channel) if (($channel['automationKey'] ?? '') === 'advertising:channel') {
-            $status['channel'] = ['id'=>$channel['id'],'name'=>$channel['name'],'itemCount'=>count($channel['items'] ?? [])]; break;
+            $status['channel'] = ['id'=>$channel['id'],'name'=>$channel['name'],'itemCount'=>count($playlists['landscape'])]; break;
         }
         if (isset($state['advertisingLastSynchronizedAt'])) $status['lastSynchronizedAt'] = $state['advertisingLastSynchronizedAt'];
         return $status;
@@ -70,63 +76,70 @@ final class AdvertisingService
     public static function synchronize(array &$state, callable $saveSlide, callable $saveChannel, ?callable $saveTemplate = null): array
     {
         $settings = self::settings($state);
-        $events = $settings['enabled'] ? self::eligible($state,$settings) : [];
-        $template = !empty($settings['templateId']) ? self::find($state['templates'],(string)$settings['templateId']) : null;
-        if (($template['status'] ?? '') === 'archived' || !empty($template['deletedAt'])) $template = null;
-        if (!$template && $settings['enabled']) foreach ($state['templates'] as $candidate) if (!empty($candidate['document']['advertisingTemplate']) && empty($candidate['deletedAt']) && ($candidate['status'] ?? '')!=='archived') { $template=$candidate; $settings['templateId']=$template['id']; $state['advertisingSettings']=$settings; break; }
-        if (!$template && $settings['enabled'] && $saveTemplate) {
-            $template = $saveTemplate(['name'=>'Werbung · Veranstaltung','description'=>'Anpassbare Werbevorlage für Querformat und Hochkant. Bild und Eventdaten werden automatisch befüllt.','orientation'=>'auto','status'=>'active','document'=>self::template()],null);
-            $settings['templateId']=$template['id']; $state['advertisingSettings']=$settings;
-        }
-        $base = $template['document'] ?? self::template();
-        $existing = [];
-        foreach ($state['slides'] as $index=>$slide) if (!empty($slide['automationKey'])) $existing[$slide['automationKey']] = $index;
-        $assets = array_column($state['mediaAssets'],null,'id');
-        $fallbacks = [];
-        foreach ($settings['eventTypeDefaultMedia'] as $type=>$id) if (isset($assets[$id]) && empty($assets[$id]['deletedAt']) && ($assets[$id]['type'] ?? '') === 'image') $fallbacks[self::normalizeType((string)$type)] = $assets[$id];
-        $active = []; $slideIds = [];
-        foreach ($events as $event) {
-            $key = 'advertising:event:'.$event['id']; $active[$key] = true;
-            $document = $base;
-            $fallback = $fallbacks[self::normalizeType((string)($event['eventType'] ?? ''))] ?? null;
-            $hasImage = !empty($event['imageUrl']);
-            $document['elements'] = self::elements($document['elements'] ?? [],$settings,$fallback,$hasImage);
-            foreach (($document['responsiveLayouts'] ?? []) as $orientation=>$layout) {
-                if (is_array($layout)) $document['responsiveLayouts'][$orientation] = self::elements($layout,$settings,$fallback,$hasImage);
+        if($settings['enabled']&&$saveTemplate){
+            $legacy=!empty($settings['templateId'])?self::find($state['templates'],$settings['templateId']):null;
+            foreach(['landscape','portrait'] as $orientation){
+                $field=$orientation==='landscape'?'templateLandscapeId':'templatePortraitId';
+                $template=!empty($settings[$field])?self::find($state['templates'],$settings[$field]):null;
+                if($template&&empty($template['deletedAt'])&&($template['status'] ?? '')!=='archived')continue;
+                $document=$legacy['document'] ?? self::template();
+                $document['elements']=$document['responsiveLayouts'][$orientation] ?? $document['elements'];
+                $document['responsiveLayouts']=[$orientation=>$document['elements']];$document['designOrientation']=$orientation;$document['advertisingTemplate']=$orientation;
+                $created=$saveTemplate(['name'=>'Werbung · '.($orientation==='landscape'?'Querformat':'Hochkant'),'description'=>'Bearbeitbare Vorlage für automatische Veranstaltungswerbung im Kanal.','orientation'=>$orientation,'status'=>'active','document'=>$document],null);
+                $settings[$field]=$created['id'];
             }
-            $document['advertisingConfigHash'] = hash('sha256',json_encode([$document,$settings['showDate'],$settings['showTime'],$settings['showSeconds'],$settings['hour12'],$hasImage,$fallback['id'] ?? null,$fallback['updatedAt'] ?? null],JSON_THROW_ON_ERROR));
-            $body = ['name'=>'Werbung · '.$event['title'],'eventId'=>$event['id'],'orientation'=>'auto','type'=>'event','document'=>$document,'status'=>'published','endsAt'=>$event['eventEnd'] ?? $event['eventStart'] ?? gmdate('c',time()+7*86400),
-                'tags'=>['Werbung','Automatisch','Veranstaltung',...(!empty($event['eventType'])?[$event['eventType']]:[]),'Veranstaltung:'.($event['externalNumber'] ?? $event['id'])],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
-            $index = $existing[$key] ?? null;
-            $current = $index === null ? null : $state['slides'][$index];
-            if (!$current || ($current['document']['advertisingConfigHash'] ?? '') !== $document['advertisingConfigHash']) $saved = $saveSlide($body,$current['id'] ?? null);
-            else {
-                $saved = array_replace($current,array_diff_key($body,['document'=>true]));
-                if ($saved !== $current) $saved['updatedAt'] = gmdate('c');
-                $state['slides'][$index] = $saved;
-            }
-            $slideIds[] = $saved['id'];
+            $state['advertisingSettings']=$settings;
         }
-        foreach ($state['slides'] as &$slide) if (str_starts_with($slide['automationKey'] ?? '', 'advertising:event:') && !isset($active[$slide['automationKey']]) && ($slide['status'] ?? '') !== 'archived') { $slide['status'] = 'archived'; $slide['updatedAt'] = gmdate('c'); }
-        unset($slide);
+        // Keep legacy rows for existing references. New event advertising is never stored as slides.
         foreach ($state['slides'] as &$slide) if (empty($slide['deletedAt']) && self::formats($slide) && empty($slide['endsAt'])) $slide['endsAt'] = gmdate('c',max(time(),strtotime((string)($slide['startsAt'] ?? '')) ?: 0)+7*86400);
         unset($slide);
-        $manual = array_values(array_filter($state['slides'],static fn(array $slide): bool => !str_starts_with($slide['automationKey'] ?? '', 'advertising:event:') && empty($slide['deletedAt']) && empty($slide['archivedAt']) && ($slide['status'] ?? '') === 'published' && self::formats($slide) && (empty($slide['endsAt']) || strtotime($slide['endsAt']) > time()) && (empty($slide['startsAt']) || strtotime($slide['startsAt']) <= time())));
-        usort($manual,static fn(array $a,array $b): int => [($a['endsAt'] ?? ''),$a['id']] <=> [($b['endsAt'] ?? ''),$b['id']]);
-        $generated = array_values(array_filter(array_map(static fn(string $id): ?array => self::find($state['slides'],$id),array_slice($slideIds,0,$settings['maximumEvents'])),static fn(?array $slide): bool => $slide && (empty($slide['endsAt']) || strtotime($slide['endsAt']) > time())));
         foreach (['landscape','portrait'] as $orientation) {
-            $key = $orientation === 'landscape' ? 'advertising:channel' : 'advertising:channel:portrait';
-            $channel = null;
-            foreach ($state['channels'] as $index=>$item) if (($item['automationKey'] ?? '') === $key) { $channel=$item; $channelIndex=$index; break; }
-            if ($settings['enabled']) {
-                $selected = array_slice(array_values(array_filter(array_merge($manual,$generated),static fn(array $slide): bool => in_array($orientation,self::formats($slide),true))),0,$settings['maximumSlides']);
-                $items = array_map(static fn(array $slide): array => ['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit'],$selected);
-                $channelBody = ['name'=>$settings['channelName'].($orientation==='landscape'?' quer':' Hochkant'),'description'=>'Automatisch: aktive Werbe-Tags und Veranstaltungen','status'=>'published','orientation'=>$orientation,'defaultTransition'=>'fade','repeatEnabled'=>true,'items'=>$items,'totalDurationSeconds'=>count($items)*$settings['durationSeconds'],'tags'=>['Werbung','Automatisch',$orientation==='landscape'?'Werbung quer':'Werbung Hochkant'],'locationIds'=>$settings['locationIds'],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
-                if (!$channel || array_replace($channel,$channelBody) !== $channel) $saveChannel($channelBody,$channel['id'] ?? null);
-            } elseif ($channel) $state['channels'][$channelIndex]['status']='paused';
+            $key=$orientation==='landscape'?'advertising:channel':'advertising:channel:portrait';$channel=null;
+            foreach($state['channels'] as $index=>$item)if(($item['automationKey'] ?? '')===$key){$channel=$item;$channelIndex=$index;break;}
+            if($settings['enabled']){
+                $items=array_values(array_filter(self::playlist($state,$orientation),static fn(array $item):bool=>empty($item['slide'])));
+                $body=['name'=>$settings['channelName'].($orientation==='landscape'?' quer':' Hochkant'),'description'=>'Automatisch: Werbe-Tags und virtuelle Veranstaltungswerbung','status'=>'published','orientation'=>$orientation,'defaultTransition'=>'fade','repeatEnabled'=>true,'items'=>$items,'totalDurationSeconds'=>count($items)*$settings['durationSeconds'],'tags'=>['Werbung','Automatisch',$orientation==='landscape'?'Werbung quer':'Werbung Hochkant'],'locationIds'=>$settings['locationIds'],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
+                if(!$channel||array_replace($channel,$body)!==$channel)$saveChannel($body,$channel['id'] ?? null);
+            }elseif($channel)$state['channels'][$channelIndex]['status']='paused';
         }
         $state['advertisingLastSynchronizedAt'] = gmdate('c');
         return self::status($state);
+    }
+
+    public static function playlist(array $state,string $orientation): array
+    {
+        $settings=self::settings($state);if(!$settings['enabled'])return [];
+        $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=time())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>time())));
+        usort($manual,static fn(array $a,array $b):int=>[$a['endsAt'] ?? '',$a['id']]<=>[$b['endsAt'] ?? '',$b['id']]);
+        $remaining=max(0,$settings['maximumSlides']-count($manual));
+        $selected=array_slice(array_merge($manual,$remaining?self::virtualSlides($state,$orientation,$remaining):[]),0,$settings['maximumSlides']);
+        return array_map(static fn(array $s):array=>['slideId'=>$s['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit']+(!empty($s['virtual'])?['slide'=>$s]:[]),$selected);
+    }
+
+    public static function virtualSlides(array $state,string $orientation,?int $limit=null): array
+    {
+        $settings=self::settings($state);if(!$settings['enabled'])return [];
+        $id=$settings[$orientation==='landscape'?'templateLandscapeId':'templatePortraitId'] ?? $settings['templateId'] ?? null;
+        $template=$id?self::find($state['templates'],$id):null;
+        $base=$template&&empty($template['deletedAt'])&&($template['status'] ?? '')!=='archived'?$template['document']:self::template();
+        $assets=array_column($state['mediaAssets'],null,'id');$fallbacks=[];
+        foreach($settings['eventTypeDefaultMedia'] as $type=>$assetId)if(isset($assets[$assetId])&&empty($assets[$assetId]['deletedAt']))$fallbacks[self::normalizeType($type)]=$assets[$assetId];
+        $result=[];
+        foreach(array_slice(self::eligible($state,$settings),0,min($settings['maximumEvents'],$settings['maximumSlides'],$limit ?? $settings['maximumEvents'])) as $event){
+            $document=$base;$fallback=$fallbacks[self::normalizeType($event['eventType'] ?? '')] ?? null;
+            $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl']));
+            $document=array_replace($document,['elements'=>$elements,'responsiveLayouts'=>[$orientation=>$elements],'designOrientation'=>$orientation,'orientation'=>$orientation,'type'=>'event','width'=>$orientation==='portrait'?1080:1920,'height'=>$orientation==='portrait'?1920:1080]);
+            $document['advertisingConfigHash']=hash('sha256',json_encode($document,JSON_THROW_ON_ERROR));
+            $result[]=['id'=>'advertising-event:'.$orientation.':'.$event['id'],'name'=>'Werbung · '.$event['title'],'eventId'=>$event['id'],'orientation'=>$orientation,'type'=>'event','document'=>$document,'status'=>'published','endsAt'=>$event['eventEnd'] ?? $event['eventStart'] ?? null,'tags'=>['Werbung','Veranstaltung',$orientation==='portrait'?'Werbung Hochkant':'Werbung quer'],'locationIds'=>$settings['locationIds'],'virtual'=>true,'automationKey'=>'advertising:event:'.$event['id'],'createdAt'=>$event['createdAt'] ?? '', 'updatedAt'=>$event['updatedAt'] ?? ''];
+        }
+        return $result;
+    }
+
+    public static function channel(array $state,array $channel): array
+    {
+        if(!in_array($channel['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true)||!self::settings($state)['enabled'])return $channel;
+        $channel['items']=self::playlist($state,($channel['automationKey'] ?? '')==='advertising:channel:portrait'?'portrait':'landscape');
+        $channel['totalDurationSeconds']=array_sum(array_column($channel['items'],'durationSeconds'));return $channel;
     }
 
     public static function formats(array $slide): array
@@ -161,7 +174,7 @@ final class AdvertisingService
         $types = array_flip(array_map([self::class,'normalizeType'],$settings['eventTypes']));
         $today = (new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd');
         $events = array_values(array_filter($state['events'],static function(array $event) use ($types,$today): bool {
-            if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || (!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]) && (!empty($event['sourceId']) || self::normalizeType((string)($event['eventType'] ?? ''))!==''))) return false;
+            if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || (!empty($event['sourceId'])&&!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]))) return false;
             $boundary = strtotime((string)($event['eventEnd'] ?? $event['eventStart'] ?? ''));
             return $boundary !== false ? $boundary >= time() : substr(preg_replace('/\D/','',(string)($event['date'] ?? '')),0,8) >= $today;
         }));

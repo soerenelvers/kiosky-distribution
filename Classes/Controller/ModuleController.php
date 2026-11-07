@@ -35,6 +35,8 @@ final readonly class ModuleController
             $apiEndpoint,
             $baseUrl . '/kiosky-player/',
             $request,
+            '',
+            (string)$this->uriBuilder->buildUriFromRoute('wizard_element_browser'),
         );
 
         return new HtmlResponse($html, 200, [

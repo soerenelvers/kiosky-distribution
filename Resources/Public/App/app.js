@@ -1150,6 +1150,7 @@ async function openEventEditor(item = null) {
   document.querySelector('#event-ticket-url').value = item?.ticketUrl || '';
   document.querySelector('#event-remaining-tickets').value = item?.remainingTickets || '';
   document.querySelector('#event-image-url').value = item?.imageUrl || '';
+  renderEventImagePreview();
   document.querySelector('#event-box-office').checked = Boolean(item?.boxOfficeAvailable);
   document.querySelector('#event-box-office-open').value = eventTimeInput(item?.boxOfficeOpenAt);
   document.querySelector('#archive-event-button').hidden = !item || state.currentUser?.role === 'viewer';
@@ -1231,7 +1232,16 @@ function openEventBulkDialog(){
 }
 document.querySelector('#bulk-edit-events').addEventListener('click',openEventBulkDialog);
 document.querySelector('#event-bulk-field').addEventListener('change',renderEventBulkFields);
-document.querySelector('#event-bulk-image-select').addEventListener('click',async()=>{try{await refreshMedia();openMediaLibrary(asset=>{const imageUrl=String(asset.src||'').startsWith('data:image/')?`/media/library/${encodeURIComponent(asset.id)}`:asset.src;document.querySelector('#event-bulk-image-url').value=imageUrl;document.querySelector('#event-bulk-image-preview').innerHTML=`<img src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.name||'Ausgewähltes Veranstaltungsbild')}">`;},'image-only','Veranstaltungsbild für die ausgewählten Termine auswählen oder hochladen');}catch(error){showToast(error.message);}});
+function renderEventImagePreview(){
+  const preview=document.querySelector('#event-image-preview'),value=document.querySelector('#event-image-url').value.trim();
+  preview.replaceChildren();if(!value){preview.textContent='Noch kein Veranstaltungsbild ausgewählt.';return;}
+  try{const url=new URL(value,window.location.href);if(!['https:','http:'].includes(url.protocol))return;const img=document.createElement('img');img.src=url.href;img.alt='Vorschau des Veranstaltungsbildes';img.loading='lazy';img.decoding='async';preview.append(img);}catch{}
+}
+let eventImagePreviewTimer;
+document.querySelector('#event-image-url').addEventListener('input',()=>{clearTimeout(eventImagePreviewTimer);eventImagePreviewTimer=setTimeout(renderEventImagePreview,300);});
+document.querySelector('#event-image-select').addEventListener('click',async()=>{try{if(kioskyRuntime.platform==='standalone')await refreshMedia();openMediaLibrary(asset=>{const src=String(asset.src||''),reference=src.startsWith('data:image/')?runtimeUrl(kioskyRuntime.apiBaseUrl,`/media/library/${encodeURIComponent(asset.id)}`):src;document.querySelector('#event-image-url').value=new URL(reference,window.location.href).href;renderEventImagePreview();},'image-only','Veranstaltungsbild auswählen oder hochladen');}catch(error){showToast(error.message);}});
+document.querySelector('#event-image-clear').addEventListener('click',()=>{clearTimeout(eventImagePreviewTimer);document.querySelector('#event-image-url').value='';renderEventImagePreview();});
+document.querySelector('#event-bulk-image-select').addEventListener('click',async()=>{try{if(kioskyRuntime.platform==='standalone')await refreshMedia();openMediaLibrary(asset=>{const imageUrl=String(asset.src||'').startsWith('data:image/')?`/media/library/${encodeURIComponent(asset.id)}`:asset.src;document.querySelector('#event-bulk-image-url').value=imageUrl;document.querySelector('#event-bulk-image-preview').innerHTML=`<img src="${escapeHtml(asset.src)}" alt="${escapeHtml(asset.name||'Ausgewähltes Veranstaltungsbild')}">`;},'image-only','Veranstaltungsbild für die ausgewählten Termine auswählen oder hochladen');}catch(error){showToast(error.message);}});
 document.querySelector('#event-bulk-form').addEventListener('submit',async event=>{
   event.preventDefault();const ids=[...state.selectedEvents],field=document.querySelector('#event-bulk-field').value,payload={ids,action:'update',field};
   if(field==='breakStart'){payload.time=document.querySelector('#event-bulk-break-start').value;payload.breakEndTime=document.querySelector('#event-bulk-break-end').value||undefined;}
@@ -1994,6 +2004,7 @@ document.querySelector('#menu-share-settings-form').addEventListener('submit',as
 });
 
 function renderAdvertisingSettings(status){
+  state.advertising=status;
   const settings=status.settings||{},types=status.availableEventTypes||[],selected=new Set(settings.eventTypes||[]);
   state.advertisingAvailableTypes=types;
   state.advertisingTypeDefaultMedia={...(settings.eventTypeDefaultMedia||{})};
@@ -2011,21 +2022,21 @@ function renderAdvertisingSettings(status){
   document.querySelector('#advertising-status-tag').textContent=settings.enabled?'Aktiv':'Deaktiviert';
   document.querySelector('#advertising-status-tag').className=`tag ${settings.enabled?'green':'muted'}`;
   renderAdvertisingTypeOptions(types,selected);
-  document.querySelector('#advertising-summary').innerHTML=`<strong>${Number(status.generatedSlides||0)} generierte · ${Number(status.taggedSlides||0)} getaggte Werbeslides</strong><span>${Number(status.eligibleEvents||0)} passende zukünftige Veranstaltungen · ${(status.channels||[status.channel]).filter(Boolean).map(channel=>`${escapeHtml(channel.name)}: ${Number(channel.itemCount)} Slides`).join(' · ')}</span>${status.lastSynchronizedAt?`<small>Zuletzt synchronisiert: ${escapeHtml(new Date(status.lastSynchronizedAt).toLocaleString('de-DE'))}</small>`:''}`;
+  document.querySelector('#advertising-summary').innerHTML=`<strong>${Number(status.generatedSlides||0)} Veranstaltungen im Hintergrund · ${Number(status.taggedSlides||0)} getaggte Werbeslides</strong><span>${Number(status.eligibleEvents||0)} passende zukünftige Veranstaltungen · ${(status.channels||[status.channel]).filter(Boolean).map(channel=>`${escapeHtml(channel.name)}: ${Number(channel.itemCount)} Slides`).join(' · ')}</span>${status.lastSynchronizedAt?`<small>Zuletzt synchronisiert: ${escapeHtml(new Date(status.lastSynchronizedAt).toLocaleString('de-DE'))}</small>`:''}`;
 }
 async function loadAdvertisingSettings(){
   if(!document.querySelector('#advertising-settings-form'))return;
-  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),licensedRead('/api/templates'),licensedRead('/api/locations'),licensedRead('/api/media',{folders:[],assets:[]})]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Automatisch anpassbare Werbevorlage erstellen</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
+  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),licensedRead('/api/templates'),licensedRead('/api/locations'),licensedRead('/api/media',{folders:[],assets:[]})]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Automatisch anpassbare Werbevorlage erstellen</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateLandscapeId||result.settings?.templateId||'';const portrait=document.querySelector('#advertising-template-portrait');portrait.innerHTML=select.innerHTML;portrait.value=result.settings?.templatePortraitId||result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
 }
 function renderAdvertisingTypeOptions(types=state.advertisingAvailableTypes||[],selected=new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value))){
   const list=document.querySelector('#advertising-event-types');if(!list)return;
   list.innerHTML=types.map(type=>{const active=selected.has(type),assetId=state.advertisingTypeDefaultMedia?.[type],asset=state.mediaAssets?.find(item=>item.id===assetId&&!item.deletedAt&&item.type==='image');return`<article class="advertising-type-default ${active?'':'is-inactive'}"><div class="advertising-type-default-preview">${asset?`<img src="${escapeHtml(asset.src)}" alt="">`:'Kein<br>Standardbild'}</div><div class="advertising-type-default-body"><label class="toggle-label"><input type="checkbox" data-advertising-event-type value="${escapeHtml(type)}" ${active?'checked':''}> ${escapeHtml(type)}</label><small title="${escapeHtml(asset?.name||'')}">${escapeHtml(asset?.name||'Veranstaltungsspezifisches Bild erforderlich')}</small><div class="advertising-type-default-actions"><button class="button button-secondary" type="button" data-advertising-type-media="${escapeHtml(type)}" ${active?'':'disabled'}>${asset?'Bild ersetzen':'Bild auswählen / hochladen'}</button>${asset?`<button class="button button-ghost" type="button" data-advertising-type-media-remove="${escapeHtml(type)}" ${active?'':'disabled'}>Entfernen</button>`:''}</div></div></article>`;}).join('')||'<p class="property-note">Noch keine Veranstaltungsarten vorhanden. Sie erscheinen nach dem Anlegen oder Importieren von Veranstaltungen.</p>';
 }
-function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumSlides:Number(document.querySelector('#advertising-maximum-slides').value),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:document.querySelector('#advertising-template').value||undefined,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
+function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumSlides:Number(document.querySelector('#advertising-maximum-slides').value),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:state.advertising?.settings?.templateId||undefined,templateLandscapeId:document.querySelector('#advertising-template').value,templatePortraitId:document.querySelector('#advertising-template-portrait').value,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
 document.querySelector('#advertising-event-types').addEventListener('change',event=>{if(event.target.matches('[data-advertising-event-type]'))renderAdvertisingTypeOptions(state.advertisingAvailableTypes,new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value)));});
 document.querySelector('#advertising-event-types').addEventListener('click',event=>{const select=event.target.closest('[data-advertising-type-media]'),remove=event.target.closest('[data-advertising-type-media-remove]');if(select){const type=select.dataset.advertisingTypeMedia;openMediaLibrary(asset=>{state.advertisingTypeDefaultMedia={...(state.advertisingTypeDefaultMedia||{}),[type]:asset.id};renderAdvertisingTypeOptions();},'image-only',`Standardbild für „${type}“ auswählen oder hochladen`);}if(remove){const type=remove.dataset.advertisingTypeMediaRemove;delete state.advertisingTypeDefaultMedia[type];renderAdvertisingTypeOptions();}});
 document.querySelector('#advertising-settings-form').addEventListener('submit',async event=>{event.preventDefault();try{await apiRequest('/api/settings/advertising',{method:'PUT',body:JSON.stringify(advertisingPayload())});await loadAdvertisingSettings();await loadContent();showToast('Werbung wurde gespeichert und synchronisiert.');}catch(error){showToast(error.message);}});
-document.querySelector('#advertising-edit-template').addEventListener('click',async()=>{try{await loadContent();const id=document.querySelector('#advertising-template').value||state.advertising?.settings?.templateId;if(!id){showToast('Bitte Werbung zuerst aktivieren und speichern.');return;}editTemplate(id);}catch(error){showToast(error.message);}});
+for(const [button,select] of [['advertising-edit-template','advertising-template'],['advertising-edit-template-portrait','advertising-template-portrait']])document.querySelector('#'+button).addEventListener('click',async()=>{try{await loadContent();const id=document.querySelector('#'+select).value;if(!id){showToast('Bitte Werbung zuerst aktivieren und speichern.');return;}editTemplate(id);}catch(error){showToast(error.message);}});
 document.querySelector('#advertising-sync').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;try{await apiRequest('/api/advertising/synchronize',{method:'POST',body:'{}'});await loadAdvertisingSettings();await loadContent();showToast('Werbeslides und Werbekanal wurden synchronisiert.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
 
 document.querySelector('[data-action="export-crewbrain-config"]').addEventListener('click', async event => {
@@ -3032,7 +3043,7 @@ function applyContentScopeUi(){
   const advertising=state.contentScope==='advertising';
   document.querySelector('#content-module-eyebrow').textContent=advertising?'Werbemodul':'Content-Baukasten';
   document.querySelector('#content-module-title').textContent=advertising?'Werbung':'Slides & Kanäle';
-  document.querySelector('#content-module-description').textContent=advertising?'Werbeslides erstellen, nach Standorten organisieren und in eigenen Werbekanälen ausspielen.':'Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.';
+  document.querySelector('#content-module-description').textContent=advertising?'Veranstaltungswerbung läuft automatisch in den Werbekanälen. Hier können zusätzlich eigene getaggte Werbeslides erstellt werden.':'Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.';
   document.querySelector('#content-slide-library-title').textContent=advertising?'Werbeslides':'Verfügbare Slides';
 }
 function populateContentTagFilters(){
@@ -3121,6 +3132,7 @@ async function loadContent(preferredChannelId = state.activeChannelId) {
     state.slides = (slidesResult.data || []).map(slideForUi);
     state.selectedSlides = new Set([...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)));
     state.channels = channelsResult.data || [];
+    state.virtualAdvertisingSlides=new Map(state.channels.flatMap(channel=>channel.items.filter(item=>item.slide?.virtual).map(item=>[item.slideId,slideForUi(item.slide)])));
     state.selectedChannels = new Set([...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)));
     state.templates = (templatesResult.data || []).map(template => ({ ...template, document: hydrateMediaReferences(structuredClone(template.document || {})) }));
     const availableChannels=scopedChannels();
@@ -3140,7 +3152,7 @@ function formatDuration(seconds){const value=Math.max(0,Number(seconds||0));if(!
 function channelDuration(channel){return Number(channel?.totalDurationSeconds??channel?.items?.reduce((sum,item)=>sum+Number(item.durationSeconds||0),0)??0);}
 function channelStatusLabel(status){return status==='published'?'Veröffentlicht':status==='ready'?'Bereit':status==='paused'?'Pausiert':'Entwurf';}
 function visibleChannels(){
-  const query=document.querySelector('#channel-search').value.trim().toLowerCase(),tag=document.querySelector('#channel-tag-filter').value,channels=scopedChannels().filter(channel=>(!tag||(channel.tags||[]).includes(tag))&&(!query||`${channel.name} ${channel.description||''} ${(channel.tags||[]).join(' ')} ${channel.items.map(item=>state.slides.find(slide=>slide.id===item.slideId)?.title||'').join(' ')}`.toLowerCase().includes(query)));
+  const query=document.querySelector('#channel-search').value.trim().toLowerCase(),tag=document.querySelector('#channel-tag-filter').value,channels=scopedChannels().filter(channel=>(!tag||(channel.tags||[]).includes(tag))&&(!query||`${channel.name} ${channel.description||''} ${(channel.tags||[]).join(' ')} ${channel.items.map(item=>(state.virtualAdvertisingSlides?.get(item.slideId)||state.slides.find(slide=>slide.id===item.slideId))?.title||'').join(' ')}`.toLowerCase().includes(query)));
   return channels;
 }
 function renderChannelOverview(){
@@ -3558,15 +3570,16 @@ function renderPlaylist() {
   const canEditContent = state.currentUser?.role !== 'viewer';
   const playlistTransitionLabels = { fade: 'Überblenden', slide: 'Wischen', zoom: 'Zoom', none: 'Ohne Übergang' };
   playlist.innerHTML = state.playlist.map((entry, index) => {
-    const slide = state.slides.find(item => item.id === entry.slideId);
+    const slide = state.virtualAdvertisingSlides?.get(entry.slideId)||state.slides.find(item => item.id === entry.slideId);
     if (!slide) return '';
-    return `<div class="playlist-item" draggable="${canEditContent}" data-playlist-index="${index}">
+    const editable=canEditContent&&!slide.virtual;
+    return `<div class="playlist-item" draggable="${editable}" data-playlist-index="${index}">
       <span class="playlist-order">${index + 1}</span>
       ${slideThumb(slide)}
       <span class="playlist-item-info"><strong>${escapeHtml(slide.title)}</strong><small>${escapeHtml(slideTypeLabels[slide.type])} · ${escapeHtml(slide.meta)}</small></span>
-      ${canEditContent ? `<label class="transition-field"><span>Übergang danach</span><select data-transition-index="${index}" aria-label="Übergang nach ${escapeHtml(slide.title)}"><option value="inherit" ${!entry.transition || entry.transition === 'inherit' ? 'selected' : ''}>Kanaleinstellung</option><option value="fade" ${entry.transition === 'fade' ? 'selected' : ''}>Überblenden</option><option value="slide" ${entry.transition === 'slide' ? 'selected' : ''}>Wischen</option><option value="zoom" ${entry.transition === 'zoom' ? 'selected' : ''}>Zoom</option><option value="none" ${entry.transition === 'none' ? 'selected' : ''}>Ohne</option></select></label>
+      ${editable ? `<label class="transition-field"><span>Übergang danach</span><select data-transition-index="${index}" aria-label="Übergang nach ${escapeHtml(slide.title)}"><option value="inherit" ${!entry.transition || entry.transition === 'inherit' ? 'selected' : ''}>Kanaleinstellung</option><option value="fade" ${entry.transition === 'fade' ? 'selected' : ''}>Überblenden</option><option value="slide" ${entry.transition === 'slide' ? 'selected' : ''}>Wischen</option><option value="zoom" ${entry.transition === 'zoom' ? 'selected' : ''}>Zoom</option><option value="none" ${entry.transition === 'none' ? 'selected' : ''}>Ohne</option></select></label>
       <label class="duration-field"><input type="number" min="3" max="600" value="${entry.duration}" data-duration-index="${index}" aria-label="Dauer für ${escapeHtml(slide.title)}"><span>Sek.</span></label>
-      <button class="remove-slide" type="button" data-remove-index="${index}" aria-label="${escapeHtml(slide.title)} entfernen">×</button>` : `<span class="playlist-readonly-meta">${Number(entry.duration)} Sek. · ${escapeHtml(entry.transition && entry.transition !== 'inherit' ? playlistTransitionLabels[entry.transition] || entry.transition : 'Kanalübergang')}</span>`}
+      <button class="remove-slide" type="button" data-remove-index="${index}" aria-label="${escapeHtml(slide.title)} entfernen">×</button>` : `<span class="playlist-readonly-meta">${slide.virtual?'Automatisch aus Veranstaltung · ':''}${Number(entry.duration)} Sek. · ${escapeHtml(entry.transition && entry.transition !== 'inherit' ? playlistTransitionLabels[entry.transition] || entry.transition : 'Kanalübergang')}</span>`}
     </div>`;
   }).join('');
 
@@ -4674,8 +4687,8 @@ function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium fü
     renderEditorCanvas();
     scheduleSlideAutosave({ immediate: true, successMessage: 'Medium wurde hinzugefügt und die Slide gespeichert.' });
   });
-  if (kioskyRuntime.platform === 'wordpress') {
-    void openWordPressMediaLibrary(selectHandler, typeFilter, context, multiple);
+  if (['wordpress','typo3'].includes(kioskyRuntime.platform)) {
+    void openNativeMediaLibrary(selectHandler, typeFilter, context, multiple);
     return;
   }
   state.mediaSelectHandler = selectHandler;
@@ -4689,12 +4702,13 @@ function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium fü
   renderMediaBrowser('media', true);
   document.querySelector('#media-dialog').showModal();
 }
-async function openWordPressMediaLibrary(selectHandler, typeFilter, context, multiple = false) {
+async function openNativeMediaLibrary(selectHandler, typeFilter, context, multiple = false) {
   if (state.nativeMediaSelecting) return;
   state.nativeMediaSelecting = true;
   try {
-    const picker = window.parent.KioskyWordPressMediaPicker;
-    if (typeof picker?.open !== 'function') throw new Error('Bitte die Medienauswahl über die Kiosky-Seite in der WordPress-Verwaltung öffnen.');
+    const wordpress=kioskyRuntime.platform==='wordpress',cms=wordpress?'WordPress':'TYPO3',prefix=wordpress?'wp:':'fal:';
+    const picker = wordpress ? window.parent.KioskyWordPressMediaPicker : window.KioskyTypo3MediaPicker;
+    if (typeof picker?.open !== 'function') throw new Error(`Bitte die Medienauswahl über die Kiosky-Seite in der ${cms}-Verwaltung öffnen.`);
     const id = await picker.open({ type: typeFilter, title: context, multiple });
     if (id === null) return;
     const media = await apiRequest('/api/media');
@@ -4702,15 +4716,15 @@ async function openWordPressMediaLibrary(selectHandler, typeFilter, context, mul
     state.mediaAssets = media.assets || [];
     const ids = multiple ? id : [id];
     if (!Array.isArray(ids) || !ids.length || ids.length > 100) throw new Error('Bitte 1 bis 100 Bilder oder Videos auswählen.');
-    const assets = [...new Set(ids)].map(value => state.mediaAssets.find(item => item.id === `wp:${value}` && !item.deletedAt));
+    const assets = [...new Set(ids)].map(value => state.mediaAssets.find(item => item.id === `${prefix}${value}` && !item.deletedAt));
     const allowed = assets.every(asset => asset && (typeFilter === 'video' ? asset.type === 'video' : typeFilter === 'image-only' ? asset.type === 'image' : typeFilter === 'image' ? ['image', 'icon'].includes(asset.type) : ['image', 'icon', 'video'].includes(asset.type)));
-    if (!allowed) throw new Error('Das ausgewählte WordPress-Medium ist nicht verfügbar oder passt nicht zu diesem Element.');
+    if (!allowed) throw new Error(`Das ausgewählte ${cms}-Medium ist nicht verfügbar oder passt nicht zu diesem Element.`);
     // Do not call refreshMedia here: it replaces editor objects and would break
     // the captured background, logo and wayfinding selection callbacks.
     await selectHandler(multiple ? assets : assets[0]);
     renderMediaLibrary();
   } catch (error) {
-    showToast(error.message || 'Das WordPress-Medium konnte nicht übernommen werden.');
+    showToast(error.message || 'Das CMS-Medium konnte nicht übernommen werden.');
   } finally {
     state.nativeMediaSelecting = false;
   }
@@ -4795,7 +4809,7 @@ async function createSlidesFromMedia(assets,tags=[]) {
 }
 document.querySelectorAll('[data-action="bulk-media-slides"]').forEach(button => button.addEventListener('click', async () => {
   try {
-    await refreshMedia();
+    if(kioskyRuntime.platform==='standalone')await refreshMedia();
     openMediaLibrary(requestMediaSlideImport, '', 'Bulk-Slide-Import: Eine Slide pro Bild oder Video (maximal 100)', { multiple: true });
   } catch (error) { showToast(error.message); }
 }));
@@ -5212,7 +5226,7 @@ function liveContentForDisplay(display){
   const channel=display.currentChannelName||state.channels.find(item=>item.id===display.currentChannelId)?.name;
   const slide=display.currentSlideName||state.slides.find(item=>item.id===display.currentSlideId)?.name;
   const channelRecord=state.channels.find(item=>item.id===(display.currentChannelId||display.defaultChannelId));
-  const slideRecord=state.slides.find(item=>item.id===display.currentSlideId)||state.slides.find(item=>item.id===channelRecord?.items?.[0]?.slideId);
+  const slideRecord=state.virtualAdvertisingSlides?.get(display.currentSlideId)||state.slides.find(item=>item.id===display.currentSlideId)||state.virtualAdvertisingSlides?.get(channelRecord?.items?.[0]?.slideId)||state.slides.find(item=>item.id===channelRecord?.items?.[0]?.slideId);
   return{channel:channel||display.channel||'Kein Inhalt',slide:slide||slideRecord?.name||'–',slideRecord,reported:Boolean(display.currentChannelId||display.currentSlideId),lastSeenAt:display.lastSeenAt};
 }
 function displayLivePreview(display){

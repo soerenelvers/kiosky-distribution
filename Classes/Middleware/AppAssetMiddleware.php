@@ -77,6 +77,7 @@ final readonly class AppAssetMiddleware implements MiddlewareInterface
         }
 
         $specialFiles = [
+            'typo3-media.js' => GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/JavaScript/Typo3Media.js'),
             'display-player.js' => GeneralUtility::getFileAbsFileName(
                 'EXT:kiosky/Resources/Public/JavaScript/DisplayPlayer.js',
             ),

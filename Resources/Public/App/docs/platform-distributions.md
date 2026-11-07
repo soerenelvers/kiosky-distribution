@@ -113,14 +113,28 @@ Kopie der ausgewählten Datei. Die WordPress-Verwaltungsseite ist für die Auswa
 erforderlich; eine separat geöffnete App-Iframe-URL meldet einen fehlenden Host.
 Benötigt werden die vorhandenen Rechte `kiosky_edit` und `upload_files`; private
 Dateien und Bearbeitungsrechte anderer Autoren bleiben geschützt.
-Standalone und TYPO3 behalten ihre bisherige Auswahloberfläche.
+### Native TYPO3-Dateiauswahl ab 3.23.0
+
+Alle Medienauswahldialoge im Backendmodul öffnen den originalen TYPO3-Dateibrowser:
+Bilder/Videos, Hintergründe, Logos, Wegweisung, Veranstaltungen, Werbung und
+Bulk-Import. Suche, Ordner, Upload und Mehrfachauswahl stammen aus TYPO3.
+„Auswahl importieren“ übernimmt markierte Dateien; Schließen ohne Auswahl bricht ab.
+Der Browser öffnet sich im nativen TYPO3-Modaldialog; Pop-ups sind nicht
+erforderlich.
+
+Ausgewählte Dateien bleiben im FAL-Speicher und behalten ihre `fal:`-Kennung.
+Dateimounts, Leserechte und Uploadberechtigungen gelten weiterhin; Kiosky prüft
+Verfügbarkeit und Medientyp nochmals über den CMS-Adapter. Private Dateien werden
+nicht für die öffentliche Ausspielung freigegeben. Das native Systemmodul
+`filelist` ist deshalb eine ausdrückliche Extension-/Composer-Abhängigkeit.
+Nur Standalone verwendet weiterhin den eigenen Kiosky-Medienbrowser.
 
 ### Bulk-Slide-Import (alle Plattformen)
 
 Unter „Slides & Kanäle → Bulk-Slide-Import“ bis zu 100 Bilder oder Videos auswählen.
-WordPress öffnet dafür die native Mediathek mit Mehrfachauswahl; Standalone und
-TYPO3 verwenden ihre Medienauswahl mit Checkboxen und einem gemeinsamen
-Erstellen-Button. Die Auswahl bleibt beim Wechseln von Ordnern erhalten.
+WordPress öffnet die native Mediathek, TYPO3 den nativen Dateibrowser mit
+Mehrfachauswahl. Standalone verwendet die eigene Medienauswahl mit Checkboxen
+und einem gemeinsamen Erstellen-Button. Die Auswahl bleibt beim Wechseln von Ordnern erhalten.
 
 Pro Datei entsteht ein Entwurf mit dem Mediennamen, passender Grundausrichtung
 und vollflächiger Darstellung ohne Beschnitt. Videotrim-Werte werden übernommen.

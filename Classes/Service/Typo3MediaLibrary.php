@@ -11,6 +11,7 @@ use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Resource\Index\MetaDataRepository;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final readonly class Typo3MediaLibrary implements MediaLibrary
 {
@@ -52,7 +53,16 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         $native = $this->metadata->findByFileUid($file->getUid());
         $data = json_decode((string)($native['tx_kiosky_data']??''),true) ?: [];
         $mime = $file->getMimeType();
-        return ['id'=>'fal:'.$file->getUid(),'name'=>($native['title']??'')?:$file->getName(),'src'=>(string)$file->getPublicUrl(),'type'=>str_starts_with($mime,'video/')?'video':($mime==='image/svg+xml'?'icon':(str_starts_with($mime,'image/')?'image':'file')),'folderId'=>$this->folderId($file->getParentFolder()),'metadata'=>array_replace($data,['cms'=>'typo3','cmsId'=>$file->getUid(),'mimeType'=>$mime,'size'=>$file->getSize(),'width'=>$native['width']??null,'height'=>$native['height']??null]),'deletedAt'=>$data['deletedAt']??null];
+        $src=$this->publicUrl($file);
+        return ['id'=>'fal:'.$file->getUid(),'name'=>($native['title']??'')?:$file->getName(),'src'=>$src,'type'=>str_starts_with($mime,'video/')?'video':($mime==='image/svg+xml'?'icon':(str_starts_with($mime,'image/')?'image':'file')),'folderId'=>$this->folderId($file->getParentFolder()),'metadata'=>array_replace($data,['cms'=>'typo3','cmsId'=>$file->getUid(),'mimeType'=>$mime,'size'=>$file->getSize(),'width'=>$native['width']??null,'height'=>$native['height']??null]),'deletedAt'=>$data['deletedAt']??null];
+    }
+
+    private function publicUrl(File $file): string
+    {
+        $src=(string)$file->getPublicUrl();
+        // Local FAL URLs are relative to the site, not the backend/player route.
+        if($src!==''&&!preg_match('#^(?:[a-z][a-z0-9+.-]*:|/)#i',$src))$src=rtrim((string)GeneralUtility::getIndpEnv('TYPO3_SITE_URL'),'/').'/'.$src;
+        return $src;
     }
 
     public function exportAssetData(array $asset): string
@@ -111,7 +121,7 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         }
         $src = (string)($asset['src']??'');
         if ($file && !$file->checkActionPermission('write')) throw new RuntimeException('Keine Schreibberechtigung für diese TYPO3-Datei.',403);
-        if (!$file || $src !== (string)$file->getPublicUrl()) {
+        if (!$file || !in_array($src,[(string)$file->getPublicUrl(),$this->publicUrl($file)],true)) {
             if (!str_starts_with($src,'data:')) {
                 MediaUpload::assertPublicUrl($src);
                 $response = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Http\RequestFactory::class)->request($src, 'GET', ['timeout'=>30,'allow_redirects'=>false,'http_errors'=>false,'stream'=>true]);

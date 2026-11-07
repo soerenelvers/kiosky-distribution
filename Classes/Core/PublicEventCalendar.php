@@ -10,6 +10,7 @@ final class PublicEventCalendar
         'view'=>'agenda','colorMode'=>'theme',
         'accentColor'=>'#1968d2','accentTextColor'=>'#ffffff','controlBackground'=>'#ffffff','controlTextColor'=>'#183153','controlBorderColor'=>'#ccd8e6',
         'showTime'=>true,'showLocation'=>true,'showCategory'=>true,'showOrganizer'=>true,'showDescription'=>true,'showStatus'=>true,'showTickets'=>true,'showRemainingTickets'=>true,'showDetails'=>true,
+        'showSubtitle'=>true,'showAdmission'=>true,'showBreak'=>false,'showEndTime'=>true,'showImage'=>false,'showPublicNotes'=>true,'showBoxOffice'=>false,'showSetupTime'=>false,'showEventNumber'=>false,'allowViewSwitch'=>true,
         'title' => 'Veranstaltungskalender',
         'upcomingTitle' => 'Nächste Veranstaltungen',
         'upcomingCount' => 10,
@@ -31,16 +32,17 @@ final class PublicEventCalendar
         $result['view']=in_array($settings['view'],['agenda','month','categories','week','day'],true)?$settings['view']:'agenda';
         $result['colorMode']=in_array($settings['colorMode'],['theme','custom'],true)?$settings['colorMode']:'theme';
         foreach(['accentColor','accentTextColor','controlBackground','controlTextColor','controlBorderColor'] as $key)$result[$key]=is_string($settings[$key])&&preg_match('/^#[0-9a-f]{6}$/i',$settings[$key])?strtolower($settings[$key]):self::DEFAULTS[$key];
-        foreach(['showTime','showLocation','showCategory','showOrganizer','showDescription','showStatus','showTickets','showRemainingTickets','showDetails'] as $key)$result[$key]=filter_var($settings[$key],FILTER_VALIDATE_BOOL,FILTER_NULL_ON_FAILURE) ?? self::DEFAULTS[$key];
+        foreach(['showTime','showLocation','showCategory','showOrganizer','showDescription','showStatus','showTickets','showRemainingTickets','showDetails','showSubtitle','showAdmission','showBreak','showEndTime','showImage','showPublicNotes','showBoxOffice','showSetupTime','showEventNumber','allowViewSwitch'] as $key)$result[$key]=filter_var($settings[$key],FILTER_VALIDATE_BOOL,FILTER_NULL_ON_FAILURE) ?? self::DEFAULTS[$key];
+        foreach(['showAdmission'=>'showTime','showEndTime'=>'showTime','showSubtitle'=>'showDescription','showPublicNotes'=>'showDescription'] as $key=>$parent)if(!array_key_exists($key,$input))$result[$key]=$result[$parent];
         return $result;
     }
 
     /** @param array<string,mixed> $state @return list<array<string,mixed>> */
-    public static function events(array $state): array
+    public static function events(array $state, ?array $settings=null): array
     {
         $events = [];
         foreach (is_array($state['events'] ?? null) ? $state['events'] : [] as $event) {
-            if (!is_array($event) || !empty($event['deletedAt'])) continue;
+            if (!is_array($event) || !empty($event['deletedAt']) || !empty($event['archivedAt'])) continue;
             $status = strtolower((string)($event['status'] ?? ''));
             if (!in_array($status, ['ready', 'published', 'sold_out', 'ended', 'cancelled'], true)) continue;
             $date = self::date($event);
@@ -61,29 +63,50 @@ final class PublicEventCalendar
                 'start' => $start,
                 'end' => $end,
                 'admission' => self::dateTime($event['admissionStart'] ?? null, $date),
+                'breakStart'=>self::dateTime($event['breakStart'] ?? null,$date),
+                'breakEnd'=>self::dateTime($event['breakEnd'] ?? null,$date),
+                'setup'=>self::dateTime($event['setupStart'] ?? null,$date),
+                'boxOfficeAvailable'=>(bool)($event['boxOfficeAvailable'] ?? false),
+                'boxOfficeOpenAt'=>self::dateTime($event['boxOfficeOpenAt'] ?? null,$date),
+                'imageUrl'=>self::safeUrl($event['imageUrl'] ?? null),
+                'externalNumber'=>self::text($event['externalNumber'] ?? '',100),
                 'status' => $status ?: 'published',
                 'remainingTickets' => self::text($event['remainingTickets'] ?? '', 200),
                 'ticketUrl' => self::safeUrl($event['ticketUrl'] ?? null),
             ], static fn(mixed $value): bool => $value !== null && $value !== '');
         }
         usort($events, static fn(array $left, array $right): int => strcmp((string)($left['start'] ?? $left['date']), (string)($right['start'] ?? $right['date'])) ?: strcmp((string)$left['title'], (string)$right['title']));
+        return self::projectEvents($events,self::normalizeSettings($settings ?? $state['publicCalendarSettings'] ?? []));
+    }
+
+    private static function projectEvents(array $events,array $settings): array
+    {
+        $fields=['showTime'=>['start'],'showEndTime'=>['end'],'showAdmission'=>['admission'],'showBreak'=>['breakStart','breakEnd'],'showSetupTime'=>['setup'],'showBoxOffice'=>['boxOfficeAvailable','boxOfficeOpenAt'],'showImage'=>['imageUrl'],'showSubtitle'=>['subtitle'],'showDescription'=>['description'],'showPublicNotes'=>['publicNotes'],'showEventNumber'=>['externalNumber'],'showLocation'=>['venue','room'],'showCategory'=>['eventType'],'showOrganizer'=>['organizer'],'showTickets'=>['ticketUrl'],'showRemainingTickets'=>['remainingTickets'],'showStatus'=>['status']];
+        foreach($events as &$event){
+            if(($event['status'] ?? '')==='cancelled')unset($event['ticketUrl']);
+            foreach($fields as $key=>$names)if(!$settings[$key])foreach($names as $name)unset($event[$name]);
+            if(!$settings['showTime'])unset($event['end']);
+        }unset($event);
         return $events;
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $overrides */
     public static function render(array $state, array $overrides = []): string
     {
+        foreach(['showAdmission'=>'showTime','showEndTime'=>'showTime','showSubtitle'=>'showDescription','showPublicNotes'=>'showDescription'] as $key=>$parent)if(array_key_exists($parent,$overrides)&&$overrides[$parent]===false&&!array_key_exists($key,$overrides))$overrides[$key]=false;
         $settings = self::normalizeSettings(array_replace(
             is_array($state['publicCalendarSettings'] ?? null) ? $state['publicCalendarSettings'] : [],
             array_filter($overrides, static fn(mixed $value): bool => $value !== null && $value !== '')
         ));
-        $payload = json_encode(['events' => self::events($state), 'settings' => $settings], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $events=self::events($state,$settings);
+        $payload = json_encode(['events' => $events, 'settings' => $settings], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $id = 'kiosky-calendar-' . bin2hex(random_bytes(6));
         $search = $settings['showSearch'] ? '<label class="kiosky-calendar__search"><span>Kalender durchsuchen</span><input type="search" data-kiosky-search autocomplete="off" placeholder="Veranstaltung, Ort oder Stichwort"></label>' : '';
+        $switch=$settings['allowViewSwitch']?'<label class="kiosky-calendar__view-switch"><span>Ansicht</span><select data-kiosky-view aria-label="Kalenderansicht">'.implode('',array_map(static fn(string $key,string $label):string=>'<option value="'.$key.'"'.($settings['view']===$key?' selected':'').'>'.$label.'</option>',array_keys(['agenda'=>'Agenda','month'=>'Monat','categories'=>'Kategorien','week'=>'Woche','day'=>'Tag']),array_values(['agenda'=>'Agenda','month'=>'Monat','categories'=>'Kategorien','week'=>'Woche','day'=>'Tag']))).'</select></label>':'';
         $aside = $settings['showUpcoming'] ? '<aside class="kiosky-calendar__upcoming" aria-labelledby="' . $id . '-upcoming"><h3 id="' . $id . '-upcoming">' . self::escape($settings['upcomingTitle']) . '</h3><div data-kiosky-upcoming></div></aside>' : '';
         $style='';if($settings['colorMode']==='custom')foreach(['accentColor'=>'accent','accentTextColor'=>'accent-text','controlBackground'=>'control-bg','controlTextColor'=>'control-text','controlBorderColor'=>'control-border'] as $key=>$variable)$style.='--kiosky-'.$variable.':'.$settings[$key].';';
         return '<section class="kiosky-event-calendar" id="' . $id . '" data-kiosky-event-calendar data-view="'.$settings['view'].'" data-color-mode="'.$settings['colorMode'].'" style="'.self::escape($style).'">'
-            . '<header class="kiosky-calendar__header"><h2>' . self::escape($settings['title']) . '</h2>' . $search . '</header>'
+            . '<header class="kiosky-calendar__header"><h2>' . self::escape($settings['title']) . '</h2>' . $switch . $search . '</header>'
             . '<div class="kiosky-calendar__layout"><div class="kiosky-calendar__main">'
             . '<nav class="kiosky-calendar__navigation" aria-label="Kalendernavigation">'
             . '<button type="button" data-kiosky-year="-1" aria-label="Ein Jahr zurück">− 1 Jahr</button><button type="button" data-kiosky-month="-1" aria-label="Einen Monat zurück">‹</button>'

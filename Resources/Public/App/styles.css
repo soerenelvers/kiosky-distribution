@@ -1587,3 +1587,7 @@ html:has(body.player-mode){overflow:hidden;height:100%}
   .schedule-target-search input { font-size:16px; }
   .schedule-content-list { max-height:30dvh; }
 }
+
+.event-image-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.event-image-preview { color:var(--muted); font-size:.75rem; }
+.event-image-preview img { display:block; width:auto; max-width:100%; max-height:180px; margin-top:8px; object-fit:contain; }

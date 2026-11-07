@@ -16,6 +16,7 @@ final readonly class AppRenderer
         string $playerBaseUrl,
         ServerRequestInterface $request,
         string $nonce = '',
+        string $mediaBrowserUrl = '',
     ): string
     {
         $indexPath = GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/index.html');
@@ -31,6 +32,7 @@ final readonly class AppRenderer
             . $this->meta('kiosky-player-base-url', $playerBaseUrl)
             . $this->meta('kiosky-player-center-url', rtrim(dirname(rtrim($playerBaseUrl, '/')), '/') . '/kiosky-player-center/')
             . ($nonce !== '' ? $this->meta('kiosky-request-header-typo3-nonce', $nonce) : '');
+        if($mediaBrowserUrl!=='')$meta.=$this->meta('kiosky-native-media-browser-url',$mediaBrowserUrl).'<script defer src="'.htmlspecialchars($assetBase.'typo3-media.js',ENT_QUOTES).'"></script>';
         $html = $this->rewriteAppAssetUrls((string)file_get_contents($indexPath), $assetBase);
         return str_replace('<head>', '<head>' . $meta, $html);
     }
@@ -86,7 +88,13 @@ final readonly class AppRenderer
         if ($replacementCount !== 3) {
             throw new RuntimeException('Die Asset-Verweise der Kiosky-Oberfläche konnten nicht vollständig aufgelöst werden.');
         }
-        return $html;
+        // Shared editor/player helpers also live under the app asset root.
+        // Relative script URLs would otherwise resolve against the backend route.
+        return preg_replace_callback(
+            '~\b(src|href)="((?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_.-]+\.(?:js|css)(?:\?[^\"]*)?)"~',
+            static fn(array $match): string => $match[1].'="'.$assetBase.$match[2].'"',
+            $html,
+        ) ?? throw new RuntimeException('Die zusätzlichen Kiosky-Assets konnten nicht aufgelöst werden.');
     }
 
     private function meta(string $name, string $content): string

@@ -332,7 +332,7 @@ final class Api
             return $this->created(['slides'=>$slides]);
         }
         if ($path === '/api/slides') {
-            if ($method === 'GET') return $this->ok(['data' => $this->active($state['slides'])]);
+            if ($method === 'GET') return $this->ok(['data' => $this->listCollection($state,'slides')]);
             if ($method === 'POST') {
                 $slide = $this->saveSlide($state, $body);
                 return $this->created(['slide' => $slide]);
@@ -372,7 +372,7 @@ final class Api
         }
 
         if ($path === '/api/channels') {
-            if ($method === 'GET') return $this->ok(['data' => $this->active($state['channels'])]);
+            if ($method === 'GET') return $this->ok(['data' => $this->listCollection($state,'channels')]);
             if ($method === 'POST') return $this->created(['channel' => $this->saveRecord($state, 'channels', $body + ['items' => []])]);
         }
         if (preg_match('#^/api/channels/([^/]+)/usage$#', $path, $match) && $method === 'GET') {
@@ -384,6 +384,8 @@ final class Api
         }
         if (preg_match('#^/api/channels/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['channels'], rawurldecode($match[1]), 'Kanal');
+            $source=AdvertisingService::channel($state,$source);
+            foreach($source['items'] as &$item)if(!empty($item['slide']['virtual'])){$copy=array_diff_key($item['slide'],array_flip(['id','createdAt','updatedAt','automationKey','virtual','currentVersion']));$copy['name'].=' (Kopie)';$copy['status']='draft';$saved=$this->saveSlide($state,$copy);$item['slideId']=$saved['id'];unset($item['slide']);}unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['automationKey'], $source['deletedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
@@ -845,6 +847,7 @@ final class Api
             return $this->ok(['settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? [])]);
         }
         if ($path === '/api/settings/public-calendar' && $method === 'PUT') {
+            foreach(['showAdmission'=>'showTime','showEndTime'=>'showTime','showSubtitle'=>'showDescription','showPublicNotes'=>'showDescription'] as $key=>$parent)if(array_key_exists($parent,$body)&&$body[$parent]===false&&!array_key_exists($key,$body))$body[$key]=false;
             $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings(array_replace($state['publicCalendarSettings'] ?? [],$body));
             return $this->ok(['settings' => $state['publicCalendarSettings']], true);
         }
@@ -1601,6 +1604,7 @@ final class Api
         foreach ($channelUpdates as $update) {
             if (!is_array($update)) continue;
             $channel = $this->required($state['channels'], (string)($update['channelId'] ?? ''), 'Kanal');
+            if(str_starts_with($channel['automationKey'] ?? '','advertising:channel')){$updatedChannels[]=['id'=>$channel['id'],'name'=>$channel['name'],'itemCount'=>count(AdvertisingService::playlist($state,$channel['orientation']))];continue;}
             $slideIds = array_values(array_unique(array_map('strval', is_array($update['slideIds'] ?? null) ? $update['slideIds'] : [])));
             if (!$slideIds) throw new RuntimeException('Ein Kanalzustand enthält keine Slides.', 422);
             foreach ($slideIds as $slideId) $this->required($state['slides'], $slideId, 'Slide');
@@ -1752,7 +1756,7 @@ final class Api
         $slides = [];
         $playableSlidesById=array_column($this->active($state['slides']),null,'id');
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
-            $slide = $playableSlidesById[$item['slideId'] ?? ''] ?? null;
+            $slide = $item['slide'] ?? $playableSlidesById[$item['slideId'] ?? ''] ?? null;
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
             $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
@@ -1764,6 +1768,7 @@ final class Api
             }
             $slides[] = $item + ['slide' => $slide, 'event' => $event];
         }
+        if($channel)$channel['items']=array_map(static fn(array $item):array=>array_diff_key($item,['slide'=>true]),$channel['items'] ?? []);
         $targets = ['global','all', 'display:' . $display['id']];
         foreach ($display['groupIds'] ?? [] as $groupId){$targets[]='group:'.$groupId;$targets[]=$groupId;}
         if (!empty($display['locationId'])) $targets[] = 'location:' . $display['locationId'];
@@ -1840,7 +1845,7 @@ final class Api
         if(!empty($channel['locationIds'])&&!in_array($location,$channel['locationIds'],true))return [];
         $slides=array_column($this->active($state['slides']),null,'id');$time=strtotime($at);
         return array_values(array_filter($channel['items'] ?? [],static function(array $item)use($slides,$time,$location):bool{
-            $slide=$slides[$item['slideId'] ?? ''] ?? null;
+            $slide=$item['slide'] ?? $slides[$item['slideId'] ?? ''] ?? null;
             return $slide && (empty($slide['startsAt'])||strtotime($slide['startsAt'])<=$time) && (empty($slide['endsAt'])||strtotime($slide['endsAt'])>$time) && (empty($slide['locationIds'])||in_array($location,$slide['locationIds'],true));
         }));
     }
@@ -1890,7 +1895,8 @@ final class Api
         if(!$id||!in_array($type,['channel','slide'],true))return null;
         $record=$this->first($this->active($state[$type==='slide'?'slides':'channels']),static fn(array $item):bool=>$item['id']===$id);
         if(!$record)return null;
-        $channel=$type==='channel'?$record:null;$direct=$type==='slide'?$record:null;
+        if($type==='channel'&&str_starts_with($record['automationKey'] ?? '','advertising:channel')&&!AdvertisingService::settings($state)['enabled'])return null;
+        $channel=$type==='channel'?AdvertisingService::channel($state,$record):null;$direct=$type==='slide'?$record:null;
         $items=$this->playableChannelItems($state,$channel ?? ['items'=>[['slideId'=>$id,'durationSeconds'=>12,'transition'=>'none']]],$display,$at);
         return $items?['channel'=>$channel,'directSlide'=>$direct,'available'=>$items]:null;
     }
@@ -2015,6 +2021,8 @@ final class Api
     private function listCollection(array $state, string $collection): array
     {
         $items = $this->active($state[$collection]);
+        if($collection==='slides')return array_values(array_filter($items,static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')));
+        if($collection==='channels')return array_map(static fn(array $c):array=>AdvertisingService::channel($state,$c),$items);
         if ($collection === 'groups') {
             return array_map(fn(array $item):array=>array_replace($item,['displayIds'=>array_values(array_column(array_filter($this->active($state['displays']),static fn(array $display):bool=>in_array($item['id'],$display['groupIds'] ?? [],true)),'id'))])+['status'=>'active'],$items);
         }
@@ -2089,7 +2097,8 @@ final class Api
             foreach ($matrix['members'] ?? [] as $member) $memberships[$member['displayId']] ??= [$matrix, $member];
         }
         $now = time();
-        return array_map(function (array $item) use ($channels, $locations, $slides, $memberships, $now): array {
+        $eventNames=array_column($state['events'],'title','id');
+        return array_map(function (array $item) use ($channels, $locations, $slides, $memberships, $now,$eventNames): array {
             $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
             $location = $locations[$item['locationId'] ?? ''] ?? null;
             [$matrix, $member] = $memberships[$item['id']] ?? [null, null];
@@ -2098,6 +2107,7 @@ final class Api
             $item['channel'] = ($item['defaultContentType']==='slide'?($defaultSlide['name'] ?? null):($channel['name'] ?? null)) ?? 'Kein Standardinhalt';
             $currentChannel = $channels[$item['channelId'] ?? ''] ?? null;
             $currentSlide = $slides[$item['slideId'] ?? ''] ?? null;
+            if(!$currentSlide&&preg_match('/^advertising-event:(?:landscape|portrait):(.+)$/',(string)($item['slideId'] ?? ''),$match)&&isset($eventNames[$match[1]]))$currentSlide=['name'=>'Werbung · '.$eventNames[$match[1]]];
             $lastSeen = strtotime((string)($item['lastSeenAt'] ?? ''));
             $item['online'] = !empty($item['online']) && $lastSeen !== false && abs($now - $lastSeen) <= 60;
             $item['currentChannelId'] = $item['channelId'] ?? null;
@@ -2217,6 +2227,7 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='channels'&&isset($body['items']))$body['items']=array_values(array_filter($body['items'],static fn(array $item):bool=>!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
         if($collection==='schedules'){
             $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');
             $contentId=$body['contentId'] ?? $body[$type.'Id'] ?? $merged['contentId'] ?? $merged[$type.'Id'] ?? '';
@@ -2397,6 +2408,7 @@ final class Api
         if (!array_key_exists('titleExclusions', $stored)) {
             $stored['titleExclusions'] = $stored['crewbrain']['config']['titleExclusions'] ?? [];
         }
+        if(is_array($stored['publicCalendarSettings'] ?? null))$stored['publicCalendarSettings']=PublicEventCalendar::normalizeSettings($stored['publicCalendarSettings']);
         return array_replace_recursive($this->defaults(), $stored);
     }
 

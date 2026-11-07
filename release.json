@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "ac5c62924baa44249614891c05ad1cf9ec6a5fff",
+  "source_commit": "a412790a7bc47efaf5a5424448293715d27d0a4d",
   "product": "kiosky",
-  "version": "3.22.4",
-  "released_at": "2026-11-07T00:27:55.998Z",
+  "version": "3.23.0",
+  "released_at": "2026-11-07T12:35:06.822Z",
   "channel": "stable",
-  "release_notes": "## [3.22.4] – 2026-11-07\n\n- Presets als auslösbare Zuspielung behandeln: spätere manuelle Zuweisungen, Änderungen des Display-Standards sowie neue/aktiv bearbeitete Zeitzuweisungen lösen das Preset ab.\n- Ablösung pro Display erhalten; andere Gruppenmitglieder bleiben auf ihrem Preset, alte Presets kehren nach Ablauf oder Entfernen der Ersetzung nicht zurück.\n- Neue Preset-Ausführungen wieder zulassen, vorhandene Ausführungssnapshots berücksichtigen und zeitweise offline verpasste Slots einschließlich Wiederholungen erkennen.\n- Echte Warnungen vor allen Zuspielungen erhalten; Preset-Hinweise bleiben ablösbar. Gleichzeitige WordPress-Player-Ablösungen sicher zusammenführen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.22.4",
+  "release_notes": "## [3.23.0] – 2026-11-07\n\n- Veranstaltungswerbung direkt und mengenbegrenzt in die Werbekanäle einspielen, ohne Bibliotheks-Slides oder Versionen anzulegen; alle manuellen Veranstaltungsarten berücksichtigen.\n- Unabhängig bearbeitbare Werbevorlagen für Quer- und Hochformat, vorhandene Kanalzuweisungen und getaggte Werbung erhalten; nach Ablauf weitere Termine nachrücken lassen.\n- Website-Kalender in WordPress und TYPO3 um einzeln freigebbare Eventfelder, Bilder, Layoutwechsel und Suche über alle Termine erweitern; ausgeblendete Felder aus öffentlichen Daten entfernen.\n- Veranstaltungsbilder per externer URL oder Medienauswahl mit Upload setzen; in WordPress die native Mediathek und in TYPO3 den nativen FAL-Dateibrowser in allen Medienauswahldialogen verwenden.\n- Lange Kalenderlisten schrittweise laden, Werbeinhalte begrenzt erzeugen und virtuellen Player-Status ohne Bibliothekseinträge speichern (Standalone-Migration 042).",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.23.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.22.4",
+    "core_version": "3.23.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.22.4",
-    "typo3_extension_version": "3.22.4"
+    "wordpress_plugin_version": "3.23.0",
+    "typo3_extension_version": "3.23.0"
   },
   "components": {
     "core": {
-      "version": "3.22.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.4.zip?ref=v3.22.4",
-      "sha256": "2a585572cf27c6b10473f5c675600c42b9246e10c84559f038f5f323d03c5b31"
+      "version": "3.23.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.23.0.zip?ref=v3.23.0",
+      "sha256": "5035ce6b2fced00ca1d5f2ab7e32451b5b8084432b9bb9e1cd3e751680513771"
     },
     "standalone": {
-      "version": "3.22.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.22.4.zip?ref=v3.22.4",
-      "sha256": "2a585572cf27c6b10473f5c675600c42b9246e10c84559f038f5f323d03c5b31"
+      "version": "3.23.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.23.0.zip?ref=v3.23.0",
+      "sha256": "5035ce6b2fced00ca1d5f2ab7e32451b5b8084432b9bb9e1cd3e751680513771"
     },
     "wordpress": {
-      "version": "3.22.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.22.4.zip?ref=v3.22.4",
-      "sha256": "021cb4fb4e8603493a4f372520635c483fb68bc7bf8bd3f92b6013183a9739d7",
+      "version": "3.23.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.23.0.zip?ref=v3.23.0",
+      "sha256": "d99c15a1ee5c02c462e69057f0c4fe90f4d154d9bda5c3332bdf9c609906b135",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.22.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.22.4.zip?ref=v3.22.4",
-      "sha256": "e86b81795603cd642540f533174ca1bb327e8a79eda1db4c461de1394895e345",
+      "version": "3.23.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.23.0.zip?ref=v3.23.0",
+      "sha256": "600f329c81da715b7ee69ed7e7e57ed343b83b8273d86855c6e02c40792fb2c2",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

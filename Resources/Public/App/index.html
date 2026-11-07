@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.22.4-20261107002754%2Bac5c6292">
+  <link rel="stylesheet" href="styles.css?v=3.23.0-20261107123505%2Ba412790a">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -788,7 +788,7 @@
         </form>
         </div>
         <div class="settings-detail" data-settings-detail="advertising" hidden>
-          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Werbung</h2><p>Verbindet Veranstaltungswerbung und getaggte Slides in zwei automatischen Werbekanälen.</p></div></div>
+          <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Werbung</h2><p>Berechnet Veranstaltungswerbung direkt in zwei Werbekanälen, ohne zusätzliche Bibliotheks-Slides. Getaggte Werbung bleibt erhalten.</p></div></div>
           <form class="panel feature-settings-panel" id="advertising-settings-form">
             <div class="panel-header"><div><p class="eyebrow">Werbekanal</p><h2>Generator konfigurieren</h2><p>Veröffentlichte Slides mit Werbe-Tags werden bis zu ihrem Ablauf automatisch zugeordnet. Ohne Ablaufdatum werden beim Taggen sieben Tage gesetzt.</p></div><span class="tag blue" id="advertising-status-tag">Deaktiviert</span></div>
             <div class="config-form-grid">
@@ -797,16 +797,17 @@
               <label class="form-field"><span>Maximale Slides je Werbekanal</span><input id="advertising-maximum-slides" type="number" min="1" max="500" value="15"></label>
               <label class="form-field"><span>Nächste Veranstaltungen</span><input id="advertising-maximum-events" type="number" min="1" max="200" value="15"></label>
               <label class="form-field"><span>Anzeigedauer je Slide</span><input id="advertising-duration" type="number" min="3" max="600" value="12"></label>
-              <label class="form-field"><span>Responsive Slide-Vorlage</span><select id="advertising-template"><option value="">Automatisch anpassbare Werbevorlage erstellen</option></select></label>
+              <label class="form-field"><span>Vorlage Werbung quer</span><select id="advertising-template"><option value="">Automatisch anpassbare Werbevorlage erstellen</option></select></label>
+              <label class="form-field"><span>Vorlage Werbung Hochkant</span><select id="advertising-template-portrait"><option value="">Automatisch anpassbare Werbevorlage erstellen</option></select></label>
               <label class="toggle-label"><input id="advertising-show-date" type="checkbox"> Datum anzeigen</label>
               <label class="toggle-label"><input id="advertising-show-time" type="checkbox" checked> Uhrzeiten anzeigen</label>
               <label class="toggle-label"><input id="advertising-show-seconds" type="checkbox"> Sekunden anzeigen</label>
               <label class="toggle-label"><input id="advertising-hour12" type="checkbox"> 12-Stunden-Format verwenden</label>
             </div>
             <fieldset class="advertising-event-types"><legend>Standorte der automatischen Werbekanäle</legend><div id="advertising-location-options"></div><p class="property-note">Ohne Auswahl sind die Werbekanäle an allen Standorten verfügbar.</p></fieldset>
-            <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Manuelle Veranstaltungen ohne Veranstaltungsart werden automatisch einbezogen. Bei Veranstaltungen mit einer Art gelten die aktivierten Arten. Abgesagte, archivierte und abgelaufene Veranstaltungen werden nicht beworben. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
+            <fieldset class="advertising-event-types advertising-event-defaults"><legend>Veranstaltungsarten und Standardbilder</legend><div id="advertising-event-types"></div><p class="property-note">Manuelle Veranstaltungen werden automatisch einbezogen. Die aktivierten Arten filtern importierte Veranstaltungen. Abgesagte, archivierte und abgelaufene Veranstaltungen werden nicht beworben. Das Standardbild wird verwendet, wenn an der Veranstaltung kein eigenes Bild hinterlegt ist.</p></fieldset>
             <div class="advertising-summary" id="advertising-summary">Noch nicht geladen.</div>
-            <div class="dialog-actions"><button class="button button-secondary" id="advertising-edit-template" type="button">Werbevorlage bearbeiten</button><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
+            <div class="dialog-actions"><button class="button button-secondary" id="advertising-edit-template" type="button">Vorlage quer bearbeiten</button><button class="button button-secondary" id="advertising-edit-template-portrait" type="button">Vorlage Hochkant bearbeiten</button><button class="button button-secondary" id="advertising-sync" type="button">Jetzt synchronisieren</button><button class="button button-primary" type="submit">Werbung speichern</button></div>
           </form>
         </div>
         <div class="settings-detail" data-settings-detail="calendar" hidden>
@@ -831,14 +832,24 @@
               <label class="form-field"><span>Steuerelemente: Rahmen</span><input type="color" value="#ccd8e6" data-public-calendar-field="controlBorderColor"></label>
             </div></fieldset>
             <fieldset><legend>Sichtbare Spalten und Optionen</legend><p>Datum und Veranstaltungstitel bleiben sichtbar. Die übrigen Angaben und Aktionen lassen sich einzeln ausblenden.</p><div class="config-form-grid">
-              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showTime"> Uhrzeit und Einlass</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showTime"> Beginn der Veranstaltung</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showLocation"> Ort und Raum</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showCategory"> Kategorie</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showOrganizer"> Veranstalter</label>
-              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showDescription"> Beschreibung und öffentliche Hinweise</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showDescription"> Beschreibung</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showStatus"> Absage / ausverkauft</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showTickets"> Ticket-Link</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showRemainingTickets"> Restkarten / Ticketinformation</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showSubtitle"> Untertitel</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showAdmission"> Einlass</label>
+              <label class="toggle-label"><input type="checkbox" data-public-calendar-field="showBreak"> Pause und Fortsetzung</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showEndTime"> Endzeit</label>
+              <label class="toggle-label"><input type="checkbox" data-public-calendar-field="showImage"> Veranstaltungsbild</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showPublicNotes"> Öffentliche Hinweise</label>
+              <label class="toggle-label"><input type="checkbox" data-public-calendar-field="showBoxOffice"> Abendkasse und Öffnung</label>
+              <label class="toggle-label"><input type="checkbox" data-public-calendar-field="showSetupTime"> Aufbauzeit öffentlich anzeigen</label>
+              <label class="toggle-label"><input type="checkbox" data-public-calendar-field="showEventNumber"> Veranstaltungsnummer</label>
+              <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="allowViewSwitch"> Ansichtswechsel auf der Website erlauben</label>
               <label class="toggle-label"><input type="checkbox" checked data-public-calendar-field="showDetails"> Detail-Schaltfläche</label>
             </div></fieldset>
             <p class="property-note">WordPress: Shortcode <code>[kiosky_event_calendar]</code>. TYPO3: Inhaltselement „Kiosky Veranstaltungskalender“. Werte können an der jeweiligen Einbindung überschrieben werden.</p>
@@ -1243,7 +1254,7 @@
         <label class="form-field span-two"><span>Interne Notizen</span><textarea id="event-internal-notes" rows="3"></textarea></label>
         <label class="form-field"><span>Ticket-Link</span><input id="event-ticket-url" type="url" placeholder="https://…"></label>
         <label class="form-field"><span>Ticketstatus / Restkarten</span><input id="event-remaining-tickets" type="text"></label>
-        <label class="form-field span-two"><span>Bild-URL</span><input id="event-image-url" type="url" placeholder="https://…"></label>
+        <div class="form-field span-two"><label for="event-image-url">Bild-Link oder Mediathek</label><input id="event-image-url" type="url" placeholder="https://…"><div class="event-image-actions"><button type="button" class="button button-secondary" id="event-image-select">Bild auswählen / hochladen</button><button type="button" class="button button-secondary" id="event-image-clear">Bild entfernen</button></div><div class="event-image-preview" id="event-image-preview" aria-live="polite"></div><small>Externen Bild-Link eingeben oder ein Bild aus der Mediathek wählen. Mit der Veranstaltung speichern.</small></div>
         <label class="toggle-label"><input id="event-box-office" type="checkbox"> Abendkasse verfügbar</label>
         <label class="form-field"><span>Abendkasse öffnet</span><input id="event-box-office-open" type="time"></label>
       </div>
@@ -1696,10 +1707,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.22.4-20261107002754%2Bac5c6292"></script>
-  <script src="player/fullscreen-control.js?v=3.22.4-20261107002754%2Bac5c6292"></script>
-  <script src="player/media-placement.js?v=3.22.4-20261107002754%2Bac5c6292"></script>
-  <script src="player/editor-alignment.js?v=3.22.4-20261107002754%2Bac5c6292"></script>
-  <script src="app.js?v=3.22.4-20261107002754%2Bac5c6292"></script>
+  <script src="runtime-config.js?v=3.23.0-20261107123505%2Ba412790a"></script>
+  <script src="player/fullscreen-control.js?v=3.23.0-20261107123505%2Ba412790a"></script>
+  <script src="player/media-placement.js?v=3.23.0-20261107123505%2Ba412790a"></script>
+  <script src="player/editor-alignment.js?v=3.23.0-20261107123505%2Ba412790a"></script>
+  <script src="app.js?v=3.23.0-20261107123505%2Ba412790a"></script>
 </body>
 </html>

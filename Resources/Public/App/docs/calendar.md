@@ -42,16 +42,25 @@ Einbettungen unabhängig. Auf ausreichenden Textkontrast achten.
 
 ## Spalten und Optionen
 
-Einzeln ein-/ausblendbar sind Uhrzeit einschließlich Einlass, Ort/Raum, Kategorie,
-Veranstalter, Beschreibung/öffentliche Hinweise, Veranstaltungsstatus,
-Ticketlinks, Restkartenhinweis und Detail-Schaltflächen. Datum und Titel bleiben
-sichtbar. Dieselben Vorgaben gelten für die Zusatzliste und die Detailansicht.
-Ausgeblendete Beschreibung oder Einlasszeit können keinen entsprechenden
-Detail-Button erzeugen. Abgesagte Veranstaltungen erhalten keinen Ticketlink.
+Einzeln ein-/ausblendbar sind Untertitel, Bild, Uhrzeit, Ende, Einlass, Pause,
+Wiederbeginn, Aufbau, Abendkasse, Veranstaltungsnummer, Ort/Raum, Kategorie,
+Veranstalter, Beschreibung, öffentliche Hinweise, Status, Ticketlinks,
+Restkartenhinweis und Detail-Schaltflächen. Datum und Titel bleiben sichtbar.
+Dieselben Vorgaben gelten für Zusatzliste und Details. Interne Notizen werden
+nie ausgegeben. Archivierte und gelöschte Veranstaltungen werden ausgeschlossen.
+Abgesagte Veranstaltungen erhalten keinen Ticketlink.
 
-Diese Optionen steuern die Darstellung; sie sind keine Zugriffssperre für
-bereits öffentliche Veranstaltungsdaten. Vertrauliche Informationen gehören
-weiterhin ausschließlich in interne Felder.
+Ab 3.23.0 werden ausgeblendete Felder auch aus den eingebetteten JSON-Daten und
+der öffentlichen Kalender-API entfernt. Berechtigte Redakteure können einzelne
+Felder je Einbettung ausdrücklich freigeben. Vertrauliche Informationen gehören
+weiterhin ausschließlich in interne Felder. Bisherige Einstellungen für Uhrzeit
+und Beschreibung gelten auch für die zugehörigen neuen Unterfelder.
+
+„Ansicht wechseln“ erlaubt Besuchern, zwischen allen fünf Layouts umzuschalten.
+Die Suche findet Termine auch außerhalb des gerade sichtbaren Tages oder der
+Woche. Lange Ergebnislisten laden jeweils bis zu 100 weitere Termine über
+„Weitere Veranstaltungen laden“ nach; Suche und Filter berücksichtigen alle
+freigegebenen Termine. Bilder werden erst bei Bedarf geladen.
 
 ## WordPress: je Kalender überschreiben
 
@@ -71,7 +80,9 @@ Weitere Beispiele:
 
 Optionen: `show_time`, `show_location`, `show_category`, `show_organizer`,
 `show_description`, `show_status`, `show_tickets`, `show_remaining_tickets`,
-`show_details`, außerdem die bisherigen `title`, `upcoming_title`,
+`show_details`, `show_subtitle`, `show_image`, `show_end_time`,
+`show_admission`, `show_break`, `show_setup_time`, `show_box_office`,
+`show_event_number`, `show_public_notes`, `allow_view_switch`, außerdem die bisherigen `title`, `upcoming_title`,
 `upcoming_count`, `show_search` und `show_upcoming`. Boolesche Angaben sind
 `true`/`false`; weggelassene Angaben erben die zentrale Einstellung. Eine
 Einbettung verändert weder die zentrale Konfiguration noch andere Kalender.

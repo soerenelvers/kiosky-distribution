@@ -5,7 +5,8 @@ Ab 3.16.0 gelten dieselben Funktionen in Standalone, WordPress und TYPO3.
 ## Import
 
 In **Slides & Kanäle → Bulk-Slide-Import** mehrere Bilder oder Videos wählen.
-WordPress öffnet seinen nativen Medienbrowser. Nach der Dateiauswahl Tags auswählen
+WordPress und TYPO3 öffnen ihren nativen Medienbrowser; Standalone die eigene
+Medienauswahl. Nach der Dateiauswahl Tags auswählen
 oder neue Tags eingeben und übernehmen. Alle gewählten Dateien erhalten dieselben
 Tags, jeweils als eigene Slide mit Referenz auf die Originaldatei. Abbrechen vor
 „Übernehmen“ erstellt keine Slides. Ein fehlerhafter Import wird vollständig
@@ -59,23 +60,43 @@ Rollback entfernt bereits vergebene Tags/Ablaufdaten nicht. Die neue Einstellung
 und der zusätzliche Kanal benötigen keine Datenbankschemaänderung.
 
 
-## Werbung aus manuell angelegten Veranstaltungen
+## Werbung aus manuell angelegten Veranstaltungen ab 3.23.0
 
-Nach dem Aktivieren unter Einstellungen → Werbung erzeugt Kiosky die Kanäle
-„Werbung quer“ und „Werbung Hochkant“. Manuelle Veranstaltungen ohne
-Veranstaltungsart werden automatisch berücksichtigt. Ist eine Veranstaltungsart
-hinterlegt, muss diese in den Werbeeinstellungen ausgewählt sein. Der bisherige Statusfilter bleibt erhalten: Auch Veranstaltungen „Zu prüfen“
-werden berücksichtigt; abgesagte, archivierte, gelöschte und abgelaufene
-Veranstaltungen bleiben ausgeschlossen.
+Alle manuell angelegten Veranstaltungen werden unabhängig von ihrer Kategorie
+berücksichtigt. Die Auswahl der Veranstaltungsarten begrenzt weiterhin importierte
+Veranstaltungen. Der bisherige Statusfilter bleibt erhalten: Auch „Zu prüfen“ wird
+berücksichtigt; abgesagte, archivierte, gelöschte und abgelaufene Termine entfallen.
 
-Beim ersten Aktivieren wird „Werbung · Veranstaltung“ als bearbeitbare Vorlage
-in der Vorlagenbibliothek gespeichert und ausgewählt. Über „Werbevorlage
-bearbeiten“ öffnest du den Slide-Editor. Bild und Eventdaten stammen aus der
-jeweiligen Veranstaltung; zusätzliche Eventfelder kannst du im Editor ergänzen.
-Speichere über „Vorlage aktualisieren“. Änderungen werden in die automatisch
-generierten Werbeslides übernommen. Eine selbst ausgewählte Vorlage bleibt
-maßgeblich. Synchronisieren erzeugt keine doppelten Kanäle oder Vorlagen.
+Unter Einstellungen → Werbung stehen getrennte, editierbare Vorlagen für Quer-
+und Hochformat bereit. „Vorlage bearbeiten“ öffnet den Slide-Editor; „Vorlage
+aktualisieren“ speichert die Änderungen. Bestehende Vorlagen werden übernommen;
+die beiden neuen Standardvorlagen können unabhängig angepasst werden. Eventdaten
+und Bild werden aus der jeweiligen Veranstaltung eingesetzt.
 
+Die Kanäle erzeugen ihre Veranstaltungsinhalte erst beim Abruf im Hintergrund.
+Es entstehen keine zusätzlichen Bibliotheks-Slides oder Slide-Versionen.
+„Nächste Veranstaltungen“ begrenzt die Zahl der Event-Inhalte je Kanal;
+„Maximale Slides je Werbekanal“ begrenzt die Summe aus manuellen getaggten Slides
+und Event-Inhalten. Manuelle Slides haben Vorrang, danach folgen die nächsten
+Veranstaltungen bis zur Grenze. Nach Ablauf rücken weitere passende Termine nach.
 Die Werbung endet mit dem Veranstaltungsende, ersatzweise mit dem Beginn.
-Die Begrenzungen für nächste Veranstaltungen und Slides je Kanal gelten weiter.
-Diese Funktion ist in Standalone, WordPress und TYPO3 identisch.
+
+Automatische Inhalte werden über den Werbekanal zugewiesen. Beim ausdrücklichen
+Duplizieren eines Werbekanals entstehen normale Entwurfs-Slides als bearbeitbare
+Momentaufnahme. Bestehende ältere automatisch erzeugte Slides bleiben für ihre
+alten Referenzen erhalten, sind aber aus der normalen Bibliothek ausgeblendet.
+
+## Veranstaltungsbild
+
+Im Veranstaltungsdialog entweder eine externe Bild-URL eintragen oder
+„Bild auswählen / hochladen“ verwenden. WordPress öffnet die native Mediathek;
+TYPO3 öffnet seinen nativen Dateibrowser mit Upload und Mehrfachauswahl.
+Standalone verwendet die eigene Medienauswahl mit Upload.
+Die Vorschau zeigt das ausgewählte Bild. „Bild entfernen“ löscht nur die Referenz
+im Formular, nicht die Mediendatei. Erst „Speichern“ übernimmt die Änderung.
+
+Die Funktion gilt für alle drei Varianten. Standalone-Migration 042 ergänzt eine
+optionale virtuelle Inhaltskennung im Player-Status, ohne vorhandene Slide-
+Referenzen zu ändern. Vorhandene Veranstaltungs-, Kanal- und Vorlagendaten werden
+nicht gelöscht. Vor einem Downgrade eine Sicherung verwenden; ältere Versionen
+können Event-Werbung wieder als gespeicherte Slides erzeugen.
