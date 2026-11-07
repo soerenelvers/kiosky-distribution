@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/EventEditorSettings.php';
 
 use RuntimeException;
 
@@ -24,6 +25,7 @@ final class TransferService
                 'navigationOrder' => $state['navigationOrder'] ?? [],
                 'scheduleTargetOrder' => $state['scheduleTargetOrder'] ?? [],
                 'titleExclusions' => $state['titleExclusions'] ?? [],
+                'eventEditorSettings' => EventEditorSettings::normalize($state['eventEditorSettings'] ?? []),
                 'publicCalendarSettings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? []),
             ];
         }
@@ -184,6 +186,7 @@ final class TransferService
             if (is_array($settings['navigationOrder'] ?? null)) $state['navigationOrder'] = array_values(array_map('strval', $settings['navigationOrder']));
             if (is_array($settings['scheduleTargetOrder'] ?? null)) $state['scheduleTargetOrder'] = array_values(array_map('strval', $settings['scheduleTargetOrder']));
             if (is_array($settings['titleExclusions'] ?? null)) $state['titleExclusions'] = array_values(array_map('strval', $settings['titleExclusions']));
+            if (is_array($settings['eventEditorSettings'] ?? null)) $state['eventEditorSettings']=EventEditorSettings::normalize($settings['eventEditorSettings']);
             if (is_array($settings['publicCalendarSettings'] ?? null)) $state['publicCalendarSettings'] = PublicEventCalendar::normalizeSettings($settings['publicCalendarSettings']);
         }
         if (isset($sections['integrations']) && is_array($sections['integrations'])) {

@@ -13,6 +13,7 @@ require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
 require_once __DIR__.'/PresetHandoff.php';
+require_once __DIR__.'/EventEditorSettings.php';
 
 final class Api
 {
@@ -251,7 +252,7 @@ final class Api
         }
 
         if ($path === '/api/events') {
-            if ($method === 'GET') return $this->ok(['data' => $this->active($state['events'])]);
+            if ($method === 'GET') return $this->ok(['data' => $this->active($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? [])]);
             if ($method === 'POST') {
                 $event = $this->saveRecord($state, 'events', $body);
                 $this->ensureEventChannel($state, $event);
@@ -837,12 +838,18 @@ final class Api
         if ($path === '/api/settings/features' && $method === 'GET') return $this->ok(['data' => $this->license()->features($state),'licensedModules'=>$this->license()->grants($state), 'navigationOrder' => $this->normalizeNavigationOrder($state['navigationOrder'] ?? []),'menuAccess'=>($this->identity['role'] ?? '') === 'admin' || !empty($state['menuAccess'][$this->identity['id']]['enabled'])]);
         if ($path === '/api/settings/features' && $method === 'PUT') {
             $allowed = ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users', 'content', 'presets_warnings'];
-            $allowed=array_merge($allowed,array_map(static fn(string $type):string=>'editor_'.$type,['text','ticker','weather','qr-code','countdown','image','video','web','event','event-table','event-field','wayfinding','alert-icon']));
+            $allowed=array_merge($allowed,array_map(static fn(string $type):string=>'editor_'.$type,['text','ticker','weather','qr-code','countdown','image','video','web','event','event-table','event-stamp','event-field','wayfinding','alert-icon']));
             foreach($allowed as $key){$module=LicenseClient::feature($key);if(($body[$key] ?? null)===true&&$module&&!$this->license()->allows($state,$module))throw new RuntimeException('Dieses Modul ist nicht lizenziert.',403);}
             foreach ($allowed as $key) if (is_bool($body[$key] ?? null)) $state['featureSettings'][$key] = $body[$key];
             if (($body['menus'] ?? null)===false && isset($state['menuShare'])) $state['menuShare']['secret']=bin2hex(random_bytes(32));
             $state['navigationOrder'] = $this->normalizeNavigationOrder($body['navigationOrder'] ?? $state['navigationOrder'] ?? []);
             return $this->ok(['data' => $this->license()->features($state),'licensedModules'=>$this->license()->grants($state), 'navigationOrder' => $state['navigationOrder']], true);
+        }
+        if ($path === '/api/settings/events' && $method === 'GET') return $this->ok(['settings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? [])]);
+        if ($path === '/api/settings/events' && $method === 'PUT') {
+            $current=EventEditorSettings::normalize($state['eventEditorSettings'] ?? []);$patch=is_array($body['fields'] ?? null)?$body['fields']:[];
+            $state['eventEditorSettings']=EventEditorSettings::normalize(['fields'=>array_replace($current['fields'],$patch)]);
+            return $this->ok(['settings'=>$state['eventEditorSettings']],true);
         }
         if ($path === '/api/settings/public-calendar' && $method === 'GET') {
             return $this->ok(['settings' => PublicEventCalendar::normalizeSettings($state['publicCalendarSettings'] ?? [])]);

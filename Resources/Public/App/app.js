@@ -417,10 +417,114 @@ function eventTableMarkup(event,element={}){
   return `<section class="event-data-table">${element.eventHeading?`<strong class="event-free-heading">${escapeHtml(element.eventHeading)}</strong>`:''}<table aria-label="Veranstaltungsdaten"><tbody>${rows}</tbody></table></section>`;
 }
 
+function eventTicketsSoldOut(event){
+  if(!event)return false;if(event.status==='sold_out')return true;
+  const value=String(event.remainingTickets??'').trim().toLocaleLowerCase('de-DE');
+  if(/\b(?:nicht|not)\s+(?:ausverkauft|sold[ _-]*out)\b/.test(value))return false;
+  return /\b(?:ausverkauft|sold[ _-]*out)\b/.test(value)||/^(?:0(?:\s*(?:karten|tickets|restkarten))?|keine\s*(?:karten|tickets|restkarten))$/.test(value);
+}
+function eventBoxOfficeOpen(event,now=Date.now()){
+  if(!event||event.boxOfficeAvailable!==true||['cancelled','ended','archived'].includes(event.status))return false;
+  const opens=event.boxOfficeOpenAt?Date.parse(event.boxOfficeOpenAt):-Infinity,closes=event.eventEnd?Date.parse(event.eventEnd):Infinity;
+  return opens<=now&&now<closes;
+}
+function eventTicketsUnavailable(event){
+  return Boolean(event)&&(event.status==='cancelled'||eventTicketsSoldOut(event)||/nicht\s+verfügbar|not\s+available|unavailable|kein(?:e|en)?\s+(?:vorverkauf|karten|tickets)/i.test(String(event.remainingTickets??'')));
+}
+function eventTextVisible(element,event,now=Date.now()){
+  if(!element.eventCondition||element.eventCondition==='always')return true;
+  return eventStampVisible({stampCondition:element.eventCondition,stampField:element.eventConditionField,stampValue:element.eventConditionValue},event,now);
+}
+function eventTextVisibilityAttributes(element,event){
+  if(element.type!=='text'||!element.eventCondition||element.eventCondition==='always')return '';
+  const fields=new Set(['status','remainingTickets','ticketUrl','boxOfficeAvailable','boxOfficeOpenAt','eventEnd','eventStart','date',element.eventConditionField]);
+  const snapshot=event?Object.fromEntries([...fields].filter(field=>Object.hasOwn(eventDetailLabels,field)&&field!=='ticketQr').map(field=>[field,event[field]])):null;
+  const config={element:{eventCondition:element.eventCondition,eventConditionField:element.eventConditionField,eventConditionValue:element.eventConditionValue},event:snapshot};
+  return `${hiddenEventValueAttributes(eventTextVisible(element,event))} data-event-text-condition="${escapeHtml(encodeURIComponent(JSON.stringify(config)))}"`;
+}
+const eventTextConditionCache=new WeakMap();
+function updateEventTextVisibility(root,now=Date.now()){
+  root.querySelectorAll('[data-event-text-condition]').forEach(node=>{try{
+    const encoded=node.dataset.eventTextCondition;let config=eventTextConditionCache.get(node);if(!config||config.encoded!==encoded){config={...JSON.parse(decodeURIComponent(encoded)),encoded};eventTextConditionCache.set(node,config);}
+    const visible=eventTextVisible(config.element,config.event,now),wasHidden=node.dataset.eventValueMissing==='true';
+    if(visible===!wasHidden)return;if(visible){node.removeAttribute('data-event-value-missing');node.removeAttribute('aria-hidden');if(node.dataset.autoFont==='true'&&node.parentElement)scheduleAutomaticTextFit(node.parentElement);}else{node.dataset.eventValueMissing='true';node.setAttribute('aria-hidden','true');}
+  }catch{node.dataset.eventValueMissing='true';node.setAttribute('aria-hidden','true');}});
+}
+function eventStampVisible(element,event,now=Date.now()){
+  if(!event)return false;const mode=element.stampCondition||'sold-out';
+  if(mode==='always')return true;if(mode==='sold-out')return eventTicketsSoldOut(event);if(mode==='not-sold-out')return Boolean(event.remainingTickets)&&!eventTicketsSoldOut(event);
+  if(mode==='cancelled')return event.status==='cancelled';if(mode==='box-office')return event.boxOfficeAvailable===true;
+  if(mode==='box-office-open')return eventBoxOfficeOpen(event,now);if(mode==='box-office-closed')return !eventBoxOfficeOpen(event,now);
+  if(mode==='tickets-unavailable')return eventTicketsUnavailable(event);if(mode==='tickets-available')return !eventTicketsUnavailable(event)&&Boolean(String(event.remainingTickets??'').trim()||eventTicketUrl(event));
+  const field=element.stampField||'remainingTickets';if(!Object.hasOwn(eventDetailLabels,field)||field==='ticketQr')return false;
+  const values=[String(event[field]??''),String(eventDetailValue(event,field))].map(value=>value.trim().toLocaleLowerCase('de-DE')),value=values[1],expected=String(element.stampValue||'').trim().toLocaleLowerCase('de-DE');
+  if(mode==='field-not-empty')return value!=='';if(mode==='field-empty')return value==='';if(mode==='field-equals')return values.includes(expected);if(mode==='field-contains')return expected!==''&&values.some(value=>value.includes(expected));return false;
+}
+function eventStampMarkup(element,event,preview=false){
+  const visible=eventStampVisible(element,event);if(!visible&&!preview&&!['box-office-open','box-office-closed'].includes(element.stampCondition))return '';
+  const color=/^#[0-9a-f]{6}$/i.test(String(element.color))?element.color:'#b91c1c',ink=/^#[0-9a-f]{6}$/i.test(String(element.stampTextColor))?element.stampTextColor:'#ffffff';
+  return `<div class="event-stamp ${element.stampStyle==='solid'?'is-solid':''} ${preview&&!visible?'is-condition-inactive':''}" style="--stamp-color:${color};--stamp-ink:${ink}"><span>${escapeHtml(element.text||'AUSVERKAUFT')}</span>${preview&&!visible?'<small>Vorschau · Bedingung nicht erfüllt</small>':''}</div>`;
+}
+
+function eventLayoutId(prefix='row'){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;}
+function eventLayoutNumber(value,fallback,min=0,max=6){const number=Number(value);return value==null||value===''||!Number.isFinite(number)?fallback:Math.max(min,Math.min(max,number));}
+function eventLayoutTokens(text,previous=[]){
+  const pools=new Map();for(const token of previous)if(token.type==='field'){const list=pools.get(token.field)||[];list.push(token);pools.set(token.field,list);}
+  const tokens=[];let cursor=0;const pattern=/\{\{([^{}\n]+)\}\}/g;
+  for(const match of String(text).slice(0,8000).matchAll(pattern)){
+    if(match.index>cursor)tokens.push({id:eventLayoutId('text'),type:'text',text:text.slice(cursor,match.index)});
+    const name=match[1].trim(),field=Object.hasOwn(eventDetailLabels,name)?name:Object.keys(eventDetailLabels).find(field=>eventDetailLabels[field].toLocaleLowerCase('de-DE')===name.toLocaleLowerCase('de-DE'));
+    const previousToken=field?pools.get(field)?.shift():null;tokens.push(field?{...previousToken,id:previousToken?.id||eventLayoutId('field'),type:'field',field}:{id:eventLayoutId('text'),type:'text',text:match[0]});cursor=match.index+match[0].length;
+  }
+  if(cursor<String(text).length)tokens.push({id:eventLayoutId('text'),type:'text',text:String(text).slice(cursor,8000)});
+  return tokens;
+}
+function eventLayoutText(row){return(row.tokens||[]).map(token=>token.type==='field'?`{{${eventDetailLabels[token.field]||token.field}}}`:String(token.text||'')).join('');}
+function eventLayoutAddAt(row,start,end,addition){
+  const text=eventLayoutText(row);start=Math.max(0,Math.min(text.length,start));end=Math.max(start,Math.min(text.length,end));let cursor=0;
+  const spans=row.tokens.map(token=>{const length=eventLayoutText({tokens:[token]}).length,span={token,start:cursor,end:cursor+length};cursor+=length;return span;});
+  for(const span of spans)if(span.token.type==='field'){
+    if(start===end&&start>span.start&&start<span.end)start=end=span.end;
+    else if(start<span.end&&end>span.start){start=Math.min(start,span.start);end=Math.max(end,span.end);}
+  }
+  const previous=spans.filter(span=>span.token.type!=='field'||span.end<=start||span.start>=end).map(span=>span.token),marker=`\uE000${eventLayoutId('insert')}\uE001`,insert=typeof addition==='string'?addition:marker;
+  if(text.length-(end-start)+(typeof addition==='string'?addition.length:eventLayoutText({tokens:[addition]}).length)>8000)return null;
+  let tokens=eventLayoutTokens(text.slice(0,start)+insert+text.slice(end),previous);
+  if(typeof addition!=='string')tokens=tokens.flatMap(token=>{if(token.type!=='text'||!token.text.includes(marker))return[token];const [before,after]=token.text.split(marker);return[...(before?[{id:eventLayoutId('text'),type:'text',text:before}]:[]),addition,...(after?[{id:eventLayoutId('text'),type:'text',text:after}]:[])];});
+  return tokens.length<=100?tokens:null;
+}
+
+function eventLayoutRowsFromDetails(element){
+  return eventDetailsForElement(element).map(field=>{const options=eventDetailOptions(element,field),label=!['title','subtitle','date','ticketQr','imageUrl'].includes(field)?`${eventDetailLabels[field]}: `:'';return{id:eventLayoutId(),align:options.align,empty:'collapse',scale:field==='title'?100:field==='subtitle'||field==='date'?70:55,tokens:[{id:eventLayoutId('field'),type:'field',field,prefix:label,empty:options.empty,placeholder:options.placeholder}]};});
+}
+function eventLayoutMarkup(event,element){
+  const gap=eventLayoutNumber(element.eventRowGap,.35),lineHeight=eventLayoutNumber(element.eventRowLineHeight,1.2,.7,4);
+  const rows=element.eventRows.slice(0,50).flatMap((row,index)=>{
+    if(!row||!Array.isArray(row.tokens))return[];
+    let hasFields=false,fieldVisible=false,textVisible=false;
+    const content=row.tokens.slice(0,100).map(token=>{
+      if(token?.type!=='field'){const text=String(token?.text||'').slice(0,8000);textVisible||=Boolean(text.trim());return `<span class="event-layout-token event-layout-text">${escapeHtml(text)}</span>`;}
+      if(!Object.hasOwn(eventDetailLabels,token.field))return '';
+      hasFields=true;const defaults=eventDetailOptions(element,token.field),empty=['collapse','space','placeholder'].includes(token.empty)?token.empty:defaults.empty,value=eventDetailContent(event,token.field,element),present=Boolean(value),placeholder=String(token.placeholder??defaults.placeholder).slice(0,2000);
+      if(!present&&empty==='collapse')return '';
+      fieldVisible=true;
+      const media=token.field==='ticketQr'||token.field==='imageUrl',body=present?value:empty==='space'?'&#160;':escapeHtml(placeholder)||'&#160;';
+      const inner=media&&present||token.field==='ticketQr'&&empty==='space'?`<span class="event-layout-media${token.field==='ticketQr'?' event-layout-qr':''}${!present?' event-qr-empty':''}">${body}</span>`:body;
+      return `<span class="event-layout-token" data-event-layout-field="${token.field}"${!present?` data-event-empty="${empty}"`:''}>${present||empty==='placeholder'?escapeHtml(String(token.prefix||'').slice(0,2000)):''}${inner}${present||empty==='placeholder'?escapeHtml(String(token.suffix||'').slice(0,2000)):''}</span>`;
+    }).join('');
+    const present=hasFields?fieldVisible:textVisible,empty=['space','placeholder'].includes(row.empty)?row.empty:'collapse';
+    if(!present&&empty==='collapse')return[];
+    const align=['left','center','right'].includes(row.align)?row.align:['left','center','right'].includes(element.align)?element.align:'left',after=eventLayoutNumber(row.gapAfter,gap),scale=eventLayoutNumber(row.scale,100,25,250)/100;
+    return [`<div class="event-layout-row" data-event-layout-row="${escapeHtml(String(row.id||index))}"${!present?` data-event-empty="${empty}"`:''} style="text-align:${align};margin-bottom:${after}em;font-size:${scale}em;line-height:${lineHeight};min-height:${lineHeight}em">${present?content:empty==='space'?'&#160;':escapeHtml(String(row.emptyText||'–'))}</div>`];
+  });
+  return `${element.eventHeading?`<small class="event-free-heading">${escapeHtml(element.eventHeading)}</small>`:''}<div class="event-row-layout">${rows.join('')}</div>`;
+}
+
 function eventDetailsForElement(element){
   return Array.isArray(element.eventDetails)?element.eventDetails.filter(field=>Object.hasOwn(eventDetailLabels,field)):['title',...(element.showDate?['date']:[]),...(element.showTime===false?[]:['admissionStart','eventStart','breakStart','breakEnd','eventEnd'])];
 }
 function eventWelcomeBlockMarkup(event,fallbackTitle='Veranstaltung',options={}){
+  if(Array.isArray(options.eventRows)&&options.eventLayoutMode!=='details')return eventLayoutMarkup(event,options);
   const fields=eventDetailsForElement(options),custom=Array.isArray(options.eventDetails),heading=options.eventHeading??'Herzlich willkommen zu';
   if(!custom){
     const time=field=>eventFieldDisplayValue(event,field,options),pauseStart=time('breakStart'),pauseEnd=time('breakEnd');
@@ -517,7 +621,7 @@ function overlayClockTime(context={},timestamp=Date.now()) {
 function overlayClockScale(clock){const scale=Number(clock?.scale??100);return (Number.isFinite(scale)?Math.max(50,Math.min(300,scale)):100)/100;}
 
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable" style="--clock-scale:${overlayClockScale(element.clock)}">${overlayClockTime()}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))} style="${style}">${eventQrMarkup(element,event)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element.countdownMode==='event'&&(element.hideOnEnd||element.countdownEndBehavior)?countdown:element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${eventFieldContent(event,element)}</div>`;}if(element.type==='event-table')return `<div class="player-layout-element player-event-table" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventTableMarkup(event,element)}</div>`;if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))} style="${style}">${eventQrMarkup(element,event)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element.countdownMode==='event'&&(element.hideOnEnd||element.countdownEndBehavior)?countdown:element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${eventFieldContent(event,element)}</div>`;}if(element.type==='event-stamp')return `<div class="player-layout-element player-event-stamp" ${['box-office-open','box-office-closed'].includes(element.stampCondition)?eventTextVisibilityAttributes({type:'text',eventCondition:element.stampCondition},event):hiddenEventValueAttributes(eventStampVisible(element,event))} style="${style}">${eventStampMarkup(element,event)}</div>`;if(element.type==='event-table')return `<div class="player-layout-element player-event-table" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventTableMarkup(event,element)}</div>`;if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" ${eventTextVisibilityAttributes(element,event)} style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}" style="--clock-scale:${overlayClockScale(settings.clock)}">${overlayClockTime()}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -588,6 +692,7 @@ function renderPlaybackSlide(slide,display,item,orientation,animate=true,elapsed
 }
 
 function updatePlaybackClocks(root,context={},timestamp=Date.now()) {
+  updateEventTextVisibility(root,timestamp);
   const time=overlayClockTime(context,timestamp);root.querySelectorAll('#player-clock,.wayfinding-clock,.slide-clock').forEach(clock=>{if(clock.textContent!==time)clock.textContent=time;});root.querySelectorAll('[data-countdown-target]').forEach(node=>{const text=`${node.dataset.countdownPrefix||''}${countdownText({targetTime:node.dataset.countdownTarget})}${node.dataset.countdownSuffix||''}`;if(node.textContent!==text)node.textContent=text;});root.querySelectorAll('[data-slide-countdown]').forEach(node=>{try{const element=JSON.parse(decodeURIComponent(node.dataset.countdownElement||''));const countdown=resolveEventCountdown(element,JSON.parse(decodeURIComponent(node.dataset.countdownEvent||'null')));updateCountdownNode(node,countdown,node.querySelector('span'));}catch{}});root.querySelectorAll('[data-ticker-countdown]').forEach(node=>{try{const item=JSON.parse(decodeURIComponent(node.dataset.tickerCountdown||''));updateCountdownNode(node,item);}catch{}});root.querySelectorAll('[data-wayfinding-countdown]').forEach(node=>{try{const countdown=JSON.parse(decodeURIComponent(node.dataset.wayfindingCountdown||''));updateCountdownNode(node,countdown);}catch{}});
 }
 
@@ -783,7 +888,7 @@ const cmsIntegrated = kioskyRuntime.platform === 'wordpress';
 const cmsManagedServices = kioskyRuntime.platform !== 'standalone';
 if (cmsManagedServices) document.querySelectorAll('[data-standalone-only]').forEach(element => element.remove());
 if (cmsIntegrated) document.body.classList.add('cms-integrated', 'cms-wordpress');
-if (!cmsManagedServices) document.querySelectorAll('[data-settings-open="calendar"],[data-settings-detail="calendar"]').forEach(element => { element.hidden = true; });
+
 if (cmsManagedServices) {
   document.body.classList.add('cms-managed-services');
   document.querySelectorAll('[data-view="media"], [data-view="users"]').forEach(element => { element.hidden = true; });
@@ -917,7 +1022,7 @@ function setView(view) {
     if(licenseAllows('easyjob'))loadEasyJobConfiguration();
     if(licenseAllows('api'))loadApiUsers();
   }
-  if(view==='settings'){showSettingsLevel();loadFeatureSettings();if(licenseAllows('advertising'))loadAdvertisingSettings();if(cmsManagedServices&&licenseAllows('events'))loadPublicCalendarSettings();}
+  if(view==='settings'){showSettingsLevel();loadFeatureSettings();if(licenseAllows('advertising'))loadAdvertisingSettings();if(licenseAllows('events'))loadPublicCalendarSettings();}
   if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin')loadMenuModuleSettings();}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
@@ -1033,7 +1138,8 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
   if(level==='modules'&&licenseAllows('menus'))loadMenuModuleSettings(true);
   if(level==='licensing')loadLicensing();
   if(level==='advertising')loadAdvertisingSettings();
-  if(level==='calendar'&&cmsManagedServices)loadPublicCalendarSettings();
+  if(level==='calendar')loadPublicCalendarSettings();
+  if(level==='events')loadEventFieldSettings();
   if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
 }));
 document.querySelectorAll('[data-settings-anchor]').forEach(button => button.addEventListener('click', () => {
@@ -1153,9 +1259,8 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && compactNavigation.matches && sidebar.classList.contains('is-open')) closeCompactNavigation();
 });
 
-document.querySelectorAll('[data-action="new-event"]').forEach(button => button.addEventListener('click', () => {
-  setView('events');
-  openEventEditor();
+document.querySelectorAll('[data-action="new-event"]').forEach(button => button.addEventListener('click', async () => {
+  button.disabled=true;try{setView('events');await loadEvents();await openEventEditor();}finally{button.disabled=false;}
 }));
 
 document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', async () => {setView('operations');await loadOperations();const preset=state.presets.find(item=>item.id===`preset-${button.dataset.preset}`);if(preset){document.querySelector(`[data-apply-preset="${preset.id}"]`)?.click();}else showToast('Preset wurde nicht gefunden.');}));
@@ -1226,13 +1331,49 @@ function renderEvents() {
   const selected=state.selectedEvents.size,selectedImported=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.sourceId).length;document.querySelector('#bulk-edit-events').disabled=!selectedImported;document.querySelector('#bulk-edit-events').title=selected&&!selectedImported?'Massenänderungen gelten nur für importierte Veranstaltungen':'';document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
 }
 
+const eventEditorFieldLabels={title:'Titel (Pflichtfeld)',subtitle:'Untertitel',status:'Status',organizer:'Veranstalter / Kunde',eventType:'Veranstaltungs-/Jobtyp',date:'Datum',venue:'Spielort',room:'Raum / Saal',setupStart:'Aufbau / Veranstalter vor Ort',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',description:'Öffentliche Beschreibung',publicNotes:'Öffentliche Hinweise',internalNotes:'Interne Notizen',ticketUrl:'Ticket-Link',remainingTickets:'Ticketstatus / Restkarten',imageUrl:'Veranstaltungsbild / Mediathek',boxOfficeAvailable:'Abendkasse verfügbar',boxOfficeOpenAt:'Abendkasse öffnet',schedule:'Ablauf / Raumnutzung'};
+const eventEditorFieldIds={title:'event-title',subtitle:'event-subtitle',status:'event-status',organizer:'event-organizer',eventType:'event-type',date:'event-date',venue:'event-venue',room:'event-room',setupStart:'event-setup',admissionStart:'event-admission',eventStart:'event-start',breakStart:'event-break',breakEnd:'event-break-end',eventEnd:'event-end',description:'event-description',publicNotes:'event-public-notes',internalNotes:'event-internal-notes',ticketUrl:'event-ticket-url',remainingTickets:'event-remaining-tickets',imageUrl:'event-image-url',boxOfficeAvailable:'event-box-office',boxOfficeOpenAt:'event-box-office-open'};
+function applyEventEditorFields(){
+  const fields=state.eventFieldSettings?.fields||{};
+  for(const [key,id] of Object.entries(eventEditorFieldIds)){const input=document.getElementById(id),wrapper=input.closest('.form-field,.toggle-label'),visible=key==='title'||fields[key]!==false;wrapper.hidden=!visible;wrapper.querySelectorAll('input,select,textarea,button').forEach(control=>{if(!visible&&!control.disabled){control.dataset.eventFieldDisabled='true';control.disabled=true;}else if(visible&&control.dataset.eventFieldDisabled==='true'){control.disabled=false;delete control.dataset.eventFieldDisabled;}});}
+  if(document.querySelector('#event-type-new-controls').hidden)document.querySelector('#event-type-new').disabled=true;
+  document.querySelector('#event-schedule-section').hidden=!state.currentScheduleEventId||fields.schedule===false;
+}
+function renderEventFieldSettings(settings={}){state.eventFieldSettings=settings;document.querySelector('#event-field-settings-options').innerHTML=Object.entries(eventEditorFieldLabels).map(([key,label])=>`<label class="toggle-label"><input type="checkbox" data-event-field-setting="${key}" ${key==='title'||settings.fields?.[key]!==false?'checked':''} ${key==='title'?'disabled':''}> ${escapeHtml(label)}</label>`).join('');}
+async function loadEventFieldSettings(){try{const result=await apiRequest('/api/settings/events');renderEventFieldSettings(result.settings||{});}catch(error){showToast(error.message);}}
+document.querySelector('#event-field-settings-all').addEventListener('click',()=>{document.querySelectorAll('[data-event-field-setting]').forEach(input=>{input.checked=true;});});
+document.querySelector('#event-field-settings-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;const fields=Object.fromEntries([...document.querySelectorAll('[data-event-field-setting]')].map(input=>[input.dataset.eventFieldSetting,input.checked]));try{const result=await apiRequest('/api/settings/events',{method:'PUT',body:JSON.stringify({fields})});renderEventFieldSettings(result.settings);if(document.querySelector('#event-dialog').open)applyEventEditorFields();showToast('Veranstaltungseinstellungen wurden gespeichert.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
+
 async function loadEvents() {
   try {
     const result = await licensedRead('/api/events');
     state.events = result.data || [];
+    state.eventFieldSettings=result.fieldSettings||{};
     renderEvents();
   } catch (error) { showToast(error.message); }
 }
+
+let eventTypeDrafts=[];
+function renderEventTypeOptions(selected=''){
+  const types=[...new Set([...state.events.filter(event=>!event.deletedAt).map(event=>event.eventType),...eventTypeDrafts,selected].map(value=>String(value||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  document.querySelector('#event-type').innerHTML='<option value="">Kein Typ</option>'+types.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+  document.querySelector('#event-type').value=selected;
+}
+function showNewEventType(show){
+  const input=document.querySelector('#event-type-new');document.querySelector('#event-type-new-controls').hidden=!show;input.disabled=!show;input.required=show;input.value='';input.setCustomValidity('');if(show)input.focus();
+}
+function applyNewEventType(){
+  const input=document.querySelector('#event-type-new');if(input.disabled)return true;
+  const value=input.value.trim();input.setCustomValidity(value?'':'Bitte einen Typ eingeben.');if(!input.reportValidity())return false;
+  const existing=[...document.querySelector('#event-type').options].find(option=>option.value.toLocaleLowerCase('de-DE')===value.toLocaleLowerCase('de-DE'))?.value,selected=existing||value;
+  if(!existing)eventTypeDrafts.push(value);renderEventTypeOptions(selected);showNewEventType(false);return true;
+}
+document.querySelector('#event-type-add').addEventListener('click',()=>showNewEventType(true));
+document.querySelector('#event-type-apply').addEventListener('click',()=>{if(applyNewEventType())document.querySelector('#event-type').focus();});
+document.querySelector('#event-type-cancel').addEventListener('click',()=>{showNewEventType(false);document.querySelector('#event-type').focus();});
+document.querySelector('#event-type-new').addEventListener('input',event=>event.target.setCustomValidity(''));
+document.querySelector('#event-type-new').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();if(applyNewEventType())document.querySelector('#event-type').focus();}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();showNewEventType(false);document.querySelector('#event-type').focus();}});
+document.querySelector('#event-type').addEventListener('change',()=>showNewEventType(false));
 
 async function openEventEditor(item = null) {
   document.querySelector('#event-form').reset();
@@ -1242,7 +1383,7 @@ async function openEventEditor(item = null) {
   document.querySelector('#event-title').value = item?.title || '';
   document.querySelector('#event-subtitle').value = item?.subtitle || '';
   document.querySelector('#event-organizer').value = item?.organizer || '';
-  document.querySelector('#event-type').value = item?.eventType || '';
+  eventTypeDrafts=[];renderEventTypeOptions(item?.eventType||'');showNewEventType(false);
   document.querySelector('#event-status').value = item?.status || 'draft';
   document.querySelector('#event-date').value = eventDateInput(item?.date);
   document.querySelector('#event-venue').value = item?.venue || '';
@@ -1269,6 +1410,7 @@ async function openEventEditor(item = null) {
   document.querySelector('#event-schedule-section').hidden=!item;
   document.querySelector('#new-event-schedule-entry').hidden=state.currentUser?.role==='viewer';
   if(item)await loadEventSchedule(item.id);
+  applyEventEditorFields();
   document.querySelector('#event-dialog').showModal();
 }
 
@@ -1315,6 +1457,7 @@ document.querySelector('#event-schedule-form').addEventListener('submit',async e
 });
 
 function collectEventEditor() {
+  if(!applyNewEventType())throw new Error('Bitte einen gültigen Veranstaltungs-/Jobtyp eingeben.');
   const date = document.querySelector('#event-date').value;
   return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventTimestamp(date,document.querySelector('#event-setup').value), admissionStart: eventTimestamp(date, document.querySelector('#event-admission').value), eventStart: eventTimestamp(date, document.querySelector('#event-start').value), breakStart: eventTimestamp(date, document.querySelector('#event-break').value), breakEnd:eventTimestamp(date,document.querySelector('#event-break-end').value), eventEnd: eventTimestamp(date, document.querySelector('#event-end').value), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventTimestamp(date, document.querySelector('#event-box-office-open').value) };
 }
@@ -1970,7 +2113,7 @@ function renderModuleSwitching(){
   list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''} ${!licenseAllows(licenseModuleForFeature(view))?'disabled':''}><span>${!licenseAllows(licenseModuleForFeature(view))?'Nicht lizenziert':view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
-const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-table':'Event-Tabelle','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
+const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
 function editorElementEnabled(type,settings=state.featureSettings||{}){return settings[`editor_${type}`]!==false;}
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
@@ -1984,10 +2127,10 @@ async function loadFeatureSettings(){
 }
 
 async function loadPublicCalendarSettings(){
-  if(!cmsManagedServices)return null;
   try{
     const result=await apiRequest('/api/settings/public-calendar'),settings=result.settings||{};
     document.querySelector('#public-calendar-title').value=settings.title||'Veranstaltungskalender';
+    if(!cmsManagedServices){document.querySelector('#public-calendar-enabled').checked=settings.publicEnabled===true;document.querySelector('#public-calendar-embed').value=`<iframe src="${new URL('/calendar',window.location.href).toString()}" title="Veranstaltungskalender" width="100%" height="900" style="border:0" loading="lazy"></iframe>`;}
     document.querySelector('#public-calendar-upcoming-title').value=settings.upcomingTitle||'Nächste Veranstaltungen';
     document.querySelector('#public-calendar-upcoming-count').value=settings.upcomingCount||10;
     document.querySelector('#public-calendar-show-search').checked=settings.showSearch!==false;
@@ -2010,6 +2153,7 @@ document.querySelector('#public-calendar-settings-form')?.addEventListener('subm
     showUpcoming:document.querySelector('#public-calendar-show-upcoming').checked,
   };
   document.querySelectorAll('[data-public-calendar-field]').forEach(input=>{payload[input.dataset.publicCalendarField]=input.type==='checkbox'?input.checked:input.value;});
+  if(!cmsManagedServices)payload.publicEnabled=document.querySelector('#public-calendar-enabled').checked;
   try{await apiRequest('/api/settings/public-calendar',{method:'PUT',body:JSON.stringify(payload)});showToast('Website-Kalender wurde gespeichert.');}
   catch(error){showToast(error.message);}
 });
@@ -3002,7 +3146,7 @@ state.channelRedo = [];
 state.channelHistoryCurrent = null;
 
 const slideTypeLabels = {
-  custom: 'Eigene Slide', 'event-table':'Event-Tabelle', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
+  custom: 'Eigene Slide', 'event-stamp':'Event-Stempel', 'event-table':'Event-Tabelle', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
 };
 const orientationLabels = { auto: 'Automatisch / responsiv', landscape: 'Querformat', portrait: 'Hochformat' };
 
@@ -3031,6 +3175,7 @@ function previewTypography(value) {
 function thumbnailElementMarkup(element, settings,event=null) {
   element=previewTypography(element);
   const style = `left:${Number(element.x || 0)}%;top:${Number(element.y || 0)}%;width:${Number(element.width || 40)}%;height:${Number(element.height || 20)}%;background:${escapeHtml(element.background || 'transparent')};color:${escapeHtml(element.color || '#ffffff')};${textFontStyle(element,24,`${Math.max(3,textFontPixels(element,24)/8)}px`)};text-align:${escapeHtml(element.align || 'left')};transform:rotate(${Number(element.rotation || 0)}deg);opacity:${Number(element.opacity ?? 100) / 100};padding:${Math.max(0, Number(element.padding || 0) / 8)}px;border-radius:${Math.max(0, Number(element.radius || 0) / 8)}px`;
+  if(element.type==='text'&&!eventTextVisible(element,event))return '';
   let content = escapeHtml(element.text || '');
   if (element.type === 'wayfinding') content = wayfindingMarkup(element, settings);
   if (element.type === 'ticker') content = `<span class="slide-thumb-ticker">⇠ ${escapeHtml(tickerElementItems(element).map(item => item.kind === 'text' ? item.text : item.kind === 'countdown' ? 'Countdown' : item.kind === 'qr-code' ? 'QR-Code' : item.icon || 'Icon').join(' · '))}</span>`;
@@ -3041,6 +3186,7 @@ function thumbnailElementMarkup(element, settings,event=null) {
   if (element.type === 'video') content = element.src ? mediaContentMarkup(element,element.src,true,'muted preload="metadata"') : '<span class="slide-thumb-symbol">▶</span>';
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
   if (element.type === 'event') content = `<span class="slide-thumb-event">${eventWelcomeBlockMarkup(event,element.event||element.text||'Veranstaltung',element)}</span>`;
+  if (element.type === 'event-stamp') content=eventStampMarkup(element,event,!event);
   if (element.type === 'event-table') content = eventTableMarkup(event,element);
   if (element.type === 'event-field') content = element.field==='ticketQr'?eventFieldContent(event,element):escapeHtml(event?eventFieldPresentation(event,element.field,element).text:`${element.prefix||''}${element.fallback||'Veranstaltungsfeld'}`);
   return `<span class="slide-thumb-element type-${escapeHtml(element.type)}" style="${style}">${content}</span>`;
@@ -3206,8 +3352,7 @@ for(const [prefix,kind,render] of [['slide','slides',renderSlideLibrary],['chann
 
 function populateContentEventOptions() {
   const options = state.events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(event.title)}</option>`).join('');
-  document.querySelector('#channel-event').innerHTML = `<option value="">Keine feste Veranstaltung</option>${options}`;
-  document.querySelector('#slide-event').innerHTML = `<option value="">Keine feste Veranstaltung</option>${options}`;
+  for(const id of ['channel-event','slide-event']){const select=document.getElementById(id),selected=select.value;select.innerHTML=`<option value="">Keine feste Veranstaltung</option>${options}`;if([...select.options].some(option=>option.value===selected))select.value=selected;}
 
 }
 
@@ -3953,7 +4098,8 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'weather') return { ...base, weatherMode: 'temperature', fontSize: 32, fontWeight: 600, color: '#ffffff', background: '#315b49', x: 78, y: 6, width: 16, height: 12, padding: 6, radius: 10 };
   if (type === 'qr-code') return { ...base, qrKind: 'link', qrValue: 'https://example.org', wifiSsid: '', wifiPassword: '', wifiEncryption: 'WPA', wifiHidden: false, qrForeground: '#111111', background: '#ffffff', x: 64, y: 18, width: 24, height: 42, padding: 8 };
   if (type === 'countdown') return { ...base, countdownMode: 'daily', countdownDailyTime: '18:00', targetTime: '', prefix: 'Noch ', suffix: '', showSeconds: true, countdownFormat:'hhmmss', countdownEndBehavior:'countup', hideOnEnd:false, fontSize: 52, fontWeight: 700, color: '#ffffff', background: 'transparent', align: 'center', width: 48, height: 18 };
-  if (type === 'event') return { ...base, eventHeading:'', event: '', text: '', fontSize: 38, color: '#ffffff', width: 80, height: 32 };
+  if (type === 'event') return { ...base, eventHeading:'', event: '', text: '', fontSize: 38, color: '#ffffff', width: 80, height: 32, eventLayoutMode:'rows', eventRows:eventLayoutRowsFromDetails(base) };
+  if (type === 'event-stamp') return {...base,text:'AUSVERKAUFT',stampCondition:'sold-out',stampField:'remainingTickets',stampStyle:'outline',color:'#b91c1c',background:'transparent',fontSize:48,fontWeight:800,rotation:-12,x:52,y:14,width:42,height:20};
   if (type === 'event-table') return {...base,eventHeading:'',eventDetails:['title','subtitle','date','eventStart','eventEnd','venue','room'],eventTableLabels:true,width:80,height:70,fontSize:28};
   if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: false, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
@@ -4194,10 +4340,11 @@ function editorElementMarkup(element) {
   if (element.type === 'image') { const src=element.src||event?.imageUrl||''; return src?mediaContentMarkup(element,src):'<span class="canvas-placeholder" data-event-value-missing="true" aria-hidden="true">▧<small>Bild auswählen</small></span>'; }
   if (element.type === 'video') return element.src ? mediaContentMarkup(element,element.src,true,`${element.muted!==false?'muted':''} autoplay loop`) : '<span class="canvas-placeholder">▶<small>Video auswählen</small></span>';
   if (element.type === 'web') return element.src && element.src !== 'https://example.org' ? `<iframe src="${escapeHtml(element.src)}" title="Eingebettete Website" loading="lazy"></iframe>` : `<span class="canvas-placeholder">↗<small>${escapeHtml(element.src || 'Website-URL eintragen')}</small></span>`;
+  if (element.type === 'event-stamp') return `<div class="canvas-event-stamp">${eventStampMarkup(element,event,true)}</div>`;
   if (element.type === 'event-table') return `<div class="canvas-event-table" ${hiddenEventValueAttributes(Boolean(event))}>${eventTableMarkup(event,element)}</div>`;
   if (element.type === 'event') return `<div class="canvas-event-content" ${hiddenEventValueAttributes(Boolean(event))}>${eventWelcomeBlockMarkup(event,element.event||'Veranstaltung',element)}</div>`;
   if (element.type === 'event-field') { const presentation=eventFieldPresentation(event,element.field,element); return `<div class="${element.field==='ticketQr'?'canvas-qr-code':'canvas-text-content'}" ${hiddenEventValueAttributes(presentation.present)}>${eventFieldContent(event,element)}</div>`; }
-  return `<div class="canvas-text-content" contenteditable="false" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
+  return `<div class="canvas-text-content ${element.type==='text'&&!eventTextVisible(element,event)?'is-condition-inactive':''}" contenteditable="false" spellcheck="true">${escapeHtml(element.text || '')}</div>`;
 }
 
 try{document.querySelector('#editor-snap-enabled').checked=localStorage.getItem('kiosky-editor-snapping')!=='false';}catch{}
@@ -4537,7 +4684,7 @@ function syncEditorProperties() {
   renderSlideSettingsProperties();
   if (!element) return;
   document.querySelector('#property-element-type').textContent = slideTypeLabels[element.type] || 'Element';
-  document.querySelectorAll('[data-property-section]').forEach(section => { section.hidden = section.dataset.propertySection !== element.type && !(section.dataset.propertySection==='event'&&element.type==='event-table') && !(section.dataset.propertySection === 'text' && ['event','event-table','event-field','ticker','countdown','weather'].includes(element.type)); });
+  document.querySelectorAll('[data-property-section]').forEach(section => { section.hidden = section.dataset.propertySection !== element.type && !(section.dataset.propertySection==='event'&&element.type==='event-table') && !(section.dataset.propertySection === 'text' && ['event','event-table','event-stamp','event-field','ticker','countdown','weather'].includes(element.type)); });
   document.querySelector('#property-text-field').hidden = ['ticker','weather','event','event-table','event-field'].includes(element.type);
   document.querySelector('#property-text').value = element.text || '';
   document.querySelector('#property-font-size').value = textFontPoints(element,24);
@@ -4546,6 +4693,7 @@ function syncEditorProperties() {
   document.querySelector('#property-font-size').disabled=Boolean(element.autoFontSize);
   document.querySelector('#property-color').value = element.color || '#ffffff';
   document.querySelector('#property-event').value = element.event || '';
+  renderEventLayoutEditor(element);
   document.querySelector('#property-event-heading').value=element.eventHeading??'Herzlich willkommen zu';
   document.querySelector('#property-event-table-labels').checked=element.eventTableLabels!==false;
   document.querySelector('#property-event-table-empty').checked=element.eventTableShowEmpty===true;
@@ -4559,6 +4707,21 @@ function syncEditorProperties() {
     document.querySelector(`[data-event-row-placeholder-label="${field}"]`).hidden=eventDetailOptions(element,field).empty!=='placeholder';
   }
   document.querySelector('#property-event-field').value = element.field || 'title';
+  document.querySelector('#property-text-condition-section').hidden=element.type!=='text';
+  document.querySelector('#property-text-condition').value=element.eventCondition||'always';
+  document.querySelector('#property-text-condition-field').value=element.eventConditionField||'ticketUrl';
+  document.querySelector('#property-text-condition-value').value=element.eventConditionValue||'';
+  document.querySelector('#property-text-condition-custom').hidden=!String(element.eventCondition||'always').startsWith('field-');
+  document.querySelector('#property-text-condition-value').closest('label').hidden=!['field-equals','field-contains'].includes(element.eventCondition);
+  document.querySelector('#property-text-condition-state').textContent=eventTextVisible(element,editorSelectedEvent())?'Bedingung erfüllt: Der Text wird angezeigt.':'Bedingung nicht erfüllt: Nur die blasse Editorvorschau ist sichtbar. Ohne passendes Event bleiben bedingte Texte ausgeblendet.';
+  document.querySelector('#property-stamp-condition').value=element.stampCondition||'sold-out';
+  document.querySelector('#property-stamp-field').value=element.stampField||'remainingTickets';
+  document.querySelector('#property-stamp-value').value=element.stampValue||'';
+  document.querySelector('#property-stamp-style').value=element.stampStyle||'outline';
+  document.querySelector('#property-stamp-text-color').value=element.stampTextColor||'#ffffff';
+  document.querySelector('#property-stamp-custom').hidden=!String(element.stampCondition||'sold-out').startsWith('field-');
+  document.querySelector('#property-stamp-value').closest('label').hidden=!['field-equals','field-contains'].includes(element.stampCondition);
+  document.querySelector('#property-stamp-state').textContent=eventStampVisible(element,editorSelectedEvent())?'Bedingung erfüllt: Der Stempel wird auf dem Player angezeigt.':'Bedingung nicht erfüllt: Die gestrichelte Vorschau wird auf dem Player ausgeblendet.';
   document.querySelector('#property-event-prefix').value = element.prefix || '';
   document.querySelector('#property-event-fallback').value = element.fallback || '';
   document.querySelector('#property-event-locked').checked = Boolean(element.locked);
@@ -4724,7 +4887,7 @@ document.querySelectorAll('[data-editor-action]').forEach(button => button.addEv
   if (!element) return;
   const index = state.editorElements.indexOf(element);
   if (action === 'delete') {pushEditorHistory();deleteSelectedEditorElements();return;}
-  if (action === 'duplicate') {pushEditorHistory(); const copy = { ...element, id: `element-${Date.now()}`, x: Math.min(90, element.x + 4), y: Math.min(90, element.y + 4) }; state.editorElements.push(copy); state.selectedEditorElementId = copy.id;state.selectedEditorElementIds=new Set([copy.id]); }
+  if (action === 'duplicate') {pushEditorHistory(); const copy = { ...structuredClone(element), id: `element-${Date.now()}`, x: Math.min(90, element.x + 4), y: Math.min(90, element.y + 4) }; state.editorElements.push(copy); state.selectedEditorElementId = copy.id;state.selectedEditorElementIds=new Set([copy.id]); }
   if (action === 'forward' && index < state.editorElements.length - 1) {pushEditorHistory();[state.editorElements[index], state.editorElements[index + 1]] = [state.editorElements[index + 1], state.editorElements[index]];}
   if (action === 'backward' && index > 0) {pushEditorHistory();[state.editorElements[index], state.editorElements[index - 1]] = [state.editorElements[index - 1], state.editorElements[index]];}
   renderEditorCanvas();
@@ -4773,7 +4936,84 @@ for(const [attribute,key] of [['align','align'],['empty','empty'],['placeholder'
   pushEditorHistory();element.eventDetails??=eventDetailsForElement(element);element.eventDetailSettings??={};element.eventDetailSettings[field]={...element.eventDetailSettings[field],[key]:input.value};renderEditorCanvas();scheduleSlideAutosave();
 }));
 
+let eventLayoutTarget=null,eventLayoutDrag=null,eventLayoutIgnoreClick=0;
+function changeEventLayout(change){
+  const element=selectedEditorElement();if(element?.type!=='event')return;
+  pushEditorHistory();change(element);renderEditorCanvas();scheduleSlideAutosave();
+}
+function eventLayoutInsert(row,token,beforeId=null){
+  if(row.tokens.length>=100){showToast('Bitte eine weitere Zeile verwenden: maximal 100 Text-/Feldbausteine pro Zeile.');return;}
+  const index=beforeId?row.tokens.findIndex(item=>item.id===beforeId):-1;row.tokens.splice(index<0?row.tokens.length:index,0,token);
+}
+function eventLayoutTextTokenControls(token,row,rows){
+  const label=String(token.text||'').trim()?`Text: ${String(token.text).slice(0,35)}`:'Leerzeichen / Umbruch';
+  return `<details class="event-layout-text-chip" data-event-layout-token-id="${escapeHtml(token.id)}"><summary data-event-layout-drag-token="${escapeHtml(token.id)}"><span>${escapeHtml(label)}</span></summary><div class="event-layout-token-actions"><button type="button" class="event-layout-grip" data-event-layout-drag-token="${escapeHtml(token.id)}" aria-label="Textbaustein ziehen">⠿</button><button type="button" class="mini-button" data-event-layout-token-move="-1" aria-label="Text nach links">←</button><button type="button" class="mini-button" data-event-layout-token-move="1" aria-label="Text nach rechts">→</button><button type="button" class="mini-button" data-event-layout-token-delete aria-label="Textbaustein entfernen">×</button></div><label class="form-field"><span>Freitext / Trennzeichen</span><textarea rows="2" maxlength="8000" data-event-layout-token-setting="text">${escapeHtml(token.text||'')}</textarea></label><label class="form-field"><span>In Zeile verschieben</span><select data-event-layout-token-target>${rows.map((target,n)=>`<option value="${escapeHtml(target.id)}" ${target.id===row.id?'selected':''}>Zeile ${n+1}</option>`).join('')}</select></label></details>`;
+}
+function eventLayoutTokenControls(row,rows){return row.tokens.map(token=>token.type!=='field'?eventLayoutTextTokenControls(token,row,rows):!Object.hasOwn(eventDetailLabels,token.field)?'':`<details class="event-layout-chip" data-event-layout-token-id="${escapeHtml(token.id)}"><summary data-event-layout-drag-token="${escapeHtml(token.id)}"><span>${escapeHtml(eventDetailLabels[token.field])}</span></summary><div class="event-layout-token-actions"><button type="button" class="event-layout-grip" data-event-layout-drag-token="${escapeHtml(token.id)}" aria-label="${escapeHtml(eventDetailLabels[token.field])} ziehen">⠿</button><button type="button" class="mini-button" data-event-layout-token-move="-1" aria-label="Feld nach links">←</button><button type="button" class="mini-button" data-event-layout-token-move="1" aria-label="Feld nach rechts">→</button><button type="button" class="mini-button" data-event-layout-token-delete aria-label="Feld entfernen">×</button></div><label class="form-field"><span>Text davor</span><input data-event-layout-token-setting="prefix" maxlength="2000" value="${escapeHtml(token.prefix||'')}"></label><label class="form-field"><span>Text danach</span><input data-event-layout-token-setting="suffix" maxlength="2000" value="${escapeHtml(token.suffix||'')}"></label><label class="form-field"><span>Wenn das Feld leer ist</span><select data-event-layout-token-setting="empty">${[['inherit','Wie bisher'],['collapse','Ausblenden'],['space','Platz freihalten'],['placeholder','Ersatztext']].map(([value,label])=>`<option value="${value}" ${(token.empty||'inherit')===value?'selected':''}>${label}</option>`).join('')}</select></label><label class="form-field"><span>Ersatztext</span><input data-event-layout-token-setting="placeholder" maxlength="2000" value="${escapeHtml(token.placeholder??'–')}"></label><label class="form-field"><span>In Zeile verschieben</span><select data-event-layout-token-target>${rows.map((target,n)=>`<option value="${escapeHtml(target.id)}" ${target.id===row.id?'selected':''}>Zeile ${n+1}</option>`).join('')}</select></label></details>`).join('');}
+function renderEventLayoutEditor(element){
+  const panel=document.querySelector('#event-layout-panel');panel.hidden=element.type!=='event';if(panel.hidden){document.querySelector('#event-detail-choices').closest('fieldset').hidden=false;document.querySelector('#property-event').closest('label').hidden=false;return;}
+  const enabled=Array.isArray(element.eventRows)&&element.eventLayoutMode!=='details';
+  document.querySelector('#event-detail-choices').closest('fieldset').hidden=enabled;
+  document.querySelector('#property-event').closest('label').hidden=enabled;
+  const signature=JSON.stringify([element.id,element.eventRows,element.eventLayoutMode,element.eventRowGap,element.eventRowLineHeight]);
+  if(panel.dataset.signature===signature)return;
+  const active=document.activeElement;if(eventLayoutDrag||panel.contains(active)&&['INPUT','TEXTAREA'].includes(active.tagName))return;
+  panel.dataset.signature=signature;
+  if(!enabled){panel.innerHTML='<p class="property-note">Details frei auf Zeilen verteilen, nebeneinander stellen und mit Text kombinieren.</p><button class="button button-secondary" type="button" data-event-layout-enable>Zeilenlayout bearbeiten</button>';return;}
+  const rows=element.eventRows;
+  panel.innerHTML=`<div class="event-layout-toolbar"><strong>Zeilenlayout</strong><button type="button" class="mini-button" data-event-layout-disable>Zur Detail-Liste</button></div><div class="event-layout-grid"><label class="form-field"><span>Zeilenabstand (em)</span><input type="number" min="0" max="6" step=".05" data-event-layout-global="eventRowGap" value="${eventLayoutNumber(element.eventRowGap,.35)}"></label><label class="form-field"><span>Zeilenhöhe</span><input type="number" min=".7" max="4" step=".05" data-event-layout-global="eventRowLineHeight" value="${eventLayoutNumber(element.eventRowLineHeight,1.2,.7,4)}"></label></div><p class="property-note">Platzhalter in Zeilen oder vor andere Platzhalter ziehen. Antippen fügt an der Textauswahl ein. Freitext, Leerzeichen und Trennzeichen direkt ins Zeilenfeld schreiben. 1 em entspricht der Schriftgröße.</p><details class="event-layout-palette"><summary>Eventfelder einfügen</summary><div>${Object.entries(eventDetailLabels).map(([field,label])=>`<button type="button" data-event-layout-add-field="${field}" data-event-layout-drag-field="${field}">${escapeHtml(label)}</button>`).join('')}</div></details><div class="event-layout-insert"><button type="button" class="mini-button" data-event-layout-add-text="Text" data-event-layout-drag-text="Text">Freitext</button><button type="button" class="mini-button" data-event-layout-add-text=" " data-event-layout-drag-text=" ">Leerzeichen</button><button type="button" class="mini-button" data-event-layout-add-text=" · " data-event-layout-drag-text=" · ">Trennzeichen ·</button></div><div class="event-layout-rows">${rows.map((row,index)=>`<article class="event-layout-row-editor" data-event-layout-row-id="${escapeHtml(row.id)}"><header><button type="button" class="event-layout-grip" data-event-layout-drag-row="${escapeHtml(row.id)}" aria-label="Zeile ${index+1} ziehen">⠿</button><strong>Zeile ${index+1}</strong><button type="button" class="mini-button" data-event-layout-row-move="-1" ${index===0?'disabled':''} aria-label="Zeile ${index+1} nach oben">↑</button><button type="button" class="mini-button" data-event-layout-row-move="1" ${index===rows.length-1?'disabled':''} aria-label="Zeile ${index+1} nach unten">↓</button><button type="button" class="mini-button" data-event-layout-row-delete aria-label="Zeile ${index+1} löschen">×</button></header><label class="form-field"><span>Text und Platzhalter</span><textarea rows="3" maxlength="8000" data-event-layout-text aria-label="Zeile ${index+1}: Text und Platzhalter">${escapeHtml(eventLayoutText(row))}</textarea></label><div class="event-layout-chips">${eventLayoutTokenControls(row,rows)}</div><div class="event-layout-grid"><label class="form-field"><span>Ausrichtung</span><select data-event-layout-row-setting="align">${[['inherit','Wie Element'],['left','Links'],['center','Zentriert'],['right','Rechts']].map(([value,label])=>`<option value="${value}" ${(row.align||'inherit')===value?'selected':''}>${label}</option>`).join('')}</select></label><label class="form-field"><span>Schriftgröße (%)</span><input type="number" min="25" max="250" data-event-layout-row-setting="scale" value="${row.scale??100}"></label><label class="form-field"><span>Abstand danach (em)</span><input type="number" min="0" max="6" step=".05" data-event-layout-row-setting="gapAfter" placeholder="Wie Zeilenabstand" value="${row.gapAfter??''}"></label><label class="form-field"><span>Wenn die Zeile leer ist</span><select data-event-layout-row-setting="empty">${[['collapse','Ausblenden · nachrücken'],['space','Zeile freihalten'],['placeholder','Ersatztext']].map(([value,label])=>`<option value="${value}" ${(row.empty||'collapse')===value?'selected':''}>${label}</option>`).join('')}</select></label></div><label class="form-field"><span>Ersatztext der Zeile</span><input maxlength="2000" data-event-layout-row-setting="emptyText" value="${escapeHtml(row.emptyText||'')}"></label></article>`).join('')}</div><button type="button" class="button button-secondary" data-event-layout-add-row>＋ Zeile hinzufügen</button>`;
+}
+function eventLayoutFindInputContext(target){const element=selectedEditorElement(),row=element?.eventRows?.find(row=>row.id===target.closest('[data-event-layout-row-id]')?.dataset.eventLayoutRowId),token=row?.tokens.find(token=>token.id===target.closest('[data-event-layout-token-id]')?.dataset.eventLayoutTokenId);return{element,row,token};}
+const eventLayoutPanel=document.querySelector('#event-layout-panel');
+eventLayoutPanel.addEventListener('focusin',event=>{if(event.target.matches('[data-event-layout-text]')){const {element,row}=eventLayoutFindInputContext(event.target);eventLayoutTarget={elementId:element.id,rowId:row.id,start:event.target.selectionStart,end:event.target.selectionEnd};}});
+for(const name of ['select','keyup','click'])eventLayoutPanel.addEventListener(name,event=>{if(event.target.matches('[data-event-layout-text]')){const {element,row}=eventLayoutFindInputContext(event.target);eventLayoutTarget={elementId:element.id,rowId:row.id,start:event.target.selectionStart,end:event.target.selectionEnd};}});
+eventLayoutPanel.addEventListener('focusout',()=>setTimeout(()=>{if(!eventLayoutDrag&&!eventLayoutPanel.contains(document.activeElement)){const element=selectedEditorElement();if(element)renderEventLayoutEditor(element);}},0));
+eventLayoutPanel.addEventListener('input',event=>{
+  const input=event.target,{row,token}=eventLayoutFindInputContext(input);
+  if(input.matches('[data-event-layout-text]')){const tokens=eventLayoutTokens(input.value,row.tokens);if(tokens.length>100){showToast('Bitte den Inhalt auf mehrere Zeilen verteilen.');input.value=eventLayoutText(row);return;}changeEventLayout(()=>{row.tokens=tokens;});input.closest('[data-event-layout-row-id]').querySelector('.event-layout-chips').innerHTML=eventLayoutTokenControls(row,selectedEditorElement().eventRows);eventLayoutTarget={elementId:selectedEditorElement().id,rowId:row.id,start:input.selectionStart,end:input.selectionEnd};}
+  else if(input.matches('[data-event-layout-global]'))changeEventLayout(element=>{element[input.dataset.eventLayoutGlobal]=eventLayoutNumber(input.value,input.dataset.eventLayoutGlobal==='eventRowGap'?.35:1.2,input.dataset.eventLayoutGlobal==='eventRowGap'?0:.7,input.dataset.eventLayoutGlobal==='eventRowGap'?6:4);});
+  else if(input.matches('input[data-event-layout-row-setting]'))changeEventLayout(()=>{const key=input.dataset.eventLayoutRowSetting;row[key]=key==='gapAfter'?(input.value===''?null:eventLayoutNumber(input.value,.35)):key==='scale'?eventLayoutNumber(input.value,100,25,250):input.value;});
+  else if(input.matches('input[data-event-layout-token-setting],textarea[data-event-layout-token-setting]')){changeEventLayout(()=>{token[input.dataset.eventLayoutTokenSetting]=input.value;});if(input.dataset.eventLayoutTokenSetting==='text')input.closest('[data-event-layout-row-id]').querySelector('[data-event-layout-text]').value=eventLayoutText(row);}
+});
+eventLayoutPanel.addEventListener('change',event=>{
+  const input=event.target,{row,token}=eventLayoutFindInputContext(input);
+  if(input.matches('select[data-event-layout-row-setting]'))changeEventLayout(()=>{row[input.dataset.eventLayoutRowSetting]=input.value;});
+  else if(input.matches('select[data-event-layout-token-setting]'))changeEventLayout(()=>{token[input.dataset.eventLayoutTokenSetting]=input.value;});
+  else if(input.matches('[data-event-layout-token-target]'))changeEventLayout(element=>{const target=element.eventRows.find(row=>row.id===input.value);if(target&&target!==row&&target.tokens.length<100){row.tokens.splice(row.tokens.indexOf(token),1);target.tokens.push(token);}});
+});
+eventLayoutPanel.addEventListener('click',event=>{
+  if(performance.now()<eventLayoutIgnoreClick){event.preventDefault();return;}
+  const button=event.target.closest('button');if(!button)return;const {element,row,token}=eventLayoutFindInputContext(button);
+  if(button.hasAttribute('data-event-layout-enable'))changeEventLayout(element=>{element.eventRows??=eventLayoutRowsFromDetails(element);element.eventLayoutMode='rows';});
+  else if(button.hasAttribute('data-event-layout-disable'))changeEventLayout(element=>{element.eventLayoutMode='details';});
+  else if(button.hasAttribute('data-event-layout-add-row')){if(element.eventRows.length>=50){showToast('Maximal 50 Zeilen pro Element.');return;}changeEventLayout(element=>{element.eventRows.push({id:eventLayoutId(),tokens:[],align:'inherit',empty:'space'});});}
+  else if(button.hasAttribute('data-event-layout-row-delete'))changeEventLayout(element=>{element.eventRows.splice(element.eventRows.indexOf(row),1);});
+  else if(button.hasAttribute('data-event-layout-row-move'))changeEventLayout(element=>{const index=element.eventRows.indexOf(row),target=index+Number(button.dataset.eventLayoutRowMove);if(target>=0&&target<element.eventRows.length)[element.eventRows[index],element.eventRows[target]]=[element.eventRows[target],element.eventRows[index]];});
+  else if(button.hasAttribute('data-event-layout-token-delete'))changeEventLayout(()=>{row.tokens.splice(row.tokens.indexOf(token),1);});
+  else if(button.hasAttribute('data-event-layout-token-move'))changeEventLayout(()=>{const index=row.tokens.indexOf(token),target=index+Number(button.dataset.eventLayoutTokenMove);if(target>=0&&target<row.tokens.length)[row.tokens[index],row.tokens[target]]=[row.tokens[target],row.tokens[index]];});
+  else if(button.hasAttribute('data-event-layout-add-field')||button.hasAttribute('data-event-layout-add-text'))changeEventLayout(element=>{
+    let row=element.eventRows.find(row=>eventLayoutTarget?.elementId===element.id&&row.id===eventLayoutTarget.rowId)||element.eventRows.at(-1);if(!row){row={id:eventLayoutId(),tokens:[],empty:'collapse'};element.eventRows.push(row);}
+    const text=eventLayoutText(row),same=eventLayoutTarget?.elementId===element.id&&eventLayoutTarget?.rowId===row.id,start=same?Math.min(text.length,eventLayoutTarget.start):text.length,end=same?Math.min(text.length,eventLayoutTarget.end):text.length,addition=button.hasAttribute('data-event-layout-add-field')?`{{${eventDetailLabels[button.dataset.eventLayoutAddField]}}}`:button.dataset.eventLayoutAddText;
+    const tokens=eventLayoutAddAt(row,start,end,button.hasAttribute('data-event-layout-add-field')?{id:eventLayoutId('field'),type:'field',field:button.dataset.eventLayoutAddField}:addition);if(!tokens){showToast('Bitte eine weitere Zeile verwenden.');return;}row.tokens=tokens;eventLayoutTarget={elementId:element.id,rowId:row.id,start:start+addition.length,end:start+addition.length};
+  });
+});
+eventLayoutPanel.addEventListener('pointerdown',event=>{
+  const handle=event.target.closest('[data-event-layout-drag-row],[data-event-layout-drag-field],[data-event-layout-drag-token],[data-event-layout-drag-text]');if(!handle||event.button!==0||event.isPrimary===false)return;
+  const {element,row,token}=eventLayoutFindInputContext(handle),startX=event.clientX,startY=event.clientY,pointerId=event.pointerId,drag={elementId:element.id,rowId:row?.id,tokenId:token?.id,field:handle.dataset.eventLayoutDragField,text:handle.dataset.eventLayoutDragText,rowOnly:handle.hasAttribute('data-event-layout-drag-row'),moved:false,ghost:null};eventLayoutDrag=drag;try{handle.setPointerCapture(pointerId);}catch{}
+  const scroller=eventLayoutPanel.closest('.editor-properties');let scrollFrame=0;const highlight=()=>{eventLayoutPanel.querySelectorAll('.is-event-drop-target').forEach(node=>node.classList.remove('is-event-drop-target'));document.elementFromPoint(drag.x,drag.y)?.closest('[data-event-layout-row-id]')?.classList.add('is-event-drop-target');};const scroll=()=>{if(!eventLayoutDrag||!drag.moved)return;const rect=scroller.getBoundingClientRect(),y=drag.y;if(y<rect.top+55)scroller.scrollTop-=14;else if(y>rect.bottom-55)scroller.scrollTop+=14;highlight();scrollFrame=requestAnimationFrame(scroll);};
+  const move=moveEvent=>{if(moveEvent.pointerId!==pointerId)return;if(!drag.moved&&Math.hypot(moveEvent.clientX-startX,moveEvent.clientY-startY)<8)return;moveEvent.preventDefault();drag.x=moveEvent.clientX;drag.y=moveEvent.clientY;if(!drag.moved){drag.moved=true;scrollFrame=requestAnimationFrame(scroll);}if(!drag.ghost){drag.ghost=document.createElement('div');drag.ghost.className='event-layout-drag-ghost';drag.ghost.textContent=drag.rowOnly?'Zeile verschieben':eventDetailLabels[drag.field||token?.field]||'Baustein verschieben';(eventLayoutPanel.closest('dialog')||document.body).append(drag.ghost);}drag.ghost.style.left=`${moveEvent.clientX+12}px`;drag.ghost.style.top=`${moveEvent.clientY+12}px`;eventLayoutPanel.querySelectorAll('.is-event-drop-target').forEach(node=>node.classList.remove('is-event-drop-target'));document.elementFromPoint(moveEvent.clientX,moveEvent.clientY)?.closest('[data-event-layout-row-id]')?.classList.add('is-event-drop-target');};
+  const end=upEvent=>{if(upEvent.pointerId!=null&&upEvent.pointerId!==pointerId)return;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);window.removeEventListener('blur',end);cancelAnimationFrame(scrollFrame);try{if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);}catch{}drag.ghost?.remove();eventLayoutDrag=null;eventLayoutPanel.querySelectorAll('.is-event-drop-target').forEach(node=>node.classList.remove('is-event-drop-target'));if(!drag.moved)return;eventLayoutIgnoreClick=performance.now()+400;
+    if(upEvent.type!=='pointerup'){const element=selectedEditorElement();if(element)renderEventLayoutEditor(element);return;}
+    const targetNode=document.elementFromPoint(upEvent.clientX,upEvent.clientY),targetId=targetNode?.closest('[data-event-layout-row-id]')?.dataset.eventLayoutRowId,beforeId=targetNode?.closest('[data-event-layout-token-id]')?.dataset.eventLayoutTokenId;
+    if(upEvent.type==='pointerup'&&targetId&&selectedEditorElement()?.id===drag.elementId)changeEventLayout(element=>{const target=element.eventRows.find(row=>row.id===targetId),source=element.eventRows.find(row=>row.id===drag.rowId);if(!target)return;if(drag.rowOnly&&source&&target!==source){element.eventRows.splice(element.eventRows.indexOf(source),1);element.eventRows.splice(element.eventRows.indexOf(target),0,source);}else if(drag.text!==undefined)eventLayoutInsert(target,{id:eventLayoutId('text'),type:'text',text:drag.text},beforeId);else if(drag.field)eventLayoutInsert(target,{id:eventLayoutId('field'),type:'field',field:drag.field},beforeId);else if(source){const index=source.tokens.findIndex(token=>token.id===drag.tokenId);if(index<0||beforeId===drag.tokenId||target.tokens.length>=100)return;const [token]=source.tokens.splice(index,1);eventLayoutInsert(target,token,beforeId);}});
+  };window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);window.addEventListener('blur',end);
+});
+
+document.querySelector('#property-stamp-field').innerHTML=Object.entries(eventDetailLabels).filter(([field])=>field!=='ticketQr').map(([field,label])=>`<option value="${field}">${escapeHtml(label)}</option>`).join('');
+document.querySelector('#property-text-condition-field').innerHTML=document.querySelector('#property-stamp-field').innerHTML;
 const propertyBindings = [
+  ['property-text-condition','eventCondition',value=>value],['property-text-condition-field','eventConditionField',value=>value],['property-text-condition-value','eventConditionValue',value=>value],
+  ['property-stamp-condition','stampCondition',value=>value],['property-stamp-field','stampField',value=>value],['property-stamp-value','stampValue',value=>value],['property-stamp-style','stampStyle',value=>value],['property-stamp-text-color','stampTextColor',value=>value],
   ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
@@ -6353,6 +6593,7 @@ setInterval(() => { if (state.view === 'operations') renderOperations(); }, 3000
 setInterval(() => { if (state.view === 'displays' && !document.querySelector('dialog[open]')) loadDisplays(); }, 30000);
 setInterval(() => {
   if (!slideDialog.open) return;
+  const textEvent=editorSelectedEvent();document.querySelectorAll('.canvas-element.type-text').forEach(node=>{const element=state.editorElements.find(item=>item.id===node.dataset.editorElement);if(element)node.querySelector('.canvas-text-content')?.classList.toggle('is-condition-inactive',!eventTextVisible(element,textEvent));});
   const overlayTime=overlayClockTime();document.querySelectorAll('#slide-editor-canvas .slide-clock,#slide-editor-canvas .wayfinding-clock').forEach(clock=>{if(clock.textContent!==overlayTime)clock.textContent=overlayTime;});
   if(state.editorEventSelection?.mode!=='linked'){const eventId=editorSelectedEvent()?.id||'';if(state.editorResolvedEventId!==eventId){state.editorResolvedEventId=eventId;syncEditorEventSource();renderEditorCanvas();}}
   document.querySelectorAll('.canvas-element.type-countdown').forEach(node => {

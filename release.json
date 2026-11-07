@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "c2037860b9881292dfc19873abc632aea915c3e7",
+  "source_commit": "87a7594068b857ce937b9df8eed8ea942dc2d5f7",
   "product": "kiosky",
-  "version": "3.26.0",
-  "released_at": "2026-11-07T17:53:15.255Z",
+  "version": "3.27.0",
+  "released_at": "2026-11-07T21:29:16.760Z",
   "channel": "stable",
-  "release_notes": "## [3.26.0] – 2026-11-07\n\n- Direkte Slide-zu-Slide-Übergänge für Überblenden, Schieben und Zoom statt Ausblenden über den Player-Hintergrund; Kanalvorgaben und individuelle Übergänge erhalten.\n- Pro Standort eine zentrale Display-Hintergrundfarbe für freie Flächen und Slides ohne eigenen Hintergrund einstellen; Schwarz als neutrale Vorgabe und Live-Übernahme ohne Neustart der Wiedergabe.\n- Ausgehende Medien während des Übergangs im bestehenden DOM belassen, maximal eine zusätzliche Slide halten und danach Decoder, Iframes, Listener und Zeitgeber freigeben; auf neue Medien höchstens eine Sekunde warten.\n- Standortfarbe in Standalone, WordPress und TYPO3 sowie Systemexport/-import übernehmen; bestehende Standalone-Datenbanken mit Migration 043 ergänzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.26.0",
+  "release_notes": "## [3.27.0] – 2026-11-07\n\n- Feste Event-Auswahl im offenen Slide-/Kanal-Editor beim Aktualisieren der Inhalte erhalten, insbesondere nach „Als Vorlage speichern“.\n\n- Einstellungen → Veranstaltungen mit Checkboxen für sichtbare/nutzbare Editorfelder ergänzen; Titel erhalten, ausgeblendete Werte bewahren und Vorgaben in allen drei Varianten speichern.\n\n- Vorhandene Veranstaltungs-/Jobtypen beim manuellen Anlegen und Bearbeiten im Dropdown anbieten; neue Typen direkt hinzufügen und mit der Veranstaltung speichern.\n\n- Normale Textelemente abhängig von öffentlichen Eventfeldern, Ticket-Verfügbarkeit und zeitgesteuerter Abendkassenöffnung ein-/ausblenden; Live-Zeitwechsel ohne Slide-Neustart und blasse Editorvorschau unterstützen.\n\n- Website-Kalender mit klareren Veranstaltungskarten und vollständiger, barriereärmer bedienbarer Detailansicht überarbeiten; störende Theme-Styles und dynamische Einbettungen berücksichtigen.\n- Eigenständige Kalenderseite und iframe-Einbettung in Standalone ergänzen; öffentliche Freigabe standardmäßig deaktivieren und nicht freigegebene Felder serverseitig entfernen.\n- Frei platzierbare, drehbare Event-Stempel mit eigenem Text, Farben, Umrandung/Füllung und Bedingungen für Ausverkauft, Absage, Abendkasse oder andere öffentliche Eventfelder ergänzen.\n- Eventdaten um einen integrierten Zeileneditor mit mehreren Eventfeldern nebeneinander, frei editierbaren Texten, Leerzeichen und Trennzeichen erweitern.\n- Zeilen sowie Text- und Feldbausteine mit Maus oder Touch verschieben; Pfeile und Zielzeilen-Auswahl als Alternativen, automatische Scrollhilfe und Rückgängig unterstützen.\n- Zeilenabstand, individuelle Abstände, Zeilenhöhe, Ausrichtung, Schriftgröße sowie feldgebundene Vor-/Nachtexte und Leerwertverhalten einstellen.\n- Neue Elemente direkt im Zeilenlayout öffnen, bisherige Detailansichten erhalten und vollständige Layouts unabhängig in Slides, Duplikaten und Vorlagen speichern; gemeinsame Ausgabe in Standalone, WordPress und TYPO3.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.27.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.26.0",
+    "core_version": "3.27.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.26.0",
-    "typo3_extension_version": "3.26.0"
+    "wordpress_plugin_version": "3.27.0",
+    "typo3_extension_version": "3.27.0"
   },
   "components": {
     "core": {
-      "version": "3.26.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.26.0.zip?ref=v3.26.0",
-      "sha256": "319e5842bda575c3896be464878a8c9e0ebbc10de3136eea0cc9a2f88a284e0f"
+      "version": "3.27.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.27.0.zip?ref=v3.27.0",
+      "sha256": "831539535ada4306f79b7b0dddb24c523d9b704c573978de8334a8115e0fb34b"
     },
     "standalone": {
-      "version": "3.26.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.26.0.zip?ref=v3.26.0",
-      "sha256": "319e5842bda575c3896be464878a8c9e0ebbc10de3136eea0cc9a2f88a284e0f"
+      "version": "3.27.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.27.0.zip?ref=v3.27.0",
+      "sha256": "831539535ada4306f79b7b0dddb24c523d9b704c573978de8334a8115e0fb34b"
     },
     "wordpress": {
-      "version": "3.26.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.26.0.zip?ref=v3.26.0",
-      "sha256": "3b8b48f3defa785fdb7f5da1339f8afd380ae313d1611c92caa4ad025477199b",
+      "version": "3.27.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.27.0.zip?ref=v3.27.0",
+      "sha256": "6b9f321d946b53ea8f13fc4eb1e4d9a462296b09c005371daef4fd47c8c6f595",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.26.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.26.0.zip?ref=v3.26.0",
-      "sha256": "3278acbee5f059a22cb760b505a3af96d58aabf12a48eebae09d00943359999a",
+      "version": "3.27.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.27.0.zip?ref=v3.27.0",
+      "sha256": "920867fd715ed6d1e7bd74b34eba19b504a30cce464384b08f38795cde892cbd",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

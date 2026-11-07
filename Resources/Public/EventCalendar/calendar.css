@@ -80,3 +80,41 @@
 .kiosky-calendar__excerpt { margin:.4rem 0; font-size:.9em; }
 .kiosky-calendar__dialog .kiosky-calendar__event-image { max-width:100%; max-height:400px; }
 @media(max-width:600px){.kiosky-calendar__view-switch,.kiosky-calendar__search{flex:1 1 100%;}.kiosky-calendar__view-switch select{font-size:16px;}}
+
+/* Scoped cards and detail dialog; retain website fonts and configured colors. */
+.kiosky-calendar__toolbar,.kiosky-calendar__navigation {gap:.65rem;align-items:center}
+.kiosky-calendar__toolbar input,.kiosky-calendar__toolbar select {min-height:46px}
+.kiosky-calendar__event {border:1px solid #e2e8f0;border-color:color-mix(in srgb,currentColor 14%,transparent);border-radius:1rem;padding:1.1rem;box-shadow:0 2px 12px #00000006;gap:1.1rem;margin-block:.8rem;background:transparent}
+.kiosky-calendar__event h4 {font-weight:700;line-height:1.25;margin:0 0 .35rem}
+.kiosky-calendar__date {align-self:start;display:grid;place-items:center;min-width:4.4rem;padding:.7rem .35rem;border-radius:.8rem;background:color-mix(in srgb,var(--kiosky-accent) 9%,transparent);color:var(--kiosky-accent)}
+.kiosky-calendar__date>strong {font-size:1.9em;line-height:1}
+.kiosky-calendar__date>span {font-size:.75em;text-align:center;margin-top:.35rem}
+.kiosky-calendar__summary {min-width:0}
+.kiosky-calendar__subtitle {font-weight:600;margin:.3rem 0}
+.kiosky-calendar__excerpt {opacity:.85;line-height:1.6}
+.kiosky-calendar__summary .kiosky-calendar__event-image {float:right;width:min(35%,160px);height:auto;max-height:180px;border-radius:.65rem;object-fit:cover;margin:0 0 .7rem 1rem}
+.kiosky-calendar__actions {display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;align-self:start}
+.kiosky-calendar__actions button,.kiosky-calendar__ticket {text-decoration:none;font-weight:600}
+.kiosky-calendar__result-count {font-size:.85em;opacity:.75;margin:1.2rem 0 .4rem}
+.kiosky-calendar__tag {border:0;background:color-mix(in srgb,var(--kiosky-accent) 10%,transparent);color:var(--kiosky-accent);font-weight:600}
+.kiosky-calendar__times {display:flex;gap:.35rem 1rem;flex-wrap:wrap;font-size:.85em;line-height:1.6}
+.kiosky-calendar__dialog:not([open]) {display:none!important}
+.kiosky-calendar__dialog[open] {display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;inset:0!important;transform:none!important;margin:auto!important;width:min(48rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);max-height:calc(100dvh - 2rem);height:fit-content;overflow:auto;overscroll-behavior:contain;z-index:2147483646;border:1px solid #e2e8f0;border-radius:1.25rem;padding:clamp(1rem,4vw,2rem);color:inherit;background:var(--kiosky-dialog-surface,Canvas);box-shadow:0 18px 80px #0005;font:inherit}
+.kiosky-calendar__dialog::backdrop {background:#10182799;backdrop-filter:blur(3px)}
+.kiosky-calendar__dialog [data-kiosky-close] {position:sticky;top:0;float:right;z-index:1;min-height:44px;background:var(--kiosky-dialog-surface,Canvas);margin:0 0 .5rem .8rem}
+.kiosky-calendar__dialog [data-kiosky-detail-body] {clear:both}
+.kiosky-calendar__detail-heading h2 {font:inherit;font-size:clamp(1.5em,4vw,2.2em);font-weight:750;line-height:1.2;letter-spacing:-.02em;margin:.8rem 0}
+.kiosky-calendar__detail-hero:empty {display:none}
+.kiosky-calendar__detail-hero .kiosky-calendar__event-image {width:100%;max-height:340px;object-fit:cover;border-radius:.8rem;margin:0 0 1.2rem}
+.kiosky-calendar__detail-subtitle {font-size:1.1em;opacity:.8}
+.kiosky-calendar__detail-facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem 1.4rem;margin:1.3rem 0;padding:1.2rem 0;border-block:1px solid #8883}
+.kiosky-calendar__detail-facts>div {min-width:0}
+.kiosky-calendar__detail-facts dt {font-size:.8em;opacity:.7;font-weight:600;margin-bottom:.2rem}
+.kiosky-calendar__detail-facts dd {margin:0;font-weight:550;overflow-wrap:anywhere}
+.kiosky-calendar__detail-description {line-height:1.65}
+.kiosky-calendar__detail-empty {opacity:.7;font-style:italic}
+.kiosky-calendar__detail-actions {margin-top:1.5rem}
+@media(max-width:600px){.kiosky-calendar__event {padding:.85rem;gap:.75rem}.kiosky-calendar__date {min-width:3.2rem}.kiosky-calendar__date>strong{font-size:1.5em}.kiosky-calendar__summary .kiosky-calendar__event-image{float:none;width:100%;max-height:220px;margin:0 0 .75rem}.kiosky-calendar__detail-facts{grid-template-columns:minmax(0,1fr)}.kiosky-calendar__dialog[open]{width:calc(100vw - 1rem);max-width:calc(100vw - 1rem);max-height:calc(100dvh - 1rem);border-radius:.9rem}}
+.kiosky-calendar__header {gap:1rem;align-items:end;padding-block:.2rem 1rem;border-bottom:1px solid #8883;margin-bottom:1rem}
+.kiosky-calendar__header h2 {font-weight:750;letter-spacing:-.02em;line-height:1.2}
+.kiosky-calendar__header input,.kiosky-calendar__header select {min-height:46px;border-radius:.65rem}

@@ -1660,3 +1660,53 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .display-player section.player-layout-slide[data-transition="zoom"]:not(.is-visible) {transform:scale(.88)}
 .display-player section.player-layout-slide[data-transition="none"] {transition:none;transform:none}
 .display-player .player-layout-element section {opacity:1;transform:none;max-width:none;transition:none}
+/* Eventdaten: editable rows and inline field/text tokens. */
+.event-row-layout {display:flex;flex-direction:column;width:100%;min-width:0;min-height:0}
+.event-layout-row {white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.event-layout-row:last-child {margin-bottom:0!important}
+.canvas-event-content .event-layout-token,.player-event-block .event-layout-token,.slide-thumb-event .event-layout-token {font:inherit;line-height:inherit;margin:0;white-space:pre-wrap;letter-spacing:inherit}
+.event-layout-row .event-layout-media {font:inherit;line-height:inherit;margin:0;display:inline-block;width:min(100%,8em);vertical-align:middle;white-space:normal}
+.event-layout-media .generated-qr-code {background:#fff}
+.event-layout-toolbar,.event-layout-row-editor>header,.event-layout-token-actions,.event-layout-insert {display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.event-layout-toolbar {justify-content:space-between;margin:14px 0 8px}
+.event-layout-grid {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.event-layout-grid .form-field {min-width:0}
+#event-layout-panel input,#event-layout-panel select,#event-layout-panel textarea {width:100%;min-width:0;min-height:44px}
+#event-layout-panel textarea {white-space:pre-wrap;resize:vertical;font-size:13px}
+.event-layout-palette>div {display:flex;gap:5px;flex-wrap:wrap;padding:8px 0}
+.event-layout-palette button,.event-layout-grip {min-height:44px;border:1px solid var(--line);border-radius:6px;background:var(--paper,#fff);color:inherit;cursor:grab;touch-action:none}
+.event-layout-grip {min-width:40px}
+.event-layout-palette summary,.event-layout-chip summary {cursor:pointer;padding:8px 0}
+.event-layout-row-editor {border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0;min-width:0}
+.event-layout-row-editor>header strong {flex:1}
+.event-layout-row-editor .form-field {margin-top:8px}
+.event-layout-chips {display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+.event-layout-chip {border:1px solid var(--line);border-radius:6px;padding:0 8px;min-width:0;max-width:100%}
+.event-layout-chip[open] {width:100%}
+.event-layout-drag-ghost {position:fixed;z-index:2147483647;pointer-events:none;background:#17201d;color:#fff;padding:9px 12px;border-radius:6px;box-shadow:0 4px 16px #0004}
+.event-layout-row-editor.is-event-drop-target {outline:3px solid var(--signal,#2463d4)}
+@media(max-width:420px){.event-layout-grid {grid-template-columns:minmax(0,1fr)}}
+.event-layout-chip summary {touch-action:none;cursor:grab;min-height:44px}
+.event-layout-qr {aspect-ratio:1;background:#fff}
+.event-layout-grip,.event-layout-chip summary,.event-layout-palette button {user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.canvas-event-stamp,.event-stamp {width:100%;height:100%;min-width:0;min-height:0}
+.event-stamp {position:relative;display:grid;place-items:center;text-align:center;border:.085em solid var(--stamp-color,#b91c1c);border-radius:.15em;color:var(--stamp-color,#b91c1c);font:inherit;font-weight:800;letter-spacing:.055em;line-height:1.05;padding:.12em .22em;white-space:pre-wrap;overflow-wrap:anywhere}
+.event-stamp.is-solid {background:var(--stamp-color,#b91c1c);color:var(--stamp-ink,#fff)}
+.event-stamp.is-condition-inactive {opacity:.3;border-style:dashed}
+.event-stamp>small {position:absolute;bottom:0;left:0;right:0;font:500 .18em/1.1 sans-serif!important;letter-spacing:normal!important}
+.player-layout-element .event-stamp>span,.canvas-element .event-stamp>span {font:inherit;margin:0}
+/* Canvas grips must not intercept input in the mobile editor drawers. */
+@media(max-width:1100px){.slide-editor-dialog .editor-tools,.slide-editor-dialog .editor-layers,.slide-editor-dialog .editor-properties {z-index:2100}}
+.editor-stage-wrap {isolation:isolate;z-index:0}
+.event-layout-text-chip {border:1px dashed var(--line);border-radius:6px;padding:0 8px;min-width:0;max-width:100%}
+.event-layout-text-chip[open] {width:100%}
+.event-layout-text-chip summary {touch-action:none;cursor:grab;min-height:44px;padding:8px 0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.event-layout-insert button {touch-action:none;cursor:grab;user-select:none}
+
+.canvas-text-content.is-condition-inactive {opacity:.3;outline:1px dashed currentColor}
+
+.event-type-picker {min-width:0}
+.event-type-picker select,.event-type-picker input {width:100%;min-width:0;min-height:44px}
+.event-type-picker>button,.event-type-actions {margin-top:8px}
+.event-type-actions {display:flex;flex-wrap:wrap;gap:8px}
+#event-type-new-controls {margin-top:10px}

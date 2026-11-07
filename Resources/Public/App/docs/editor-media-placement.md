@@ -89,3 +89,83 @@ Die unabhängige QR-Prüfung `tests/qr-code-readback.py` vergleicht die Matrizen
 `qrcode==8.2` und liest alle Testlinks mit `zxing-cpp==2.3.0` zurück (Pillow nötig).
 `tests/event-ticket-table-browser.py` prüft Editor, Speichern und echten Player
 mit allen drei UI-Transporten sowie Änderungen und fehlende Ticket-Links.
+
+## Eventdaten mit Zeilenlayout (3.27.0)
+
+Neue Eventdaten-Elemente öffnen direkt den Zeileneditor rechts. Bestehende Elemente
+werden mit **Zeilenlayout bearbeiten** übernommen; die bisherige Detailauswahl
+bleibt erhalten und kann über **Zur Detail-Liste** wieder verwendet werden.
+Dasselbe gilt beim Bearbeiten von Vorlagen.
+
+Jede Zeile bietet ein Textfeld. Eventfelder lassen sich aus „Eventfelder einfügen“
+per Ziehen oder Antippen einsetzen. Beispielsweise zeigt
+`Einlass: {{Einlass}} · Beginn: {{Beginn}}` beide Zeiten nebeneinander.
+Freitext, mehrere Leerzeichen, Trennzeichen und Zeilenumbrüche können direkt im
+Textfeld eingegeben werden. Platzhalter erscheinen zusätzlich als ziehbare
+Bausteine; ihre Reihenfolge und Zielzeile lassen sich auch über Schaltflächen
+beziehungsweise „In Zeile verschieben“ ändern. Zeilen können hinzugefügt, gelöscht
+und mit Griff oder Pfeiltasten umsortiert werden. Bei längeren Listen scrollt die
+Eigenschaftenleiste während des Ziehens am oberen oder unteren Rand mit.
+
+Unter jedem Feldbaustein stehen Text davor/danach und das Verhalten bei fehlendem
+Wert bereit. Diese Texte werden zusammen mit dem Feld ausgeblendet; direkt im
+Zeilentext eingetragene Zeichen bleiben Freitext. Ganze leere Datenzeilen können
+nachrücken, Platz freihalten oder einen Ersatztext anzeigen. Ticket-QR und Bild
+sind ebenfalls als Platzhalter verfügbar. Die Event-Auswahl der Slide (verknüpft,
+aktuell, heute oder nächstes Event) bleibt maßgeblich; interne Notizen sind keine
+verfügbaren Platzhalter.
+
+„Zeilenabstand“ gilt für alle Zeilen; „Abstand danach“ überschreibt ihn für eine
+Zeile. Die Abstände in em skalieren mit der Schrift, auch auf 4K-Displays.
+Zeilenhöhe, Ausrichtung und relative Schriftgröße sind einstellbar. Grenzen:
+50 Zeilen pro Element und 100 Bausteine pro Zeile. Rückgängig, Duplikate, Vorlagen,
+Vorschauen und Player übernehmen das Layout. Die Speicherung erfolgt ergänzend
+im Slide-Dokument; eine Datenbankmigration ist nicht erforderlich.
+
+`python tests/event-row-layout-browser.py` prüft Maus-/Touch-Ziehen, Abbruch,
+Rückgängig, Vorlage, unabhängige Duplikate, gespeicherte Abstände und echten Player
+über alle drei UI-Transporte. PHP-Vertragstests prüfen zusätzlich die unveränderte
+Übernahme des Zeilenlayouts in die nativen CMS-Playerdaten.
+
+## Bedingter Event-Stempel (3.27.0)
+
+„Event-Stempel“ ist ein eigenes Element. Text, Schrift, Farbe, Position, Größe und
+Drehung werden wie bei anderen Elementen bearbeitet. Umrandung oder Füllung und
+die Textfarbe der gefüllten Variante sind wählbar.
+
+Standardbedingung ist „Tickets ausverkauft“. In der Veranstaltung kann im Feld
+„Ticketstatus / Restkarten“ beispielsweise „Ausverkauft“, „Nicht ausverkauft“,
+„Karten verfügbar“ oder eine Restkartenzahl eingetragen beziehungsweise aus der
+Vorschlagsliste gewählt werden. Auch importierte Angaben wie „Sold out“ und null
+verbleibende Tickets werden erkannt. Die normale Eventdaten-Anzeige kann das
+Feld weiterhin als Text ausgeben.
+
+Weitere Bedingungen sind Absage, verfügbare Abendkasse, ein ausgefülltes/leeres
+öffentliches Eventfeld oder ein Textvergleich. Ohne aufgelöstes Event bleibt der
+Stempel auf dem Player unsichtbar. Die gestrichelte Editorvorschau hilft beim
+Positionieren, wenn die Bedingung gerade nicht erfüllt ist. Die Event-Auswahl der
+Slide und Vorlagenübernahme gelten auch für den Stempel. Statusänderungen kommen
+über die normale Player-Aktualisierung an; der Stempel muss nicht neu angelegt
+werden. Interne Notizen können nicht als Bedingung verwendet werden.
+
+## Bedingte Texte (3.27.0)
+
+Ein **Text**-Element auswählen und rechts **Text sichtbar, wenn …** einstellen.
+Vorgabe ist **Immer sichtbar**. Beispiele: **Eventfeld ausgefüllt ist** mit
+**Ticket-Link**, **Tickets nicht verfügbar / abgesagt**, **Abendkasse geöffnet**
+oder **Abendkasse geschlossen**. Leere Felder sowie eigene Vergleichswerte
+(entspricht / enthält, ohne Beachtung der Großschreibung) sind ebenfalls möglich.
+Verwendet wird die Event-Auswahl der Slide, einschließlich aktuell/heute/nächstes
+Event. Ohne passendes Event werden bedingte Texte ausgeblendet. Im Editor bleibt
+eine blasse, weiterhin bearbeitbare Vorschau erhalten; der Player blendet das
+gesamte Textelement einschließlich Hintergrund aus.
+
+„Geöffnet“ bedeutet: Abendkasse verfügbar, Öffnungszeit erreicht und das
+Veranstaltungsende noch nicht erreicht. Ohne Öffnungszeit gilt die Verfügbarkeit.
+Abgesagte oder beendete Events und ungültige Uhrzeiten öffnen keine Abendkasse.
+Die Gegenbedingung „geschlossen“ gilt nur, wenn ein Event vorhanden ist.
+Zeitgrenzen werden im laufenden Player über seinen vorhandenen Sekundentakt
+aktualisiert; Datenänderungen kommen mit der normalen Player-Aktualisierung.
+Dieselben ergänzten Bedingungen stehen auch im Event-Stempel zur Verfügung.
+Interne Eventfelder sind nicht als Bedingung auswählbar. Keine zusätzliche
+Abfrage, Datenbankmigration oder eigener Timer ist erforderlich.

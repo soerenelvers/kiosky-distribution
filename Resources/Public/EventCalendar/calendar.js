@@ -13,10 +13,11 @@
   const minutes = value => {const p=timeParts(value);return p?Number(p.find(v=>v.type==='hour').value)*60+Number(p.find(v=>v.type==='minute').value):0;};
   const searchText = event => [event.title,event.subtitle,event.description,event.publicNotes,event.organizer,event.eventType,event.venue,event.room,event.externalNumber,time(event.start),time(event.admission),time(event.breakStart),time(event.breakEnd)].filter(Boolean).join(' ').toLocaleLowerCase(locale);
 
+  const initializedCalendars=new WeakSet();let dialogSequence=0;
   function initialize(root) {
-    if(root.dataset.kioskyReady)return;
+    if(initializedCalendars.has(root))return;
     let payload;try{payload=JSON.parse(root.querySelector('[data-kiosky-data]').textContent);}catch{return;}
-    root.dataset.kioskyReady='true';
+    initializedCalendars.add(root);root.dataset.kioskyReady='true';const detailTitleId=`kiosky-event-details-${++dialogSequence}-${Math.random().toString(36).slice(2,9)}`;
     const settings={showBreak:false,showSetupTime:false,showImage:false,showBoxOffice:false,showEventNumber:false,...payload.settings};
     for(const [key,parent] of Object.entries({showAdmission:'showTime',showEndTime:'showTime',showSubtitle:'showDescription',showPublicNotes:'showDescription'}))if(settings[key]===undefined)settings[key]=settings[parent]!==false;
     let view=['agenda','month','categories','week','day'].includes(settings.view)?settings.view:'agenda';
@@ -31,11 +32,12 @@
     root.dataset.view=view;
     const filtered=()=>visibleEvents;
     const where=e=>[e.venue,e.room].filter(Boolean).join(' · ');
-    const canDetail=e=>enabled('showDetails')&&Boolean(e.description||e.subtitle||e.publicNotes||e.admission||e.breakStart||e.breakEnd||e.setup||e.boxOfficeOpenAt||e.imageUrl||e.externalNumber);
+    const canDetail=e=>enabled('showDetails')&&Boolean(e.title);
     const extraTimes=e=>[['Einlass',e.admission],['Pause',e.breakStart],['Fortsetzung',e.breakEnd],['Aufbau',e.setup],['Abendkasse ab',e.boxOfficeOpenAt]].filter(([,v])=>v).map(([label,v])=>`<span>${label}: ${escapeHtml(time(v))} Uhr</span>`).join('');
     const image=e=>e.imageUrl&&/^https?:\/\//i.test(e.imageUrl)?`<img class="kiosky-calendar__event-image" src="${escapeHtml(e.imageUrl)}" alt="" loading="lazy" decoding="async">`:'';
-    const status=e=>enabled('showStatus')&&['cancelled','sold_out'].includes(e.status)?`<strong class="kiosky-calendar__status">${e.status==='cancelled'?'Abgesagt':'Ausverkauft'}</strong>`:'';
-    const ticket=e=>enabled('showTickets')&&e.ticketUrl&&/^https?:\/\//i.test(e.ticketUrl)&&e.status!=='cancelled'?`<a class="kiosky-calendar__ticket" href="${escapeHtml(e.ticketUrl)}" rel="noopener">Tickets / Details</a>`:'';
+    const ticketSoldOut=e=>e.status==='sold_out'||!/\b(?:nicht|not)\s+(?:ausverkauft|sold[ _-]*out)\b/i.test(String(e.remainingTickets??''))&&(/\b(?:ausverkauft|sold[ _-]*out)\b/i.test(String(e.remainingTickets??''))||/^(?:0(?:\s*(?:karten|tickets|restkarten))?|keine\s*(?:karten|tickets|restkarten))$/i.test(String(e.remainingTickets??'').trim()));
+    const status=e=>enabled('showStatus')&&(e.status==='cancelled'||ticketSoldOut(e))?`<strong class="kiosky-calendar__status">${e.status==='cancelled'?'Abgesagt':'Ausverkauft'}</strong>`:'';
+    const ticket=e=>enabled('showTickets')&&e.ticketUrl&&/^https?:\/\//i.test(e.ticketUrl)&&e.status!=='cancelled'?`<a class="kiosky-calendar__ticket" href="${escapeHtml(e.ticketUrl)}" rel="noopener">Tickets</a>`:'';
     const action=e=>`${canDetail(e)?`<button type="button" data-kiosky-detail="${escapeHtml(e.id)}">Details</button>`:''}${ticket(e)}`;
     function card(e,compact=false){
       const columns=[...(enabled('showTime')?['minmax(3.8rem,.6fr)']:[]),'minmax(0,2fr)',...(enabled('showLocation')?['minmax(0,1fr)']:[]),...(enabled('showCategory')?['minmax(0,.7fr)']:[]),...(enabled('showOrganizer')?['minmax(0,1fr)']:[]),...(action(e)?['auto']:[])];
@@ -73,15 +75,27 @@
       if(view==='day'&&!query){focus.innerHTML=`<div class="kiosky-calendar__focus-date"><strong>${day(selected).getDate()}</strong><span>${escapeHtml(formatDay(day(selected),{weekday:'long',month:'long',year:'numeric'}))}</span></div>`;results.innerHTML=list(filtered().filter(e=>e.date===selected));strip.innerHTML=`<button type="button" data-kiosky-shift="-7" aria-label="Vorherige Woche">‹</button>${Array.from({length:7},(_,i)=>dayButton(plusDays(start,i),true)).join('')}<button type="button" data-kiosky-shift="7" aria-label="Nächste Woche">›</button>`;}
       if(view==='week'&&!query)renderWeek();
     }
-    function showDetails(event){
-      const pieces=[image(event),`<h2>${escapeHtml(event.title)}</h2>`,status(event),`<p>${escapeHtml(formatDay(day(event.date),{dateStyle:'full'}))}</p>`,enabled('showTime')&&event.start?`<p>${time(event.start)}${event.end?`–${time(event.end)}`:''} Uhr</p>`:'',extraTimes(event),enabled('showLocation')&&where(event)?`<p data-calendar-field="location">${escapeHtml(where(event))}</p>`:'',enabled('showCategory')&&event.eventType?`<p>${escapeHtml(event.eventType)}</p>`:'',enabled('showOrganizer')&&event.organizer?`<p>${escapeHtml(event.organizer)}</p>`:'',[event.subtitle,event.description,event.publicNotes].filter(Boolean).map(text=>`<p>${escapeHtml(text)}</p>`).join(''),enabled('showRemainingTickets')&&event.remainingTickets?`<p>${escapeHtml(event.remainingTickets)}</p>`:'',event.externalNumber?`<p>Veranstaltung: ${escapeHtml(event.externalNumber)}</p>`:'',event.boxOfficeAvailable!==undefined?`<p>${event.boxOfficeAvailable?'Abendkasse verfügbar':'Keine Abendkasse'}</p>`:'',ticket(event)];
-      $('[data-kiosky-detail-body]').innerHTML=pieces.join('');dialog.showModal();
+    let detailTrigger=null;
+    function closeDetails(){for(const key of ['display','visibility','opacity','transform'])dialog.style.removeProperty(key);if(typeof dialog.close==='function'&&dialog.open)dialog.close();else dialog.removeAttribute('open');dialog.removeAttribute('data-kiosky-fallback');detailTrigger?.focus();}
+    function showDetails(event,trigger){
+      if(!enabled('showDetails'))return;detailTrigger=trigger||document.activeElement;
+      const facts=[['Datum',formatDay(day(event.date),{dateStyle:'full'})],...(enabled('showTime')&&event.start?[['Beginn',`${time(event.start)} Uhr`]]:[]),...(enabled('showEndTime')&&event.end?[['Ende',`${time(event.end)} Uhr`]]:[]),...[['Einlass',event.admission],['Pause',event.breakStart],['Fortsetzung',event.breakEnd],['Aufbau',event.setup],['Abendkasse ab',event.boxOfficeOpenAt]].filter(([,v])=>v).map(([label,v])=>[label,`${time(v)} Uhr`]),...(enabled('showLocation')&&where(event)?[['Ort',where(event)]]:[]),...(event.eventType?[['Kategorie',event.eventType]]:[]),...(event.organizer?[['Veranstalter',event.organizer]]:[]),...(event.remainingTickets?[['Ticketstatus',event.remainingTickets]]:[]),...(event.externalNumber?[['Veranstaltung',event.externalNumber]]:[]),...(event.boxOfficeAvailable!==undefined?[['Abendkasse',event.boxOfficeAvailable?'Verfügbar':'Nicht verfügbar']]:[])];
+      const description=[event.description,event.publicNotes].filter(Boolean);
+      $('[data-kiosky-detail-body]').innerHTML=`<div class="kiosky-calendar__detail-hero">${image(event)}</div><header class="kiosky-calendar__detail-heading">${event.eventType?`<span class="kiosky-calendar__tag">${escapeHtml(event.eventType)}</span>`:''}<h2 id="${detailTitleId}">${escapeHtml(event.title)}</h2>${event.subtitle?`<p class="kiosky-calendar__detail-subtitle">${escapeHtml(event.subtitle)}</p>`:''}${status(event)}</header><dl class="kiosky-calendar__detail-facts">${facts.map(([label,value])=>`<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl><div class="kiosky-calendar__detail-description">${description.length?description.map(text=>`<p>${escapeHtml(text)}</p>`).join(''):'<p class="kiosky-calendar__detail-empty">Weitere Informationen folgen. Alle aktuell freigegebenen Angaben stehen oben.</p>'}</div>${ticket(event)?`<footer class="kiosky-calendar__detail-actions">${ticket(event)}</footer>`:''}`;
+      for(const [key,value] of Object.entries({display:'block',visibility:'visible',opacity:'1',transform:'none'}))dialog.style.setProperty(key,value,'important');
+      dialog.setAttribute('aria-labelledby',detailTitleId);dialog.setAttribute('aria-modal','true');
+      if(typeof dialog.showModal==='function'){if(!dialog.open)dialog.showModal();}else{dialog.setAttribute('open','');dialog.dataset.kioskyFallback='true';}
+      dialog.querySelector('[data-kiosky-close]').focus();
     }
+    dialog.addEventListener('close',()=>{for(const key of ['display','visibility','opacity','transform'])dialog.style.removeProperty(key);detailTrigger?.focus();});
+    dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDetails();}});
+    dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeDetails();}if(event.key==='Tab'){const nodes=[...dialog.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(node=>node.getClientRects().length),first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}});
+
     root.addEventListener('click',event=>{
       const button=event.target.closest('button');if(!button||!root.contains(button))return;
       if(button.hasAttribute('data-kiosky-more')){renderLimit+=100;render();return;}
-      if(button.hasAttribute('data-kiosky-detail')||button.hasAttribute('data-kiosky-open-event')){const e=events.find(e=>e.id===(button.dataset.kioskyDetail||button.dataset.kioskyOpenEvent));if(e)showDetails(e);return;}
-      if(button.hasAttribute('data-kiosky-close')){dialog.close();return;}
+      if(button.hasAttribute('data-kiosky-detail')||button.hasAttribute('data-kiosky-open-event')){const e=events.find(e=>String(e.id)===String(button.dataset.kioskyDetail||button.dataset.kioskyOpenEvent));if(e){event.preventDefault();event.stopPropagation();showDetails(e,button);}return;}
+      if(button.hasAttribute('data-kiosky-close')){event.preventDefault();event.stopPropagation();closeDetails();return;}
       renderLimit=100;
       if(button.hasAttribute('data-kiosky-category')){category=button.dataset.kioskyCategory;render();return;}
       if(button.dataset.kioskyDay){selected=button.dataset.kioskyDay;anchor=day(selected);query='';if(search)search.value='';render();return;}
@@ -112,5 +126,6 @@
     {let scheduled=false;const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;themeColors();});});observer.observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-bs-theme']});observer.observe(document.body,{attributes:true,attributeFilter:['class','style','data-theme']});}
   }
   const start=()=>document.querySelectorAll('[data-kiosky-event-calendar]').forEach(initialize);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  const observe=()=>{start();const observer=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1){if(node.matches('[data-kiosky-event-calendar]'))initialize(node);node.querySelectorAll('[data-kiosky-event-calendar]').forEach(initialize);}});observer.observe(document.body,{childList:true,subtree:true});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
 }());

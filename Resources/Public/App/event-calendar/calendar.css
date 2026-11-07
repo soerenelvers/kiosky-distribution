@@ -1,0 +1,120 @@
+.kiosky-event-calendar { --kiosky-accent:var(--wp--preset--color--primary,var(--bs-primary,#1968d2)); --kiosky-accent-text:#fff; --kiosky-control-bg:transparent; --kiosky-control-text:currentColor; --kiosky-control-border:currentColor; box-sizing:border-box; color:inherit; font:inherit; max-width:100%; container-type:inline-size; }
+.kiosky-event-calendar *, .kiosky-event-calendar *::before, .kiosky-event-calendar *::after { box-sizing:inherit; }
+.kiosky-event-calendar [hidden] { display:none !important; }
+.kiosky-event-calendar button,.kiosky-event-calendar input,.kiosky-event-calendar a.kiosky-calendar__ticket { font:inherit; border:1px solid var(--kiosky-control-border); border-radius:.55rem; color:var(--kiosky-control-text); background:var(--kiosky-control-bg); padding:.6rem .75rem; min-height:44px; max-width:100%; }
+.kiosky-event-calendar button { cursor:pointer; }
+.kiosky-event-calendar button:hover { filter:brightness(.94); }
+.kiosky-event-calendar button:focus-visible,.kiosky-event-calendar a:focus-visible,.kiosky-event-calendar input:focus-visible,.kiosky-calendar__week-scroll:focus-visible { outline:3px solid var(--kiosky-accent); outline-offset:3px; }
+.kiosky-calendar__header { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:end; justify-content:space-between; margin-bottom:1.5rem; }
+.kiosky-calendar__header h2 { margin:0; font-size:1.7em; }
+.kiosky-calendar__search { display:grid; gap:.4rem; flex:0 1 24rem; min-width:0; }
+.kiosky-calendar__search input { width:100%; }
+.kiosky-calendar__search input::placeholder { color:inherit; opacity:.7; }
+.kiosky-calendar__search span,.kiosky-calendar__navigation label span { font-size:.85em; }
+.kiosky-calendar__layout { display:flex; align-items:start; gap:1.5rem; }
+.kiosky-calendar__main { flex:1 1 40rem; min-width:0; }
+.kiosky-calendar__upcoming { flex:0 1 20rem; min-width:0; border-inline-start:1px solid var(--kiosky-control-border); padding-inline-start:1.25rem; }
+.kiosky-calendar__upcoming h3 { margin:0 0 1rem; }
+.kiosky-calendar__navigation { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-bottom:1.25rem; }
+.kiosky-calendar__navigation strong { font-size:1.15em; text-transform:capitalize; margin-inline:.4rem; }
+.kiosky-calendar__navigation label { margin-inline-start:auto; display:grid; gap:.25rem; font-size:.9em; }
+.kiosky-calendar__weekdays,.kiosky-calendar__grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.35rem; }
+.kiosky-calendar__weekdays { text-align:center; margin-bottom:.35rem; font-size:.85em; }
+.kiosky-calendar__grid button { display:flex; flex-direction:column; align-items:start; gap:.25rem; min-height:5rem; text-align:start; }
+.kiosky-calendar__grid button small { font-size:.72em; overflow-wrap:anywhere; }
+.kiosky-event-calendar button.is-selected,.kiosky-event-calendar button[aria-pressed=true] { background:var(--kiosky-accent); color:var(--kiosky-accent-text); border-color:var(--kiosky-accent); }
+.kiosky-event-calendar .is-today { box-shadow:inset 0 0 0 1px var(--kiosky-accent); }
+.kiosky-calendar__categories { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+.kiosky-calendar__results { margin-top:1.25rem; }
+.kiosky-calendar__result-count { font-size:.9em; }
+.kiosky-calendar__event { display:grid; grid-template-columns:4.5rem minmax(0,1fr); gap:1rem; padding:1.1rem 0; border-bottom:1px solid var(--kiosky-control-border); align-items:start; }
+.kiosky-calendar__date { display:grid; text-align:center; border-inline-start:3px solid var(--kiosky-accent); padding:.3rem; }
+.kiosky-calendar__date strong { font-size:1.65em; line-height:1.2; }
+.kiosky-calendar__date span { font-size:.72em; }
+.kiosky-calendar__event-content { display:grid; gap:.8rem; align-items:start; }
+.kiosky-calendar__event-content>* { min-width:0; overflow-wrap:anywhere; }
+.kiosky-calendar__event h4 { margin:0 0 .3rem; font-size:1.05em; }
+.kiosky-calendar__event-content small { display:block; font-size:.8em; }
+.kiosky-calendar__time,.kiosky-calendar__location,.kiosky-calendar__organizer { font-size:.85em; }
+.kiosky-calendar__tag { display:inline-block; font-size:.8em; padding:.3rem .45rem; border-radius:.4rem; border:1px solid var(--kiosky-accent); }
+.kiosky-calendar__status { display:inline-block; font-size:.8em; margin-block:.2rem; text-transform:uppercase; }
+.kiosky-calendar__actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+.kiosky-calendar__actions button,.kiosky-event-calendar a.kiosky-calendar__ticket { font-size:.82em; text-align:center; text-decoration:none; }
+.kiosky-calendar__event.is-compact { grid-template-columns:3.5rem minmax(0,1fr); gap:.75rem; }
+.kiosky-calendar__event.is-compact .kiosky-calendar__event-content { grid-template-columns:minmax(0,1fr) !important; gap:.35rem; }
+.kiosky-calendar__focus-date { display:flex; align-items:baseline; flex-wrap:wrap; gap:1rem; margin-block:1.5rem; }
+.kiosky-calendar__focus-date>strong { font-size:clamp(4rem,10vw,7rem); line-height:1; color:var(--kiosky-accent); }
+.kiosky-calendar__focus-date>span { font-size:1.2em; }
+.kiosky-calendar__strip { display:grid; grid-template-columns:2.75rem repeat(7,minmax(0,1fr)) 2.75rem; gap:.35rem; margin-top:1.5rem; }
+.kiosky-calendar__strip button { padding:.4rem .1rem; display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:0; }
+.kiosky-calendar__strip button span,.kiosky-calendar__strip button small { font-size:.65em; }
+.kiosky-calendar__strip button>strong { font-size:1.1em; }
+.kiosky-calendar__week-scroll { overflow:auto; max-height:650px; border:1px solid var(--kiosky-control-border); border-radius:.65rem; }
+.kiosky-calendar__week-table { display:grid; grid-template-columns:3.5rem repeat(7,minmax(5.8rem,1fr)); min-width:800px; }
+.kiosky-calendar__week-day { min-width:0; border-inline-start:1px solid var(--kiosky-control-border); }
+.kiosky-calendar__week-heading { height:112px; position:sticky; top:0; z-index:2; background:var(--kiosky-week-surface,Canvas); color:inherit; overflow:auto; border-bottom:1px solid var(--kiosky-control-border); }
+.kiosky-calendar__week-heading>button { width:100%; border:0; border-radius:0; display:flex; gap:.1rem; flex-direction:column; align-items:center; font-size:.8em; }
+.kiosky-calendar__week-heading small { font-size:.75em; }
+.kiosky-calendar__week-hours { height:1440px; position:relative; background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,var(--kiosky-control-border) 59px,var(--kiosky-control-border) 60px); }
+.kiosky-calendar__hour-labels { position:sticky; left:0; height:1552px; background:var(--kiosky-week-surface,Canvas); color:inherit; z-index:3; }
+.kiosky-calendar__hour-labels>div { height:112px; position:sticky; top:0; background:inherit; }
+.kiosky-calendar__hour-labels>span { position:absolute; transform:translateY(112px); width:100%; font-size:.7em; padding:.2rem; }
+.kiosky-event-calendar .kiosky-calendar__week-event { position:absolute; padding:.3rem; min-height:44px; overflow:auto; font-size:.75em; text-align:start; background:var(--kiosky-accent); color:var(--kiosky-accent-text); border:1px solid var(--kiosky-accent-text); border-radius:.35rem; }
+.kiosky-calendar__week-event strong,.kiosky-calendar__week-event small { display:block; overflow-wrap:anywhere; }
+.kiosky-event-calendar .kiosky-calendar__week-event.is-all-day { position:static; width:100%; min-height:44px; }
+.kiosky-calendar__dialog { color:inherit; background:var(--kiosky-dialog-surface,Canvas); border:1px solid var(--kiosky-control-border); border-radius:1rem; padding:1.5rem; max-width:min(42rem,calc(100vw - 2rem)); max-height:85vh; overflow:auto; }
+.kiosky-calendar__dialog::backdrop { background:#0008; }
+.kiosky-calendar__dialog [data-kiosky-close] { float:right; margin:0 0 1rem 1rem; }
+.kiosky-calendar__dialog p { white-space:pre-line; overflow-wrap:anywhere; }
+.kiosky-calendar__empty-message { padding:1.5rem; border:1px dashed var(--kiosky-control-border); border-radius:.5rem; }
+@container (max-width:65rem) { .kiosky-calendar__layout { flex-direction:column;align-items:stretch; } .kiosky-calendar__upcoming { flex:auto;border-inline-start:0;border-block-start:1px solid var(--kiosky-control-border);padding:1rem 0; } }
+@container (max-width:52rem) { .kiosky-calendar__event-content { grid-template-columns:minmax(0,1fr) !important;gap:.4rem; } .kiosky-calendar__navigation label { margin-inline-start:0; } }
+@media (max-width:52rem) { .kiosky-calendar__layout { flex-direction:column;align-items:stretch; } .kiosky-calendar__upcoming { flex:auto;border-inline-start:0;padding:1rem 0; } .kiosky-calendar__event-content { grid-template-columns:minmax(0,1fr) !important; } }
+@container (max-width:28rem) { .kiosky-calendar__grid button { padding:.3rem;min-height:4rem; } .kiosky-calendar__grid button small { font-size:.6em; } .kiosky-calendar__strip { grid-template-columns:2rem repeat(7,minmax(0,1fr)) 2rem;gap:.15rem; } .kiosky-calendar__strip button span { font-size:.6em; } }
+
+.kiosky-calendar__view-switch { display:grid; gap:.4rem; min-width:9rem; }
+.kiosky-calendar__view-switch select { min-height:44px; max-width:100%; font:inherit; color:var(--kiosky-control-text); background:var(--kiosky-control-bg); border:1px solid var(--kiosky-control-border); border-radius:.55rem; padding:.6rem; }
+.kiosky-calendar__event-image { display:block; width:100%; max-width:240px; max-height:180px; object-fit:contain; margin-bottom:.6rem; }
+.kiosky-calendar__times { display:flex; flex-wrap:wrap; gap:.3rem .8rem; font-size:.85em; margin:.5rem 0; }
+.kiosky-calendar__subtitle { margin:.3rem 0; font-weight:600; }
+.kiosky-calendar__excerpt { margin:.4rem 0; font-size:.9em; }
+.kiosky-calendar__dialog .kiosky-calendar__event-image { max-width:100%; max-height:400px; }
+@media(max-width:600px){.kiosky-calendar__view-switch,.kiosky-calendar__search{flex:1 1 100%;}.kiosky-calendar__view-switch select{font-size:16px;}}
+
+/* Scoped cards and detail dialog; retain website fonts and configured colors. */
+.kiosky-calendar__toolbar,.kiosky-calendar__navigation {gap:.65rem;align-items:center}
+.kiosky-calendar__toolbar input,.kiosky-calendar__toolbar select {min-height:46px}
+.kiosky-calendar__event {border:1px solid #e2e8f0;border-color:color-mix(in srgb,currentColor 14%,transparent);border-radius:1rem;padding:1.1rem;box-shadow:0 2px 12px #00000006;gap:1.1rem;margin-block:.8rem;background:transparent}
+.kiosky-calendar__event h4 {font-weight:700;line-height:1.25;margin:0 0 .35rem}
+.kiosky-calendar__date {align-self:start;display:grid;place-items:center;min-width:4.4rem;padding:.7rem .35rem;border-radius:.8rem;background:color-mix(in srgb,var(--kiosky-accent) 9%,transparent);color:var(--kiosky-accent)}
+.kiosky-calendar__date>strong {font-size:1.9em;line-height:1}
+.kiosky-calendar__date>span {font-size:.75em;text-align:center;margin-top:.35rem}
+.kiosky-calendar__summary {min-width:0}
+.kiosky-calendar__subtitle {font-weight:600;margin:.3rem 0}
+.kiosky-calendar__excerpt {opacity:.85;line-height:1.6}
+.kiosky-calendar__summary .kiosky-calendar__event-image {float:right;width:min(35%,160px);height:auto;max-height:180px;border-radius:.65rem;object-fit:cover;margin:0 0 .7rem 1rem}
+.kiosky-calendar__actions {display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;align-self:start}
+.kiosky-calendar__actions button,.kiosky-calendar__ticket {text-decoration:none;font-weight:600}
+.kiosky-calendar__result-count {font-size:.85em;opacity:.75;margin:1.2rem 0 .4rem}
+.kiosky-calendar__tag {border:0;background:color-mix(in srgb,var(--kiosky-accent) 10%,transparent);color:var(--kiosky-accent);font-weight:600}
+.kiosky-calendar__times {display:flex;gap:.35rem 1rem;flex-wrap:wrap;font-size:.85em;line-height:1.6}
+.kiosky-calendar__dialog:not([open]) {display:none!important}
+.kiosky-calendar__dialog[open] {display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;inset:0!important;transform:none!important;margin:auto!important;width:min(48rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);max-height:calc(100dvh - 2rem);height:fit-content;overflow:auto;overscroll-behavior:contain;z-index:2147483646;border:1px solid #e2e8f0;border-radius:1.25rem;padding:clamp(1rem,4vw,2rem);color:inherit;background:var(--kiosky-dialog-surface,Canvas);box-shadow:0 18px 80px #0005;font:inherit}
+.kiosky-calendar__dialog::backdrop {background:#10182799;backdrop-filter:blur(3px)}
+.kiosky-calendar__dialog [data-kiosky-close] {position:sticky;top:0;float:right;z-index:1;min-height:44px;background:var(--kiosky-dialog-surface,Canvas);margin:0 0 .5rem .8rem}
+.kiosky-calendar__dialog [data-kiosky-detail-body] {clear:both}
+.kiosky-calendar__detail-heading h2 {font:inherit;font-size:clamp(1.5em,4vw,2.2em);font-weight:750;line-height:1.2;letter-spacing:-.02em;margin:.8rem 0}
+.kiosky-calendar__detail-hero:empty {display:none}
+.kiosky-calendar__detail-hero .kiosky-calendar__event-image {width:100%;max-height:340px;object-fit:cover;border-radius:.8rem;margin:0 0 1.2rem}
+.kiosky-calendar__detail-subtitle {font-size:1.1em;opacity:.8}
+.kiosky-calendar__detail-facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem 1.4rem;margin:1.3rem 0;padding:1.2rem 0;border-block:1px solid #8883}
+.kiosky-calendar__detail-facts>div {min-width:0}
+.kiosky-calendar__detail-facts dt {font-size:.8em;opacity:.7;font-weight:600;margin-bottom:.2rem}
+.kiosky-calendar__detail-facts dd {margin:0;font-weight:550;overflow-wrap:anywhere}
+.kiosky-calendar__detail-description {line-height:1.65}
+.kiosky-calendar__detail-empty {opacity:.7;font-style:italic}
+.kiosky-calendar__detail-actions {margin-top:1.5rem}
+@media(max-width:600px){.kiosky-calendar__event {padding:.85rem;gap:.75rem}.kiosky-calendar__date {min-width:3.2rem}.kiosky-calendar__date>strong{font-size:1.5em}.kiosky-calendar__summary .kiosky-calendar__event-image{float:none;width:100%;max-height:220px;margin:0 0 .75rem}.kiosky-calendar__detail-facts{grid-template-columns:minmax(0,1fr)}.kiosky-calendar__dialog[open]{width:calc(100vw - 1rem);max-width:calc(100vw - 1rem);max-height:calc(100dvh - 1rem);border-radius:.9rem}}
+.kiosky-calendar__header {gap:1rem;align-items:end;padding-block:.2rem 1rem;border-bottom:1px solid #8883;margin-bottom:1rem}
+.kiosky-calendar__header h2 {font-weight:750;letter-spacing:-.02em;line-height:1.2}
+.kiosky-calendar__header input,.kiosky-calendar__header select {min-height:46px;border-radius:.65rem}
