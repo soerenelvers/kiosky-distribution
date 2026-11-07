@@ -169,3 +169,54 @@ aktualisiert; Datenänderungen kommen mit der normalen Player-Aktualisierung.
 Dieselben ergänzten Bedingungen stehen auch im Event-Stempel zur Verfügung.
 Interne Eventfelder sind nicht als Bedingung auswählbar. Keine zusätzliche
 Abfrage, Datenbankmigration oder eigener Timer ist erforderlich.
+
+## Event-Tabelle: Details einzeln gestalten (3.28.0)
+
+Neue **Event-Tabellen** öffnen direkt den Zeileneditor. Bei bestehenden Tabellen
+**Zeilenlayout bearbeiten · Details einzeln gestalten** wählen. Die ausgewählten
+Details, Reihenfolge, Ausrichtung und Leerwertoptionen werden übernommen.
+**Zur Detail-Liste** erlaubt die bisherige Checkbox-Ansicht; das Zeilenlayout
+bleibt für die Rückkehr gespeichert.
+
+Ein Feld aufklappen: eigene Schriftgröße in Entwurfs-Punkten, Schriftstärke,
+Kursiv/Unterstrichen, Textfarbe, Vor-/Nachtext, Ausrichtung, Breite in Prozent
+sowie linken/rechten/unteren Abstand in em einstellen. Ein leeres Größen- oder
+Breitenfeld übernimmt die Vorgabe beziehungsweise natürliche Breite. **Farbe vom
+Element** entfernt die individuelle Farbe. Die Prozentbreite enthält die inneren
+linken/rechten Abstände. Zwei Felder mit je 50 % stehen in derselben Zeile;
+Ausrichtung wirkt innerhalb dieser Breite. Zu schmale Breiten lassen Text
+umbrechen. Punktgrößen skalieren mit der Slide und gelten unabhängig von der
+Größe anderer Details. Feldbezeichnungen ergänzen eigene Vor-/Nachtexte und
+können global oder pro Detail abgeschaltet werden.
+
+Bausteine per Maus/Touch oder über Zielzeile und Pfeile verschieben. Zeilen lassen
+sich hinzufügen, löschen und umordnen. Die Reihenfolge im Zeilenfeld entspricht
+der sichtbaren Reihenfolge; Platzhalter behalten beim Verschieben ihre Formatierung.
+Beispiel: Beginn und Einlass in Zeile 1 legen, beide auf 50 % Breite setzen und
+für Beginn 24 pt, für Einlass 18 pt wählen. Abstände und Leerwertoptionen lassen
+sich unabhängig einstellen. Fehlende Details mit **Ausblenden** erzeugen keinen
+Baustein; leere Zeilen rücken nach. Tabellenrahmen, Zellrahmen und Trennlinien
+werden in beiden Darstellungen nicht ausgegeben.
+
+## Ticket-Link-Bedingung und QR-Begleittext (3.28.0)
+
+Am Textelement **Text sichtbar, wenn → Ticket-Link vorhanden (wie QR-Code)**
+wählen. Auch **Eventfeld ausgefüllt ist → Ticket-Link** funktioniert ohne
+zusätzliche Auswahl des bereits angezeigten Standardfelds. Fehlt der Link,
+besteht er nur aus Leerzeichen oder ist er kein gültiger HTTP-/HTTPS-Link,
+wird das gesamte Textelement aus der Ausgabe entfernt. Der Editor zeigt eine
+blasse, bearbeitbare Vorschau. Andere frei positionierte Elemente behalten ihre
+Position. Innerhalb von Datenzeilen rücken fehlende Details und leere Zeilen nach.
+
+Bei **QR-Code** und **Eventfeld → Ticket-Link als QR-Code** gibt es **Begleittext
+am QR-Code**. Text, Position links/rechts/darüber/darunter, Punktgröße,
+Ausrichtung, Farbe und Abstand lassen sich einstellen. Im Zeileneditor steht
+dieselbe Gruppe am Ticket-QR-Baustein bereit. QR-Code und Beschriftung teilen sich
+den Elementrahmen; dessen Größe und Position werden am Element gewählt.
+Die weiße QR-Fläche mit unverzerrtem Code bleibt erhalten. Ohne gültigen
+Ticket-Link verschwinden Code und Begleittext gemeinsam. Auch eine Zeile,
+die nur diesen QR-Code enthält, hinterlässt dabei keine Leerfläche.
+
+Die Einstellungen liegen additiv im Slide-Dokument und werden beim Speichern,
+Duplizieren, Export/Import und in Vorlagen übernommen. Editor, Miniatur,
+Kanalvorschau und Player verwenden dieselben Renderer.

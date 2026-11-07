@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "87a7594068b857ce937b9df8eed8ea942dc2d5f7",
+  "source_commit": "1a1b2e0be21b2e83d43a5fe998303e69fd8bcdfd",
   "product": "kiosky",
-  "version": "3.27.0",
-  "released_at": "2026-11-07T21:29:16.760Z",
+  "version": "3.28.0",
+  "released_at": "2026-11-07T22:21:40.880Z",
   "channel": "stable",
-  "release_notes": "## [3.27.0] – 2026-11-07\n\n- Feste Event-Auswahl im offenen Slide-/Kanal-Editor beim Aktualisieren der Inhalte erhalten, insbesondere nach „Als Vorlage speichern“.\n\n- Einstellungen → Veranstaltungen mit Checkboxen für sichtbare/nutzbare Editorfelder ergänzen; Titel erhalten, ausgeblendete Werte bewahren und Vorgaben in allen drei Varianten speichern.\n\n- Vorhandene Veranstaltungs-/Jobtypen beim manuellen Anlegen und Bearbeiten im Dropdown anbieten; neue Typen direkt hinzufügen und mit der Veranstaltung speichern.\n\n- Normale Textelemente abhängig von öffentlichen Eventfeldern, Ticket-Verfügbarkeit und zeitgesteuerter Abendkassenöffnung ein-/ausblenden; Live-Zeitwechsel ohne Slide-Neustart und blasse Editorvorschau unterstützen.\n\n- Website-Kalender mit klareren Veranstaltungskarten und vollständiger, barriereärmer bedienbarer Detailansicht überarbeiten; störende Theme-Styles und dynamische Einbettungen berücksichtigen.\n- Eigenständige Kalenderseite und iframe-Einbettung in Standalone ergänzen; öffentliche Freigabe standardmäßig deaktivieren und nicht freigegebene Felder serverseitig entfernen.\n- Frei platzierbare, drehbare Event-Stempel mit eigenem Text, Farben, Umrandung/Füllung und Bedingungen für Ausverkauft, Absage, Abendkasse oder andere öffentliche Eventfelder ergänzen.\n- Eventdaten um einen integrierten Zeileneditor mit mehreren Eventfeldern nebeneinander, frei editierbaren Texten, Leerzeichen und Trennzeichen erweitern.\n- Zeilen sowie Text- und Feldbausteine mit Maus oder Touch verschieben; Pfeile und Zielzeilen-Auswahl als Alternativen, automatische Scrollhilfe und Rückgängig unterstützen.\n- Zeilenabstand, individuelle Abstände, Zeilenhöhe, Ausrichtung, Schriftgröße sowie feldgebundene Vor-/Nachtexte und Leerwertverhalten einstellen.\n- Neue Elemente direkt im Zeilenlayout öffnen, bisherige Detailansichten erhalten und vollständige Layouts unabhängig in Slides, Duplikaten und Vorlagen speichern; gemeinsame Ausgabe in Standalone, WordPress und TYPO3.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.27.0",
+  "release_notes": "## [3.28.0] – 2026-11-07\n\n- Event-Tabelle um den Zeileneditor mit frei angeordneten Details nebeneinander, verschiebbaren Zeilen und Bausteinen sowie individuellen Schriftgrößen, Fett/Kursiv/Unterstrichen, Farben, Vor-/Nachtexten, Ausrichtungen, Breiten und Abständen erweitern.\n- Neue Event-Tabellen direkt im Zeilenlayout öffnen; vorhandene Tabellen über „Zeilenlayout bearbeiten“ übernehmen und die bisherige Detailauswahl weiter anbieten.\n- Außen-, Zell- und Trennlinien der Event-Tabelle vollständig entfernen.\n- Fehlerhafte Ticket-Link-Sichtbarkeit bei nicht ausdrücklich gespeichertem Standardfeld beheben: Oberfläche und Auswertung verwenden denselben Ticket-Link; leere, nur aus Leerzeichen bestehende und ungültige Links blenden den Text vollständig aus.\n- Direkte Textbedingung „Ticket-Link vorhanden (wie QR-Code)“ ergänzen und ausgeblendete Text-/QR-Elemente aus dem Layout nehmen.\n- Editierbaren QR-Begleittext links, rechts, oberhalb oder unterhalb mit Schriftgröße, Farbe, Ausrichtung und Abstand unterstützen; QR und Begleittext ohne Ticket-Link gemeinsam ausblenden, auch innerhalb der Event-Tabelle.\n- Gemeinsame Speicherung, Vorschau, Vorlagen und Player-Ausgabe in Standalone, WordPress und TYPO3 beibehalten; keine zusätzliche Datenbankmigration oder Laufzeitabhängigkeit.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.28.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.27.0",
+    "core_version": "3.28.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.27.0",
-    "typo3_extension_version": "3.27.0"
+    "wordpress_plugin_version": "3.28.0",
+    "typo3_extension_version": "3.28.0"
   },
   "components": {
     "core": {
-      "version": "3.27.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.27.0.zip?ref=v3.27.0",
-      "sha256": "831539535ada4306f79b7b0dddb24c523d9b704c573978de8334a8115e0fb34b"
+      "version": "3.28.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.28.0.zip?ref=v3.28.0",
+      "sha256": "9ccde99dfe6938ba9f1affae3ee95328eb7fcff4408a021924679d9c6692231f"
     },
     "standalone": {
-      "version": "3.27.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.27.0.zip?ref=v3.27.0",
-      "sha256": "831539535ada4306f79b7b0dddb24c523d9b704c573978de8334a8115e0fb34b"
+      "version": "3.28.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.28.0.zip?ref=v3.28.0",
+      "sha256": "9ccde99dfe6938ba9f1affae3ee95328eb7fcff4408a021924679d9c6692231f"
     },
     "wordpress": {
-      "version": "3.27.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.27.0.zip?ref=v3.27.0",
-      "sha256": "6b9f321d946b53ea8f13fc4eb1e4d9a462296b09c005371daef4fd47c8c6f595",
+      "version": "3.28.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.28.0.zip?ref=v3.28.0",
+      "sha256": "db6151d444fcc24abae6902e4cf1e434ac9b247c74da2a05fee1c072deacce33",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.27.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.27.0.zip?ref=v3.27.0",
-      "sha256": "920867fd715ed6d1e7bd74b34eba19b504a30cce464384b08f38795cde892cbd",
+      "version": "3.28.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.28.0.zip?ref=v3.28.0",
+      "sha256": "0ca6d2eb1756cee21819b08b95e561efe809a1d3984ad1338747474c9ca5902c",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -1710,3 +1710,25 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .event-type-picker>button,.event-type-actions {margin-top:8px}
 .event-type-actions {display:flex;flex-wrap:wrap;gap:8px}
 #event-type-new-controls {margin-top:10px}
+
+/* Event table details and QR labels share the same layout in editor, previews and player. */
+.event-data-table table,.event-data-table tbody,.event-data-table tr,.event-data-table th,.event-data-table td {border:0!important;outline:0!important;box-shadow:none!important;background-image:none!important}
+.event-data-table .event-row-layout {flex:0 1 auto}
+.event-layout-token[style] {overflow-wrap:anywhere}
+.event-layout-field-label {font:inherit;font-weight:600}
+#event-layout-panel .toggle-label input {width:auto;min-width:20px;min-height:20px;flex:0 0 auto}
+#event-layout-panel .toggle-label {min-height:44px}
+.qr-caption-controls {min-width:0;margin-top:12px}
+.qr-caption-controls input,.qr-caption-controls select,.qr-caption-controls textarea {min-width:0;width:100%;min-height:44px}
+.qr-with-caption {display:grid!important;grid-template-rows:minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr);gap:var(--qr-caption-gap,.35em);width:100%;height:100%;min-width:0;min-height:0;background:#fff;white-space:pre-wrap;line-height:1.2}
+.qr-with-caption.is-top {grid-template-rows:auto minmax(0,1fr)}
+.qr-with-caption.is-top .qr-caption-text {grid-row:1}
+.qr-with-caption.is-left,.qr-with-caption.is-right {grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center}
+.qr-with-caption.is-left .qr-caption-text {grid-row:1;grid-column:1}
+.qr-with-caption.is-left .qr-caption-code {grid-column:2}
+.qr-caption-code {display:grid!important;place-items:center;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden}
+.qr-caption-code>.generated-qr-code {width:100%;height:100%;min-height:0;object-fit:contain}
+.canvas-event-content .qr-with-caption,.player-event-block .qr-with-caption,.slide-thumb-event .qr-with-caption {margin:0;letter-spacing:normal}
+.canvas-event-content .qr-caption-text,.player-event-block .qr-caption-text,.slide-thumb-event .qr-caption-text,.qr-caption-text {font:inherit!important;line-height:1.2!important;letter-spacing:normal!important;margin:0!important;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.canvas-event-content .qr-caption-code,.player-event-block .qr-caption-code,.slide-thumb-event .qr-caption-code {font:inherit;margin:0}
+[data-event-text-condition][data-event-value-missing="true"],.player-qr-code[data-event-value-missing="true"],.player-dynamic-field[data-event-value-missing="true"] {display:none!important}
