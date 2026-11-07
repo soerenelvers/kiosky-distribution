@@ -1651,3 +1651,12 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .event-table-qr.event-qr-empty {background:transparent;visibility:hidden}
 .event-detail-row-settings input,.event-detail-row-settings select {min-height:44px}
 .canvas-element .event-table-image,.player-layout-element .event-table-image {width:auto;height:auto;max-width:100%;max-height:7em;object-fit:contain}
+
+/* Keep the previous real frame underneath every incoming transition. */
+.display-player,.display-player.has-slide-design,.display-player.is-matrix-segment {background:var(--player-background,#000000)}
+.display-player section.player-layout-slide {background:var(--player-background,#000000);z-index:1;isolation:isolate;transform:none;transition:opacity .45s linear,transform .45s ease}
+.display-player section.player-outgoing-slide {z-index:0;opacity:1;transform:none;transition:none}
+.display-player section.player-layout-slide[data-transition="slide"]:not(.is-visible) {transform:translateX(8vw)}
+.display-player section.player-layout-slide[data-transition="zoom"]:not(.is-visible) {transform:scale(.88)}
+.display-player section.player-layout-slide[data-transition="none"] {transition:none;transform:none}
+.display-player .player-layout-element section {opacity:1;transform:none;max-width:none;transition:none}

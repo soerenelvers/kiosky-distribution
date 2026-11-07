@@ -2035,6 +2035,7 @@ final class Api
             }
             return array_map(function (array $item) use ($counts): array {
                 $item['displayCount'] = $counts[$item['id']] ?? 0;
+                $item['playerBackgroundColor'] ??= '#000000';
                 return $item;
             }, $items);
         }
@@ -2116,6 +2117,7 @@ final class Api
             $item['currentSlideId'] = $item['slideId'] ?? null;
             $item['currentSlideName'] = $currentSlide['name'] ?? null;
             $item['location'] = $location['name'] ?? null;
+            $item['playerBackgroundColor'] = preg_match('/^#[0-9a-f]{6}$/i',(string)($location['playerBackgroundColor'] ?? ''))?strtolower($location['playerBackgroundColor']):'#000000';
             $item['clockTimezone'] = $location['timezone'] ?? $item['timezone'] ?? 'Europe/Berlin';
             $item['resolution'] = ['width' => (int)($item['width'] ?? 1920), 'height' => (int)($item['height'] ?? 1080)];
             $item['matrix'] = $matrix && $member ? ['id' => $matrix['id'], 'name' => $matrix['name'], 'row' => (int)($member['row'] ?? 0), 'column' => (int)($member['column'] ?? 0)] : null;
@@ -2228,6 +2230,11 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='locations'){
+            $color=array_key_exists('playerBackgroundColor',$body)?$body['playerBackgroundColor']:($current['playerBackgroundColor'] ?? '#000000');
+            if(!is_string($color)||!preg_match('/^#[0-9a-f]{6}$/i',$color))throw new RuntimeException('Die Display-Hintergrundfarbe muss eine sechsstellige Hex-Farbe sein, z. B. #000000.',422);
+            $body['playerBackgroundColor']=strtolower($color);
+        }
         if($collection==='channels'&&isset($body['items']))$body['items']=array_values(array_filter($body['items'],static fn(array $item):bool=>!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
         if($collection==='schedules'){
             $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');

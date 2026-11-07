@@ -1,7 +1,6 @@
-## [3.25.0] – 2026-11-07
+## [3.26.0] – 2026-11-07
 
-- Ticket-Link des ausgewählten, aktuellen, heutigen oder nächsten Events als dynamischen QR-Code im Eventfeld, QR-Code-Element und Eventdaten einbinden; fehlende oder ungültige Links ausblenden.
-- Neue Event-Tabelle mit Checkbox-Auswahl öffentlicher Veranstaltungsfelder, frei bearbeitbarer Überschrift, optionalen Feldbezeichnungen und konfigurierbarer Leerwertdarstellung.
-- Jede Eventdaten-/Tabellenzeile einzeln ausrichten; leere Felder ausblenden und nachrücken lassen, Platz freihalten oder eigenen Ersatztext anzeigen.
-- QR-Codes bis 2953 UTF-8-Bytes lokal und ohne Abschneiden erzeugen; SVG-Cache begrenzen und lange Links unabhängig per Scanner prüfen.
-- Gemeinsame Editor-, Vorschau- und Playerdarstellung sowie Event-Tabellen-Funktionsschalter in Standalone, WordPress und TYPO3 bereitstellen.
+- Direkte Slide-zu-Slide-Übergänge für Überblenden, Schieben und Zoom statt Ausblenden über den Player-Hintergrund; Kanalvorgaben und individuelle Übergänge erhalten.
+- Pro Standort eine zentrale Display-Hintergrundfarbe für freie Flächen und Slides ohne eigenen Hintergrund einstellen; Schwarz als neutrale Vorgabe und Live-Übernahme ohne Neustart der Wiedergabe.
+- Ausgehende Medien während des Übergangs im bestehenden DOM belassen, maximal eine zusätzliche Slide halten und danach Decoder, Iframes, Listener und Zeitgeber freigeben; auf neue Medien höchstens eine Sekunde warten.
+- Standortfarbe in Standalone, WordPress und TYPO3 sowie Systemexport/-import übernehmen; bestehende Standalone-Datenbanken mit Migration 043 ergänzen.
