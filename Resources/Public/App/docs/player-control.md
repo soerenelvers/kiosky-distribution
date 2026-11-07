@@ -104,18 +104,28 @@ Unter **Slides & Kanäle → Archiv öffnen** können bearbeitungsberechtigte Nu
 
 Bilder und Icons in Wegweisungszeilen können über **Zoom** zwischen 10 % und 250 % skaliert werden. 100 % ist die bisherige Ausgangsgröße; kleinere Werte verkleinern das Motiv in der bestehenden Zelle. Vorschau, gespeicherte Slide und Player verwenden denselben Faktor.
 
-## Ausspielreihenfolge ab 3.22.2
+## Presets und Ausspielreihenfolge ab 3.22.4
 
-1. Aktive Warnung für das Display bzw. seine Gruppe, seinen Standort oder seine Matrix.
-2. Aktives Preset beziehungsweise eine externe Direktzuweisung.
-3. Aktive, veröffentlichte Zeitzuweisung für Display, Gruppe oder Matrix.
-4. Standardkanal oder Standardslide des Displays (bei einer Matrix zunächst deren Standardkanal).
+Echte Warnungen behalten immer Vorrang. Ein Preset löst eine vordefinierte Zuspielung
+sofort aus und ersetzt zunächst eine bereits laufende Zeitzuweisung. Es sperrt die
+Displays jedoch nicht: Eine spätere manuelle Direktzuweisung, eine Änderung des
+Display-Standards oder eine neu wirksam werdende bzw. aktiv bearbeitete Zeitzuweisung
+löst das Preset für die betroffenen Displays ab. Dies gilt auch für Preset-Hinweise,
+die technisch als Warnungsdesign gespeichert sind; echte Warnungen bleiben erhalten.
 
-Warnungen überlagern Presets unabhängig von deren numerischer Priorität. Innerhalb
-derselben Warnungs-/Preset-Ebene bleiben Priorität und Veröffentlichungszeit relevant.
-Beim Ende einer Warnung wird das weiterhin aktive Preset wieder sichtbar. Nach dem
-Aufheben eines Presets greift die aktuell gültige Zeitzuweisung; nach deren Ende
-wieder der Standard.
+Die Ablösung wird pro Display gespeichert. Eine einzelne Änderung beendet daher
+nicht das Gruppen-Preset auf anderen Displays. Nach Ende oder Entfernen der neuen
+Zuweisung greift der reguläre Zeitplan bzw. Display-Standard; das alte Preset kehrt
+nicht zurück. Ein erneutes Auslösen desselben Presets startet eine neue Zuspielung.
+Auch ein während einer Offline-Phase vollständig verpasster Zeitslot wird beim
+Wiederverbinden berücksichtigt. Künftige Slots lösen das Preset erst beim Start ab.
+
+Ohne Ablösung gilt zunächst Warnung → Preset/Direktzuweisung → aktive Zeitzuweisung
+→ Standardkanal oder Standardslide (bei einer Matrix zunächst deren Standardkanal).
+Bereits vorhandene Preset-Ausführungen werden anhand ihrer gespeicherten
+Ausführungssnapshots erkannt. Standalone ergänzt dafür eine additive Tabelle;
+bestehende Inhalte und Kopplungen bleiben erhalten. Ältere Versionen ignorieren
+die Ablösemarkierungen und verwenden beim Rollback wieder ihr bisheriges Verhalten.
 
 Ein nicht mehr ausspielbarer Inhalt blockiert die folgende Ebene nicht: abgelaufene,
 zukünftige, archivierte, gelöschte oder am Standort nicht verfügbare Einzel-Slides

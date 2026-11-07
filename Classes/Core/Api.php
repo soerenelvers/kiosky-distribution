@@ -12,6 +12,7 @@ require_once __DIR__.'/SlideEventSelection.php';
 require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
+require_once __DIR__.'/PresetHandoff.php';
 
 final class Api
 {
@@ -1499,7 +1500,7 @@ final class Api
             if ($type === 'channel') {
                 $channelId = (string)($body['channelId'] ?? $preset['channelId'] ?? $config['channelId'] ?? '');
                 $result = ['action' => 'channel_assigned', 'assignments' => array_map(
-                    fn(array $target): array => $this->saveAssignment($state, array_replace($body, ['target' => $target, 'content' => ['type' => 'channel', 'id' => $channelId]])),
+                    fn(array $target): array => $this->saveAssignment($state, array_replace($body, ['target' => $target, 'content' => ['type' => 'channel', 'id' => $channelId]]),'preset:'.$preset['id'].':'.$this->uuid()),
                     $targets
                 )];
             } elseif ($type === 'emergency') {
@@ -1543,7 +1544,7 @@ final class Api
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $input @return array<string,mixed> */
-    private function saveAssignment(array &$state, array $input): array
+    private function saveAssignment(array &$state, array $input, ?string $presetSource=null): array
     {
         $target = $this->externalTarget($input['target'] ?? null);
         $content = is_array($input['content'] ?? null) ? $input['content'] : [];
@@ -1557,11 +1558,13 @@ final class Api
         $startsAt = $this->externalDate($input['startsAt'] ?? null, 'startsAt');
         $expiresAt = $this->externalDate($input['expiresAt'] ?? null, 'expiresAt');
         if ($startsAt && $expiresAt && strtotime($expiresAt) <= strtotime($startsAt)) throw new RuntimeException('expiresAt muss nach startsAt liegen.');
+        if($presetSource===null&&(!$startsAt||strtotime($startsAt)<=time()))PresetHandoff::releaseTargets($state,[$target]);
         $current = $this->first($state['assignments'], static fn(array $item): bool => ($item['target'] ?? null) === $target);
         $assignment = $this->record([
             'target' => $target, 'content' => ['type' => $contentType, 'id' => $contentId], 'priority' => $priority,
-            'startsAt' => $startsAt, 'expiresAt' => $expiresAt, 'source' => 'external_api', 'createdBy' => $this->identity['id'],
+            'startsAt' => $startsAt, 'expiresAt' => $expiresAt, 'source' => $presetSource ?? 'external_api', 'createdBy' => $this->identity['id'],
         ], $current['id'] ?? null);
+        $assignment['updatedAt']=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
         if ($current) $assignment['createdAt'] = $current['createdAt'];
         $index = $current ? $this->index($state['assignments'], (string)$current['id']) : null;
         if ($index === null) $state['assignments'][] = $assignment; else $state['assignments'][$index] = $assignment;
@@ -1605,9 +1608,10 @@ final class Api
             $updatedChannels[] = $this->saveRecord($state, 'channels', $channel, (string)$channel['id']);
         }
         $assignments = [];
+        $runSource='preset:'.$preset['id'].':'.$this->uuid();
         foreach ($assignmentInputs as $input) {
             if (!is_array($input)) continue;
-            $assignments[] = $this->saveAssignment($state, ['target' => ['type' => $input['targetType'] ?? '', 'id' => $input['targetId'] ?? ''], 'content' => ['type' => $input['contentType'] ?? '', 'id' => $input['contentId'] ?? ''], 'priority' => 500]);
+            $assignments[] = $this->saveAssignment($state, ['target' => ['type' => $input['targetType'] ?? '', 'id' => $input['targetId'] ?? ''], 'content' => ['type' => $input['contentType'] ?? '', 'id' => $input['contentId'] ?? ''], 'priority' => 500],$runSource);
         }
         $execution = $this->record(['presetId' => $preset['id'], 'targets' => array_map(static fn(array $item): array => $item['target'], $assignments), 'result' => ['action' => 'state_applied', 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
         $state['presetExecutions'][] = $execution;
@@ -1731,7 +1735,10 @@ final class Api
         if ($action !== 'state' || $method !== 'GET') throw new RuntimeException('Methode nicht erlaubt.', 405);
 
         $matrixLayout = $this->matrixLayout($state, (string)$display['id']);
-        $assignment = $this->license()->allows($state,'schedule') ? $this->resolveAssignment($state, $display, $matrixLayout) : null;
+        $beforeHandoffs=$state['presetHandoffs'] ?? [];
+        $releasedPresets=PresetHandoff::released($state,$display,$this->license()->allows($state,'schedule'));
+        $handoffChanged=$beforeHandoffs!==($state['presetHandoffs'] ?? []);
+        $assignment = $this->license()->allows($state,'schedule') ? $this->resolveAssignment($state, $display, $matrixLayout,$releasedPresets) : null;
         $selection = $this->resolvedChannelSelection($state, $display, $matrixLayout);
         $channel = $selection['channel'];
         $directSlide = $selection['directSlide'] ?? null;
@@ -1761,7 +1768,7 @@ final class Api
         foreach ($display['groupIds'] ?? [] as $groupId){$targets[]='group:'.$groupId;$targets[]=$groupId;}
         if (!empty($display['locationId'])) $targets[] = 'location:' . $display['locationId'];
         if ($matrixLayout) $targets[] = 'matrix:' . $matrixLayout['id'];
-        $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())&&count(array_intersect($targets,$item['targets'] ?? []))>0));
+        $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())&&count(array_intersect($targets,$item['targets'] ?? []))>0&&empty($releasedPresets[PresetHandoff::key('warning',$item)])));
         usort($warningCandidates,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));
         $warning=$warningCandidates[0] ?? null;
         $emergency = $warning ? [
@@ -1790,14 +1797,15 @@ final class Api
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $commands, 'serverTime' => $serverTime,
-        ],$changed||$deliveryChanged);
+        ],$changed||$deliveryChanged||$handoffChanged);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */
-    private function resolveAssignment(array $state, array $display, ?array $matrix): ?array
+    private function resolveAssignment(array $state, array $display, ?array $matrix, array $released=[]): ?array
     {
         $now = time();
-        $candidates = array_values(array_filter($state['assignments'], function (array $item) use ($display, $matrix, $now): bool {
+        $candidates = array_values(array_filter($state['assignments'], function (array $item) use ($display, $matrix, $now,$released): bool {
+            if(!empty($released[PresetHandoff::key('assignment',$item)]))return false;
             $startsAt = !empty($item['startsAt']) ? strtotime((string)$item['startsAt']) : false;
             $expiresAt = !empty($item['expiresAt']) ? strtotime((string)$item['expiresAt']) : false;
             if (($startsAt !== false && $startsAt > $now) || ($expiresAt !== false && $expiresAt <= $now)) return false;
@@ -2214,7 +2222,10 @@ final class Api
             $contentId=$body['contentId'] ?? $body[$type.'Id'] ?? $merged['contentId'] ?? $merged[$type.'Id'] ?? '';
             $body=array_replace($body,['contentType'=>$type,'contentId'=>$contentId,'channelId'=>$type==='channel'?$contentId:null,'slideId'=>$type==='slide'?$contentId:null]);
         }
+        if($collection==='warnings'&&PresetHandoff::source($body['source'] ?? $current['source'] ?? '')&&($body['status'] ?? '')==='active'&&!$current)$body['publishedAt']=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
         $record = $this->record(array_replace($current, $body), $id);
+        if($collection==='displays'&&$current&&array_intersect_key($current,array_flip(['defaultContentType','defaultChannelId','defaultSlideId']))!==array_intersect_key($record,array_flip(['defaultContentType','defaultChannelId','defaultSlideId'])))PresetHandoff::releaseTargets($state,[['type'=>'display','id'=>$record['id']]]);
+        if($collection==='schedules'&&($record['status'] ?? '')==='published'&&$this->scheduleActive($record,$this->now()))PresetHandoff::releaseTargets($state,[['type'=>$record['targetType'] ?? '', 'id'=>$record['targetId'] ?? '']]);
         $index = $this->index($state[$collection], $record['id']);
         if ($index === null) $state[$collection][] = $record; else $state[$collection][$index] = $record;
         if($collection==='displays')foreach($state['groups'] as &$group){

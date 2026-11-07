@@ -102,4 +102,36 @@ final class ExternalSchedule
         }
         return false;
     }
+
+    /** Most recent occurrence, including a completed slot missed by an offline player. */
+    public static function latestStart(array $s, float $now): ?float
+    {
+        $start=strtotime((string)($s['startsAt'] ?? ''));$end=strtotime((string)($s['endsAt'] ?? ''));
+        if(($s['active'] ?? true)===false||$start===false||$end===false||$end<=$start||$now<$start)return null;
+        $recurrence=$s['recurrence'] ?? 'once';if($recurrence==='once')return (float)$start;
+        $from=empty($s['recurrenceStartsAt'])?$start:strtotime($s['recurrenceStartsAt']);
+        $until=empty($s['recurrenceEndsAt'])?INF:strtotime($s['recurrenceEndsAt']);$limit=min($now,$until-0.001);
+        if($limit<$from)return null;
+        try{
+            $zone=new DateTimeZone($s['recurrenceTimezone'] ?? 'UTC');$a=self::wall($start,$zone);$duration=self::wall($end,$zone)-$a;
+            $anchor=(int)floor($a/86400);$today=(int)floor(self::wall((int)$limit,$zone)/86400);$weekly=$recurrence==='weekly';
+            $interval=max(1,(int)($s['recurrenceInterval'] ?? 1));$cycleDays=$interval*($weekly?7:1);
+            $days=!empty($s['recurrenceWeekdays'])?$s['recurrenceWeekdays']:[(int)gmdate('w',$a)];
+            $cycle=(int)floor(($today-$anchor)/$cycleDays);
+            for($attempt=0;$attempt<3&&$cycle>=0;$attempt++,$cycle--){
+                for($offset=$weekly?6:0;$offset>=0;$offset--){
+                    $candidateDay=$anchor+$cycle*$cycleDays+$offset;
+                    if($candidateDay>$today||($weekly&&!in_array((int)gmdate('w',$candidateDay*86400),$days,true)))continue;
+                    $candidate=$candidateDay*86400+$a%86400;
+                    try{
+                        $actualStart=strtotime(self::local(gmdate('Y-m-d\TH:i:s',$candidate),$zone));
+                        $actualEnd=strtotime(self::local(gmdate('Y-m-d\TH:i:s',$candidate+$duration),$zone));
+                        $effective=max($start,$from,$actualStart);
+                        if($effective<=$limit&&$actualEnd>$effective)return (float)$effective;
+                    }catch(Throwable){/* Missing local DST occurrence. */}
+                }
+            }
+        }catch(Throwable){/* Invalid legacy recurrence. */}
+        return null;
+    }
 }

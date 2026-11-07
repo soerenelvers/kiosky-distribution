@@ -281,3 +281,12 @@ Die Variable `last_schedule_id` enthält die zuletzt mit dieser Modulinstanz erz
 Die Moduldatei aus `integrations/companion/releases/kiosky-control-1.3.0.tgz`
 importieren und an der bestehenden Verbindung Version 1.3.0 auswählen.
 Die bisherigen Aktionen „Slide anzeigen“/„Kanal anzeigen“ bleiben direkte Overrides.
+
+### Preset-Zuspielungen ablösen (ab 3.22.4)
+
+Presets sind auslösbare Zustände: Nach der Ausführung können spätere manuelle
+Zuweisungen über `/api/v1/assignments` bzw. die Display-/Gruppen-Shortcuts sowie
+neu wirksame oder aktiv bearbeitete Zeitzuweisungen die Preset-Zuspielung ablösen.
+Die Ablösung gilt pro Display und bleibt nach Ende der Ersetzung erhalten.
+Ein erneutes Ausführen startet einen neuen Preset-Zustand. Echte Warnungen behalten
+Vorrang; `presets/stop` ist zum späteren Überspielen nicht erforderlich.

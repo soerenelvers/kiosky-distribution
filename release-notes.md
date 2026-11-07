@@ -1,5 +1,6 @@
-## [3.22.3] – 2026-11-06
+## [3.22.4] – 2026-11-07
 
-- Eigene Suche nach Displays, Gruppen und Matrizen in der Zeitplanung, kombinierbar mit dem Online-Filter.
-- Ziele und Inhalte unabhängig scrollen; Suche oberhalb der Ziele sowie Zeitachsen und Zielnamen beim Scrollen erreichbar halten.
-- Gemeinsame Oberfläche für Standalone, WordPress und TYPO3 einschließlich Touch-Bedienung; überlagerte Navigation-/Layoutregeln für schmale Tablets korrigieren.
+- Presets als auslösbare Zuspielung behandeln: spätere manuelle Zuweisungen, Änderungen des Display-Standards sowie neue/aktiv bearbeitete Zeitzuweisungen lösen das Preset ab.
+- Ablösung pro Display erhalten; andere Gruppenmitglieder bleiben auf ihrem Preset, alte Presets kehren nach Ablauf oder Entfernen der Ersetzung nicht zurück.
+- Neue Preset-Ausführungen wieder zulassen, vorhandene Ausführungssnapshots berücksichtigen und zeitweise offline verpasste Slots einschließlich Wiederholungen erkennen.
+- Echte Warnungen vor allen Zuspielungen erhalten; Preset-Hinweise bleiben ablösbar. Gleichzeitige WordPress-Player-Ablösungen sicher zusammenführen.
