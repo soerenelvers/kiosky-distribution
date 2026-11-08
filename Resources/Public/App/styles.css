@@ -1804,3 +1804,9 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 @media(max-width:600px){.list-sort-controls{gap:8px}.list-sort-controls label{width:100%}.list-sort-controls label select{flex:1}}
 
 .player-layout-element .event-stamp>span,.canvas-element .event-stamp>span{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Precise small frames use separate large transform controls for pointer access. */
+#slide-editor-canvas .canvas-element{min-width:0;min-height:0;border:0}
+.editor-geometry-properties{min-width:0;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px}
+.editor-geometry-properties legend{font-size:.8rem;font-weight:700;padding:0 4px}
+.editor-geometry-properties select,.editor-geometry-properties input{min-width:0;width:100%;min-height:44px}

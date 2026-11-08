@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kiosky\Core;
 
 use RuntimeException;
+require_once __DIR__.'/ExternalSchedule.php';
 
 /** CMS counterpart of the standalone advertising generator; works only on the current state snapshot. */
 final class AdvertisingService
@@ -147,7 +148,8 @@ final class AdvertisingService
             $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl']));
             $document=array_replace($document,['elements'=>$elements,'responsiveLayouts'=>[$orientation=>$elements],'designOrientation'=>$orientation,'orientation'=>$orientation,'type'=>'event','width'=>$orientation==='portrait'?1080:1920,'height'=>$orientation==='portrait'?1920:1080]);
             $document['advertisingConfigHash']=hash('sha256',json_encode($document,JSON_THROW_ON_ERROR));
-            $result[]=['id'=>'advertising-event:'.$orientation.':'.$event['id'],'name'=>'Werbung · '.$event['title'],'eventId'=>$event['id'],'orientation'=>$orientation,'type'=>'event','document'=>$document,'status'=>'published','endsAt'=>$event['eventEnd'] ?? $event['eventStart'] ?? null,'tags'=>['Werbung','Veranstaltung',$orientation==='portrait'?'Werbung Hochkant':'Werbung quer'],'locationIds'=>$settings['locationIds'],'virtual'=>true,'automationKey'=>'advertising:event:'.$event['id'],'createdAt'=>$event['createdAt'] ?? '', 'updatedAt'=>$event['updatedAt'] ?? ''];
+            $date=self::overviewDay($event['date'] ?? '');$boundary=self::overviewInstant($event['eventEnd'] ?? '',$date) ?? self::overviewInstant($event['eventStart'] ?? '',$date);
+            $result[]=['id'=>'advertising-event:'.$orientation.':'.$event['id'],'name'=>'Werbung · '.$event['title'],'eventId'=>$event['id'],'orientation'=>$orientation,'type'=>'event','document'=>$document,'status'=>'published','endsAt'=>$boundary!==null?gmdate('c',$boundary):null,'tags'=>['Werbung','Veranstaltung',$orientation==='portrait'?'Werbung Hochkant':'Werbung quer'],'locationIds'=>$settings['locationIds'],'virtual'=>true,'automationKey'=>'advertising:event:'.$event['id'],'createdAt'=>$event['createdAt'] ?? '', 'updatedAt'=>$event['updatedAt'] ?? ''];
         }
         return $result;
     }
@@ -159,20 +161,61 @@ final class AdvertisingService
         $channel['totalDurationSeconds']=array_sum(array_column($channel['items'],'durationSeconds'));return $channel;
     }
 
-    /** Only public event fields are embedded in runtime output; never persist this projection. */
-    public static function overviewSlide(array $slide,array $events):array
+    public static function overviewCount(mixed $value):int
     {
-        $selected=null;
-        $visit=function($value)use(&$visit,&$selected,$events){
-            if(!is_array($value))return $value;
-            if(($value['type'] ?? '')==='event-overview'){
-                if($selected===null){$selected=array_values(array_filter($events,static fn(array $e):bool=>empty($e['deletedAt'])&&empty($e['archivedAt'])&&!in_array($e['status'] ?? '',['cancelled','archived'],true)&&(!empty($e['eventEnd'])||!empty($e['eventStart'])?(strtotime((string)($e['eventEnd'] ?? $e['eventStart'])) ?: 0)>=time():substr(preg_replace('/\D/','',(string)($e['date'] ?? '')),0,8)>=(new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd'))));usort($selected,static fn(array $a,array $b):int=>[strtotime((string)($a['eventStart'] ?? $a['date'] ?? '')) ?: 0,$a['id']]<=>[strtotime((string)($b['eventStart'] ?? $b['date'] ?? '')) ?: 0,$b['id']]);}
-                $count=in_array((int)($value['eventCount'] ?? 6),[6,10,15],true)?(int)($value['eventCount'] ?? 6):6;
-                $value['events']=array_map(static fn(array $e):array=>array_intersect_key($e,array_flip(['id','title','subtitle','date','eventStart','admissionStart','imageUrl','ticketUrl','ticketLink','ticketStatus'])),array_slice($selected,0,$count));return $value;
+        return is_numeric($value)&&is_finite((float)$value)&&(float)$value>=1?min(50,(int)$value):6;
+    }
+
+    private static function overviewDay(mixed $value):string
+    {
+        $text=trim((string)($value ?? ''));
+        $digits=preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/',$text,$m)?$m[3].$m[2].$m[1]:substr(preg_replace('/\D/','',$text),0,8);
+        return strlen($digits)===8&&checkdate((int)substr($digits,4,2),(int)substr($digits,6,2),(int)substr($digits,0,4))?$digits:'';
+    }
+
+    private static function overviewInstant(mixed $value,string $date):?int
+    {
+        $text=trim((string)($value ?? ''));if($text==='')return null;
+        $clock=preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/',$text)===1;
+        if($clock&&$date==='')return null;
+        if($clock)$text=substr($date,0,4).'-'.substr($date,4,2).'-'.substr($date,6,2).'T'.$text;
+        try{if(preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?$/',$text)){if(strlen($text)===16)$text.=':00';return strtotime(ExternalSchedule::localTimestamp($text,'Europe/Berlin'));}$time=new \DateTimeImmutable($text,new \DateTimeZone('Europe/Berlin'));$errors=\DateTimeImmutable::getLastErrors();return $errors&&($errors['warning_count']||$errors['error_count'])?null:$time->getTimestamp();}catch(\Throwable){return null;}
+    }
+
+    /** One lazy, bounded selection per playback request, reused by every overview on it. */
+    public static function overviewProjector(array $events,?int $now=null):callable
+    {
+        $now??=time();$selected=null;
+        $select=static function()use($events,$now):array{
+            $today=(new \DateTimeImmutable('@'.$now))->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('Ymd');$rows=[];
+            foreach($events as $event){
+                if(!empty($event['deletedAt'])||!empty($event['archivedAt'])||in_array($event['status'] ?? '',['cancelled','archived','ended'],true))continue;
+                $date=self::overviewDay($event['date'] ?? '');$start=self::overviewInstant($event['eventStart'] ?? '',$date);$end=self::overviewInstant($event['eventEnd'] ?? '',$date);$boundary=$end ?? $start;
+                if($boundary!==null?$boundary<$now:($date===''||$date<$today))continue;
+                $order=$start ?? ($date!==''?strtotime(substr($date,0,4).'-'.substr($date,4,2).'-'.substr($date,6,2).'T00:00:00Z'):false);if($order===false)continue;
+                $rows[]=['event'=>$event,'order'=>$order];
             }
+            usort($rows,static fn(array $a,array $b):int=>$a['order']<=>$b['order'] ?: strcmp((string)$a['event']['id'],(string)$b['event']['id']));
+            return array_map(static function(array $row):array{
+                $event=$row['event'];$out=array_intersect_key($event,array_flip(['id','title','subtitle','date','eventStart','admissionStart','imageUrl','ticketUrl','remainingTickets','status']));$date=self::overviewDay($event['date'] ?? '');if($date!=='')$out['date']=$date;
+                foreach(['eventStart','admissionStart'] as $key){$time=self::overviewInstant($event[$key] ?? '',$date);if($time!==null)$out[$key]=gmdate('Y-m-d\TH:i:s\Z',$time);}return $out;
+            },array_slice($rows,0,50));
+        };
+        $visit=static function($value)use(&$visit,&$selected,$select){
+            if(!is_array($value))return $value;
+            if(($value['type'] ?? '')==='event-overview'){$selected??=$select();$value['eventCount']=self::overviewCount($value['eventCount'] ?? 6);$value['events']=array_slice($selected,0,$value['eventCount']);return $value;}
             foreach($value as $key=>$item)$value[$key]=$visit($item);return $value;
         };
-        return $visit($slide);
+        return $visit;
+    }
+
+    public static function overviewSlide(array $slide,array $events):array{return self::overviewProjector($events)($slide);}
+
+    public static function stripOverviewRuntime(mixed $value):mixed
+    {
+        if(!is_array($value))return $value;
+        if(($value['type'] ?? '')==='event-overview')unset($value['events']);
+        foreach($value as $key=>$item)$value[$key]=self::stripOverviewRuntime($item);return $value;
     }
 
     public static function formats(array $slide): array
@@ -208,8 +251,8 @@ final class AdvertisingService
         $today = (new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd');
         $events = array_values(array_filter($state['events'],static function(array $event) use ($types,$today): bool {
             if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || (!empty($event['sourceId'])&&!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]))) return false;
-            $boundary = strtotime((string)($event['eventEnd'] ?? $event['eventStart'] ?? ''));
-            return $boundary !== false ? $boundary >= time() : substr(preg_replace('/\D/','',(string)($event['date'] ?? '')),0,8) >= $today;
+            $date=self::overviewDay($event['date'] ?? '');$boundary=self::overviewInstant($event['eventEnd'] ?? '',$date) ?? self::overviewInstant($event['eventStart'] ?? '',$date);
+            return $boundary !== null ? $boundary >= time() : $date >= $today;
         }));
         usort($events,static fn(array $a,array $b): int => [($a['eventStart'] ?? $a['date'] ?? ''),$a['title']] <=> [($b['eventStart'] ?? $b['date'] ?? ''),$b['title']]);
         return $events;

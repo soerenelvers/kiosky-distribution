@@ -280,7 +280,7 @@ final class Api
             $snapshot=$this->eventReuseSnapshot($state,rawurldecode($match[1]),$body['input'] ?? null);$body['title']??=EventReuse::copyTitle($snapshot['input']['title']);return $this->eventReuseCreate($state,$snapshot,$body);
         }
         if ($path === '/api/events') {
-            if ($method === 'GET') return $this->ok(['data' => $this->active($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? [])]);
+            if ($method === 'GET') return $this->ok(['data' => $this->active($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? []),'serverTime'=>$this->now()]);
             if ($method === 'POST') {
                 $event = $this->saveRecord($state, 'events', $body);
                 $this->ensureEventChannel($state, $event);
@@ -1863,6 +1863,7 @@ final class Api
         $available=$selection['available'] ?? [];
         $slides = [];
         $playableSlidesById=array_column($this->active($state['slides']),null,'id');
+        $projectOverview=AdvertisingService::overviewProjector($this->license()->allows($state,'events')?$this->active($state['events']):[]);
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
             $slide = $item['slide'] ?? $playableSlidesById[$item['slideId'] ?? ''] ?? null;
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
@@ -1874,8 +1875,8 @@ final class Api
                 $scheduleRules=[];foreach(EasyJobService::roomUseTypes($state['easyjob']['roomUseTypeRules'] ?? []) as $rule)$scheduleRules[$rule['normalizedType']]=$rule;
                 $event['scheduleEntries']=array_values(array_map(static fn(array $entry):array=>array_intersect_key($entry,array_flip(['id','displayCaption','category','startAt','endAt','roomName'])),array_filter($state['eventSchedules'],static fn(array $entry):bool=>($entry['eventId'] ?? '')===$event['id']&&($entry['active'] ?? true)!==false&&!in_array($entry['category'] ?? '',['internal','cancelled'],true)&&($entry['visible'] ?? true)!==false&&($scheduleRules[EasyJobService::normalizedRoomUseType((string)($entry['type'] ?? ''))]['visible'] ?? true)!==false)));
             }
-            $slide=AdvertisingService::overviewSlide($slide,$this->license()->allows($state,'events')?$this->active($state['events']):[]);
-            $slides[] = $item + ['slide' => $slide, 'event' => $event];
+            $slide=$projectOverview($slide);
+            $slides[] = array_replace($item,['slide' => $slide, 'event' => $event]);
         }
         if($channel)$channel['items']=array_map(static fn(array $item):array=>array_diff_key($item,['slide'=>true]),$channel['items'] ?? []);
         $targets = ['global','all', 'display:' . $display['id']];
@@ -2338,6 +2339,7 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if(in_array($collection,['slides','templates'],true)&&isset($body['document']))$body['document']=AdvertisingService::stripOverviewRuntime($body['document']);
         if($collection==='locations'){
             $color=array_key_exists('playerBackgroundColor',$body)?$body['playerBackgroundColor']:($current['playerBackgroundColor'] ?? '#000000');
             if(!is_string($color)||!preg_match('/^#[0-9a-f]{6}$/i',$color))throw new RuntimeException('Die Display-Hintergrundfarbe muss eine sechsstellige Hex-Farbe sein, z. B. #000000.',422);

@@ -386,23 +386,53 @@ function eventFieldPresentation(event,field,options={}){
 function hiddenEventValueAttributes(present){return present?'':'data-event-value-missing="true" aria-hidden="true"';}
 
 const eventDetailLabels={title:'Titel',subtitle:'Untertitel',date:'Datum',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',setupStart:'Aufbau',venue:'Spielort',room:'Raum / Saal',organizer:'Veranstalter',eventType:'Kategorie',remainingTickets:'Ticketstatus',boxOfficeOpenAt:'Abendkasse ab',publicNotes:'Öffentlicher Hinweis',description:'Beschreibung',externalNumber:'Veranstaltungsnummer',status:'Status',ticketUrl:'Ticket-Link',ticketQr:'Ticket-Link als QR-Code',imageUrl:'Veranstaltungsbild',boxOfficeAvailable:'Abendkasse verfügbar'};
-function previewOverviewDocument(value,events){
-  if(Array.isArray(value))return value.map(item=>previewOverviewDocument(item,events));
+function overviewEventCount(value){const number=Number(value);return Number.isFinite(number)&&number>=1?Math.min(50,Math.floor(number)):6;}
+function overviewEventDay(value){
+  const text=String(value||'').trim(),de=text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/),digits=de?de[3]+de[2]+de[1]:text.replace(/\D/g,'').slice(0,8);
+  if(digits.length!==8)return '';const iso=`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}`,time=Date.parse(iso+'T00:00:00Z');return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===iso?digits:'';
+}
+function overviewEventInstant(value,date=''){
+  const text=String(value??'').trim();if(!text)return NaN;
+  const clock=/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(text),floating=/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?$/.test(text);
+  if((clock&&date)||floating){const local=clock?`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T${text}`:text;return countdownZonedInstant(local,'Europe/Berlin');}
+  return clock?NaN:Date.parse(text);
+}
+function rememberOverviewClock(result){const server=Date.parse(result?.serverTime||'');if(Number.isFinite(server))state.overviewClock={server,receivedAt:performance.now()};}
+function editorOverviewNow(){return state.overviewClock?state.overviewClock.server+Math.max(0,performance.now()-state.overviewClock.receivedAt):Date.now();}
+function overviewUpcomingEvents(events,now=Date.now()){
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(now).replaceAll('-','');
+  return events.flatMap(event=>{
+    if(event.deletedAt||event.archivedAt||['cancelled','archived','ended'].includes(event.status))return [];
+    const date=overviewEventDay(event.date),start=overviewEventInstant(event.eventStart,date),end=overviewEventInstant(event.eventEnd,date),boundary=Number.isFinite(end)?end:start;
+    if(Number.isFinite(boundary)?boundary<now:!date||date<today)return [];
+    const order=Number.isFinite(start)?start:Date.parse(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T00:00:00Z`);if(!Number.isFinite(order))return [];
+    return [{event,date,order}];
+  }).sort((a,b)=>a.order-b.order||String(a.event.id).localeCompare(String(b.event.id))).slice(0,50).map(({event,date})=>{const out={...event};if(date)out.date=date;for(const key of ['eventStart','admissionStart']){const time=overviewEventInstant(event[key],date);if(Number.isFinite(time))out[key]=new Date(time).toISOString();}return out;});
+}
+function stripOverviewRuntime(value){
+  if(Array.isArray(value))return value.map(stripOverviewRuntime);
   if(!value||typeof value!=='object')return value;
-  if(value.type==='event-overview')return {...value,events:overviewUpcomingEvents(events).slice(0,Number(value.eventCount)||6)};
-  return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,previewOverviewDocument(item,events)]));
+  return Object.fromEntries(Object.entries(value).filter(([key])=>value.type!=='event-overview'||key!=='events').map(([key,item])=>[key,stripOverviewRuntime(item)]));
 }
-function overviewUpcomingEvents(events){
-  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('-','');
-  const timestamp=event=>{const raw=String(event.eventStart||event.date||'');return Date.parse(/^\d{8}$/.test(raw)?`${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}T00:00:00Z`:raw);};
-  return events.filter(event=>!event.deletedAt&&!event.archivedAt&&!['cancelled','archived'].includes(event.status)&&((event.eventEnd||event.eventStart)?Date.parse(event.eventEnd||event.eventStart)>=Date.now():String(event.date||'').replace(/\D/g,'').slice(0,8)>=today)).sort((a,b)=>timestamp(a)-timestamp(b)||String(a.id).localeCompare(String(b.id)));
+function previewOverviewDocument(value,events,now=Date.now()){
+  let selected;
+  const visit=node=>{if(Array.isArray(node))return node.map(visit);if(!node||typeof node!=='object')return node;if(node.type==='event-overview'){selected??=overviewUpcomingEvents(events,now);return {...node,events:selected.slice(0,overviewEventCount(node.eventCount))};}return Object.fromEntries(Object.entries(node).map(([key,item])=>[key,visit(item)]));};return visit(value);
 }
-
-function eventOverviewMarkup(element){
-  const count=[6,10,15].includes(Number(element.eventCount))?Number(element.eventCount):6;
-  const events=Array.isArray(element.events)?element.events:overviewUpcomingEvents(state.events||[]).slice(0,count);
-  const columns=count===10?2:3,rows=Math.ceil(count/columns);
-  return `<div class="event-overview-grid" data-overview-count="${count}" style="--overview-columns:${columns};--overview-rows:${rows}">${events.length?events.slice(0,count).map(event=>{const ticket=eventTicketUrl(event),date=eventFieldPresentation(event,'date').text,start=eventFieldPresentation(event,'eventStart').text,admission=eventFieldPresentation(event,'admissionStart').text;return `<article class="event-overview-card" data-overview-event="${escapeHtml(event.id)}"><div class="event-overview-image">${event.imageUrl?`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager">`:'<span>LIVE</span>'}</div><div class="event-overview-title"><time>${escapeHtml(date)}</time><strong>${escapeHtml(event.title||'')}</strong>${event.subtitle?`<small>${escapeHtml(event.subtitle)}</small>`:''}</div><div class="event-overview-footer"><div>${start?`<span>Beginn <b>${escapeHtml(start)}</b></span>`:''}${admission?`<span>Einlass <b>${escapeHtml(admission)}</b></span>`:''}</div>${ticket?`<div class="event-overview-ticket">${qrSvgMarkup(ticket,'#0f172a','#ffffff')}<small>Tickets</small></div>`:''}</div></article>`;}).join(''):'<p class="event-overview-empty">Weitere Veranstaltungen folgen.</p>'}</div>`;
+async function refreshOverviewEvents(force=false){
+  if(!force&&state.overviewLoadedAt&&performance.now()-state.overviewLoadedAt<30000)return;
+  state.overviewEventsRequest??=loadEvents().then(result=>{if(result)state.overviewLoadedAt=performance.now();}).finally(()=>{state.overviewEventsRequest=null;if(slideDialog.open&&state.editorElements.some(element=>element.type==='event-overview'))renderEditorCanvas();});
+  return state.overviewEventsRequest;
+}
+function editorOverviewEvents(events){
+  const now=editorOverviewNow(),second=Math.floor(now/1000),cached=state.overviewSelection;
+  if(cached?.source===events&&cached.second===second)return cached.events;
+  const selected=overviewUpcomingEvents(events,now);state.overviewSelection={source:events,second,events:selected};return selected;
+}
+function eventOverviewMarkup(element,previewEvents){
+  const count=overviewEventCount(element.eventCount);
+  const events=previewEvents?editorOverviewEvents(previewEvents).slice(0,count):Array.isArray(element.events)?element.events:editorOverviewEvents(state.events||[]).slice(0,count);
+  const columns=Math.min(count,count===10?2:3),rows=Math.ceil(count/columns);
+  return `<div class="event-overview-grid" data-overview-count="${count}" style="--overview-columns:${columns};--overview-rows:${rows}">${events.length?events.slice(0,count).map(event=>{const ticket=eventTicketUrl(event),date=eventFieldPresentation(event,'date').text,start=eventFieldPresentation(event,'eventStart').text,admission=eventFieldPresentation(event,'admissionStart').text;return `<article class="event-overview-card" data-overview-event="${escapeHtml(event.id)}"><div class="event-overview-image">${event.imageUrl?`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager">`:'<span>LIVE</span>'}</div><div class="event-overview-title"><time>${escapeHtml(date)}</time><strong>${escapeHtml(event.title||'')}</strong>${event.subtitle?`<small>${escapeHtml(event.subtitle)}</small>`:''}</div><div class="event-overview-footer"><div>${start?`<span>Beginn <b>${escapeHtml(start)}</b></span>`:''}${admission?`<span>Einlass <b>${escapeHtml(admission)}</b></span>`:''}</div>${ticket?`<div class="event-overview-ticket">${qrSvgMarkup(ticket,'#0f172a','#ffffff')}<small>Tickets</small></div>`:''}</div></article>`;}).join(''):'<p class="event-overview-empty">Keine kommenden Veranstaltungen gefunden.</p>'}</div>`;
 }
 function eventTicketUrl(event){
   const value=String(event?.ticketUrl||'').trim();
@@ -1462,9 +1492,10 @@ async function loadEvents() {
   try {
     const result = await licensedRead('/api/events');
     state.events = result.data || [];
+    rememberOverviewClock(result);state.overviewLoadedAt=performance.now();
     state.eventFieldSettings=result.fieldSettings||{};
-    renderEvents();
-  } catch (error) { showToast(error.message); }
+    renderEvents();return result;
+  } catch (error) { showToast(error.message);return null; }
 }
 
 let eventTypeDrafts=[];
@@ -3358,7 +3389,7 @@ function thumbnailElementMarkup(element, settings,event=null) {
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
   if (element.type === 'event') content = `<span class="slide-thumb-event">${eventWelcomeBlockMarkup(event,element.event||element.text||'Veranstaltung',element)}</span>`;
   if (element.type === 'event-stamp') content=eventStampMarkup(element,event,!event);
-  if (element.type === 'event-overview') content=eventOverviewMarkup(element);
+  if (element.type === 'event-overview') content=eventOverviewMarkup(element,state.events||[]);
   if (element.type === 'event-table') content = eventTableMarkup(event,element);
   if (element.type === 'event-field') content = element.field==='ticketQr'?eventFieldContent(event,element):escapeHtml(event?eventFieldPresentation(event,element.field,element).text:`${element.prefix||''}${element.fallback||'Veranstaltungsfeld'}`);
   return `<span class="slide-thumb-element type-${escapeHtml(element.type)}" style="${style}">${content}</span>`;
@@ -4149,7 +4180,7 @@ function slideEditorPayload() {
       designOrientation,
       eventSelection: structuredClone(state.editorEventSelection||{mode:'linked'}),
       settings: structuredClone(state.editorSlideSettings),
-      elements: state.editorElements.map(element => ({ ...element, src: String(element.src || '').startsWith('blob:') ? '' : element.src }))
+      elements: stripOverviewRuntime(state.editorElements).map(element => ({ ...element, src: String(element.src || '').startsWith('blob:') ? '' : element.src }))
     }
   };
 }
@@ -4217,11 +4248,35 @@ async function flushSlideAutosave(options = {}) {
   }
 }
 
+function editorGeometryReference(){const portrait=document.querySelector('#slide-editor-canvas').dataset.ratio==='portrait';return{width:portrait?1080:1920,height:portrait?1920:1080};}
+function geometryAxisSize(key,reference){return ['x','width'].includes(key)?reference.width:reference.height;}
+function geometryToInput(value,key,unit,reference){return Number((Number(value)*(unit==='px'?geometryAxisSize(key,reference)/100:1)).toFixed(2));}
+function geometryFromInput(value,key,unit,reference){
+  if(String(value).trim()===''||!Number.isFinite(Number(value)))return null;
+  const axis=geometryAxisSize(key,reference),percent=Number(value)*(unit==='px'?100/axis:1),minimum=['width','height'].includes(key)?100/axis:0;
+  return Math.max(minimum,Math.min(100,percent));
+}
+function syncEditorGeometryFields(element,force=false){
+  if(!element)return;const reference=editorGeometryReference(),unit=element.geometryUnit==='px'?'px':'percent';
+  document.querySelector('#property-geometry-unit').value=unit;
+  document.querySelector('#property-geometry-reference').textContent=`Entwurfsfläche: ${reference.width} × ${reference.height} px. Pixelwerte werden mit der gesamten Slide proportional skaliert.`;
+  for(const [key,label] of [['x','X'],['y','Y'],['width','Breite'],['height','Höhe']]){
+    const input=document.querySelector('#property-'+key),axis=geometryAxisSize(key,reference);input.min=['width','height'].includes(key)?String(unit==='px'?1:100/axis):'0';input.max=String(unit==='px'?axis:100);input.step='any';input.disabled=Boolean(element.locked);
+    document.querySelector(`[data-geometry-label="${key}"]`).textContent=label+' '+(unit==='px'?'px':'%');
+    if(force||document.activeElement!==input)input.value=geometryToInput(element[key],key,unit,reference);
+  }
+}
+function changeEditorGeometry(key,input){
+  const element=selectedEditorElement();if(!element||element.locked)return;
+  const value=geometryFromInput(input.value,key,element.geometryUnit,editorGeometryReference());
+  if(value!==null)updateSelectedElement(key,value);
+}
 function applyEditorOrientation(ratio, designOrientation) {
   const canvas = document.querySelector('#slide-editor-canvas');
   state.editorAutoDesignOrientation = designOrientation === 'portrait' ? 'portrait' : 'landscape';
   canvas.dataset.orientationMode = ratio;
   canvas.dataset.ratio = ratio === 'auto' ? state.editorAutoDesignOrientation : ratio;
+  syncEditorGeometryFields(selectedEditorElement());
 }
 
 function openSlideEditor(slide = null, options = {}) {
@@ -4259,6 +4314,7 @@ function openSlideEditor(slide = null, options = {}) {
   renderEditorCanvas();
   setEditorMobilePanel('');
   slideDialog.showModal();
+  if(state.editorElements.some(element=>element.type==='event-overview'))refreshOverviewEvents();
   state.editorLastSnapshot = editorSnapshot();
   state.slideLastScheduledSnapshot = state.editorLastSnapshot;
   syncEditorHistoryButtons();
@@ -4507,7 +4563,7 @@ for(const id of ['editor-event-auto','editor-event-mode','editor-event-room'])do
 });
 function editorElementMarkup(element) {
   const event=editorSelectedEvent();
-  if(element.type==='event-overview')return eventOverviewMarkup(element);
+  if(element.type==='event-overview')return eventOverviewMarkup(element,state.events||[]);
   if (element.type === 'wayfinding') return wayfindingMarkup(element,state.editorSlideSettings,event);
   if (element.type === 'ticker') return `<div class="canvas-ticker ${element.tickerDirection==='right'?'is-right':''}" style="--ticker-duration:${Math.max(3,Math.min(60,Number(element.tickerDuration||15)))}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div>`;
   if (element.type === 'weather') return weatherElementMarkup(element);
@@ -4600,10 +4656,10 @@ function startEditorTransform(event,element,mode,edge=''){
     if(mode==='move'){
       const movement=KioskyEditorAlignment.move(box,others,dx/rect.width*100,dy/rect.height*100,8/rect.width*100,8/rect.height*100,document.querySelector('#editor-snap-enabled').checked&&!moveEvent.altKey);
       selected.forEach(item=>{const start=originals.get(item.id);item.x=start.x+movement.dx;item.y=start.y+movement.dy;});showEditorSnapGuides(canvas,movement.guides);
-    }else if(mode==='resize')Object.assign(element,KioskyEditorAlignment.resize(original,edge,dx,dy,rect.width,rect.height));
+    }else if(mode==='resize')Object.assign(element,KioskyEditorAlignment.resize(original,edge,dx,dy,rect.width,rect.height,element.geometryUnit==='px'?{width:100/editorGeometryReference().width,height:100/editorGeometryReference().height}:undefined));
     else element.rotation=((Math.round(original.rotation+(Math.atan2(moveEvent.clientY-centerY,moveEvent.clientX-centerX)-startAngle)*180/Math.PI)%360)+360)%360;
     for(const item of selected){const node=canvas.querySelector(`[data-editor-element="${CSS.escape(item.id)}"]`);Object.assign(node.style,{left:item.x+'%',top:item.y+'%',width:item.width+'%',height:item.height+'%',transform:`rotate(${Number(item.rotation||0)}deg)`});}
-    positionEditorTransformControls(canvas);for(const key of ['x','y','width','height','rotation'])document.querySelector(`#property-${key}`).value=Math.round(Number(element[key]||0));
+    positionEditorTransformControls(canvas);syncEditorGeometryFields(element,true);document.querySelector('#property-rotation').value=Math.round(Number(element.rotation||0));
   });
   const move=moveEvent=>{if(moveEvent.pointerId===pointerId){moveEvent.preventDefault();applyMove(moveEvent);}};
   const finish=(cancel=false,redraw=true)=>{
@@ -4871,7 +4927,8 @@ function syncEditorProperties() {
   document.querySelector('#property-event').value = element.event || '';
   renderEventLayoutEditor(element);
   document.querySelector('#property-event-heading').value=element.eventHeading??'Herzlich willkommen zu';
-  document.querySelector('#property-overview-count').value=element.eventCount||6;
+  document.querySelector('#property-overview-count').value=overviewEventCount(element.eventCount);
+  if(element.type==='event-overview'){const available=editorOverviewEvents(state.events||[]).length;document.querySelector('#property-overview-status').textContent=`${Math.min(available,overviewEventCount(element.eventCount))} von ${overviewEventCount(element.eventCount)} Karten · ${available} passende kommende Veranstaltungen (bis 50).`;}
   document.querySelector('#property-event-table-labels').checked=element.eventTableLabels!==false;
   document.querySelector('#property-event-table-empty').checked=element.eventTableShowEmpty===true;
   const details=new Set(element.type==='event-table'?eventTableFields(element):eventDetailsForElement(element));document.querySelectorAll('[data-event-detail]').forEach(input=>{input.checked=details.has(input.dataset.eventDetail);});
@@ -4908,10 +4965,7 @@ function syncEditorProperties() {
   document.querySelector('#property-web-url').value = element.type === 'web' ? element.src || '' : '';
   document.querySelector('#property-video-muted').checked = element.muted !== false;
   syncMediaPlacementProperties(element);
-  document.querySelector('#property-x').value = Math.round(element.x);
-  document.querySelector('#property-y').value = Math.round(element.y);
-  document.querySelector('#property-width').value = Math.round(element.width);
-  document.querySelector('#property-height').value = Math.round(element.height);
+  syncEditorGeometryFields(element);
   document.querySelector('#property-background').value = /^#[0-9a-f]{6}$/i.test(element.background || '') ? element.background : '#315b49';
   document.querySelector('#property-background-field').hidden = element.type === 'wayfinding';
   document.querySelector('#property-background-mode').value = !element.background || element.background === 'transparent' ? 'transparent' : 'color';
@@ -5207,13 +5261,20 @@ document.querySelector('#property-stamp-text-placeholder').innerHTML=Object.entr
 document.querySelector('#property-stamp-text-insert').addEventListener('click',()=>{const input=document.querySelector('#property-text'),field=document.querySelector('#property-stamp-text-placeholder').value;input.setRangeText(`{{${eventDetailLabels[field]||field}}}`,input.selectionStart??input.value.length,input.selectionEnd??input.value.length,'end');input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();});
 document.querySelector('#property-stamp-field').innerHTML=Object.entries(eventDetailLabels).filter(([field])=>field!=='ticketQr').map(([field,label])=>`<option value="${field}">${escapeHtml(label)}</option>`).join('');
 document.querySelector('#property-text-condition-field').innerHTML=document.querySelector('#property-stamp-field').innerHTML;
+document.querySelector('#property-overview-refresh').addEventListener('click',()=>refreshOverviewEvents(true));
+document.querySelector('#property-geometry-unit').addEventListener('change',event=>{updateSelectedElement('geometryUnit',event.target.value);syncEditorGeometryFields(selectedEditorElement(),true);});
+for(const key of ['x','y','width','height']){
+  const input=document.querySelector('#property-'+key);input.addEventListener('input',()=>changeEditorGeometry(key,input));
+  input.addEventListener('change',()=>{changeEditorGeometry(key,input);syncEditorGeometryFields(selectedEditorElement(),true);});
+  input.addEventListener('blur',()=>syncEditorGeometryFields(selectedEditorElement(),true));
+}
 const propertyBindings = [
   ['property-text-condition','eventCondition',value=>value],['property-text-condition-field','eventConditionField',value=>value],['property-text-condition-value','eventConditionValue',value=>value],
   ['property-stamp-condition','stampCondition',value=>value],['property-stamp-field','stampField',value=>value],['property-stamp-value','stampValue',value=>value],['property-stamp-style','stampStyle',value=>value],['property-stamp-text-color','stampTextColor',value=>value],
-  ['property-overview-count','eventCount',value=>Number(value)], ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
+  ['property-overview-count','eventCount',value=>overviewEventCount(value)], ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
-  ['property-x', 'x', Number], ['property-y', 'y', Number], ['property-width', 'width', Number], ['property-height', 'height', Number], ['property-background', 'background', value => value],
+  ['property-background', 'background', value => value],
   ['property-rotation', 'rotation', Number], ['property-opacity', 'opacity', Number], ['property-padding', 'padding', Number], ['property-radius', 'radius', Number],
   ['property-font-weight', 'fontWeight', Number], ['property-line-height', 'lineHeight', Number], ['property-letter-spacing', 'letterSpacing', Number], ['property-text-align', 'align', value => value],
   ['property-ticker-duration', 'tickerDuration', Number], ['property-ticker-direction', 'tickerDirection', value => value],
@@ -5225,7 +5286,7 @@ const propertyBindings = [
 ];
 propertyBindings.forEach(([id, property, convert]) => {
   const input = document.querySelector(`#${id}`);
-  const eventName = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
+  const eventName = id==='property-overview-count'||input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
   input.addEventListener(eventName, () => {
     updateSelectedElement(property, convert(input.value, input));
     if(id==='property-auto-font-size')document.querySelector('#property-font-size').disabled=input.checked;
@@ -5504,7 +5565,7 @@ function renderTemplates() {
   list.querySelectorAll('[data-edit-template-id]').forEach(button=>button.addEventListener('click',()=>{editTemplate(button.dataset.editTemplateId);document.querySelector('#template-dialog').close();}));
   list.querySelectorAll('[data-delete-template-id]').forEach(button=>button.addEventListener('click',async()=>{const template=state.templates.find(item=>item.id===button.dataset.deleteTemplateId);if(!template||!window.confirm(`Vorlage „${template.name}“ archivieren?`))return;try{await apiRequest(template.document?.menuTemplate?`/api/menus/templates/${template.id}`:`/api/templates/${template.id}`,{method:'DELETE'});await loadContent();showToast('Vorlage wurde archiviert.');}catch(error){showToast(error.message);}}));
 }
-function loadTemplateElements(template){state.editorElements=structuredClone(template.document.elements||[]).map(element=>({...element,...(element.type==='wayfinding'?{background:'transparent',logo:{src:'',position:'top-left'},clock:{enabled:false,position:'bottom-right'}}:{}),id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`}));state.editorEventSelection=structuredClone(template.document.eventSelection||{mode:'linked'});syncEditorEventSource();state.editorSlideSettings={...defaultSlideSettings(),...(structuredClone(template.document.settings||{})),background:{...defaultSlideSettings().background,...(structuredClone(template.document.settings?.background||{}))},logo:{...defaultSlideSettings().logo,...(structuredClone(template.document.settings?.logo||{}))},clock:{...defaultSlideSettings().clock,...(structuredClone(template.document.settings?.clock||{}))}};state.selectedEditorElementId=state.editorElements[0]?.id||null;document.querySelector('#editor-ratio').value=template.orientation;applyEditorOrientation(template.orientation,template.document.designOrientation);renderEditorCanvas();}
+function loadTemplateElements(template){state.editorElements=structuredClone(template.document.elements||[]).map(element=>({...element,...(element.type==='wayfinding'?{background:'transparent',logo:{src:'',position:'top-left'},clock:{enabled:false,position:'bottom-right'}}:{}),id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`}));state.editorEventSelection=structuredClone(template.document.eventSelection||{mode:'linked'});syncEditorEventSource();state.editorSlideSettings={...defaultSlideSettings(),...(structuredClone(template.document.settings||{})),background:{...defaultSlideSettings().background,...(structuredClone(template.document.settings?.background||{}))},logo:{...defaultSlideSettings().logo,...(structuredClone(template.document.settings?.logo||{}))},clock:{...defaultSlideSettings().clock,...(structuredClone(template.document.settings?.clock||{}))}};state.selectedEditorElementId=state.editorElements[0]?.id||null;document.querySelector('#editor-ratio').value=template.orientation;applyEditorOrientation(template.orientation,template.document.designOrientation);renderEditorCanvas();if(state.editorElements.some(element=>element.type==='event-overview'))refreshOverviewEvents();}
 function applyTemplate(id){const template=state.templates.find(item=>item.id===id);if(!template){openSlideEditor();return;}openSlideEditor();loadTemplateElements(template);scheduleSlideAutosave({immediate:true,successMessage:`Vorlage „${template.name}“ wurde geladen und als Slide gespeichert.`});}
 function editTemplate(id){const template=state.templates.find(item=>item.id===id);if(!template)return;openSlideEditor(null,{templateId:template.id,templateName:template.name});loadTemplateElements(template);}
 function websiteSlidePayload(urlValue,name='',orientation='auto') {
@@ -5534,7 +5595,7 @@ document.querySelector('[data-action="blank-slide"]').addEventListener('click',(
 document.querySelector('[data-action="use-template"]').addEventListener('click',openTemplateChooser);
 document.querySelector('#template-chooser-form').addEventListener('submit',event=>{event.preventDefault();const selected=document.querySelector('input[name="template-choice"]:checked');if(!selected){showAuthMessage('template-chooser-message','Bitte wähle eine Vorlage aus.');return;}document.querySelector('#template-chooser-dialog').close();selected.value==='__website'?openUrlSlideDialog():selected.value==='__blank'?openSlideEditor():applyTemplate(selected.value);});
 document.querySelector('[data-action="manage-templates"]').addEventListener('click',()=>{renderTemplates();document.querySelector('#template-dialog').showModal();});
-document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{...(current?.document?.menuTemplate?{menuTemplate:true}:{}),...(current?.document?.advertisingTemplate?{advertisingTemplate:true}:{}),designOrientation:state.editorAutoDesignOrientation,eventSelection:structuredClone(state.editorEventSelection||{mode:'linked'}),settings:structuredClone(state.editorSlideSettings),elements:structuredClone(state.editorElements)}};try{await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${current.id}`:current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();if(current?.document?.menuTemplate)await loadMenuModuleSettings();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
+document.querySelector('[data-action="save-template"]').addEventListener('click',async()=>{const current=state.templates.find(item=>item.id===state.editingTemplateId);const suggested=document.querySelector('#new-slide-title').value.trim()||'Neue Vorlage';const name=current?suggested:window.prompt('Name der neuen Slide-Vorlage:',`${suggested} Vorlage`);if(!name)return;const wayfinding=state.editorElements.some(element=>element.type==='wayfinding');const payload={name,description:wayfinding?'Flexibles ¼–½–¼-Layout mit Zeilen, Pfeilen, Logo und Uhrzeit':`${state.editorElements.filter(element=>element.type==='event-field').length} dynamische Veranstaltungsfelder`,orientation:document.querySelector('#editor-ratio').value,status:'active',document:{...(current?.document?.menuTemplate?{menuTemplate:true}:{}),...(current?.document?.advertisingTemplate?{advertisingTemplate:true}:{}),designOrientation:state.editorAutoDesignOrientation,eventSelection:structuredClone(state.editorEventSelection||{mode:'linked'}),settings:structuredClone(state.editorSlideSettings),elements:stripOverviewRuntime(structuredClone(state.editorElements))}};try{await apiRequest(current?.document?.menuTemplate?`/api/menus/templates/${current.id}`:current?`/api/templates/${current.id}`:'/api/templates',{method:current?'PUT':'POST',body:JSON.stringify(payload)});await loadContent();if(current)slideDialog.close();if(current?.document?.menuTemplate)await loadMenuModuleSettings();showToast(`Vorlage „${name}“ wurde ${current?'aktualisiert':'gespeichert'}.`);}catch(error){showToast(error.message);}});
 
 ['channel-transition', 'channel-orientation', 'channel-repeat'].forEach(id => document.querySelector(`#${id}`).addEventListener('change', () => {
   updateChannelPreviewFormat();
@@ -5639,7 +5700,7 @@ function channelPreviewItems(channel, slides, events, nowMs=Date.now()) {
   return channel.items.flatMap(entry=>{
     const slide=entry.slide||byId.get(entry.slideId);
     if(!slide||slide.deletedAt||slide.status==='archived'||(slide.startsAt&&!(Date.parse(slide.startsAt)<=nowMs))||(slide.endsAt&&!(Date.parse(slide.endsAt)>nowMs)))return[];
-    const previewSlide={...slide,document:previewOverviewDocument(slide.document,events)};return [{...entry,slide:previewSlide,event:selectSlideEvent(events,slide.document?.eventSelection||{},eventsById.get(slide.eventId||channel.eventId)||null,nowMs)}];
+    const previewSlide={...slide,document:previewOverviewDocument(slide.document,events,nowMs)};return [{...entry,slide:previewSlide,event:selectSlideEvent(events,slide.document?.eventSelection||{},eventsById.get(slide.eventId||channel.eventId)||null,nowMs)}];
   });
 }
 
@@ -5681,7 +5742,7 @@ function scaleChannelPreview() {
 function tickChannelPreview(force=false) {
   const session=channelPreviewSession;if(!session)return;
   const root=document.querySelector('#channel-preview-stage');let surface=document.querySelector('#channel-preview-slide');
-  const items=channelPreviewItems(session.channel,session.slides,session.events);
+  const items=channelPreviewItems(session.channel,session.slides,session.events,editorOverviewNow());
   const signature=items.map(item=>`${item.slide.id}:${item.durationSeconds}`).join('|');
   if(signature!==session.signature){session.signature=signature;session.elapsedMs=0;session.startedAt=performance.now();session.renderKey=null;}
   const elapsed=session.elapsedMs+(session.paused?0:performance.now()-session.startedAt);
@@ -5728,6 +5789,7 @@ async function openChannelPreview() {
   try{
     const [slides,events]=await Promise.all([licensedRead('/api/slides'),licensedRead('/api/events')]);
     if(generation!==channelPreviewGeneration||!dialog.open)return;
+    if(events.serverTime)rememberOverviewClock(events);
     if((slides.data||[]).some(slide=>JSON.stringify(slide.document||{}).includes('countdownSchedule'))) {
       const previewItems=channelPreviewItems(channel,slides.data||[],events.data||[]);
       const ids=[...new Set(previewItems.map(item=>item.event?.id).filter(Boolean))];
@@ -5747,7 +5809,7 @@ document.querySelector('#preview-dialog').addEventListener('cancel',closeChannel
 document.querySelectorAll('[data-channel-preview-control]').forEach(button=>button.addEventListener('click',()=>{
   const session=channelPreviewSession;if(!session)return;
   const action=button.dataset.channelPreviewControl;
-  const items=channelPreviewItems(session.channel,session.slides,session.events);
+  const items=channelPreviewItems(session.channel,session.slides,session.events,editorOverviewNow());
   const elapsed=session.elapsedMs+(session.paused?0:performance.now()-session.startedAt);
   if(action==='pause'){
     session.elapsedMs=elapsed;session.startedAt=performance.now();session.paused=!session.paused;

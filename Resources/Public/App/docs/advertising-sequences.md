@@ -52,8 +52,7 @@ nur die vorhandenen Karten sichtbar. Ohne passende Termine erscheint ein Hinweis
 
 Der neue Slide öffnet sich direkt im Editor und steht anschließend in der
 normalen Slide-Bibliothek bereit. Überschrift, Position und Größe sind editierbar.
-Beim Element **Veranstaltungsübersicht** kann die Anzahl zwischen sechs, zehn und
-fünfzehn umgestellt werden. Das Element kann auch direkt im Slide-/Vorlageneditor
+Beim Element **Veranstaltungsübersicht** kann die Anzahl von 1 bis 50 frei eingestellt werden (ab 3.34.0). Das Element kann auch direkt im Slide-/Vorlageneditor
 hinzugefügt werden. Den Entwurf veröffentlichen und einem beliebigen Kanal,
 Zeitplan oder Display zuweisen.
 
@@ -70,3 +69,11 @@ der CMS-Domainkern setzt die Regeln für beide CMS lokal um. Keine neue
 Datenbankmigration. Vor einem Downgrade neue Übersichten aus Ausspielungen nehmen;
 ältere Versionen kennen das Element nicht. Neue Abfolge-Einstellungen werden von
 älteren Versionen nicht ausgewertet, vorhandene Inhalte werden nicht gelöscht.
+
+Ab 3.34.0 verhindern leere oder ungültige optionale Endzeiten keine gültigen
+kommenden Veranstaltungen mehr; dies gilt auch für die automatische Werberotation. Uhrzeiten ohne Zeitzone beziehen sich auf
+Europe/Berlin. Die Vorschau verwendet die Serverzeit und kann über
+**Veranstaltungen aktualisieren** neu geladen werden. Gespeicherte alte
+Momentaufnahmen werden durch aktuelle Daten ersetzt. Die Auswahl wird pro
+Player-Abfrage einmal berechnet, auf 50 Karten begrenzt und gemeinsam verwendet;
+für einzelne Karten werden keine zusätzlichen API-Abfragen ausgeführt.
