@@ -1732,3 +1732,11 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .canvas-event-content .qr-caption-text,.player-event-block .qr-caption-text,.slide-thumb-event .qr-caption-text,.qr-caption-text {font:inherit!important;line-height:1.2!important;letter-spacing:normal!important;margin:0!important;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
 .canvas-event-content .qr-caption-code,.player-event-block .qr-caption-code,.slide-thumb-event .qr-caption-code {font:inherit;margin:0}
 [data-event-text-condition][data-event-value-missing="true"],.player-qr-code[data-event-value-missing="true"],.player-dynamic-field[data-event-value-missing="true"] {display:none!important}
+
+.event-template-card {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);min-width:0}
+.event-template-card>div {min-width:0}.event-template-card strong,.event-template-card p {overflow-wrap:anywhere}
+.event-template-actions {display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0}
+#event-reuse-dialog input,#event-template-save-dialog input,#event-template-name {width:100%;min-width:0;min-height:44px}
+@media(max-width:700px){.event-template-card {align-items:stretch;flex-direction:column}.event-template-actions .button {flex:1;min-height:44px}}
+
+.event-editor-dialog .dialog-actions {flex-wrap:wrap}

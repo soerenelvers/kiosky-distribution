@@ -14,6 +14,7 @@ require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
 require_once __DIR__.'/PresetHandoff.php';
 require_once __DIR__.'/EventEditorSettings.php';
+require_once __DIR__.'/EventReuse.php';
 
 final class Api
 {
@@ -251,6 +252,19 @@ final class Api
             return $this->ok(['imported' => $result], true);
         }
 
+        if($path==='/api/event-templates'){
+            if($method==='GET')return $this->ok(['data'=>array_map(static fn(array $r):array=>['id'=>$r['id'],'name'=>$r['name'],'title'=>$r['input']['title'],'eventType'=>$r['input']['eventType'] ?? null,'date'=>$r['input']['date'] ?? null,'scheduleCount'=>count($r['schedule']),'updatedAt'=>$r['updatedAt']],EventReuse::templates($state))]);
+            if($method==='POST'){$snapshot=$this->eventReuseSnapshot($state,(string)($body['eventId'] ?? ''),$body['input'] ?? null);$template=EventReuse::save($state,$body['name'] ?? null,$snapshot);return $this->created(['template'=>$template]);}
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
+        if(preg_match('#^/api/event-templates/([^/]+)(/create-event)?$#',$path,$match)){
+            $id=rawurldecode($match[1]);if(!empty($match[2])&&$method==='POST')return $this->eventReuseCreate($state,EventReuse::get($state,$id),$body);
+            if(empty($match[2])){if($method==='GET')return $this->ok(['template'=>EventReuse::get($state,$id)]);if($method==='PUT')return $this->ok(['template'=>EventReuse::save($state,$body['name'] ?? null,['input'=>$body['input'] ?? [],'schedule'=>$body['schedule'] ?? []],$id)],true);if($method==='DELETE'){EventReuse::delete($state,$id);return $this->ok(['ok'=>true],true);}}
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
+        if(preg_match('#^/api/events/([^/]+)/duplicate$#',$path,$match)){if($method!=='POST')throw new RuntimeException('Methode nicht erlaubt.',405);
+            $snapshot=$this->eventReuseSnapshot($state,rawurldecode($match[1]),$body['input'] ?? null);$body['title']??=EventReuse::copyTitle($snapshot['input']['title']);return $this->eventReuseCreate($state,$snapshot,$body);
+        }
         if ($path === '/api/events') {
             if ($method === 'GET') return $this->ok(['data' => $this->active($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? [])]);
             if ($method === 'POST') {
@@ -1035,6 +1049,17 @@ final class Api
     }
 
     /** @param array<string,mixed> $state */
+    private function eventReuseSnapshot(array $state,string $eventId,mixed $override=null):array
+    {
+        $event=$this->required($state['events'],$eventId,'Veranstaltung');if(!empty($event['deletedAt'])||!empty($event['archivedAt']))throw new RuntimeException('Veranstaltung wurde nicht gefunden.',404);
+        $snapshot=['input'=>EventReuse::input($event),'schedule'=>EventReuse::schedule(array_values(array_filter($state['eventSchedules'],static fn(array $entry):bool=>($entry['eventId'] ?? '')===$eventId&&($entry['active'] ?? true)!==false)))];
+        if($override===null)return $snapshot;$input=EventReuse::input($override);$shifted=EventReuse::copy($snapshot,['date'=>$input['date'] ?? null]);return ['input'=>$input,'schedule'=>$shifted['schedule']];
+    }
+    private function eventReuseCreate(array &$state,array $snapshot,array $options):array
+    {
+        $prepared=EventReuse::copy($snapshot,$options);$event=$this->saveRecord($state,'events',$prepared['input']);$this->ensureEventChannel($state,$event);foreach($prepared['schedule'] as $entry)$this->eventSchedule($state,'POST',$event['id'],null,$entry);return $this->created(['event'=>$event]);
+    }
+
     private function eventSchedule(array &$state,string $method,string $eventId,?string $id,array $body): array
     {
         $event=$this->required($state['events'],$eventId,'Veranstaltung');

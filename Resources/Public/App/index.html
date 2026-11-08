@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.28.0-20261107222138%2B1a1b2e0b">
+  <link rel="stylesheet" href="styles.css?v=3.29.0-20261108022033%2B86671406">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -202,7 +202,7 @@
       <section class="view" data-view-panel="events">
         <div class="section-heading">
           <div><p class="eyebrow">Programmverwaltung</p><h2>Veranstaltungen</h2><p>Importierte Stammdaten prüfen und für Website sowie Displays ergänzen.</p></div>
-          <div class="section-actions"><button class="button button-secondary" type="button" id="bulk-edit-events" disabled>⚙ Massenaktion …</button><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" id="open-event-templates">Veranstaltungsvorlagen</button><button class="button button-secondary" type="button" id="bulk-edit-events" disabled>⚙ Massenaktion …</button><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
         </div>
         <article class="panel table-panel">
           <div class="toolbar">
@@ -1236,6 +1236,7 @@
       <span class="dialog-icon">◫</span><p class="eyebrow">Programmverwaltung</p><h2 id="event-dialog-title">Veranstaltung bearbeiten</h2>
       <input id="event-id" type="hidden">
       <div class="event-source-note" id="event-source-note">Manuell angelegte Veranstaltung</div>
+      <label class="form-field" hidden><span>Name der Veranstaltungsvorlage</span><input id="event-template-name" maxlength="160" disabled></label>
       <div class="form-grid event-editor-grid">
         <label class="form-field span-two"><span>Titel</span><input id="event-title" type="text" maxlength="300" required></label>
         <label class="form-field"><span>Untertitel</span><input id="event-subtitle" type="text" maxlength="300"></label>
@@ -1271,9 +1272,13 @@
         <div class="event-schedule-list" id="event-schedule-list"><p class="event-table-empty">Ablauf wird geladen …</p></div>
       </section>
       <p class="privacy-note">Manuell gespeicherte Felder werden geschützt und bei einem erneuten CrewBrain-Import nicht automatisch überschrieben.</p>
-      <div class="dialog-actions"><button class="button danger-action" type="button" id="delete-event-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-event-button" hidden>Veranstaltung archivieren</button><button class="button button-secondary" type="button" data-close-dialog="event-dialog">Abbrechen</button><button class="button button-primary" type="submit" id="save-event-button">Veranstaltung speichern</button></div>
+      <div class="dialog-actions"><button class="button button-secondary" type="button" id="duplicate-event-button" hidden>Duplizieren</button><button class="button button-secondary" type="button" id="save-event-template-button" hidden>Als Veranstaltungsvorlage</button><button class="button danger-action" type="button" id="delete-event-button" hidden>Endgültig löschen</button><button class="button button-secondary" type="button" id="archive-event-button" hidden>Veranstaltung archivieren</button><button class="button button-secondary" type="button" data-close-dialog="event-dialog">Abbrechen</button><button class="button button-primary" type="submit" id="save-event-button">Veranstaltung speichern</button></div>
     </form>
   </dialog>
+
+  <dialog id="event-templates-dialog" class="wide-dialog"><section class="dialog-content"><button class="dialog-close" type="button" data-close-dialog="event-templates-dialog" aria-label="Vorlagen schließen">×</button><h2>Veranstaltungsvorlagen</h2><p>Wiederkehrende Veranstaltungsangaben und Ablaufpunkte einmal hinterlegen, dann mit neuem Titel und Datum verwenden.</p><div id="event-template-list" aria-live="polite"></div></section></dialog>
+  <dialog id="event-reuse-dialog"><form class="dialog-content" id="event-reuse-form"><button class="dialog-close" type="button" data-close-dialog="event-reuse-dialog" aria-label="Abbrechen">×</button><h2 id="event-reuse-heading">Veranstaltung duplizieren</h2><p id="event-reuse-source"></p><label class="form-field"><span>Neuer Veranstaltungstitel</span><input id="event-reuse-title" required maxlength="300"></label><label class="form-field"><span>Neues Veranstaltungsdatum</span><input id="event-reuse-date" type="date"></label><p class="property-note">Uhrzeiten und mehrtägige Abläufe werden auf das gewählte Datum übertragen. Die neue Veranstaltung startet als Entwurf und kann anschließend bearbeitet werden.</p><div class="dialog-actions"><button type="button" class="button button-secondary" data-close-dialog="event-reuse-dialog">Abbrechen</button><button type="submit" class="button button-primary">Entwurf erstellen</button></div></form></dialog>
+  <dialog id="event-template-save-dialog"><form class="dialog-content" id="event-template-save-form"><button class="dialog-close" type="button" data-close-dialog="event-template-save-dialog" aria-label="Abbrechen">×</button><h2>Als Veranstaltungsvorlage speichern</h2><label class="form-field"><span>Vorlagenname</span><input id="event-template-save-name" required maxlength="160"></label><p>Übernimmt die aktuellen Veranstaltungsangaben und die gespeicherten Ablaufpunkte.</p><div class="dialog-actions"><button type="button" class="button button-secondary" data-close-dialog="event-template-save-dialog">Abbrechen</button><button type="submit" class="button button-primary">Vorlage speichern</button></div></form></dialog>
 
   <dialog id="event-bulk-dialog">
     <form class="dialog-content" id="event-bulk-form">
@@ -1715,10 +1720,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.28.0-20261107222138%2B1a1b2e0b"></script>
-  <script src="player/fullscreen-control.js?v=3.28.0-20261107222138%2B1a1b2e0b"></script>
-  <script src="player/media-placement.js?v=3.28.0-20261107222138%2B1a1b2e0b"></script>
-  <script src="player/editor-alignment.js?v=3.28.0-20261107222138%2B1a1b2e0b"></script>
-  <script src="app.js?v=3.28.0-20261107222138%2B1a1b2e0b"></script>
+  <script src="runtime-config.js?v=3.29.0-20261108022033%2B86671406"></script>
+  <script src="player/fullscreen-control.js?v=3.29.0-20261108022033%2B86671406"></script>
+  <script src="player/media-placement.js?v=3.29.0-20261108022033%2B86671406"></script>
+  <script src="player/editor-alignment.js?v=3.29.0-20261108022033%2B86671406"></script>
+  <script src="app.js?v=3.29.0-20261108022033%2B86671406"></script>
 </body>
 </html>

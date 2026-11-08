@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kiosky\Core;
 require_once __DIR__.'/EventEditorSettings.php';
+require_once __DIR__.'/EventReuse.php';
 
 use RuntimeException;
 
@@ -30,7 +31,7 @@ final class TransferService
             ];
         }
         if (in_array('events', $included, true)) {
-            $sections['events'] = ['records' => $this->active($state['events'] ?? []), 'scheduleEntries' => $state['eventSchedules'] ?? []];
+            $sections['events'] = ['templates'=>EventReuse::templates($state),'records' => $this->active($state['events'] ?? []), 'scheduleEntries' => $state['eventSchedules'] ?? []];
         }
         if (in_array('slides', $included, true)) {
             $sections['slides'] = [
@@ -153,6 +154,7 @@ final class TransferService
         }
         $versions = $sections['slides']['versions'] ?? [];
         $state['slideVersions'] = array_merge($state['slideVersions'] ?? [], $this->rewriteRecords($versions, $maps, 'slideVersions'));
+        if(isset($sections['events']['templates'])){if(!is_array($sections['events']['templates'])||!array_is_list($sections['events']['templates'])||count($sections['events']['templates'])>200)throw new RuntimeException('Ungültige Veranstaltungsvorlagen.',422);foreach($sections['events']['templates'] as $template)EventReuse::save($state,$template['name'] ?? null,$template);$counts['eventTemplates']=count($sections['events']['templates']);}
         $eventSchedules = $sections['events']['scheduleEntries'] ?? [];
         $state['eventSchedules'] = array_merge($state['eventSchedules'] ?? [], $this->rewriteRecords($eventSchedules, $maps, 'eventSchedules'));
 

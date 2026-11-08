@@ -1325,10 +1325,17 @@ function eventTimeInput(value) {
   return match ? `${match[1]}:${match[2]}` : '';
 }
 
-function eventTimestamp(date, time) {
-  if(!date||!time)return undefined;
-  const timestamp=new Date(`${date}T${time}:00`);
-  return Number.isNaN(timestamp.valueOf())?undefined:timestamp.toISOString();
+const eventTimeFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+function eventLocalDateTime(value){const time=Date.parse(value||'');if(!Number.isFinite(time))return '';const parts=Object.fromEntries(eventTimeFormatter.formatToParts(time).map(part=>[part.type,part.value]));return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;}
+function eventTimestamp(date,time){
+  if(!date||!time)return undefined;const local=`${date}T${time.length===5?time+':00':time}`,desired=Date.parse(local+'Z');if(!Number.isFinite(desired)||new Date(desired).toISOString().slice(0,19)!==local)throw new Error('Datum oder Uhrzeit ist ungültig.');
+  const candidates=[];for(const hours of [-36,-12,0,12,36]){const sample=desired+hours*3600000,offset=Date.parse(eventLocalDateTime(new Date(sample).toISOString())+'Z')-sample,candidate=desired-offset;if(eventLocalDateTime(new Date(candidate).toISOString())===local)candidates.push(candidate);}
+  if(!candidates.length)throw new Error('Diese Uhrzeit existiert wegen der Zeitumstellung nicht.');return new Date(Math.min(...candidates)).toISOString();
+}
+function eventEditorTimestamp(date,time,key){
+  if(!date||!time)return undefined;const original=state.eventEditorOriginalInput||{},value=original[key],wall=eventLocalDateTime(value),anchor=eventDateInput(original.date)||eventLocalDateTime(original.eventStart).slice(0,10);
+  if(wall&&anchor){if(date===anchor&&time===wall.slice(11,16))return value;const days=(Date.parse(wall.slice(0,10))-Date.parse(anchor))/86400000;date=new Date(Date.parse(date)+days*86400000).toISOString().slice(0,10);if(time===wall.slice(11,16))time=wall.slice(11);}
+  return eventTimestamp(date,time);
 }
 
 function visibleEventRows(){
@@ -1358,6 +1365,7 @@ function applyEventEditorFields(){
   for(const [key,id] of Object.entries(eventEditorFieldIds)){const input=document.getElementById(id),wrapper=input.closest('.form-field,.toggle-label'),visible=key==='title'||fields[key]!==false;wrapper.hidden=!visible;wrapper.querySelectorAll('input,select,textarea,button').forEach(control=>{if(!visible&&!control.disabled){control.dataset.eventFieldDisabled='true';control.disabled=true;}else if(visible&&control.dataset.eventFieldDisabled==='true'){control.disabled=false;delete control.dataset.eventFieldDisabled;}});}
   if(document.querySelector('#event-type-new-controls').hidden)document.querySelector('#event-type-new').disabled=true;
   document.querySelector('#event-schedule-section').hidden=!state.currentScheduleEventId||fields.schedule===false;
+  if(state.editingEventTemplateId)for(const id of ['event-status','event-date'])document.getElementById(id).closest('label').hidden=true;
 }
 function renderEventFieldSettings(settings={}){state.eventFieldSettings=settings;document.querySelector('#event-field-settings-options').innerHTML=Object.entries(eventEditorFieldLabels).map(([key,label])=>`<label class="toggle-label"><input type="checkbox" data-event-field-setting="${key}" ${key==='title'||settings.fields?.[key]!==false?'checked':''} ${key==='title'?'disabled':''}> ${escapeHtml(label)}</label>`).join('');}
 async function loadEventFieldSettings(){try{const result=await apiRequest('/api/settings/events');renderEventFieldSettings(result.settings||{});}catch(error){showToast(error.message);}}
@@ -1395,17 +1403,24 @@ document.querySelector('#event-type-new').addEventListener('input',event=>event.
 document.querySelector('#event-type-new').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();if(applyNewEventType())document.querySelector('#event-type').focus();}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();showNewEventType(false);document.querySelector('#event-type').focus();}});
 document.querySelector('#event-type').addEventListener('change',()=>showNewEventType(false));
 
-async function openEventEditor(item = null) {
+async function openEventEditor(item = null,options={}) {
+  const template=options.template||null;state.editingEventTemplateId=template?.id||null;state.eventEditorOriginalInput=structuredClone(item||{});
+
   document.querySelector('#event-form').reset();
   document.querySelector('#event-id').value = item?.id || '';
-  document.querySelector('#event-dialog-title').textContent = item ? 'Veranstaltung bearbeiten' : 'Veranstaltung anlegen';
+  document.querySelector('#event-dialog-title').textContent = template?'Veranstaltungsvorlage bearbeiten':item ? 'Veranstaltung bearbeiten' : 'Veranstaltung anlegen';
+  const name=document.querySelector('#event-template-name');name.value=template?.name||'';name.disabled=!template;name.required=Boolean(template);name.closest('label').hidden=!template;
+  document.querySelector('#save-event-button').textContent=template?'Vorlage speichern':'Veranstaltung speichern';
+  document.querySelector('#duplicate-event-button').hidden=!item?.id||Boolean(template)||state.currentUser?.role==='viewer';
+  document.querySelector('#save-event-template-button').hidden=!item?.id||Boolean(template)||state.currentUser?.role==='viewer';
   document.querySelector('#event-source-note').textContent = item?.sourceId === 'source-crewbrain' ? `Aus CrewBrain importiert${item.externalNumber ? ` · ${item.externalNumber}` : ''} · manuelle Änderungen werden geschützt` : item?.sourceId === 'source-easyjob' ? `Aus easyjob importiert${item.externalNumber ? ` · ${item.externalNumber}` : ''} · manuelle Änderungen werden geschützt` : 'Manuell angelegte Veranstaltung';
   document.querySelector('#event-title').value = item?.title || '';
   document.querySelector('#event-subtitle').value = item?.subtitle || '';
   document.querySelector('#event-organizer').value = item?.organizer || '';
   eventTypeDrafts=[];renderEventTypeOptions(item?.eventType||'');showNewEventType(false);
   document.querySelector('#event-status').value = item?.status || 'draft';
-  document.querySelector('#event-date').value = eventDateInput(item?.date);
+  const referenceDate=eventDateInput(item?.date)||eventLocalDateTime(item?.eventStart||item?.setupStart||item?.admissionStart||item?.breakStart||item?.breakEnd||item?.eventEnd||item?.boxOfficeOpenAt).slice(0,10)||(template?(eventLocalDateTime(template.schedule?.[0]?.startAt).slice(0,10)||eventLocalDateTime(new Date().toISOString()).slice(0,10)):'');
+  document.querySelector('#event-date').value=referenceDate;if(referenceDate&&!state.eventEditorOriginalInput.date)state.eventEditorOriginalInput.date=referenceDate.replaceAll('-','');
   document.querySelector('#event-venue').value = item?.venue || '';
   document.querySelector('#event-room').value = item?.room || '';
   document.querySelector('#event-setup').value = eventTimeInput(item?.setupStart);
@@ -1423,35 +1438,67 @@ async function openEventEditor(item = null) {
   renderEventImagePreview();
   document.querySelector('#event-box-office').checked = Boolean(item?.boxOfficeAvailable);
   document.querySelector('#event-box-office-open').value = eventTimeInput(item?.boxOfficeOpenAt);
-  document.querySelector('#archive-event-button').hidden = !item || state.currentUser?.role === 'viewer';
-  document.querySelector('#delete-event-button').hidden = !item || state.currentUser?.role !== 'admin';
-  state.currentScheduleEventId=item?.id||null;
+  document.querySelector('#archive-event-button').hidden = !item?.id || Boolean(template) || state.currentUser?.role === 'viewer';
+  document.querySelector('#delete-event-button').hidden = !item?.id || Boolean(template) || state.currentUser?.role !== 'admin';
+  state.currentScheduleEventId=template?'template:'+template.id:item?.id||null;
   state.eventSchedule=[];
   document.querySelector('#event-schedule-section').hidden=!item;
   document.querySelector('#new-event-schedule-entry').hidden=state.currentUser?.role==='viewer';
-  if(item)await loadEventSchedule(item.id);
+  if(template){state.eventSchedule=structuredClone(template.schedule||[]).map((entry,index)=>({...entry,id:'template-entry-'+index,source:'manual',active:true,displayCaption:entry.caption||entry.type,category:entry.category}));renderEventScheduleFilters();renderEventSchedule();}else if(item?.id)await loadEventSchedule(item.id);
   applyEventEditorFields();
   document.querySelector('#event-dialog').showModal();
 }
 
+async function openEventTemplates(){
+  const dialog=document.querySelector('#event-templates-dialog');if(!dialog.open)dialog.showModal();const list=document.querySelector('#event-template-list');list.textContent='Vorlagen werden geladen …';
+  try{const result=await apiRequest('/api/event-templates'),editable=state.currentUser?.role!=='viewer';state.eventTemplates=result.data||[];list.innerHTML=state.eventTemplates.map(template=>`<article class="event-template-card"><div><strong>${escapeHtml(template.name)}</strong><p>${escapeHtml(template.title)}${template.eventType?' · '+escapeHtml(template.eventType):''}</p><small>${Number(template.scheduleCount||0)} Ablaufpunkte</small></div>${editable?`<div class="event-template-actions"><button type="button" class="button button-primary" data-event-template-use="${escapeHtml(template.id)}">Verwenden</button><button type="button" class="button button-secondary" data-event-template-edit="${escapeHtml(template.id)}">Bearbeiten</button><button type="button" class="button button-secondary" data-event-template-delete="${escapeHtml(template.id)}">Löschen</button></div>`:''}</article>`).join('')||'<p class="property-note">Noch keine Veranstaltungsvorlagen. Öffne eine bestehende Veranstaltung und wähle „Als Veranstaltungsvorlage“.</p>';}catch(error){list.textContent=error.message;}
+}
+document.querySelector('#open-event-templates').addEventListener('click',openEventTemplates);
+document.querySelector('#event-template-list').addEventListener('click',async event=>{
+  const button=event.target.closest('button');if(!button)return;const id=button.dataset.eventTemplateUse||button.dataset.eventTemplateEdit||button.dataset.eventTemplateDelete;button.disabled=true;
+  try{
+    if(button.dataset.eventTemplateDelete){if(!confirm('Diese Veranstaltungsvorlage löschen? Bereits erstellte Veranstaltungen bleiben erhalten.'))return;await apiRequest('/api/event-templates/'+encodeURIComponent(id),{method:'DELETE'});await openEventTemplates();return;}
+    const {template}=await apiRequest('/api/event-templates/'+encodeURIComponent(id));
+    if(button.dataset.eventTemplateEdit){document.querySelector('#event-templates-dialog').close();await openEventEditor(template.input,{template});return;}
+    openEventReuse({kind:'template',id:template.id,input:template.input,name:template.name,scheduleCount:template.schedule.length});
+  }catch(error){showToast(error.message);}finally{button.disabled=false;}
+});
+function openEventReuse(context){
+  state.eventReuse=context;const duplicate=context.kind==='duplicate';document.querySelector('#event-reuse-heading').textContent=duplicate?'Veranstaltung duplizieren':'Veranstaltung aus Vorlage';document.querySelector('#event-reuse-source').textContent=duplicate?'Aktuelle Veranstaltungsangaben und gespeicherte Ablaufpunkte übernehmen.':'Vorlage: '+context.name;
+  document.querySelector('#event-reuse-title').value=duplicate?(context.input.title+' (Kopie)').slice(0,300):context.input.title;
+  let date=eventDateInput(context.input.date);if(!date&&context.input.eventStart)date=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(context.input.eventStart));
+  document.querySelector('#event-reuse-date').value=date;document.querySelector('#event-reuse-date').closest('label').hidden=state.eventFieldSettings?.fields?.date===false;document.querySelector('#event-reuse-dialog').showModal();
+}
+document.querySelector('#duplicate-event-button').addEventListener('click',()=>{try{openEventReuse({kind:'duplicate',id:document.querySelector('#event-id').value,input:collectEventEditor()});}catch(error){showToast(error.message);}});
+document.querySelector('#event-reuse-form').addEventListener('submit',async event=>{
+  event.preventDefault();const button=event.submitter;button.disabled=true;const context=state.eventReuse,payload={title:document.querySelector('#event-reuse-title').value.trim(),date:document.querySelector('#event-reuse-date').value||undefined,...(context.kind==='duplicate'?{input:context.input}:{})};
+  try{const path=context.kind==='duplicate'?'/api/events/'+encodeURIComponent(context.id)+'/duplicate':'/api/event-templates/'+encodeURIComponent(context.id)+'/create-event',{event:created}=await apiRequest(path,{method:'POST',body:JSON.stringify(payload)});for(const id of ['event-reuse-dialog','event-templates-dialog','event-dialog']){const dialog=document.getElementById(id);if(dialog.open)dialog.close();}await loadEvents();await openEventEditor(created);showToast('Neue Veranstaltung als Entwurf angelegt. Bitte Angaben prüfen und speichern.');}catch(error){showToast(error.message);}finally{button.disabled=false;}
+});
+document.querySelector('#save-event-template-button').addEventListener('click',()=>{try{state.pendingEventTemplate={eventId:document.querySelector('#event-id').value,input:collectEventEditor()};document.querySelector('#event-template-save-name').value=(state.pendingEventTemplate.input.title+' Vorlage').slice(0,160);document.querySelector('#event-template-save-dialog').showModal();}catch(error){showToast(error.message);}});
+document.querySelector('#event-template-save-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;try{await apiRequest('/api/event-templates',{method:'POST',body:JSON.stringify({...state.pendingEventTemplate,name:document.querySelector('#event-template-save-name').value.trim()})});document.querySelector('#event-template-save-dialog').close();showToast('Veranstaltungsvorlage wurde gespeichert.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
+
 const scheduleCategoryLabels={access:'Zugang',setup:'Aufbau',rehearsal:'Probe',event:'Veranstaltung',break:'Pause',hospitality:'Gastronomie',teardown:'Abbau',internal:'Intern',cancelled:'Storniert',other:'Sonstiges'};
-function scheduleDateTimeInput(value){if(!value)return'';const date=new Date(value),offset=date.getTimezoneOffset()*60000;return new Date(date.getTime()-offset).toISOString().slice(0,16);}
+function scheduleDateTimeInput(value){return eventLocalDateTime(value).slice(0,16);}
+function eventScheduleTimestamp(value){return value?eventTimestamp(value.slice(0,10),value.slice(11)):undefined;}
 function renderEventSchedule(){
   const search=document.querySelector('#event-schedule-search').value.trim().toLowerCase(),room=document.querySelector('#event-schedule-room-filter').value,category=document.querySelector('#event-schedule-category-filter').value,type=document.querySelector('#event-schedule-type-filter').value;
   const entries=state.eventSchedule.filter(entry=>(!search||[entry.displayCaption,entry.type,entry.roomName,entry.roomConfiguration].some(value=>String(value||'').toLowerCase().includes(search)))&&(!room||entry.roomName===room)&&(!category||entry.category===category)&&(!type||entry.type===type));
   document.querySelector('#event-schedule-list').innerHTML=entries.map(entry=>{
     const date=new Date(entry.startAt),time=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit'}).format(date),day=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit'}).format(date),editable=entry.source==='manual'&&state.currentUser?.role!=='viewer';
-    return `<div class="event-schedule-row"><span class="event-schedule-time">${entry.isApproximate?'ca. ':''}${escapeHtml(time)}<small>${escapeHtml(day)}</small></span><span><strong>${escapeHtml(entry.displayCaption)}</strong><small class="${entry.category==='other'?'event-schedule-unknown':''}">${escapeHtml(entry.type)}${entry.category==='other'?' · nicht zugeordnet':''}</small></span><span>${escapeHtml(entry.roomName||'–')}<small>${escapeHtml(entry.roomConfiguration||'')}</small></span><span><i class="tag muted">${escapeHtml(scheduleCategoryLabels[entry.category]||entry.category)}</i><small class="event-schedule-source">${entry.source==='easyjob'?'easyjob · schreibgeschützt':'Manuell'}</small></span><span class="event-schedule-actions">${editable?`<button type="button" data-edit-schedule="${escapeHtml(entry.id)}">Bearbeiten</button><button type="button" data-delete-schedule="${escapeHtml(entry.id)}">Löschen</button>`:''}</span></div>`;
+    return `<div class="event-schedule-row"><span class="event-schedule-time">${entry.isApproximate?'ca. ':''}${escapeHtml(time)}<small>${escapeHtml(day)}</small></span><span><strong>${escapeHtml(entry.displayCaption)}</strong><small class="${entry.category==='other'?'event-schedule-unknown':''}">${escapeHtml(entry.type)}${entry.category==='other'?' · nicht zugeordnet':''}</small></span><span>${escapeHtml(entry.roomName||'–')}<small>${escapeHtml(entry.roomConfiguration||'')}</small></span><span><i class="tag muted">${escapeHtml(scheduleCategoryLabels[entry.category]||entry.category||'Automatisch')}</i><small class="event-schedule-source">${entry.source==='easyjob'?'easyjob · schreibgeschützt':'Manuell'}</small></span><span class="event-schedule-actions">${editable?`<button type="button" data-edit-schedule="${escapeHtml(entry.id)}">Bearbeiten</button><button type="button" data-delete-schedule="${escapeHtml(entry.id)}">Löschen</button>`:''}</span></div>`;
   }).join('')||'<p class="event-table-empty">Keine passenden Ablaufpunkte vorhanden.</p>';
+}
+function renderEventScheduleFilters(){
+    const rooms=[...new Set(state.eventSchedule.map(entry=>entry.roomName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')),types=[...new Set(state.eventSchedule.map(entry=>entry.type))].sort((a,b)=>a.localeCompare(b,'de')),categories=[...new Set(state.eventSchedule.map(entry=>entry.category).filter(Boolean))];
+    document.querySelector('#event-schedule-room-filter').innerHTML='<option value="">Alle Räume</option>'+rooms.map(value=>`<option>${escapeHtml(value)}</option>`).join('');
+    document.querySelector('#event-schedule-type-filter').innerHTML='<option value="">Alle Typen</option>'+types.map(value=>`<option>${escapeHtml(value)}</option>`).join('');
+    document.querySelector('#event-schedule-category-filter').innerHTML='<option value="">Alle Kategorien</option>'+categories.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(scheduleCategoryLabels[value]||value)}</option>`).join('');
 }
 async function loadEventSchedule(eventId){
   try{
     const result=await apiRequest(`/api/events/${encodeURIComponent(eventId)}/schedule`);
     state.eventSchedule=result.data||[];
-    const rooms=[...new Set(state.eventSchedule.map(entry=>entry.roomName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')),types=[...new Set(state.eventSchedule.map(entry=>entry.type))].sort((a,b)=>a.localeCompare(b,'de')),categories=[...new Set(state.eventSchedule.map(entry=>entry.category))];
-    document.querySelector('#event-schedule-room-filter').innerHTML='<option value="">Alle Räume</option>'+rooms.map(value=>`<option>${escapeHtml(value)}</option>`).join('');
-    document.querySelector('#event-schedule-type-filter').innerHTML='<option value="">Alle Typen</option>'+types.map(value=>`<option>${escapeHtml(value)}</option>`).join('');
-    document.querySelector('#event-schedule-category-filter').innerHTML='<option value="">Alle Kategorien</option>'+categories.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(scheduleCategoryLabels[value]||value)}</option>`).join('');
+    renderEventScheduleFilters();
     renderEventSchedule();
   }catch(error){document.querySelector('#event-schedule-list').innerHTML=`<p class="auth-message">${escapeHtml(error.message)}</p>`;}
 }
@@ -1469,17 +1516,18 @@ document.querySelector('#new-event-schedule-entry').addEventListener('click',()=
 document.querySelector('#event-schedule-list').addEventListener('click',async event=>{
   const edit=event.target.closest('[data-edit-schedule]'),remove=event.target.closest('[data-delete-schedule]');
   if(edit)openScheduleEditor(state.eventSchedule.find(entry=>entry.id===edit.dataset.editSchedule));
-  if(remove&&confirm('Diesen manuellen Ablaufpunkt löschen?')){try{await apiRequest(`/api/events/${encodeURIComponent(state.currentScheduleEventId)}/schedule/${encodeURIComponent(remove.dataset.deleteSchedule)}`,{method:'DELETE'});await loadEventSchedule(state.currentScheduleEventId);showToast('Ablaufpunkt gelöscht.');}catch(error){showToast(error.message);}}
+  if(remove&&confirm('Diesen manuellen Ablaufpunkt löschen?')){if(state.editingEventTemplateId){state.eventSchedule=state.eventSchedule.filter(entry=>entry.id!==remove.dataset.deleteSchedule);renderEventScheduleFilters();renderEventSchedule();return;}try{await apiRequest(`/api/events/${encodeURIComponent(state.currentScheduleEventId)}/schedule/${encodeURIComponent(remove.dataset.deleteSchedule)}`,{method:'DELETE'});await loadEventSchedule(state.currentScheduleEventId);showToast('Ablaufpunkt gelöscht.');}catch(error){showToast(error.message);}}
 });
 document.querySelector('#event-schedule-form').addEventListener('submit',async event=>{
-  event.preventDefault();const id=document.querySelector('#event-schedule-entry-id').value,payload={type:document.querySelector('#event-schedule-type').value.trim(),caption:document.querySelector('#event-schedule-caption').value.trim(),startAt:new Date(document.querySelector('#event-schedule-start').value).toISOString(),endAt:document.querySelector('#event-schedule-end').value?new Date(document.querySelector('#event-schedule-end').value).toISOString():undefined,roomName:document.querySelector('#event-schedule-room').value.trim(),roomConfiguration:document.querySelector('#event-schedule-room-configuration').value.trim(),category:document.querySelector('#event-schedule-category').value||undefined,isApproximate:document.querySelector('#event-schedule-approximate').checked};
-  try{await apiRequest(`/api/events/${encodeURIComponent(state.currentScheduleEventId)}/schedule${id?`/${encodeURIComponent(id)}`:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(payload)});document.querySelector('#event-schedule-dialog').close();await loadEventSchedule(state.currentScheduleEventId);showToast('Ablaufpunkt gespeichert.');}catch(error){showToast(error.message);}
+  event.preventDefault();try{const id=document.querySelector('#event-schedule-entry-id').value,payload={type:document.querySelector('#event-schedule-type').value.trim(),caption:document.querySelector('#event-schedule-caption').value.trim(),startAt:eventScheduleTimestamp(document.querySelector('#event-schedule-start').value),endAt:document.querySelector('#event-schedule-end').value?eventScheduleTimestamp(document.querySelector('#event-schedule-end').value):undefined,roomName:document.querySelector('#event-schedule-room').value.trim(),roomConfiguration:document.querySelector('#event-schedule-room-configuration').value.trim(),category:document.querySelector('#event-schedule-category').value||undefined,isApproximate:document.querySelector('#event-schedule-approximate').checked};
+  if(state.editingEventTemplateId){if(payload.endAt&&payload.endAt<payload.startAt){showToast('Das Ende liegt vor dem Beginn.');return;}const entry={...payload,id:id||'template-entry-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),source:'manual',active:true,displayCaption:payload.caption||payload.type,category:payload.category,sortOrder:state.eventSchedule.find(item=>item.id===id)?.sortOrder||0},index=state.eventSchedule.findIndex(item=>item.id===id);if(index<0)state.eventSchedule.push(entry);else state.eventSchedule[index]=entry;document.querySelector('#event-schedule-dialog').close();renderEventScheduleFilters();renderEventSchedule();return;}
+  await apiRequest(`/api/events/${encodeURIComponent(state.currentScheduleEventId)}/schedule${id?`/${encodeURIComponent(id)}`:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(payload)});document.querySelector('#event-schedule-dialog').close();await loadEventSchedule(state.currentScheduleEventId);showToast('Ablaufpunkt gespeichert.');}catch(error){showToast(error.message);}
 });
 
 function collectEventEditor() {
   if(!applyNewEventType())throw new Error('Bitte einen gültigen Veranstaltungs-/Jobtyp eingeben.');
   const date = document.querySelector('#event-date').value;
-  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventTimestamp(date,document.querySelector('#event-setup').value), admissionStart: eventTimestamp(date, document.querySelector('#event-admission').value), eventStart: eventTimestamp(date, document.querySelector('#event-start').value), breakStart: eventTimestamp(date, document.querySelector('#event-break').value), breakEnd:eventTimestamp(date,document.querySelector('#event-break-end').value), eventEnd: eventTimestamp(date, document.querySelector('#event-end').value), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventTimestamp(date, document.querySelector('#event-box-office-open').value) };
+  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventEditorTimestamp(date,document.querySelector('#event-setup').value,'setupStart'), admissionStart: eventEditorTimestamp(date,document.querySelector('#event-admission').value,'admissionStart'), eventStart: eventEditorTimestamp(date,document.querySelector('#event-start').value,'eventStart'), breakStart: eventEditorTimestamp(date,document.querySelector('#event-break').value,'breakStart'), breakEnd:eventEditorTimestamp(date,document.querySelector('#event-break-end').value,'breakEnd'), eventEnd: eventEditorTimestamp(date,document.querySelector('#event-end').value,'eventEnd'), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventEditorTimestamp(date,document.querySelector('#event-box-office-open').value,'boxOfficeOpenAt') };
 }
 
 document.querySelector('#event-search').addEventListener('input', renderEvents);
@@ -1530,6 +1578,7 @@ document.querySelector('#event-form').addEventListener('submit', async event => 
   const id = document.querySelector('#event-id').value;
   const button = document.querySelector('#save-event-button'); button.disabled = true;
   try {
+    if(state.editingEventTemplateId){await apiRequest('/api/event-templates/'+encodeURIComponent(state.editingEventTemplateId),{method:'PUT',body:JSON.stringify({name:document.querySelector('#event-template-name').value.trim(),input:collectEventEditor(),schedule:state.eventSchedule})});document.querySelector('#event-dialog').close();await openEventTemplates();showToast('Veranstaltungsvorlage wurde gespeichert.');return;}
     await apiRequest(id ? `/api/events/${encodeURIComponent(id)}` : '/api/events', { method: id ? 'PUT' : 'POST', body: JSON.stringify(collectEventEditor()) });
     document.querySelector('#event-dialog').close();
     await loadEvents();

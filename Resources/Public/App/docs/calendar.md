@@ -172,3 +172,7 @@ oder Zugriffsregel für Import, API, bestehende Slides oder öffentliche Kalende
 Redakteure bekommen dieselbe Formularkonfiguration über die Eventliste; nur
 Administratoren dürfen sie ändern. Die Einstellung wird serverseitig gespeichert
 und gilt über Geräte und Browser hinweg in allen drei Varianten.
+
+Vorlagen und unabhängige Kopien manueller Veranstaltungen sind in
+[event-templates.md](event-templates.md) beschrieben. Neue Kopien starten als
+Entwurf und werden erst nach Freigabe in Kalender und Werbung sichtbar.
