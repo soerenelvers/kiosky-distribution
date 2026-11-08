@@ -12,7 +12,7 @@ Vorlage mit der Adresse der jeweiligen Installation aus.
    herunterladen und einmal starten. Bisherige EXEs enthalten noch keinen
    Updater. Der neue Player ab Kiosky 3.21.0 übernimmt danach neue Player-Versionen
    automatisch vom verbundenen HTTPS-Server. [Ablauf und Rücknahme](player-updates.md).
-2. Das bisherige Kiosky-Playerfenster schließen und die neue EXE einmal starten.
+2. Die neue EXE einmal starten. Ab 3.30.1 beendet sie gezielt die laufende installierte Standardkopie und ersetzt diese.
    Sie installiert sich benutzerbezogen nach
    `%LOCALAPPDATA%\Kiosky\Player\KioskyPlayer.exe`.
 3. Fehlt eine geeignete stabile WebView2-Laufzeit, deren einmalige Einrichtung
@@ -26,7 +26,7 @@ Vorlage mit der Adresse der jeweiligen Installation aus.
 5. Nach Windows-Abmeldung und erneuter Anmeldung startet die installierte Kopie
    wieder mit demselben Profil. Die Downloadkopie wird nicht mehr benötigt.
 
-Es gibt ein Playerfenster und einen Autostarteintrag pro Windows-Benutzer. Ein
+Ohne zusätzliche Multi-Display-Instanzen gibt es ein Playerfenster und einen Autostarteintrag pro Windows-Benutzer. Ein
 weiterer Start öffnet keine zweite speicherverbrauchende Wiedergabe. Ein Download
 für eine andere Kiosky-Installation ersetzt die Startadresse und verwendet den
 zu dieser Adresse gehörenden Profilordner.
@@ -125,3 +125,11 @@ für die konkrete Fehlerursache erforderlich.
 Zur Deinstallation Autostart entfernen, das eigene Playerfenster schließen und
 den eigenen Installationsordner löschen. Andere Browserprofile werden nicht
 verändert. Windows-32-Bit-Downloads bleiben eingestellt.
+
+Ab 3.30.1 aktualisiert auch ein erneuter Download die laufende Installation. Die
+Datei zuerst ausführen; der reine Browserdownload verändert noch keine Installation.
+Der Austausch verwendet den festen Installationspfad und schließt nur das dazu
+gehörende Playerfenster mit überprüftem Programmpfad. Ein absichtlich deaktivierter
+Autostart und die adressgebundenen Kopplungsprofile bleiben erhalten. Ausdrücklich
+angelegte Multi-Display-Instanzen werden dabei nicht beendet oder neu gekoppelt.
+Ein älterer Download derselben Serverbindung setzt eine neuere Version nicht zurück.

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "56cf69d8f7135da248302d1847916712eb97d8c4",
+  "source_commit": "0b5ad4f36b77c8bf305aa358209c5efd8a6892ca",
   "product": "kiosky",
-  "version": "3.30.0",
-  "released_at": "2026-11-08T12:41:08.461Z",
+  "version": "3.30.1",
+  "released_at": "2026-11-08T13:46:30.844Z",
   "channel": "stable",
-  "release_notes": "## [3.30.0] – 2026-11-08\n\n- Zeitzuweisungen in Zustands-/Reset-Presets vorbereiten: mehrere Displays oder Gruppen, Slide oder Kanal, Von-bis-Zeitraum, Zeitzone, Priorität und Wiederholung.\n- Uhrzeiten am Auslösetag oder feste Datums-/Zeitpunkte einschließlich Mitternacht, Sekunden und Sommer-/Winterzeit unterstützen; Mehrfachziele und mobile Bearbeitung ergänzen.\n- Beim Auslösen über Oberfläche, API oder Companion reguläre veröffentlichte Zeitplaneinträge atomar erzeugen; reine Zeitplan-Presets ohne unbegrenzte direkte Zuweisung ausführen und nach Ablauf zum sonst gültigen Inhalt zurückkehren.\n- Neue Preset-Zeitplanreferenzen beim Systemtransfer auf neue Ziel-/Inhalts-IDs umschreiben und bei endgültiger Kanallöschung bereinigen; bestehende Preset-Aktionen, Rechte und Lizenzprüfung erhalten.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.30.0",
+  "release_notes": "## [3.30.1] – 2026-11-08\n\n- Countdown-Elemente, Event-/Ablauf-Countdowns, Lauftexte und Wegweisungen mit der bereits synchronisierten Serverzeit aktualisieren; tägliche und zeitzonenlose Zielzeiten in der Standort-Zeitzone auswerten, einschließlich Sommer-/Winterzeit.\n- Den ersten Event-Countdown-Zielpunkt erst mit Serverzeit festlegen, damit eine falsche PC-Uhr keinen späteren Ablaufpunkt auswählt oder den Countdown vorzeitig ausblendet.\n- Beim Start eines neuen Windows-Downloads die laufende kanonische Installation gezielt ablösen und ersetzen, statt den Download wegen einer laufenden Kopie zu ignorieren; Kopplung, Autostart und separate Multi-Display-Instanzen behalten.\n- Unter Linux/Mint und macOS neue Downloads als aktive Standardinstallation übernehmen, frühere verwaltete Standardplayer und deren Autostarts ablösen und die Kopplungsprofile erhalten. Explizite Linux-Multi-Display-Instanzen sowie fremde Autostarts bleiben erhalten.\n- Die automatischen Update-Routinen und ihre Rücknahme beibehalten; Windows-Updater beim manuellen Wechsel zuverlässig neu starten und native Austausch-/Kopplungstests ergänzen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.30.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.30.0",
+    "core_version": "3.30.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.30.0",
-    "typo3_extension_version": "3.30.0"
+    "wordpress_plugin_version": "3.30.1",
+    "typo3_extension_version": "3.30.1"
   },
   "components": {
     "core": {
-      "version": "3.30.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.0.zip?ref=v3.30.0",
-      "sha256": "a8246310e380dceb83076754a30be6d4d8393128cf628692101350cffe093159"
+      "version": "3.30.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.1.zip?ref=v3.30.1",
+      "sha256": "34913204a754664a9ae72fcbc0cf9330376b4c71fb50a9f23377563331ba4927"
     },
     "standalone": {
-      "version": "3.30.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.0.zip?ref=v3.30.0",
-      "sha256": "a8246310e380dceb83076754a30be6d4d8393128cf628692101350cffe093159"
+      "version": "3.30.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.1.zip?ref=v3.30.1",
+      "sha256": "34913204a754664a9ae72fcbc0cf9330376b4c71fb50a9f23377563331ba4927"
     },
     "wordpress": {
-      "version": "3.30.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.30.0.zip?ref=v3.30.0",
-      "sha256": "724d3ecf2884f818883688831c74000725a384a100ffe43a40d98da08b71e891",
+      "version": "3.30.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.30.1.zip?ref=v3.30.1",
+      "sha256": "b939a021ed02aa840f42f9bb0d4a043c3a067432797062935f2b8612eb1cd88f",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.30.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.30.0.zip?ref=v3.30.0",
-      "sha256": "343b988a0f4a84c37e01a5767779a1e3e056346bab0fbc005c32a23058d8da62",
+      "version": "3.30.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.30.1.zip?ref=v3.30.1",
+      "sha256": "274ba45db36dcb993530ab25d97e7d09712300f6c0df3a4e3c64399da8becd5e",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

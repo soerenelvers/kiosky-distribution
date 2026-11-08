@@ -37,6 +37,58 @@ check_update(){
     /usr/bin/plutil -replace version -string "$next" "$root/update.config" || return 1
     printf '%s' "$next" > "$root/update.pending"
 }
+# Stop only controllers from this user's managed Kiosky installation tree.
+stop_installation(){
+    old=$1
+    [ -d "$old/running.lock" ] || return 0
+    owner=$(cat "$old/running.lock/pid" 2>/dev/null || printf '0')
+    case "$owner" in ''|*[!0-9]*)return 1;; esac
+    [ "$owner" -gt 1 ] || return 1
+    old_state=$(/bin/ps -p "$owner" -o stat= 2>/dev/null || :)
+    case "$old_state" in ''|*Z*)rm -f "$old/running.lock/pid";rmdir "$old/running.lock" 2>/dev/null || :;return 0;; esac
+    actual_uid=$(/bin/ps -p "$owner" -o uid= | tr -d ' ')
+    actual_command=$(/bin/ps -p "$owner" -o args=)
+    [ "$actual_uid" = "$(id -u)" ] && [ "$actual_command" = "/bin/sh $old/start.sh" ] || return 1
+    managed=$(cat "$old/player.ready" 2>/dev/null || printf '0')
+    kill -TERM "$owner" 2>/dev/null || return 1
+    attempt=0
+    while [ "$attempt" -lt 20 ];do
+        state=$(/bin/ps -p "$managed" -o stat= 2>/dev/null || :)
+        case "$state" in ''|*Z*)[ ! -d "$old/running.lock" ] && return 0;; esac
+        sleep 1;attempt=$((attempt+1))
+    done
+    return 1
+}
+acquire_installation(){
+    if ! mkdir "$installation_lock" 2>/dev/null;then
+        owner=$(cat "$installation_lock/pid" 2>/dev/null || printf '0')
+        case "$owner" in ''|*[!0-9]*)return 1;; esac
+        if [ "$owner" -gt 1 ] && kill -0 "$owner" 2>/dev/null;then return 1;fi
+        rm -f "$installation_lock/pid";rmdir "$installation_lock" && mkdir "$installation_lock" || return 1
+    fi
+    printf '%s' "$$" > "$installation_lock/pid"
+}
+release_installation(){ rm -f "$installation_lock/pid";rmdir "$installation_lock" 2>/dev/null || :; }
+retire_other_installations(){
+    for old in "$players"/*;do
+        [ "$old" != "$root" ] && [ -d "$old" ] && [ ! -L "$old" ] || continue
+        name=${old##*/};printf '%s' "$name" | grep -Eq '^[0-9a-f]{24}$' || continue
+        [ -f "$old/start.sh" ] && [ -f "$old/config.json" ] || continue
+        stop_installation "$old" || return 1
+        legacy="$HOME/Library/LaunchAgents/de.kiosky.player.$name.plist"
+        if [ -f "$legacy" ] && [ "$(extract ProgramArguments.0 "$legacy")" = /bin/sh ] && [ "$(extract ProgramArguments.1 "$legacy")" = "$old/start.sh" ];then
+            /bin/launchctl bootout "gui/$(id -u)/de.kiosky.player.$name" >/dev/null 2>&1 || :
+            rm -f "$legacy"
+        fi
+    done
+    # Migrate this installation's legacy LaunchAgent as well.
+    legacy="$HOME/Library/LaunchAgents/de.kiosky.player.$identity.plist"
+    if [ -f "$legacy" ] && [ "$(extract ProgramArguments.1 "$legacy")" = "$root/start.sh" ];then
+        /bin/launchctl bootout "gui/$(id -u)/de.kiosky.player.$identity" >/dev/null 2>&1 || :
+        rm -f "$legacy"
+    fi
+}
+
 if [ "${1:-}" = --managed ];then
     [ "${KIOSKY_MANAGED_PARENT:-}" = "$PPID" ] || exit 3
     config=$2;root=$(dirname "$config")
@@ -72,9 +124,23 @@ config=${1:-}
 [ -f "$config" ] || exit 3
 url=$(extract player_url "$config") || exit 3
 identity=$(printf '%s' "$url" | /usr/bin/shasum -a 256);identity=$(printf '%s' "$identity" | cut -c 1-24)
-root="$HOME/Library/Application Support/Kiosky/players/$identity"
+players="$HOME/Library/Application Support/Kiosky/players"
+root="$players/$identity"
+installation_lock="$players/installing.lock"
 umask 077
 mkdir -p "$root" || exit 3
+acquire_installation || exit 3
+trap 'release_installation' EXIT
+incoming=$(extract version "$config") || exit 3
+version_valid "$incoming" || exit 3
+if [ -f "$root/config.json" ] && [ -f "$root/start.sh" ];then
+    current=$(extract version "$root/config.json") || exit 3
+    if newer "$current" "$incoming";then release_installation;exec /bin/sh "$root/start.sh";fi
+fi
+# Validate and stage both files before closing the old working controller.
+# plutil -extract accepts our JSON config; -lint only accepts property lists on macOS.
+cp "$config" "$root/download.config" && [ "$(extract version "$root/download.config")" = "$incoming" ] && [ "$(extract player_url "$root/download.config")" = "$url" ] && cp "$0" "$root/download.player" && /bin/sh -n "$root/download.player" || exit 3
+stop_installation "$root" || exit 3
 if ! mkdir "$root/running.lock" 2>/dev/null;then
     owner=$(cat "$root/running.lock/pid" 2>/dev/null || printf '0')
     case "$owner" in ''|*[!0-9]*)exit 3;; esac
@@ -83,19 +149,15 @@ if ! mkdir "$root/running.lock" 2>/dev/null;then
     mkdir "$root/running.lock" || exit 3
 fi
 printf '%s' "$$" > "$root/running.lock/pid"
-trap 'rm -f "$root/running.lock/pid";rmdir "$root/running.lock" 2>/dev/null || :' EXIT
-if [ -f "$root/config.json" ] && [ -f "$root/player.sh" ] && [ -f "$root/start.sh" ];then
-    incoming=$(extract version "$config") || exit 3
-    current=$(extract version "$root/config.json") || exit 3
-    if ! newer "$incoming" "$current";then exec /bin/sh "$root/start.sh";fi
-fi
-cp "$config" "$root/config.new" && mv "$root/config.new" "$root/config.json" || exit 3
-cp "$0" "$root/player.new" && mv "$root/player.new" "$root/player.sh" || exit 3
+trap 'rm -f "$root/running.lock/pid";rmdir "$root/running.lock" 2>/dev/null || :;release_installation' EXIT
+mv "$root/download.config" "$root/config.json" && mv "$root/download.player" "$root/player.sh" || exit 3
+rm -f "$root/update.installing" "$root/update.pending" "$root/update.candidate" "$root/update.config" "$root/player.ready"
 cat > "$root/start.sh" <<'CONTROLLER'
 # KIOSKY_CONTROLLER_BEGIN
 #!/bin/sh
 set -u
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -f "$root/../primary" ] && [ "$(cat "$root/../primary")" != "${root##*/}" ];then exit 0;fi
 child=''
 # On login the previous installer lock no longer has a live owner.
 if ! mkdir "$root/running.lock" 2>/dev/null;then
@@ -150,13 +212,28 @@ done
 # KIOSKY_CONTROLLER_END
 CONTROLLER
 chmod 700 "$root/start.sh" "$root/player.sh"
+/bin/sh -n "$root/start.sh" || exit 3
+retire_other_installations || exit 3
+primary="$players/primary"
+if [ -f "$primary" ];then
+    previous=$(cat "$primary")
+    if [ "$previous" != "$identity" ] && printf '%s' "$previous" | grep -Eq '^[0-9a-f]{24}$' && [ -f "$players/$previous/autostart.disabled" ];then : > "$root/autostart.disabled";fi
+fi
+canonical="$HOME/Library/LaunchAgents/de.kiosky.player.plist"
+if [ -f "$canonical" ];then
+    previous_script=$(extract ProgramArguments.1 "$canonical") || exit 3
+    case "$previous_script" in "$players/"*/start.sh)/bin/launchctl bootout "gui/$(id -u)/de.kiosky.player" >/dev/null 2>&1 || :;; *)exit 3;; esac
+    [ ! -f "$root/autostart.disabled" ] || rm -f "$canonical"
+fi
+printf '%s' "$identity" > "$primary.new" && mv "$primary.new" "$primary" || exit 3
 if [ ! -f "$root/autostart.disabled" ];then
     mkdir -p "$HOME/Library/LaunchAgents" || exit 3
     escaped=$(printf '%s' "$root/start.sh" | sed -e 's/\&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
-    agent="$HOME/Library/LaunchAgents/de.kiosky.player.$identity.plist"
+    agent="$HOME/Library/LaunchAgents/de.kiosky.player.plist"
     cat > "$agent.new" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>de.kiosky.player.$identity</string><key>ProgramArguments</key><array><string>/bin/sh</string><string>$escaped</string></array><key>RunAtLoad</key><true/></dict></plist>
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>de.kiosky.player</string><key>ProgramArguments</key><array><string>/bin/sh</string><string>$escaped</string></array><key>RunAtLoad</key><true/></dict></plist>
 PLIST
     /usr/bin/plutil -lint "$agent.new" >/dev/null && mv "$agent.new" "$agent" || exit 3
 fi
+release_installation
 exec /bin/sh "$root/start.sh"

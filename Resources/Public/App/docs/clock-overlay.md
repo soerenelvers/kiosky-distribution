@@ -31,3 +31,22 @@ Prüfungen: `pnpm test`, `pnpm test:php` und nach `pnpm build`
 Python Playwright und isolierte Datenbanken. Er prüft alle drei UI-Transporte,
 eine abweichende Geräte-Zeitzone, vier Stunden Geräteuhrabweichung, einen
 Standortwechsel sowie Zoom/Speicherung auf Desktop, Smartphone und Tablet.
+
+## Countdown und abweichende PC-Uhr (ab 3.30.1)
+
+Auch Countdown-Elemente verwenden in der tatsächlichen Ausgabe die synchronisierte
+Serverzeit: feste Termine, tägliche Uhrzeiten, Veranstaltung/Ablauf mit Offset,
+Countdowns in Lauftexten und Wegweisungen. Tägliche oder ohne Zeitzonenoffset
+hinterlegte Zielzeiten werden in der Standort-Zeitzone ausgewertet; ohne Standort
+gilt die Display-Zeitzone, andernfalls Europe/Berlin. Ein bereits mit Offset/Z
+gespeicherter Veranstaltungstermin bleibt ein absoluter Zeitpunkt.
+
+Bis 3.30.0 verwendete die regelmäßige Countdown-Aktualisierung noch die PC-Uhr,
+obwohl das Uhr-Overlay bereits mit Serverzeit lief. Ein einzelner PC konnte deshalb
+um mehrere Stunden abweichen. Die Zielpunktwahl eines Ablauf-Countdowns wird jetzt
+auch erst mit Serverzeit festgelegt; Hochzählen/Ausblenden bleibt am gewählten
+Punkt, statt nach dessen Ablauf zum nächsten Punkt zu springen.
+
+`python tests/server-countdown-browser.py` prüft je Plattform fünf Player am selben
+Standort mit unterschiedlichen Geräte-Zeitzonen und einem acht Stunden falsch
+gehenden fünften PC. Die Korrektur verändert die PC-Systemuhr nicht.

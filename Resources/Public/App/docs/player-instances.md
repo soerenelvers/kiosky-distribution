@@ -48,3 +48,18 @@ Die vorhandene Kopplung bleibt erhalten. Ältere Player benötigen einmalig den 
 
 Diese Instanzverwaltung betrifft Windows und Linux. macOS und die Raspberry-Pi-Images
 behalten ihren bisherigen Einzelplayerbetrieb und ihre automatische Update-Routine.
+
+## Erneuter Download (ab 3.30.1)
+
+Ein neuer Standarddownload wird beim Ausführen als Aktualisierung der vorhandenen
+Installation behandelt. Er erzeugt keine zusätzliche Standardausgabe. Unter Linux
+werden vorherige Standarddownloads anderer Adressen abgelöst; ihre Profile bleiben
+erhalten. Ausdrücklich angelegte Multi-Display-Instanzen behalten ihre Kopplung,
+Monitorzuordnung und Autostarts. Mehrere Ausgaben weiter hier über **Neue Instanz**
+anlegen, statt mehrere Downloads parallel zu installieren.
+
+macOS behält den Einzelplayerbetrieb. Ein neuer Download ersetzt den aktiven
+Standardplayer und verwendet einen kanonischen LaunchAgent
+`~/Library/LaunchAgents/de.kiosky.player.plist`. Frühere verwaltete Standardplayer
+und ihre adressgebundenen LaunchAgents werden abgelöst, Kopplungsprofile und
+fremde Programme bleiben erhalten. Dies gilt jeweils für den angemeldeten Benutzer.

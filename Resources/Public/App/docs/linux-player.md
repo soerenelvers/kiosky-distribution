@@ -59,7 +59,8 @@ Flatpak- und Snap-Profile liegen innerhalb des jeweiligen zulässigen App-
 Speicherbereichs. Persönliche Standard-Browserprofile bleiben getrennt.
 
 Eine andere Serveradresse oder ein anderer zugeordneter Display-Download verwendet
-eine eigene Installation und kann eine neue Kopplung benötigen. Ein neuer Linux-
+ein eigenes Kopplungsprofil und kann eine neue Kopplung benötigen. Ab 3.30.1
+löst ein solcher neuer Standarddownload den vorherigen Standardplayer ab. Ein neuer Linux-
 Benutzer hat ebenfalls ein eigenes Profil. Das Löschen des Playerprofils entfernt
 die gespeicherte Kopplung.
 
@@ -90,9 +91,9 @@ Der bisherige Linux-Starter verwendete das allgemeine Browserprofil; beim Wechse
 auf das neue isolierte Profil einmal neu koppeln. Anschließend bleibt die Kopplung
 bei Neustarts und erneutem Download derselben Variante/Adresse erhalten.
 
-Die Weboberfläche und Displayinhalte werden vom Kiosky-Server geladen. Ein neuer
-nativer Starter wird durch erneutes Herunterladen installiert; ein automatischer
-Binär-Updater ist nicht Bestandteil dieser Änderung.
+Die Weboberfläche und Displayinhalte werden vom Kiosky-Server geladen. Ab 3.21.0 erhält auch der native Starter automatische
+Updates vom verbundenen Server; Details stehen unter [Player-Updates](player-updates.md).
+Erneutes Herunterladen und Ausführen bleibt für die manuelle Aktualisierung möglich.
 
 ## Build und Prüfung
 
@@ -139,3 +140,21 @@ eine physische Mint-Hardwareabnahme. Browserkiosk ist keine vollständige Absich
 des Betriebssystems. Grundlagen: [XDG-Autostart](https://specifications.freedesktop.org/autostart/latest/),
 [Desktop Entry](https://specifications.freedesktop.org/desktop-entry/latest-single/)
 und [Firefox-Kioskmodus](https://support.mozilla.org/en-US/kb/firefox-enterprise-kiosk-mode).
+
+## Vorhandene Installation ersetzen (ab 3.30.1)
+
+Die heruntergeladene Datei ausführbar machen und einmal starten. Sie aktualisiert
+die vorhandene Standardinstallation, auch während der bisherige Player läuft.
+Pro Benutzer bleibt eine aktive Standardinstallation mit einem Eintrag
+**Kiosky Player-Instanzen** im Anwendungsmenü. Verwaltete Standardplayer anderer
+Downloadadressen und deren Autostarts werden abgelöst. Ihre Kopplungsprofile bleiben
+für eine spätere Rückkehr erhalten. Fremde Autostarts werden nicht verändert.
+Zusätzliche, über die Instanzverwaltung angelegte Multi-Display-Instanzen behalten
+ihre eigenen Profile und Autostarts. Ein älterer Download setzt die bestehende
+Installation derselben Adresse nicht zurück. Absichtlich deaktivierter Autostart
+bleibt deaktiviert; `--enable-autostart` aktiviert ihn ausdrücklich.
+
+Die aktive Standardadresse steht als Kennung in `kiosky/players/primary.json`;
+unter den bisherigen adressgebundenen Verzeichnissen bleiben die Profile erhalten.
+Weitere gleichzeitig laufende Ausgaben ausschließlich in der Multi-Display-
+Instanzverwaltung anlegen.
