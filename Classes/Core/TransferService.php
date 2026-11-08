@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/PresetTriggers.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 
@@ -60,6 +61,7 @@ final class TransferService
         if (in_array('operations', $included, true)) {
             $sections['operations'] = [
                 'presets' => $this->active($state['presets'] ?? []),
+                'presetTriggers' => array_values(array_filter(PresetTriggers::listing($state),static fn(array $row):bool=>$row['presetStatus']==='active')),
                 'warningTemplates' => $this->active($state['warningTemplates'] ?? []),
                 'warnings' => array_map(static function (array $warning): array {
                     if (($warning['status'] ?? '') === 'active') $warning['status'] = 'draft';
@@ -176,6 +178,14 @@ final class TransferService
             $state[$collection] = array_merge($state[$collection] ?? [], $records);
             $counts[$collection] = count($records);
         }
+        $presetTriggers=$sections['operations']['presetTriggers'] ?? [];
+        if(!is_array($presetTriggers)||count($presetTriggers)>500)throw new RuntimeException('Ungültige Preset-Termine im Transferpaket.',422);
+        foreach($presetTriggers as $source){
+            $presetId=$maps['presets'][$source['presetId'] ?? ''] ?? null;
+            if(!$presetId)throw new RuntimeException('Ein Preset-Termin verweist auf ein nicht übertragenes Preset.',422);
+            PresetTriggers::save($state,array_replace($source,['presetId'=>$presetId,'enabled'=>false]));
+        }
+        $counts['presetTriggers']=count($presetTriggers);
         $dwd = $this->rewriteRecords($sections['operations']['dwd'] ?? [], $maps, 'dwd');
         foreach ($dwd as $configuration) {
             $locationId = (string)($configuration['locationId'] ?? '');

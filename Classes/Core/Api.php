@@ -13,6 +13,7 @@ require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
 require_once __DIR__.'/PresetHandoff.php';
+require_once __DIR__.'/PresetTriggers.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 
@@ -94,6 +95,7 @@ final class Api
     {
         $state = $this->state();
         $licenseChanged=$this->license()->runDue($state);
+        $presetTriggerRuns=$this->runDuePresetTriggers($state);
         $summary = ($state['activeEventSource'] ?? null) === 'easyjob'
             ? $this->runAutomaticEasyJobImport($state)
             : $this->runAutomaticCrewBrainImport($state);
@@ -106,12 +108,23 @@ final class Api
             function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
             function(array &$target,array $body,?string $id): array{return $this->saveRecord($target,'channels',$body,$id);}):0;
         if($licenseChanged)$summary['ran']=true;
+        if($presetTriggerRuns){$summary['ran']=true;$summary['presetTriggerRuns']=$presetTriggerRuns;}
         if($menuChecks){$summary['ran']=true;$summary['menuChecks']=$menuChecks;}
         if ($summary['ran']) {
             $state['updatedAt'] = $this->now();
             $this->store->save($state);
         }
         return $summary;
+    }
+
+    /** Dedicated clock tick: no imports, media migrations or outbound services. */
+    public function runPresetTriggers(int $attempt=0): array
+    {
+        try{
+            $state=$this->state();$count=$this->runDuePresetTriggers($state);
+            if($count){$state['updatedAt']=$this->now();$this->store->save($state);}
+            return ['ran'=>$count>0,'presetTriggerRuns'=>$count];
+        }catch(StateConflict $error){if($attempt<2)return $this->runPresetTriggers($attempt+1);throw $error;}
     }
 
     /** Explicit CLI/Scheduler entry point; requires no browser traffic. */
@@ -533,26 +546,16 @@ final class Api
             $state['commands'][] = $command;
             return $this->created(['command' => $command]);
         }
-        if (preg_match('#^/api/presets/([^/]+)/execute$#', $path, $match) && $method === 'POST') {
-            $preset = $this->required($state['presets'], rawurldecode($match[1]), 'Preset');
-            $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
-            if (($preset['type'] ?? '') !== 'emergency') {
-                $execution = $this->executeStatePreset($state,$preset);
-                return $this->ok(['result' => $execution['result']], true);
-            }
-            $targets = !empty($body['targets']) ? array_values(array_map('strval', $body['targets'])) : array_values(array_map('strval', $config['targets'] ?? []));
-            if (!$targets) throw new RuntimeException('Das Preset enthält keine Zielbereiche.');
-            $warning = $this->saveRecord($state, 'warnings', [
-                'source' => 'preset:'.$preset['id'], 'warningType' => $config['warningType'] ?? 'info',
-                'startsAt'=>$this->now(),'endsAt'=>(float)($config['durationMinutes'] ?? 0)>0?gmdate('c',time()+(int)((float)$config['durationMinutes']*60)):null,
-                'severity' => (int)($config['severity'] ?? 3), 'title' => $config['title'] ?? $preset['name'],
-                'description' => $config['description'] ?? '', 'instructions' => $config['instructions'] ?? '',
-                'priority' => (int)($config['priority'] ?? 900), 'targets' => $targets,
-                'document' => $config['document'] ?? [], 'returnBehavior' => $config['returnBehavior'] ?? 'resume_current_schedule',
-                'status' => 'active', 'publishedAt' => $this->now(),
-            ]);
-            return $this->created(['warning' => $warning]);
+        if($path==='/api/preset-triggers'){
+            if($method==='GET')return $this->ok(['data'=>PresetTriggers::listing($state),'runs'=>PresetTriggers::runs($state),'serverTime'=>$this->now()]);
+            if($method==='POST'){$trigger=PresetTriggers::save($state,$body);$this->audit($state,'preset.trigger.created',$trigger['id']);return $this->created(['trigger'=>$trigger]);}
         }
+        if(preg_match('#^/api/preset-triggers/([^/]+)$#',$path,$match)){
+            $id=rawurldecode($match[1]);
+            if($method==='PUT'){$trigger=PresetTriggers::save($state,$body,$id);$this->audit($state,'preset.trigger.updated',$id);return $this->ok(['trigger'=>$trigger],true);}
+            if($method==='DELETE'){PresetTriggers::delete($state,$id);$this->audit($state,'preset.trigger.deleted',$id);return $this->ok(['ok'=>true],true);}
+        }
+        if (preg_match('#^/api/presets/([^/]+)/execute$#', $path, $match) && $method === 'POST') return $this->executeStoredPreset($state,rawurldecode($match[1]),$body);
         if ($path === '/api/operations' && $method === 'GET') {
             $emergency = $this->first(array_reverse($state['warnings']), fn(array $item): bool => ($item['status'] ?? '') === 'active' && ($item['source'] ?? '') === 'legacy-emergency');
             return $this->ok(['displays' => $this->listCollection($state, 'displays'), 'emergency' => $emergency, 'warnings' => $state['warnings']]);
@@ -1015,7 +1018,7 @@ final class Api
             return;
         }
 
-        $viewerBlocked = ['/api/content-packages', '/api/media', '/api/presets', '/api/warning-templates', '/api/warnings', '/api/operations', '/api/dwd', '/api/trash'];
+        $viewerBlocked = ['/api/content-packages', '/api/media', '/api/presets', '/api/preset-triggers', '/api/warning-templates', '/api/warnings', '/api/operations', '/api/dwd', '/api/trash'];
         if ($this->pathStartsWithAny($path, $viewerBlocked)) {
             throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
         }
@@ -1638,6 +1641,39 @@ final class Api
         },$config['schedules']);
     }
 
+    /** Saved actions are shared by manual requests, cron and authenticated player polls. */
+    private function executeStoredPreset(array &$state,string $presetId,array $body=[]): array
+    {
+            $preset = $this->required($state['presets'], $presetId, 'Preset');
+            $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
+            if (($preset['type'] ?? '') !== 'emergency') {
+                $execution = $this->executeStatePreset($state,$preset);
+                return $this->ok(['result' => $execution['result']], true);
+            }
+            $targets = !empty($body['targets']) ? array_values(array_map('strval', $body['targets'])) : array_values(array_map('strval', $config['targets'] ?? []));
+            if (!$targets) throw new RuntimeException('Das Preset enthält keine Zielbereiche.');
+            $warning = $this->saveRecord($state, 'warnings', [
+                'source' => 'preset:'.$preset['id'], 'warningType' => $config['warningType'] ?? 'info',
+                'startsAt'=>$this->now(),'endsAt'=>(float)($config['durationMinutes'] ?? 0)>0?gmdate('c',time()+(int)((float)$config['durationMinutes']*60)):null,
+                'severity' => (int)($config['severity'] ?? 3), 'title' => $config['title'] ?? $preset['name'],
+                'description' => $config['description'] ?? '', 'instructions' => $config['instructions'] ?? '',
+                'priority' => (int)($config['priority'] ?? 900), 'targets' => $targets,
+                'document' => $config['document'] ?? [], 'returnBehavior' => $config['returnBehavior'] ?? 'resume_current_schedule',
+                'status' => 'active', 'publishedAt' => $this->now(),
+            ]);
+            return $this->created(['warning' => $warning]);
+    }
+
+    private function runDuePresetTriggers(array &$state): int
+    {
+        if(!$this->license()->allows($state,'schedule','operations'))return 0;
+        return PresetTriggers::runDue($state,function(array &$target,string $id): array {
+            $preset=$this->required($target['presets'],$id,'Preset');
+            if(($preset['status'] ?? '')!=='active')throw new RuntimeException('Aktives Preset wurde nicht gefunden.',422);
+            return $this->executeStoredPreset($target,$id)[1];
+        });
+    }
+
     private function executeStatePreset(array &$state,array $preset): array
     {
         $config=is_array($preset['config'] ?? null)?$preset['config']:[];
@@ -1793,6 +1829,7 @@ final class Api
         }
         if ($action !== 'state' || $method !== 'GET') throw new RuntimeException('Methode nicht erlaubt.', 405);
 
+        $presetTriggerChanged=$this->runDuePresetTriggers($state)>0;
         $matrixLayout = $this->matrixLayout($state, (string)$display['id']);
         $beforeHandoffs=$state['presetHandoffs'] ?? [];
         $releasedPresets=PresetHandoff::released($state,$display,$this->license()->allows($state,'schedule'));
@@ -1857,7 +1894,7 @@ final class Api
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $commands, 'serverTime' => $serverTime,
-        ],$changed||$deliveryChanged||$handoffChanged);
+        ],$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */
@@ -2493,7 +2530,7 @@ final class Api
             'menuAccess' => [], 'events' => [], 'eventSchedules' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
-            'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
+            'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'presetTriggers' => [], 'presetTriggerRuns' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
             'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'menus' => true, 'advertising' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'updates' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
             'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'],
             'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,

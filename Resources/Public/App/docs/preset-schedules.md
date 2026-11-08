@@ -72,3 +72,5 @@ Pro Auftrag ein Ziel; die Mehrfachauswahl der Oberfläche wird darauf aufgeteilt
 Speicherung, Auslösung, Systemexport/-import und Oberfläche verwenden denselben
 Vertrag in Standalone, WordPress und TYPO3. Es gibt keine neue Datenbankmigration
 und keine zusätzliche Abfrage im Player: Er verwendet die normale Zeitplanung.
+
+Presets können ab 3.31.0 auch [über Termine im Zeitplan ausgelöst werden](preset-triggers.md), einschließlich zeitgesteuerter Folge-Presets.

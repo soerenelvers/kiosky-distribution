@@ -134,4 +134,26 @@ final class ExternalSchedule
         }catch(Throwable){/* Invalid legacy recurrence. */}
         return null;
     }
+
+    /** First actual trigger at or after a point, using local calendar recurrence. */
+    public static function nextStart(array $s, float $after): ?float
+    {
+        try {
+            $start=(float)(new DateTimeImmutable((string)$s['startsAt']))->format('U.u');
+            if (($s['active'] ?? true)===false) return null;
+            if (($s['recurrence'] ?? 'once')==='once') return $start>=$after?$start:null;
+            $from=empty($s['recurrenceStartsAt'])?$start:(float)(new DateTimeImmutable($s['recurrenceStartsAt']))->format('U.u');
+            $until=empty($s['recurrenceEndsAt'])?INF:(float)(new DateTimeImmutable($s['recurrenceEndsAt']))->format('U.u');
+            $lower=max($after,$start,$from);if($lower>=$until)return null;
+            $zone=new DateTimeZone($s['recurrenceTimezone'] ?? 'UTC');$a=self::wall((int)$start,$zone);$anchor=(int)floor($a/86400);$today=(int)floor(self::wall((int)$lower,$zone)/86400);
+            $weekly=($s['recurrence'] ?? '')==='weekly';$interval=max(1,(int)($s['recurrenceInterval'] ?? 1));$cycleDays=$interval*($weekly?7:1);
+            $weekdays=!empty($s['recurrenceWeekdays'])?$s['recurrenceWeekdays']:[(int)gmdate('w',$a)];$first=max(0,(int)floor(($today-$anchor)/$cycleDays));
+            for($cycle=$first;$cycle<=$first+2;$cycle++)for($offset=0;$offset<($weekly?7:1);$offset++){
+                $candidateDay=$anchor+$cycle*$cycleDays+$offset;
+                if($weekly&&!in_array((int)gmdate('w',$candidateDay*86400),$weekdays,true))continue;
+                try{$actual=(float)(new DateTimeImmutable(self::local(gmdate('Y-m-d\TH:i:s',$candidateDay*86400+$a%86400),$zone)))->format('U.u')+($start-floor($start));if($actual>=$lower&&$actual<$until)return $actual;}catch(Throwable){}
+            }
+        } catch(Throwable) {}
+        return null;
+    }
 }

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "494a3b2fe5790b62133ada7b4ec2426cca2d58fb",
+  "source_commit": "7460786514f6f3ba2c890b2f94ac18d030df7255",
   "product": "kiosky",
-  "version": "3.30.2",
-  "released_at": "2026-11-08T15:54:08.921Z",
+  "version": "3.31.0",
+  "released_at": "2026-11-08T17:04:49.766Z",
   "channel": "stable",
-  "release_notes": "## [3.30.2] – 2026-11-08\n\n- Windows-Player als monitorfüllendes Topmost-Fenster am Shell anmelden und Vollbild nach verlorener Fensterpriorität, Minimierung oder Explorer-Neustart wiederherstellen; F11-Fenstermodus und F10-Instanzverwaltung erhalten.\n- Linux-/Mint-Kioskfenster auch ohne feste Monitorzuordnung über normalen Anwendungen und Panels halten; Fensterzustände regelmäßig anhand der eigenen Installations-/Instanzkennung prüfen und Monitorwechsel berücksichtigen.\n- Menü-/Scrollleisten in Firefox-Profilen sowie Chromium-Playern auf Windows, Linux, macOS und Raspberry Pi ausblenden; vorhandene Firefox-Profilanpassungen behalten.\n- Gemeinsame Vollbildanforderung um ausgeblendete Navigation, Safari-Unterstützung und Wiederanlauf nach Sichtbarkeitswechsel ergänzen; Windows-Host auch bei bestehendem DOM-Vollbild erneut ansprechen.\n- Native Windows- und Linux-Fenster-/Wiederherstellungstests sowie gemeinsame Vollbild- und macOS-Startargumentprüfungen ergänzen; alle drei Distributionsvarianten gemeinsam aktualisieren.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.30.2",
+  "release_notes": "## [3.31.0] – 2026-11-08\n\n- Vollständige Presets in der Zeitplanung einmalig, täglich, wöchentlich oder im Intervall auslösen; mehrere Termine ermöglichen zeitgesteuerte Folgeaktionen mit den gespeicherten Preset-Zielen.\n- Terminverwaltung mit Zeitzone, Wiederholungsende, Wochentagen, Aktivieren/Pausieren und Ausführungsprotokoll; responsive Dialoge und Preset-Uhr-Schaltfläche ergänzen.\n- Ausführungen mit Aktionen atomar speichern und pro Termin/Zeitpunkt gegen parallele Zugriffe und Neustarts absichern; Fehler ohne Teiländerungen protokollieren und mehr als fünf Minuten verpasste Termine überspringen.\n- Standalone-Taktgeber, separate minütliche WordPress-Cron-Aufgabe und TYPO3-Scheduler/CLI bereitstellen; laufende CMS-Player prüfen zusätzlich auf fällige Termine. Hintergrundaufgaben lesen keine komplette Mediathek ein.\n- Terminübernahme beim Systemtransfer mit neuen Preset-Verweisen und pausiertem Start; begrenzte kompakte Protokolle, Rollen-/Lizenzprüfungen und Zeitzonen-/Sommerzeit-Parität in allen drei Varianten sichern.\n- Anwendungstests, echte parallele SQLite-Prozesse, CMS-Speicherkonflikte, native CMS-Installations-/Upgradeprüfungen sowie Desktop-/Mobilbrowser-Abläufe ergänzen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.31.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.30.2",
+    "core_version": "3.31.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.30.2",
-    "typo3_extension_version": "3.30.2"
+    "wordpress_plugin_version": "3.31.0",
+    "typo3_extension_version": "3.31.0"
   },
   "components": {
     "core": {
-      "version": "3.30.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.2.zip?ref=v3.30.2",
-      "sha256": "6ddf233ed34550ca61e80fe05c119b8f1b15d7d1bf641f30af8f2b1d38c9431b"
+      "version": "3.31.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.31.0.zip?ref=v3.31.0",
+      "sha256": "06b80ded000843cf1d26326f45a4945ef89a1a43c5b6bbb379aabdae761fc926"
     },
     "standalone": {
-      "version": "3.30.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.2.zip?ref=v3.30.2",
-      "sha256": "6ddf233ed34550ca61e80fe05c119b8f1b15d7d1bf641f30af8f2b1d38c9431b"
+      "version": "3.31.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.31.0.zip?ref=v3.31.0",
+      "sha256": "06b80ded000843cf1d26326f45a4945ef89a1a43c5b6bbb379aabdae761fc926"
     },
     "wordpress": {
-      "version": "3.30.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.30.2.zip?ref=v3.30.2",
-      "sha256": "76bcf575c8843c710eafe83e539d51ebaf76412f944e0c7ae3f7b6ec9e64ee8b",
+      "version": "3.31.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.31.0.zip?ref=v3.31.0",
+      "sha256": "61b468ddfd9d020f7a64f64961cefa79cbf9b0df6a142e3fa00c4effcc108105",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.30.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.30.2.zip?ref=v3.30.2",
-      "sha256": "16fd9e1cc8cf305c5f5e49f04c4c964bcc85ddc463d3677fc91b1f1a4ba369d2",
+      "version": "3.31.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.31.0.zip?ref=v3.31.0",
+      "sha256": "f41c3bc0f745e23e9a35ca1e9b1f2f5e21267ced8427d28714c05f9381f26d48",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

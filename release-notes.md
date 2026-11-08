@@ -1,7 +1,8 @@
-## [3.30.2] – 2026-11-08
+## [3.31.0] – 2026-11-08
 
-- Windows-Player als monitorfüllendes Topmost-Fenster am Shell anmelden und Vollbild nach verlorener Fensterpriorität, Minimierung oder Explorer-Neustart wiederherstellen; F11-Fenstermodus und F10-Instanzverwaltung erhalten.
-- Linux-/Mint-Kioskfenster auch ohne feste Monitorzuordnung über normalen Anwendungen und Panels halten; Fensterzustände regelmäßig anhand der eigenen Installations-/Instanzkennung prüfen und Monitorwechsel berücksichtigen.
-- Menü-/Scrollleisten in Firefox-Profilen sowie Chromium-Playern auf Windows, Linux, macOS und Raspberry Pi ausblenden; vorhandene Firefox-Profilanpassungen behalten.
-- Gemeinsame Vollbildanforderung um ausgeblendete Navigation, Safari-Unterstützung und Wiederanlauf nach Sichtbarkeitswechsel ergänzen; Windows-Host auch bei bestehendem DOM-Vollbild erneut ansprechen.
-- Native Windows- und Linux-Fenster-/Wiederherstellungstests sowie gemeinsame Vollbild- und macOS-Startargumentprüfungen ergänzen; alle drei Distributionsvarianten gemeinsam aktualisieren.
+- Vollständige Presets in der Zeitplanung einmalig, täglich, wöchentlich oder im Intervall auslösen; mehrere Termine ermöglichen zeitgesteuerte Folgeaktionen mit den gespeicherten Preset-Zielen.
+- Terminverwaltung mit Zeitzone, Wiederholungsende, Wochentagen, Aktivieren/Pausieren und Ausführungsprotokoll; responsive Dialoge und Preset-Uhr-Schaltfläche ergänzen.
+- Ausführungen mit Aktionen atomar speichern und pro Termin/Zeitpunkt gegen parallele Zugriffe und Neustarts absichern; Fehler ohne Teiländerungen protokollieren und mehr als fünf Minuten verpasste Termine überspringen.
+- Standalone-Taktgeber, separate minütliche WordPress-Cron-Aufgabe und TYPO3-Scheduler/CLI bereitstellen; laufende CMS-Player prüfen zusätzlich auf fällige Termine. Hintergrundaufgaben lesen keine komplette Mediathek ein.
+- Terminübernahme beim Systemtransfer mit neuen Preset-Verweisen und pausiertem Start; begrenzte kompakte Protokolle, Rollen-/Lizenzprüfungen und Zeitzonen-/Sommerzeit-Parität in allen drei Varianten sichern.
+- Anwendungstests, echte parallele SQLite-Prozesse, CMS-Speicherkonflikte, native CMS-Installations-/Upgradeprüfungen sowie Desktop-/Mobilbrowser-Abläufe ergänzen.

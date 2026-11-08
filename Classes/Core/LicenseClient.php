@@ -43,6 +43,7 @@ final class LicenseClient
         if(preg_match('#^/api/(auth|health|settings/licensing|settings/features|users|audit-logs|content-transfer)(/|$)#',$path)||str_starts_with($path,'/api/player/'))return [];
         if($path==='/api/v1'||str_starts_with($path,'/api/v1/'))return array_merge(['api'],self::required(preg_replace('#^/api/v1#','/api',$path)));
         foreach(['easyjob','crewbrain'] as $p)if(preg_match('#/'.$p.'(/|$)#',$path))return ['integrations',$p];
+        if(preg_match('#^/api/preset-triggers(/|$)#',$path))return ['schedule','operations'];
         $maps=['menus'=>'menus|menu-share|settings/(menus|menu-share)','advertising'=>'advertising|settings/advertising','channels'=>'slides|templates|channels|content-packages','displays'=>'displays|display-groups|groups|locations|matrix-displays|player-pairings','events'=>'events|event-templates|public|settings/(public-calendar|events)','schedule'=>'schedule|schedules|schedule-target-order|assignments|content-assignments','operations'=>'presets|warnings|warning-templates|emergencies|dwd|operations','integrations'=>'integrations','api'=>'api-users','dashboard'=>'dashboard','media'=>'media','updates'=>'updates'];
         foreach($maps as $module=>$pattern)if(preg_match('#^/api/('.$pattern.')(/|$)#',$path))return [$module];return [];
     }

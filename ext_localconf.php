@@ -7,6 +7,7 @@ defined('TYPO3') || die();
 );
 
 if (\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('scheduler')) {
+    $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kiosky\Kiosky\Task\PresetTriggersTask::class]=['extension'=>'kiosky','title'=>'Kiosky: Preset-Termine auslösen','description'=>'Fällige Presets einmalig auslösen. Jede Minute ausführen; unabhängig von Veranstaltungsimporten.'];
     $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kiosky\Kiosky\Task\LicenseSyncTask::class]=['extension'=>'kiosky','title'=>'Kiosky: Lizenzfreigaben abgleichen','description'=>'Alle 15 Minuten fällige Modulfreigaben prüfen. Aufgabe jede Minute ausführen.'];
     $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kiosky\Kiosky\Task\MenuPdfSyncTask::class] = [
         'extension'=>'kiosky',
