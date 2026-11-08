@@ -14,6 +14,7 @@ require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
 require_once __DIR__.'/PresetHandoff.php';
 require_once __DIR__.'/PresetTriggers.php';
+require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 
@@ -1523,7 +1524,7 @@ final class Api
         if (preg_match('#^/api/v1/presets/([^/]+)/execute$#', $path, $match) && $method === 'POST') {
             $preset = $this->required($state['presets'], rawurldecode($match[1]), 'Preset');
             $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
-            if (($preset['type'] ?? '') !== 'emergency' && (array_key_exists('channelUpdates',$config)||array_key_exists('assignments',$config)||array_key_exists('schedules',$config))) {
+            if (($preset['type'] ?? '') !== 'emergency' && (array_key_exists('channelUpdates',$config)||array_key_exists('assignments',$config)||array_key_exists('schedules',$config)||array_key_exists('presetTimers',$config))) {
                 $execution=$this->executeStatePreset($state,$preset);
                 return $this->created(['execution'=>$execution]);
             }
@@ -1562,6 +1563,7 @@ final class Api
                 if (($body['endEmergency'] ?? false) === true) $this->endExternalWarnings($state);
                 $result = ['action' => 'reset', 'removedAssignments' => $removed, 'emergencyEnded' => ($body['endEmergency'] ?? false) === true];
             }
+            $timers=$this->queuePresetTimerActions($state,$preset);if($timers)$result['presetTimers']=$timers;
             $execution = $this->record(['presetId' => $preset['id'], 'targets' => $targets, 'result' => $result, 'executedAt' => $this->now()]);
             $state['presetExecutions'][] = $execution;
             $state['presetExecutions'] = array_slice($state['presetExecutions'], -100);
@@ -1630,11 +1632,11 @@ final class Api
     }
 
     /** Resolve time-only slots on the trigger day, using the external schedule contract. */
-    private function presetSchedules(array $config): array
+    private function presetSchedules(array $config,?int $at=null): array
     {
         if (!array_key_exists('schedules',$config)) return [];
         if (!is_array($config['schedules']) || !array_is_list($config['schedules']) || count($config['schedules'])>500) throw new RuntimeException('Ein Preset darf höchstens 500 Zeitzuweisungen enthalten.',422);
-        $at=time();
+        $at??=time();
         return array_map(static function(mixed $input) use($at): array {
             if (!is_array($input)) throw new RuntimeException('Ungültige Zeitzuweisung im Preset.',422);
             return ExternalSchedule::input($input,$at);
@@ -1642,6 +1644,13 @@ final class Api
     }
 
     /** Saved actions are shared by manual requests, cron and authenticated player polls. */
+    private function queuePresetTimerActions(array &$state,array $preset,?float $at=null): array
+    {
+        $config=is_array($preset['config'] ?? null)?$preset['config']:[];
+        if(!empty($config['presetTimers']))$this->license()->assertPath($state,'/api/schedules');
+        return PresetTimerActions::queue($state,$preset['id'],$config,$at);
+    }
+
     private function executeStoredPreset(array &$state,string $presetId,array $body=[]): array
     {
             $preset = $this->required($state['presets'], $presetId, 'Preset');
@@ -1650,6 +1659,7 @@ final class Api
                 $execution = $this->executeStatePreset($state,$preset);
                 return $this->ok(['result' => $execution['result']], true);
             }
+            $presetTimers=$this->queuePresetTimerActions($state,$preset);
             $targets = !empty($body['targets']) ? array_values(array_map('strval', $body['targets'])) : array_values(array_map('strval', $config['targets'] ?? []));
             if (!$targets) throw new RuntimeException('Das Preset enthält keine Zielbereiche.');
             $warning = $this->saveRecord($state, 'warnings', [
@@ -1661,7 +1671,7 @@ final class Api
                 'document' => $config['document'] ?? [], 'returnBehavior' => $config['returnBehavior'] ?? 'resume_current_schedule',
                 'status' => 'active', 'publishedAt' => $this->now(),
             ]);
-            return $this->created(['warning' => $warning]);
+            return $this->created(['warning' => $warning,'presetTimers'=>$presetTimers]);
     }
 
     private function runDuePresetTriggers(array &$state): int
@@ -1676,17 +1686,19 @@ final class Api
 
     private function executeStatePreset(array &$state,array $preset): array
     {
+        $executionAt=microtime(true);
         $config=is_array($preset['config'] ?? null)?$preset['config']:[];
         $channelUpdates = is_array($config['channelUpdates'] ?? null) ? $config['channelUpdates'] : [];
         $assignmentInputs = is_array($config['assignments'] ?? null) ? $config['assignments'] : [];
 
-        $scheduleInputs=$this->presetSchedules($config);
+        $scheduleInputs=$this->presetSchedules($config,(int)$executionAt);
         if($scheduleInputs)$this->license()->assertPath($state,'/api/schedules');
         foreach($scheduleInputs as $input){
             $this->required($this->active($state[$input['targetType']==='display'?'displays':'groups']),$input['targetId'],'Ziel');
             $this->required($this->active($state[$input['contentType']==='slide'?'slides':'channels']),$input['contentId'],'Inhalt');
         }
-        if (!$channelUpdates && !$assignmentInputs && !$scheduleInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
+        $timerInputs=PresetTimerActions::inputs($config,$executionAt);
+        if (!$channelUpdates && !$assignmentInputs && !$scheduleInputs && !$timerInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
         $updatedChannels = [];
         foreach ($channelUpdates as $update) {
             if (!is_array($update)) continue;
@@ -1706,9 +1718,10 @@ final class Api
         }
         $schedules=[];
         foreach($scheduleInputs as $input)$schedules[]=$this->collectionRoute($state,'POST','schedules','entry',$input)[1]['entry'];
+        $presetTimers=$this->queuePresetTimerActions($state,$preset,$executionAt);
         $targets=array_merge(array_map(static fn(array $item): array=>$item['target'],$assignments),array_map(static fn(array $item): array=>['type'=>$item['targetType'],'id'=>$item['targetId']],$scheduleInputs));
         $targets=array_values(array_unique($targets,SORT_REGULAR));
-        $execution = $this->record(['presetId' => $preset['id'], 'targets' => $targets, 'result' => ['action' => 'state_applied', 'schedules'=>$schedules, 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
+        $execution = $this->record(['presetId' => $preset['id'], 'targets' => $targets, 'result' => ['action' => 'state_applied', 'presetTimers'=>$presetTimers, 'schedules'=>$schedules, 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
         $state['presetExecutions'][] = $execution;
         $state['presetExecutions'] = array_slice($state['presetExecutions'], -100);
         return $execution;
@@ -2326,7 +2339,10 @@ final class Api
             if(!is_string($color)||!preg_match('/^#[0-9a-f]{6}$/i',$color))throw new RuntimeException('Die Display-Hintergrundfarbe muss eine sechsstellige Hex-Farbe sein, z. B. #000000.',422);
             $body['playerBackgroundColor']=strtolower($color);
         }
-        if($collection==='presets')$this->presetSchedules(is_array($body['config'] ?? null)?$body['config']:($current['config'] ?? []));
+        if($collection==='presets'){
+            $config=is_array($body['config'] ?? null)?$body['config']:($current['config'] ?? []);$this->presetSchedules($config);
+            $sourceId=$id ?: $this->uuid();$body['id']=$sourceId;PresetTimerActions::assertGraph($state['presets'],$sourceId,$config);
+        }
         if($collection==='channels'&&isset($body['items']))$body['items']=array_values(array_filter($body['items'],static fn(array $item):bool=>!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
         if($collection==='schedules'){
             $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');

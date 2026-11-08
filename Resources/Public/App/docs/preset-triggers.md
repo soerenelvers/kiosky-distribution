@@ -90,3 +90,5 @@ interne API-Vertrag lautet `GET/POST /api/preset-triggers` und
 `weekdays`, optional `until` und `enabled`. Die GET-Antwort enthält `data`,
 `runs` und `serverTime`. Die vorhandene Companion-Auslösung von Presets bleibt
 unverändert; die Termine laufen nach ihrer Einrichtung selbständig.
+
+Ab 3.32.0 können [Folge-Preset-Timer direkt in einem Preset](preset-followups.md) gespeichert und erst bei dessen Aufruf angelegt werden.

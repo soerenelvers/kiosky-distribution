@@ -43,6 +43,7 @@ final class ExternalSchedule
         if (!$candidates) self::fail('Diese lokale Uhrzeit existiert wegen der Zeitumstellung nicht.');
         return gmdate('Y-m-d\TH:i:s',min($candidates)).'.000Z';
     }
+    public static function localTimestamp(string $value,string $timezone): string { return self::local($value,new DateTimeZone($timezone)); }
     public static function input(array $input, ?int $now = null): array
     {
         $target = $input['target'] ?? null; $content = $input['content'] ?? null; $timing = $input['timing'] ?? null;

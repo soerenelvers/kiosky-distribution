@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kiosky\Core;
 require_once __DIR__.'/PresetTriggers.php';
+require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 
@@ -178,6 +179,7 @@ final class TransferService
             $state[$collection] = array_merge($state[$collection] ?? [], $records);
             $counts[$collection] = count($records);
         }
+        foreach($state['presets'] ?? [] as $preset)if(isset($maps['presets'])&&in_array($preset['id'],array_values($maps['presets']),true))PresetTimerActions::assertGraph($state['presets'],$preset['id'],$preset['config'] ?? []);
         $presetTriggers=$sections['operations']['presetTriggers'] ?? [];
         if(!is_array($presetTriggers)||count($presetTriggers)>500)throw new RuntimeException('Ungültige Preset-Termine im Transferpaket.',422);
         foreach($presetTriggers as $source){

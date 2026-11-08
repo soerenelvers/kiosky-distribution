@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.31.0-20261108170447%2B74607865">
+  <link rel="stylesheet" href="styles.css?v=3.32.0-20261108183000%2Bc3c6e06e">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1575,6 +1575,7 @@
 
   <dialog id="preset-dialog" class="wide-dialog"><form class="dialog-content" id="preset-form"><button class="dialog-close" type="button" data-close-dialog="preset-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">⌑</span><p class="eyebrow">Betriebsablauf</p><h2 id="preset-dialog-title">Preset anlegen</h2><input id="preset-edit-id" type="hidden"><div class="form-grid"><label class="form-field"><span>Name</span><input id="preset-name" type="text" required></label><label class="form-field"><span>Typ</span><select id="preset-type"><option value="channel">Zustands-Preset</option><option value="emergency">Warnhinweis-Preset</option><option value="reset">Reset / Standard</option></select></label></div>
     <section id="preset-state-fields" class="preset-state-builder"><div class="preset-builder-head"><div><strong>Kanalinhalte setzen</strong><small>Beim Auslösen werden die gewählten Slides in dieser Reihenfolge in den Kanal geschrieben.</small></div><button class="button button-secondary" type="button" data-add-preset-channel>＋ Kanalzustand</button></div><div id="preset-channel-actions"></div><div class="preset-builder-head"><div><strong>Content ausspielen</strong><small>Kanäle oder einzelne Slides direkt Displays, Gruppen oder Matrix-Displays zuweisen.</small></div><button class="button button-secondary" type="button" data-add-preset-assignment>＋ Zuweisung</button></div><div id="preset-assignment-actions"></div><div class="preset-builder-head"><div><strong>Zeitzuweisungen vorbereiten</strong><small>Beim Aufrufen veröffentlicht das Preset diese Einträge im regulären Zeitplan. Nach dem Ende greift wieder der sonst gültige Inhalt.</small></div><button class="button button-secondary" type="button" data-add-preset-schedule>＋ Zeitzuweisung</button></div><div id="preset-schedule-actions"></div></section>
+    <section class="preset-state-builder" id="preset-timer-fields"><div class="preset-builder-head"><div><strong>Weiteres Preset zeitgesteuert starten</strong><small>Beim Aufrufen dieses Presets werden einmalige Folge-Timer angelegt. Die übrigen Aktionen bleiben erhalten.</small></div><button class="button button-secondary" type="button" data-add-preset-timer>＋ Preset-Timer</button></div><div id="preset-timer-actions"></div><p class="property-note">Uhrzeit am Auslösetag oder festes Datum wählen. Der Zeitpunkt muss beim Aufrufen noch in der Zukunft liegen. Geplante Folge-Presets findest du anschließend auch in der Zeitplanung.</p></section>
     <section id="preset-warning-fields">
       <div class="form-grid"><label class="form-field span-two"><span>Vorlage</span><select id="preset-template"><option value="">Ohne Vorlage</option></select></label><label class="form-field"><span>Warnungstyp</span><select id="preset-alert-type"><option value="evacuation">Evakuierung</option><option value="weather">Unwetter</option><option value="security">Sicherheitslage</option><option value="technical">Technische Störung</option><option value="info">Information</option></select></label><label class="form-field"><span>Warnstufe</span><select id="preset-severity"><option value="1">1 · Hinweis</option><option value="2">2 · Wetterwarnung</option><option value="3" selected>3 · Markante Warnung</option><option value="4">4 · Unwetter</option><option value="5">5 · Extreme Gefahr</option></select></label><label class="form-field span-two"><span>Überschrift</span><input id="preset-alert-title" type="text"></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="preset-alert-description" rows="2"></textarea></label><label class="form-field span-two"><span>Handlungsanweisung</span><textarea id="preset-alert-message" rows="3"></textarea></label><label class="form-field"><span>Priorität</span><input id="preset-priority" type="number" min="0" max="1000" value="900"></label><label class="form-field"><span>Laufzeit</span><select id="preset-duration"><option value="0">Manuell beenden</option><option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option><option value="120">2 Stunden</option></select></label></div>
       <section class="warning-preset-designer" aria-labelledby="warning-preset-designer-title">
@@ -1747,10 +1748,10 @@
       <div class="tour-actions"><button class="button button-secondary" id="tour-previous" type="button">Zurück</button><button class="button button-primary" id="tour-next" type="button">Weiter</button></div>
     </aside>
   </div>
-  <script src="runtime-config.js?v=3.31.0-20261108170447%2B74607865"></script>
-  <script src="player/fullscreen-control.js?v=3.31.0-20261108170447%2B74607865"></script>
-  <script src="player/media-placement.js?v=3.31.0-20261108170447%2B74607865"></script>
-  <script src="player/editor-alignment.js?v=3.31.0-20261108170447%2B74607865"></script>
-  <script src="app.js?v=3.31.0-20261108170447%2B74607865"></script>
+  <script src="runtime-config.js?v=3.32.0-20261108183000%2Bc3c6e06e"></script>
+  <script src="player/fullscreen-control.js?v=3.32.0-20261108183000%2Bc3c6e06e"></script>
+  <script src="player/media-placement.js?v=3.32.0-20261108183000%2Bc3c6e06e"></script>
+  <script src="player/editor-alignment.js?v=3.32.0-20261108183000%2Bc3c6e06e"></script>
+  <script src="app.js?v=3.32.0-20261108183000%2Bc3c6e06e"></script>
 </body>
 </html>
