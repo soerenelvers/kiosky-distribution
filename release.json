@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "0b5ad4f36b77c8bf305aa358209c5efd8a6892ca",
+  "source_commit": "494a3b2fe5790b62133ada7b4ec2426cca2d58fb",
   "product": "kiosky",
-  "version": "3.30.1",
-  "released_at": "2026-11-08T13:46:30.844Z",
+  "version": "3.30.2",
+  "released_at": "2026-11-08T15:54:08.921Z",
   "channel": "stable",
-  "release_notes": "## [3.30.1] – 2026-11-08\n\n- Countdown-Elemente, Event-/Ablauf-Countdowns, Lauftexte und Wegweisungen mit der bereits synchronisierten Serverzeit aktualisieren; tägliche und zeitzonenlose Zielzeiten in der Standort-Zeitzone auswerten, einschließlich Sommer-/Winterzeit.\n- Den ersten Event-Countdown-Zielpunkt erst mit Serverzeit festlegen, damit eine falsche PC-Uhr keinen späteren Ablaufpunkt auswählt oder den Countdown vorzeitig ausblendet.\n- Beim Start eines neuen Windows-Downloads die laufende kanonische Installation gezielt ablösen und ersetzen, statt den Download wegen einer laufenden Kopie zu ignorieren; Kopplung, Autostart und separate Multi-Display-Instanzen behalten.\n- Unter Linux/Mint und macOS neue Downloads als aktive Standardinstallation übernehmen, frühere verwaltete Standardplayer und deren Autostarts ablösen und die Kopplungsprofile erhalten. Explizite Linux-Multi-Display-Instanzen sowie fremde Autostarts bleiben erhalten.\n- Die automatischen Update-Routinen und ihre Rücknahme beibehalten; Windows-Updater beim manuellen Wechsel zuverlässig neu starten und native Austausch-/Kopplungstests ergänzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.30.1",
+  "release_notes": "## [3.30.2] – 2026-11-08\n\n- Windows-Player als monitorfüllendes Topmost-Fenster am Shell anmelden und Vollbild nach verlorener Fensterpriorität, Minimierung oder Explorer-Neustart wiederherstellen; F11-Fenstermodus und F10-Instanzverwaltung erhalten.\n- Linux-/Mint-Kioskfenster auch ohne feste Monitorzuordnung über normalen Anwendungen und Panels halten; Fensterzustände regelmäßig anhand der eigenen Installations-/Instanzkennung prüfen und Monitorwechsel berücksichtigen.\n- Menü-/Scrollleisten in Firefox-Profilen sowie Chromium-Playern auf Windows, Linux, macOS und Raspberry Pi ausblenden; vorhandene Firefox-Profilanpassungen behalten.\n- Gemeinsame Vollbildanforderung um ausgeblendete Navigation, Safari-Unterstützung und Wiederanlauf nach Sichtbarkeitswechsel ergänzen; Windows-Host auch bei bestehendem DOM-Vollbild erneut ansprechen.\n- Native Windows- und Linux-Fenster-/Wiederherstellungstests sowie gemeinsame Vollbild- und macOS-Startargumentprüfungen ergänzen; alle drei Distributionsvarianten gemeinsam aktualisieren.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.30.2",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.30.1",
+    "core_version": "3.30.2",
     "api_version": "1",
-    "wordpress_plugin_version": "3.30.1",
-    "typo3_extension_version": "3.30.1"
+    "wordpress_plugin_version": "3.30.2",
+    "typo3_extension_version": "3.30.2"
   },
   "components": {
     "core": {
-      "version": "3.30.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.1.zip?ref=v3.30.1",
-      "sha256": "34913204a754664a9ae72fcbc0cf9330376b4c71fb50a9f23377563331ba4927"
+      "version": "3.30.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.2.zip?ref=v3.30.2",
+      "sha256": "6ddf233ed34550ca61e80fe05c119b8f1b15d7d1bf641f30af8f2b1d38c9431b"
     },
     "standalone": {
-      "version": "3.30.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.1.zip?ref=v3.30.1",
-      "sha256": "34913204a754664a9ae72fcbc0cf9330376b4c71fb50a9f23377563331ba4927"
+      "version": "3.30.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.30.2.zip?ref=v3.30.2",
+      "sha256": "6ddf233ed34550ca61e80fe05c119b8f1b15d7d1bf641f30af8f2b1d38c9431b"
     },
     "wordpress": {
-      "version": "3.30.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.30.1.zip?ref=v3.30.1",
-      "sha256": "b939a021ed02aa840f42f9bb0d4a043c3a067432797062935f2b8612eb1cd88f",
+      "version": "3.30.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.30.2.zip?ref=v3.30.2",
+      "sha256": "76bcf575c8843c710eafe83e539d51ebaf76412f944e0c7ae3f7b6ec9e64ee8b",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.30.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.30.1.zip?ref=v3.30.1",
-      "sha256": "274ba45db36dcb993530ab25d97e7d09712300f6c0df3a4e3c64399da8becd5e",
+      "version": "3.30.2",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.30.2.zip?ref=v3.30.2",
+      "sha256": "16fd9e1cc8cf305c5f5e49f04c4c964bcc85ddc463d3677fc91b1f1a4ba369d2",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -158,3 +158,5 @@ Die aktive Standardadresse steht als Kennung in `kiosky/players/primary.json`;
 unter den bisherigen adressgebundenen Verzeichnissen bleiben die Profile erhalten.
 Weitere gleichzeitig laufende Ausgaben ausschließlich in der Multi-Display-
 Instanzverwaltung anlegen.
+
+Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.

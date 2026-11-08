@@ -101,7 +101,7 @@ if [ "${1:-}" = --managed ];then
         [ -n "$browser" ] && printf '%s' "$browser" > "$root/browser.path"
     fi
     [ -x "$browser" ] || exit 3
-    "$browser" --kiosk --start-fullscreen --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--user-data-dir=$root/profile" "$url" >/dev/null 2>&1 &
+    "$browser" --kiosk --start-fullscreen --new-window --hide-scrollbars --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--user-data-dir=$root/profile" "$url" >/dev/null 2>&1 &
     player=$!
     trap 'kill "$player" 2>/dev/null || :; wait "$player" 2>/dev/null || :' EXIT
     trap 'exit 0' INT TERM

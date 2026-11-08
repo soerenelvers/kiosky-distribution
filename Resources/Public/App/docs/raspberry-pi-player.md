@@ -133,3 +133,5 @@ Er erstellt eine unveränderliche **Vorabversion**, ohne den neuesten Kiosky-Sta
 zu ersetzen. `images.json` dokumentiert Herkunft, Größen und Prüfsummen. Bereits
 existierende Image-Versionen werden nicht überschrieben. Neue Versionen benötigen
 neue Versionsnummern und entsprechend aktualisierte Links im Player Center.
+
+Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.

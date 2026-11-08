@@ -133,3 +133,5 @@ gehörende Playerfenster mit überprüftem Programmpfad. Ein absichtlich deaktiv
 Autostart und die adressgebundenen Kopplungsprofile bleiben erhalten. Ausdrücklich
 angelegte Multi-Display-Instanzen werden dabei nicht beendet oder neu gekoppelt.
 Ein älterer Download derselben Serverbindung setzt eine neuere Version nicht zurück.
+
+Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.

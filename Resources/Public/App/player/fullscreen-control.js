@@ -22,19 +22,37 @@
       finish(!error&&result?.ok===true);
     });}catch{finish(false);}
   });
+  const isFullscreen=()=>Boolean(document.fullscreenElement||document.webkitFullscreenElement);
   const domFullscreen=async()=>{
-    try{await document.documentElement.requestFullscreen();return Boolean(document.fullscreenElement);}catch{return false;}
+    const element=document.documentElement;
+    try{
+      if(typeof element.requestFullscreen==='function')await element.requestFullscreen({navigationUI:'hide'});
+      else if(typeof element.webkitRequestFullscreen==='function')return await new Promise(resolve=>{
+        let done=false;
+        const finish=()=>{if(done)return;done=true;clearTimeout(timer);document.removeEventListener?.('webkitfullscreenchange',finish);document.removeEventListener?.('webkitfullscreenerror',finish);resolve(isFullscreen());};
+        const timer=setTimeout(finish,4000);
+        document.addEventListener?.('webkitfullscreenchange',finish);
+        document.addEventListener?.('webkitfullscreenerror',finish);
+        try{element.webkitRequestFullscreen();if(isFullscreen())finish();}catch{finish();}
+      });
+      return isFullscreen();
+    }catch{return false;}
   };
   async function request(userGesture=false){
-    if(document.fullscreenElement)return true;
+    // The embedded host must restore its native window even when DOM fullscreen remains active.
+    if(typeof window.chrome?.webview?.postMessage==='function')return nativeFullscreen();
+    if(isFullscreen())return true;
     if(userGesture&&await domFullscreen())return true;
     if(await nativeFullscreen())return true;
     return userGesture?false:domFullscreen();
   }
+  let started=false;
   function start(){
+    if(started)return;started=true;
     const clearRetry=()=>{document.removeEventListener?.('pointerdown',enter);document.removeEventListener?.('keydown',enter);};
     const enter=()=>{void request(true).then(ok=>{if(ok)clearRetry();});};
     void request().then(ok=>{if(ok)clearRetry();});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void request();});
     document.addEventListener('pointerdown',enter,{once:true});
     document.addEventListener('keydown',enter,{once:true});
   }

@@ -1,7 +1,7 @@
-## [3.30.1] – 2026-11-08
+## [3.30.2] – 2026-11-08
 
-- Countdown-Elemente, Event-/Ablauf-Countdowns, Lauftexte und Wegweisungen mit der bereits synchronisierten Serverzeit aktualisieren; tägliche und zeitzonenlose Zielzeiten in der Standort-Zeitzone auswerten, einschließlich Sommer-/Winterzeit.
-- Den ersten Event-Countdown-Zielpunkt erst mit Serverzeit festlegen, damit eine falsche PC-Uhr keinen späteren Ablaufpunkt auswählt oder den Countdown vorzeitig ausblendet.
-- Beim Start eines neuen Windows-Downloads die laufende kanonische Installation gezielt ablösen und ersetzen, statt den Download wegen einer laufenden Kopie zu ignorieren; Kopplung, Autostart und separate Multi-Display-Instanzen behalten.
-- Unter Linux/Mint und macOS neue Downloads als aktive Standardinstallation übernehmen, frühere verwaltete Standardplayer und deren Autostarts ablösen und die Kopplungsprofile erhalten. Explizite Linux-Multi-Display-Instanzen sowie fremde Autostarts bleiben erhalten.
-- Die automatischen Update-Routinen und ihre Rücknahme beibehalten; Windows-Updater beim manuellen Wechsel zuverlässig neu starten und native Austausch-/Kopplungstests ergänzen.
+- Windows-Player als monitorfüllendes Topmost-Fenster am Shell anmelden und Vollbild nach verlorener Fensterpriorität, Minimierung oder Explorer-Neustart wiederherstellen; F11-Fenstermodus und F10-Instanzverwaltung erhalten.
+- Linux-/Mint-Kioskfenster auch ohne feste Monitorzuordnung über normalen Anwendungen und Panels halten; Fensterzustände regelmäßig anhand der eigenen Installations-/Instanzkennung prüfen und Monitorwechsel berücksichtigen.
+- Menü-/Scrollleisten in Firefox-Profilen sowie Chromium-Playern auf Windows, Linux, macOS und Raspberry Pi ausblenden; vorhandene Firefox-Profilanpassungen behalten.
+- Gemeinsame Vollbildanforderung um ausgeblendete Navigation, Safari-Unterstützung und Wiederanlauf nach Sichtbarkeitswechsel ergänzen; Windows-Host auch bei bestehendem DOM-Vollbild erneut ansprechen.
+- Native Windows- und Linux-Fenster-/Wiederherstellungstests sowie gemeinsame Vollbild- und macOS-Startargumentprüfungen ergänzen; alle drei Distributionsvarianten gemeinsam aktualisieren.

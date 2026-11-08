@@ -141,3 +141,5 @@ identischer Stapelzeit, Erstellungszeit und Priorität gilt Display vor Matrix v
 Die CMS-Ausgaben halten Gruppenmitgliedschaften bei Änderungen am Display und an der Gruppe in beiden Richtungen synchron; reine Gruppen-Umbenennungen behalten die Mitglieder.
 
 API-Reset-Presets und `/api/v1/presets/stop` erhalten aktive Warnungen standardmäßig. Ein ausdrückliches `endEmergency: true` bzw. `endWarnings: true` oder die separate Warnung-beenden-Aktion beendet sie weiterhin.
+
+Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.
