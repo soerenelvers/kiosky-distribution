@@ -287,3 +287,14 @@ Die Uhr-Overlay-Regression `python3 tests/clock-overlay-browser-smoke.py` prüft
 Geräteuhrabweichung, Standortwechsel, Zoom auf Desktop/Smartphone/Tablet und
 dauerhafte Speicherung von Zoom und Standort-Zeitzone. Einrichtung wie bei den
 anderen Chromium-/Playwright-Browserprüfungen.
+
+## Listensortierung
+
+Veranstaltungen werden in der Programmverwaltung standardmäßig nach Termin
+aufsteigend angezeigt. Jede Datenspalte lässt sich über die Überschrift in beiden
+Richtungen sortieren; die zusätzliche Auswahl funktioniert auch mobil. Slides
+bieten Sortierfelder für Name, Veranstaltungsdatum, Quelle, Status, Typ, Format,
+Sichtbarkeitsgrenzen, Erstellung, Änderung, Version und Tags. Die Sortierung gilt
+nur für die Verwaltung, verändert keine Kanalabfolge und erhält die Auswahl.
+Fehlende Werte stehen in beiden Richtungen am Ende; gleiche Werte bleiben stabil.
+Nach einem Neuladen gilt für Veranstaltungen wieder die chronologische Vorgabe.

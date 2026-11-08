@@ -9,7 +9,7 @@ use RuntimeException;
 /** CMS counterpart of the standalone advertising generator; works only on the current state snapshot. */
 final class AdvertisingService
 {
-    private const DEFAULTS = ['enabled'=>false,'maximumSlides'=>15,'maximumEvents'=>15,'eventTypes'=>[],'eventTypeDefaultMedia'=>[],
+    private const DEFAULTS = ['interstitialSlideIds'=>[],'channelSequences'=>[],'enabled'=>false,'maximumSlides'=>15,'maximumEvents'=>15,'eventTypes'=>[],'eventTypeDefaultMedia'=>[],
         'durationSeconds'=>12,'showDate'=>false,'showTime'=>true,'showSeconds'=>false,'hour12'=>false,
         'channelName'=>'Werbung','locationIds'=>[],'templateLandscapeId'=>null,'templatePortraitId'=>null];
 
@@ -51,7 +51,16 @@ final class AdvertisingService
         foreach ($settings['locationIds'] as $id) if (!self::find($state['locations'],$id)) throw new RuntimeException('Ein ausgewählter Standort wurde nicht gefunden.',422);
         $settings['eventTypeDefaultMedia'] = $media;
         foreach(['templateLandscapeId','templatePortraitId'] as $field)if(!empty($settings[$field])){ $t=self::find($state['templates'],(string)$settings[$field]);if(!$t||!empty($t['deletedAt'])||($t['status'] ?? '')==='archived')throw new RuntimeException('Die ausgewählte Werbevorlage wurde nicht gefunden.',422); }
+        $settings['channelSequences']=$previous['channelSequences'];
+        $settings['interstitialSlideIds']=$input['interstitialSlideIds'] ?? $previous['interstitialSlideIds'];
+        if(!is_array($settings['interstitialSlideIds']))throw new RuntimeException('Ungültige Zwischenslides.',422);
+        foreach(['landscape','portrait'] as $orientation){
+            $ids=$settings['interstitialSlideIds'][$orientation] ?? [];
+            if(!is_array($ids)||count($ids)>10)throw new RuntimeException('Höchstens zehn Zwischenslides je Format.',422);
+            foreach($ids as $id){$slide=is_string($id)?self::find($state['slides'],$id):null;if(!$slide||!empty($slide['deletedAt'])||!empty($slide['archivedAt']))throw new RuntimeException('Eine ausgewählte Zwischenslide wurde nicht gefunden.',422);}
+        }
         $state['advertisingSettings'] = $settings;
+        if($settings['enabled']&&!$previous['enabled']){foreach($state['channels'] as &$channel)if(in_array($channel['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true))$channel['status']='published';unset($channel);}
     }
 
     public static function status(array $state): array
@@ -97,9 +106,9 @@ final class AdvertisingService
             $key=$orientation==='landscape'?'advertising:channel':'advertising:channel:portrait';$channel=null;
             foreach($state['channels'] as $index=>$item)if(($item['automationKey'] ?? '')===$key){$channel=$item;$channelIndex=$index;break;}
             if($settings['enabled']){
-                $items=array_values(array_filter(self::playlist($state,$orientation),static fn(array $item):bool=>empty($item['slide'])));
+                $items=array_values(array_filter(self::playlist($state,$orientation),static fn(array $item):bool=>empty($item['slide'])&&empty($item['advertisingInterstitial'])));
                 $body=['name'=>$settings['channelName'].($orientation==='landscape'?' quer':' Hochkant'),'description'=>'Automatisch: Werbe-Tags und virtuelle Veranstaltungswerbung','status'=>'published','orientation'=>$orientation,'defaultTransition'=>'fade','repeatEnabled'=>true,'items'=>$items,'totalDurationSeconds'=>count($items)*$settings['durationSeconds'],'tags'=>['Werbung','Automatisch',$orientation==='landscape'?'Werbung quer':'Werbung Hochkant'],'locationIds'=>$settings['locationIds'],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
-                if(!$channel||array_replace($channel,$body)!==$channel)$saveChannel($body,$channel['id'] ?? null);
+                if(!$channel)$saveChannel($body,null);else{$body['items']=$items;$body['status']=$channel['status'];$body['description']=$channel['description'] ?? $body['description'];$body['tags']=$channel['tags'] ?? $body['tags'];$body['defaultTransition']=$channel['defaultTransition'];$body['repeatEnabled']=$channel['repeatEnabled'];$state['channels'][$channelIndex]=array_replace($channel,$body);}
             }elseif($channel)$state['channels'][$channelIndex]['status']='paused';
         }
         $state['advertisingLastSynchronizedAt'] = gmdate('c');
@@ -111,9 +120,17 @@ final class AdvertisingService
         $settings=self::settings($state);if(!$settings['enabled'])return [];
         $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=time())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>time())));
         usort($manual,static fn(array $a,array $b):int=>[$a['endsAt'] ?? '',$a['id']]<=>[$b['endsAt'] ?? '',$b['id']]);
-        $remaining=max(0,$settings['maximumSlides']-count($manual));
-        $selected=array_slice(array_merge($manual,$remaining?self::virtualSlides($state,$orientation,$remaining):[]),0,$settings['maximumSlides']);
-        return array_map(static fn(array $s):array=>['slideId'=>$s['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit']+(!empty($s['virtual'])?['slide'=>$s]:[]),$selected);
+        $events=self::virtualSlides($state,$orientation);$byId=array_column(array_merge($manual,$events),null,'id');
+        $active=static fn(array $s):bool=>empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=time())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>time());
+        $selected=[];$seen=[];
+        foreach($settings['channelSequences'][$orientation] ?? [] as $item){
+            $slide=$byId[$item['slideId']] ?? (!str_starts_with($item['slideId'],'advertising-event:')?self::find($state['slides'],$item['slideId']):null);
+            if($slide&&$active($slide)){$selected[]=$item+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
+        }
+        foreach(array_merge(array_slice($manual,0,$settings['maximumSlides']),$events) as $slide)if(!isset($seen[$slide['id']])){$selected[]=['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit']+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
+        $extras=[];foreach($settings['interstitialSlideIds'][$orientation] ?? [] as $id){$slide=self::find($state['slides'],$id);if($slide&&$active($slide))$extras[]=$slide;}
+        $result=[];$index=0;foreach($selected as $item){$result[]=$item;if(!empty($item['slide']['virtual'])&&++$index<count($events))foreach($extras as $slide)$result[]=['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit','advertisingInterstitial'=>true];}
+        return $result;
     }
 
     public static function virtualSlides(array $state,string $orientation,?int $limit=null): array
@@ -125,7 +142,7 @@ final class AdvertisingService
         $assets=array_column($state['mediaAssets'],null,'id');$fallbacks=[];
         foreach($settings['eventTypeDefaultMedia'] as $type=>$assetId)if(isset($assets[$assetId])&&empty($assets[$assetId]['deletedAt']))$fallbacks[self::normalizeType($type)]=$assets[$assetId];
         $result=[];
-        foreach(array_slice(self::eligible($state,$settings),0,min($settings['maximumEvents'],$settings['maximumSlides'],$limit ?? $settings['maximumEvents'])) as $event){
+        foreach(array_slice(self::eligible($state,$settings),0,min($settings['maximumEvents'],$limit ?? $settings['maximumEvents'])) as $event){
             $document=$base;$fallback=$fallbacks[self::normalizeType($event['eventType'] ?? '')] ?? null;
             $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl']));
             $document=array_replace($document,['elements'=>$elements,'responsiveLayouts'=>[$orientation=>$elements],'designOrientation'=>$orientation,'orientation'=>$orientation,'type'=>'event','width'=>$orientation==='portrait'?1080:1920,'height'=>$orientation==='portrait'?1920:1080]);
@@ -140,6 +157,22 @@ final class AdvertisingService
         if(!in_array($channel['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true)||!self::settings($state)['enabled'])return $channel;
         $channel['items']=self::playlist($state,($channel['automationKey'] ?? '')==='advertising:channel:portrait'?'portrait':'landscape');
         $channel['totalDurationSeconds']=array_sum(array_column($channel['items'],'durationSeconds'));return $channel;
+    }
+
+    /** Only public event fields are embedded in runtime output; never persist this projection. */
+    public static function overviewSlide(array $slide,array $events):array
+    {
+        $selected=null;
+        $visit=function($value)use(&$visit,&$selected,$events){
+            if(!is_array($value))return $value;
+            if(($value['type'] ?? '')==='event-overview'){
+                if($selected===null){$selected=array_values(array_filter($events,static fn(array $e):bool=>empty($e['deletedAt'])&&empty($e['archivedAt'])&&!in_array($e['status'] ?? '',['cancelled','archived'],true)&&(!empty($e['eventEnd'])||!empty($e['eventStart'])?(strtotime((string)($e['eventEnd'] ?? $e['eventStart'])) ?: 0)>=time():substr(preg_replace('/\D/','',(string)($e['date'] ?? '')),0,8)>=(new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd'))));usort($selected,static fn(array $a,array $b):int=>[strtotime((string)($a['eventStart'] ?? $a['date'] ?? '')) ?: 0,$a['id']]<=>[strtotime((string)($b['eventStart'] ?? $b['date'] ?? '')) ?: 0,$b['id']]);}
+                $count=in_array((int)($value['eventCount'] ?? 6),[6,10,15],true)?(int)($value['eventCount'] ?? 6):6;
+                $value['events']=array_map(static fn(array $e):array=>array_intersect_key($e,array_flip(['id','title','subtitle','date','eventStart','admissionStart','imageUrl','ticketUrl','ticketLink','ticketStatus'])),array_slice($selected,0,$count));return $value;
+            }
+            foreach($value as $key=>$item)$value[$key]=$visit($item);return $value;
+        };
+        return $visit($slide);
     }
 
     public static function formats(array $slide): array

@@ -1,7 +1,11 @@
-## [3.32.0] – 2026-11-08
+## [3.33.0] – 2026-11-08
 
-- In Presets zusätzliche Folge-Preset-Timer mit Uhrzeit am Auslösetag oder festem Datum und eigener Zeitzone vorbereiten; erst beim Aufrufen anlegen und mit bisherigen Kanal-, Ausspiel- und Zeitzuweisungen kombinieren.
-- Dieselben Folgeaktionen für Oberfläche, API, Companion, geplante Presets und Warn-Presets ausführen; reine Timer-Presets unterstützen und Aktionen samt Timer-Erzeugung atomar speichern.
-- Selbstaufrufe, indirekte Schleifen, fehlende/archivierte Ziele und überlange Ketten beim Speichern und Auslösen abweisen; automatisch erzeugte Einmal-Timer nach Verarbeitung aus der aktiven Liste entfernen und das Protokoll erhalten.
-- Vorwärtsverweise beim Systemtransfer zwischen allen drei Varianten neu zuordnen und validieren; Hintergrundbetrieb und bisherige Preset-/Warnungsprioritäten erhalten.
-- Tests für mehrstufige Ausführung, parallele Prozesse, Fehler-Rollback, API/Companion, native CMS-Persistenz und responsive Bearbeitung ergänzen.
+- Event-Stempeltext mit denselben öffentlichen Feld-Platzhaltern wie in Event-Tabellen füllen; Einfügehilfe, sichere Ausgabe und bestehende unabhängige Sichtbarkeitsbedingungen unterstützen.
+
+- Programmverwaltung standardmäßig chronologisch sortieren; alle Datenspalten per Überschrift oder mobiler Auswahl auf-/absteigend sortierbar machen und entsprechende Sortierung für Slide-Metadaten anbieten.
+
+- Automatische Werbekanäle in Slides & Kanäle anzeigen und manuelle Ergänzungen, Reihenfolge, Dauer sowie Übergänge bei Synchronisierung erhalten.
+- Je Format bis zu zehn wiederkehrende Zwischenslides zwischen Veranstaltungswerbungen definieren; Veranstaltungsplätze unabhängig von zusätzlicher Werbung zählen.
+- Dynamische Übersichts-Slides für sechs Veranstaltungen quer sowie zehn oder fünfzehn hochkant mit Bild, Ticket-QR-Code, Datum, Titel, Untertitel, Beginn und Einlass anbieten; auch ohne Werbeautomatik.
+- Gemeinsame Vorschau und laufende Ausgabe aktualisieren Veranstaltungsdaten ohne Slide-Kopien; private Notizen ausschließen und fehlende Ticket-Links ausblenden.
+- Identische Regeln in Standalone, WordPress und TYPO3 mit Regressionstests für Abfolgen, Ablauf, Synchronisierung und Live-Ausgabe.

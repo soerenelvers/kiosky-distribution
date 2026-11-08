@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "c3c6e06ea6aafd51611ed0170b66c8c5bcad116a",
+  "source_commit": "34712bf388426e376f7e1722182dcdab45cbe04e",
   "product": "kiosky",
-  "version": "3.32.0",
-  "released_at": "2026-11-08T18:30:02.026Z",
+  "version": "3.33.0",
+  "released_at": "2026-11-08T20:45:25.930Z",
   "channel": "stable",
-  "release_notes": "## [3.32.0] – 2026-11-08\n\n- In Presets zusätzliche Folge-Preset-Timer mit Uhrzeit am Auslösetag oder festem Datum und eigener Zeitzone vorbereiten; erst beim Aufrufen anlegen und mit bisherigen Kanal-, Ausspiel- und Zeitzuweisungen kombinieren.\n- Dieselben Folgeaktionen für Oberfläche, API, Companion, geplante Presets und Warn-Presets ausführen; reine Timer-Presets unterstützen und Aktionen samt Timer-Erzeugung atomar speichern.\n- Selbstaufrufe, indirekte Schleifen, fehlende/archivierte Ziele und überlange Ketten beim Speichern und Auslösen abweisen; automatisch erzeugte Einmal-Timer nach Verarbeitung aus der aktiven Liste entfernen und das Protokoll erhalten.\n- Vorwärtsverweise beim Systemtransfer zwischen allen drei Varianten neu zuordnen und validieren; Hintergrundbetrieb und bisherige Preset-/Warnungsprioritäten erhalten.\n- Tests für mehrstufige Ausführung, parallele Prozesse, Fehler-Rollback, API/Companion, native CMS-Persistenz und responsive Bearbeitung ergänzen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.32.0",
+  "release_notes": "## [3.33.0] – 2026-11-08\n\n- Event-Stempeltext mit denselben öffentlichen Feld-Platzhaltern wie in Event-Tabellen füllen; Einfügehilfe, sichere Ausgabe und bestehende unabhängige Sichtbarkeitsbedingungen unterstützen.\n\n- Programmverwaltung standardmäßig chronologisch sortieren; alle Datenspalten per Überschrift oder mobiler Auswahl auf-/absteigend sortierbar machen und entsprechende Sortierung für Slide-Metadaten anbieten.\n\n- Automatische Werbekanäle in Slides & Kanäle anzeigen und manuelle Ergänzungen, Reihenfolge, Dauer sowie Übergänge bei Synchronisierung erhalten.\n- Je Format bis zu zehn wiederkehrende Zwischenslides zwischen Veranstaltungswerbungen definieren; Veranstaltungsplätze unabhängig von zusätzlicher Werbung zählen.\n- Dynamische Übersichts-Slides für sechs Veranstaltungen quer sowie zehn oder fünfzehn hochkant mit Bild, Ticket-QR-Code, Datum, Titel, Untertitel, Beginn und Einlass anbieten; auch ohne Werbeautomatik.\n- Gemeinsame Vorschau und laufende Ausgabe aktualisieren Veranstaltungsdaten ohne Slide-Kopien; private Notizen ausschließen und fehlende Ticket-Links ausblenden.\n- Identische Regeln in Standalone, WordPress und TYPO3 mit Regressionstests für Abfolgen, Ablauf, Synchronisierung und Live-Ausgabe.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.33.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.32.0",
+    "core_version": "3.33.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.32.0",
-    "typo3_extension_version": "3.32.0"
+    "wordpress_plugin_version": "3.33.0",
+    "typo3_extension_version": "3.33.0"
   },
   "components": {
     "core": {
-      "version": "3.32.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.32.0.zip?ref=v3.32.0",
-      "sha256": "1e9406be539587205ca17f64f890e653879214c43753ab9f4a2efa238dbedf12"
+      "version": "3.33.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.33.0.zip?ref=v3.33.0",
+      "sha256": "acc4a3ac564a8cc909fed3d0cbbfbc9a0a932e3b3941bea242f4c57e1b5cb46c"
     },
     "standalone": {
-      "version": "3.32.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.32.0.zip?ref=v3.32.0",
-      "sha256": "1e9406be539587205ca17f64f890e653879214c43753ab9f4a2efa238dbedf12"
+      "version": "3.33.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.33.0.zip?ref=v3.33.0",
+      "sha256": "acc4a3ac564a8cc909fed3d0cbbfbc9a0a932e3b3941bea242f4c57e1b5cb46c"
     },
     "wordpress": {
-      "version": "3.32.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.32.0.zip?ref=v3.32.0",
-      "sha256": "714d7b1fee027a390b03641319c40f40bfe47d0d1e57e5d7cad82b12f987b428",
+      "version": "3.33.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.33.0.zip?ref=v3.33.0",
+      "sha256": "5d7f4c8529fd6d8db2e7e90c68041d225513030df98f56a76d3dcbc3ec74a9a5",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.32.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.32.0.zip?ref=v3.32.0",
-      "sha256": "fc27c7c917fbcc3ab06bd0e58304a75a7a02c2d02087ba823778e6ca7d2eb043",
+      "version": "3.33.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.33.0.zip?ref=v3.33.0",
+      "sha256": "9a34d971e7a3a15dcc433ba3b0f44275146cd7d82ea196f24acffe7c84c5a5ad",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

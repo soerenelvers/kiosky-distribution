@@ -386,6 +386,24 @@ function eventFieldPresentation(event,field,options={}){
 function hiddenEventValueAttributes(present){return present?'':'data-event-value-missing="true" aria-hidden="true"';}
 
 const eventDetailLabels={title:'Titel',subtitle:'Untertitel',date:'Datum',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',setupStart:'Aufbau',venue:'Spielort',room:'Raum / Saal',organizer:'Veranstalter',eventType:'Kategorie',remainingTickets:'Ticketstatus',boxOfficeOpenAt:'Abendkasse ab',publicNotes:'Öffentlicher Hinweis',description:'Beschreibung',externalNumber:'Veranstaltungsnummer',status:'Status',ticketUrl:'Ticket-Link',ticketQr:'Ticket-Link als QR-Code',imageUrl:'Veranstaltungsbild',boxOfficeAvailable:'Abendkasse verfügbar'};
+function previewOverviewDocument(value,events){
+  if(Array.isArray(value))return value.map(item=>previewOverviewDocument(item,events));
+  if(!value||typeof value!=='object')return value;
+  if(value.type==='event-overview')return {...value,events:overviewUpcomingEvents(events).slice(0,Number(value.eventCount)||6)};
+  return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,previewOverviewDocument(item,events)]));
+}
+function overviewUpcomingEvents(events){
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('-','');
+  const timestamp=event=>{const raw=String(event.eventStart||event.date||'');return Date.parse(/^\d{8}$/.test(raw)?`${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}T00:00:00Z`:raw);};
+  return events.filter(event=>!event.deletedAt&&!event.archivedAt&&!['cancelled','archived'].includes(event.status)&&((event.eventEnd||event.eventStart)?Date.parse(event.eventEnd||event.eventStart)>=Date.now():String(event.date||'').replace(/\D/g,'').slice(0,8)>=today)).sort((a,b)=>timestamp(a)-timestamp(b)||String(a.id).localeCompare(String(b.id)));
+}
+
+function eventOverviewMarkup(element){
+  const count=[6,10,15].includes(Number(element.eventCount))?Number(element.eventCount):6;
+  const events=Array.isArray(element.events)?element.events:overviewUpcomingEvents(state.events||[]).slice(0,count);
+  const columns=count===10?2:3,rows=Math.ceil(count/columns);
+  return `<div class="event-overview-grid" data-overview-count="${count}" style="--overview-columns:${columns};--overview-rows:${rows}">${events.length?events.slice(0,count).map(event=>{const ticket=eventTicketUrl(event),date=eventFieldPresentation(event,'date').text,start=eventFieldPresentation(event,'eventStart').text,admission=eventFieldPresentation(event,'admissionStart').text;return `<article class="event-overview-card" data-overview-event="${escapeHtml(event.id)}"><div class="event-overview-image">${event.imageUrl?`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager">`:'<span>LIVE</span>'}</div><div class="event-overview-title"><time>${escapeHtml(date)}</time><strong>${escapeHtml(event.title||'')}</strong>${event.subtitle?`<small>${escapeHtml(event.subtitle)}</small>`:''}</div><div class="event-overview-footer"><div>${start?`<span>Beginn <b>${escapeHtml(start)}</b></span>`:''}${admission?`<span>Einlass <b>${escapeHtml(admission)}</b></span>`:''}</div>${ticket?`<div class="event-overview-ticket">${qrSvgMarkup(ticket,'#0f172a','#ffffff')}<small>Tickets</small></div>`:''}</div></article>`;}).join(''):'<p class="event-overview-empty">Weitere Veranstaltungen folgen.</p>'}</div>`;
+}
 function eventTicketUrl(event){
   const value=String(event?.ticketUrl||'').trim();
   if(!value||/[\u0000-\u001f\u007f]/.test(value)||new TextEncoder().encode(value).length>2953)return '';
@@ -488,10 +506,19 @@ function eventStampVisible(element,event,now=Date.now()){
   const values=[String(event[field]??''),String(eventDetailValue(event,field))].map(value=>value.trim().toLocaleLowerCase('de-DE')),value=values[1],expected=String(element.stampValue||'').trim().toLocaleLowerCase('de-DE');
   if(mode==='field-not-empty')return value!=='';if(mode==='field-empty')return value==='';if(mode==='field-equals')return values.includes(expected);if(mode==='field-contains')return expected!==''&&values.some(value=>value.includes(expected));return false;
 }
+function eventPlaceholderField(name){return Object.hasOwn(eventDetailLabels,name)?name:Object.keys(eventDetailLabels).find(field=>eventDetailLabels[field].toLocaleLowerCase('de-DE')===name.toLocaleLowerCase('de-DE'));}
+function eventStampText(element,event){
+  return String(element.text||'AUSVERKAUFT').replace(/\{\{([^{}\n]+)\}\}|\{([^{}\n]+)\}/g,(placeholder,double,single)=>{
+    const field=eventPlaceholderField(String(double??single).trim());
+    if(!field||field==='ticketQr')return placeholder;
+    return String(eventDetailValue(event,field,element)??'').trim();
+  });
+}
 function eventStampMarkup(element,event,preview=false){
   const visible=eventStampVisible(element,event);if(!visible&&!preview&&!['box-office-open','box-office-closed'].includes(element.stampCondition))return '';
+  const text=preview&&!event?String(element.text||'AUSVERKAUFT'):eventStampText(element,event);if(!text.trim())return '';
   const color=/^#[0-9a-f]{6}$/i.test(String(element.color))?element.color:'#b91c1c',ink=/^#[0-9a-f]{6}$/i.test(String(element.stampTextColor))?element.stampTextColor:'#ffffff';
-  return `<div class="event-stamp ${element.stampStyle==='solid'?'is-solid':''} ${preview&&!visible?'is-condition-inactive':''}" style="--stamp-color:${color};--stamp-ink:${ink}"><span>${escapeHtml(element.text||'AUSVERKAUFT')}</span>${preview&&!visible?'<small>Vorschau · Bedingung nicht erfüllt</small>':''}</div>`;
+  return `<div class="event-stamp ${element.stampStyle==='solid'?'is-solid':''} ${preview&&!visible?'is-condition-inactive':''}" style="--stamp-color:${color};--stamp-ink:${ink}"><span>${escapeHtml(text)}</span>${preview&&!visible?'<small>Vorschau · Bedingung nicht erfüllt</small>':''}</div>`;
 }
 
 function eventLayoutId(prefix='row'){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;}
@@ -501,7 +528,7 @@ function eventLayoutTokens(text,previous=[]){
   const tokens=[];let cursor=0;const pattern=/\{\{([^{}\n]+)\}\}/g;
   for(const match of String(text).slice(0,8000).matchAll(pattern)){
     if(match.index>cursor)tokens.push({id:eventLayoutId('text'),type:'text',text:text.slice(cursor,match.index)});
-    const name=match[1].trim(),field=Object.hasOwn(eventDetailLabels,name)?name:Object.keys(eventDetailLabels).find(field=>eventDetailLabels[field].toLocaleLowerCase('de-DE')===name.toLocaleLowerCase('de-DE'));
+    const name=match[1].trim(),field=eventPlaceholderField(name);
     const previousToken=field?pools.get(field)?.shift():null;tokens.push(field?{...previousToken,id:previousToken?.id||eventLayoutId('field'),type:'field',field}:{id:eventLayoutId('text'),type:'text',text:match[0]});cursor=match.index+match[0].length;
   }
   if(cursor<String(text).length)tokens.push({id:eventLayoutId('text'),type:'text',text:String(text).slice(cursor,8000)});
@@ -661,7 +688,7 @@ function overlayClockTime(context={},timestamp=Date.now()) {
 function overlayClockScale(clock){const scale=Number(clock?.scale??100);return (Number.isFinite(scale)?Math.max(50,Math.min(300,scale)):100)/100;}
 
   const playerWayfindingMarkup=(element,event,settings)=>{const rows=(element.rows||[]).map((row,index)=>{const rowColor=playerRowColor(row,settings),left=wayfindingCell(row.left,event,rowColor),center=wayfindingCell(row.center,event,rowColor),right=wayfindingCell(row.right,event,rowColor),centerClass=!left&&!right&&row.expandCenter?' center-full':left&&!right?' center-to-right':'';const cells=centerClass===' center-full'?`<div class="wayfinding-cell is-center center-full">${center}</div>`:`${left?`<div class="wayfinding-cell">${left}</div>`:'<div></div>'}<div class="wayfinding-cell is-center${centerClass}">${center}</div>${right&&!centerClass?`<div class="wayfinding-cell">${right}</div>`:!centerClass?'<div></div>':''}`;return `<div class="wayfinding-row ${index&&row.separator?'has-separator':''}" style="color:${rowColor}">${cells}</div>`;}).join('');const logo=element.logo?.src?`<div class="wayfinding-overlay ${element.logo.position||'top-left'} overlay-${element.logo.theme||'none'}"><img src="${element.logo.src}" alt="Logo"></div>`:'';const clock=element.clock?.enabled?`<div class="wayfinding-overlay wayfinding-clock ${element.clock.position||'bottom-right'} is-readable" style="--clock-scale:${overlayClockScale(element.clock)}">${overlayClockTime()}</div>`:'';return `<div class="wayfinding-canvas" style="--wayfinding-bg:${element.background||'#17342b'}">${rows}${logo}${clock}</div>`;};
-  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))} style="${style}">${eventQrMarkup(element,event)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${eventFieldContent(event,element)}</div>`;}if(element.type==='event-stamp')return `<div class="player-layout-element player-event-stamp" ${['box-office-open','box-office-closed'].includes(element.stampCondition)?eventTextVisibilityAttributes({type:'text',eventCondition:element.stampCondition},event):hiddenEventValueAttributes(eventStampVisible(element,event))} style="${style}">${eventStampMarkup(element,event)}</div>`;if(element.type==='event-table')return `<div class="player-layout-element player-event-table" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventTableMarkup(event,element)}</div>`;if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" ${eventTextVisibilityAttributes(element,event)} style="${style}">${escapeHtml(element.text||'')}</div>`;};
+  const elementMarkup=(element,event,settings)=>{const style=`left:${Number(element.x||0)}%;top:${Number(element.y||0)}%;width:${Number(element.width||40)}%;height:${Number(element.height||20)}%;background:${element.background||'transparent'};color:${element.color||'#fff'};${textFontStyle(element,32)};text-align:${element.align||'left'};transform:rotate(${Number(element.rotation||0)}deg);opacity:${Number(element.opacity??100)/100};padding:${Number(element.padding||0)}px;border-radius:${Number(element.radius||0)}px;font-weight:${Number(element.fontWeight||400)};line-height:${Number(element.lineHeight||1.08)};letter-spacing:${Number(element.letterSpacing||0)}px`;if(element.type==='wayfinding')return `<div class="player-layout-element" style="${style}">${playerWayfindingMarkup(element,event,settings)}</div>`;if(element.type==='ticker'){const duration=Math.max(3,Math.min(60,Number(element.tickerDuration||15))),direction=element.tickerDirection==='right'?'is-right':'';return`<div class="player-layout-element" style="${style}"><div class="player-slide-ticker ${direction}" style="--ticker-duration:${duration}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div></div>`;}if(element.type==='weather')return`<div class="player-layout-element" style="${style}">${weatherElementMarkup(element)}</div>`;if(element.type==='qr-code')return`<div class="player-layout-element player-qr-code" ${hiddenEventValueAttributes(element.qrKind!=='event-ticket'||Boolean(eventTicketUrl(event)))} style="${style}">${eventQrMarkup(element,event)}</div>`;if(element.type==='countdown'){const countdown=resolveEventCountdown(element,event);return`<div class="player-layout-element player-countdown" ${hiddenEventValueAttributes(!countdownHidden(countdown))} style="${style}" data-slide-countdown data-countdown-event="${escapeHtml(encodeURIComponent(JSON.stringify(event||null)))}" data-countdown-element="${escapeHtml(encodeURIComponent(JSON.stringify(element)))}"><span>${escapeHtml(element.prefix||'')}${countdownText(countdown)}${escapeHtml(element.suffix||'')}</span></div>`;}if(element.type==='image'){const src=element.src||event?.imageUrl||'',present=Boolean(element.src||event?.imageUrl);return `<div class="player-layout-element${element.menuPdfImage?' player-pdf-page':''}" ${hiddenEventValueAttributes(present)} style="${style}">${mediaContentMarkup(element,src,false,element.menuPdfImage?'data-menu-pdf-page':'')}</div>`;}if(element.type==='video')return `<div class="player-layout-element" style="${style}">${mediaContentMarkup(element,element.src||'',true,`autoplay loop ${element.muted!==false?'muted':''} data-trim-start="${Number(element.trimStart||0)}" data-trim-end="${Number(element.trimEnd||0)}"`)}</div>`;if(element.type==='web')return `<div class="player-layout-element" style="${style}"><iframe src="${escapeHtml(element.src||'')}" title="Externer Inhalt"></iframe></div>`;if(element.type==='event-field'){const presentation=eventFieldPresentation(event,element.field,element);return `<div class="player-layout-element player-dynamic-field" ${hiddenEventValueAttributes(presentation.present)} style="${style}">${eventFieldContent(event,element)}</div>`;}if(element.type==='event-stamp')return `<div class="player-layout-element player-event-stamp" ${!eventStampText(element,event).trim()?hiddenEventValueAttributes(false):['box-office-open','box-office-closed'].includes(element.stampCondition)?eventTextVisibilityAttributes({type:'text',eventCondition:element.stampCondition},event):hiddenEventValueAttributes(eventStampVisible(element,event))} style="${style}">${eventStampMarkup(element,event)}</div>`;if(element.type==='event-overview')return `<div class="player-layout-element player-event-overview" style="${style}">${eventOverviewMarkup(element)}</div>`;if(element.type==='event-table')return `<div class="player-layout-element player-event-table" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventTableMarkup(event,element)}</div>`;if(element.type==='event')return `<div class="player-layout-element player-event-block" ${hiddenEventValueAttributes(Boolean(event))} style="${style}">${eventWelcomeBlockMarkup(event,element.text||'Veranstaltung',element)}</div>`;return `<div class="player-layout-element" ${eventTextVisibilityAttributes(element,event)} style="${style}">${escapeHtml(element.text||'')}</div>`;};
   const playerSettingsMarkup=settings=>{if(!settings)return'';const background=settings.background||{},backgroundStyle=background.mode==='image'&&background.imageSrc?`background-image:url('${background.imageSrc}');background-size:${Number(background.imageZoom||100)}% auto;background-position:${Number(background.imageX??50)}% ${Number(background.imageY??50)}%;background-repeat:no-repeat;background-color:${background.color1||'#17342b'}`:background.mode==='gradient'?`background:linear-gradient(${background.direction||'135deg'},${background.color1||'#17342b'},${background.color2||'#315b49'})`:`background:${background.color1||'#17342b'}`,logoSettings=settings.logo||{},naturalWidth=Math.max(1,Number(logoSettings.naturalWidth||400)),naturalHeight=Math.max(1,Number(logoSettings.naturalHeight||160)),baseWidth=Math.max(4,Math.min(80,Number(logoSettings.widthPercent||naturalWidth/1920*100))),logoWidth=Math.max(2,Math.min(90,baseWidth*Number(logoSettings.scale||100)/100));const logo=logoSettings.src?`<div class="slide-global-overlay slide-logo ${logoSettings.position||'top-left'} overlay-${logoSettings.theme||'none'}" style="width:${logoWidth}%;--logo-aspect:${naturalWidth}/${naturalHeight}"><img src="${logoSettings.src}" alt="Logo"></div>`:'';const clock=settings.clock?.enabled?`<div class="slide-global-overlay slide-clock ${settings.clock.position||'bottom-right'} clock-${settings.clock.theme||'dark'}" style="--clock-scale:${overlayClockScale(settings.clock)}">${overlayClockTime()}</div>`:'';return`<div class="slide-global-background" style="${backgroundStyle}"></div>${logo}${clock}`;};
 
 function playbackItemElements(item,orientation) {
@@ -1358,15 +1385,54 @@ function eventEditorTimestamp(date,time,key){
   return eventTimestamp(date,time);
 }
 
+function sortListRows(items,sort,valueFor,tieFor=item=>String(item.title||item.name||'')){
+  const collator=new Intl.Collator('de-DE',{numeric:true,sensitivity:'base'}),direction=sort.direction==='desc'?-1:1;
+  const missing=value=>value===undefined||value===null||String(value).trim()===''||(typeof value==='number'&&!Number.isFinite(value));
+  return items.map((item,index)=>({item,index,value:valueFor(item,sort.key),tie:tieFor(item)})).sort((a,b)=>{
+    const am=missing(a.value),bm=missing(b.value);if(am!==bm)return am?1:-1;
+    const order=am?0:typeof a.value==='number'&&typeof b.value==='number'?a.value-b.value:collator.compare(String(a.value),String(b.value));
+    return order*direction||collator.compare(String(a.tie),String(b.tie))||a.index-b.index;
+  }).map(entry=>entry.item);
+}
+function eventListSortValue(item,key){
+  if(key==='date'){const date=eventDateInput(item.date)||eventLocalDateTime(item.eventStart).slice(0,10);return date?date+'T'+(eventTimeInput(item.eventStart)||'00:00'):'';}
+  if(key==='source')return item.sourceId==='source-crewbrain'?'CrewBrain':item.sourceId==='source-easyjob'?'easyjob':'Manuell';
+  if(key==='status')return eventStatusLabels[item.status]||item.status;
+  if(key==='venue')return item.venue||item.room||'';
+  return item.title||'';
+}
+function sortEventRows(items){return sortListRows(items,state.eventSort||{key:'date',direction:'asc'},eventListSortValue,item=>eventListSortValue(item,'date')+' '+(item.title||''));}
+function sortSlideRows(items){
+  const events=new Map((state.events||[]).map(event=>[event.id,event]));
+  return sortListRows(items,state.slideSort||{key:'updatedAt',direction:'desc'},(item,key)=>{
+    if(['startsAt','endsAt','createdAt','updatedAt'].includes(key))return item[key]?Date.parse(item[key]):null;
+    if(key==='date')return eventListSortValue(events.get(item.eventId)||{},'date');
+    if(key==='source')return events.has(item.eventId)?eventListSortValue(events.get(item.eventId),'source'):item.automationKey?'Automatisch':'Manuell';
+    if(key==='type')return slideTypeLabels[item.type]||item.type;
+    if(key==='orientation')return orientationLabels[item.orientation||item.ratio]||item.orientation||item.ratio;
+    if(key==='status')return eventStatusLabels[item.status]||item.status;
+    if(key==='version')return Number(item.currentVersion||0);
+    if(key==='tags')return (item.tags||[]).join(', ');
+    return item.title||item.name||'';
+  });
+}
+function eventSortHeader(key,label,selection=''){
+  const sort=state.eventSort||{key:'date',direction:'asc'},active=sort.key===key,order=active?(sort.direction==='desc'?'descending':'ascending'):'none',next=active&&sort.direction==='asc'?'absteigend':'aufsteigend';
+  return `<span role="columnheader" aria-sort="${order}">${selection}<button class="table-sort-button" type="button" data-event-sort="${key}" aria-label="${label} ${next} sortieren">${label}<i aria-hidden="true">${active?(sort.direction==='desc'?'↓':'↑'):'↕'}</i></button></span>`;
+}
+function setEventListSort(key,toggle=false){
+  const previous=state.eventSort||{key:'date',direction:'asc'};state.eventSort={key,direction:toggle&&previous.key===key&&previous.direction==='asc'?'desc':'asc'};renderEvents();
+}
 function visibleEventRows(){
   const query = document.querySelector('#event-search').value.trim().toLowerCase();
   const status = document.querySelector('#event-status-filter').value;
   const objectType = document.querySelector('#event-object-filter').value;
-  return state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber,item.organizer,item.eventType].some(value => String(value || '').toLowerCase().includes(query))) && (!status || item.status === status)&&(!objectType||item.externalObjectType===objectType));
+  return sortEventRows(state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber,item.organizer,item.eventType].some(value => String(value || '').toLowerCase().includes(query))) && (!status || item.status === status)&&(!objectType||item.externalObjectType===objectType)));
 }
 function renderEvents() {
   const rows = visibleEventRows();
-  document.querySelector('#event-table').innerHTML = `<div class="table-row table-head" role="row"><span><label class="table-check"><input type="checkbox" id="event-select-all" ${rows.length&&rows.every(item=>state.selectedEvents.has(item.id))?'checked':''}> Veranstaltung</label></span><span>Termin</span><span>Ort</span><span>Quelle</span><span>Status</span><span></span></div>${rows.map(item => {
+  const sort=state.eventSort||{key:'date',direction:'asc'};document.querySelector('#event-sort-column').value=sort.key;document.querySelector('#event-sort-direction').value=sort.direction;
+  document.querySelector('#event-table').innerHTML = `<div class="table-row table-head" role="row">${eventSortHeader('title','Veranstaltung',`<label class="table-check"><input type="checkbox" id="event-select-all" aria-label="Alle sichtbaren Veranstaltungen auswählen" ${rows.length&&rows.every(item=>state.selectedEvents.has(item.id))?'checked':''}></label>`)}${eventSortHeader('date','Termin')}${eventSortHeader('venue','Ort')}${eventSortHeader('source','Quelle')}${eventSortHeader('status','Status')}<span role="columnheader" aria-label="Aktionen"></span></div>${rows.map(item => {
     const date = eventDateInput(item.date);
     const formattedDate = date ? new Date(`${date}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Termin offen';
     const time = eventTimeInput(item.eventStart);
@@ -1550,10 +1616,13 @@ function collectEventEditor() {
   return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventEditorTimestamp(date,document.querySelector('#event-setup').value,'setupStart'), admissionStart: eventEditorTimestamp(date,document.querySelector('#event-admission').value,'admissionStart'), eventStart: eventEditorTimestamp(date,document.querySelector('#event-start').value,'eventStart'), breakStart: eventEditorTimestamp(date,document.querySelector('#event-break').value,'breakStart'), breakEnd:eventEditorTimestamp(date,document.querySelector('#event-break-end').value,'breakEnd'), eventEnd: eventEditorTimestamp(date,document.querySelector('#event-end').value,'eventEnd'), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventEditorTimestamp(date,document.querySelector('#event-box-office-open').value,'boxOfficeOpenAt') };
 }
 
+document.querySelector('#event-sort-column').addEventListener('change',event=>setEventListSort(event.target.value));
+document.querySelector('#event-sort-direction').addEventListener('change',event=>{state.eventSort={key:document.querySelector('#event-sort-column').value,direction:event.target.value};renderEvents();});
 document.querySelector('#event-search').addEventListener('input', renderEvents);
 document.querySelector('#event-status-filter').addEventListener('change', renderEvents);
 document.querySelector('#event-object-filter').addEventListener('change', renderEvents);
 document.querySelector('#event-table').addEventListener('click', event => {
+  const sort=event.target.closest('[data-event-sort]');if(sort){const key=sort.dataset.eventSort;setEventListSort(key,true);document.querySelector(`[data-event-sort="${key}"]`).focus({preventScroll:true});return;}
   const button = event.target.closest('[data-edit-event]');
   if (button) openEventEditor(state.events.find(item => item.id === button.dataset.editEvent));
 });
@@ -2202,7 +2271,7 @@ function renderModuleSwitching(){
   list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''} ${!licenseAllows(licenseModuleForFeature(view))?'disabled':''}><span>${!licenseAllows(licenseModuleForFeature(view))?'Nicht lizenziert':view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
-const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
+const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-overview':'Veranstaltungsübersicht','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
 function editorElementEnabled(type,settings=state.featureSettings||{}){return settings[`editor_${type}`]!==false;}
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
@@ -2345,8 +2414,21 @@ document.querySelector('#menu-share-settings-form').addEventListener('submit',as
   }catch(error){showAuthMessage('menu-share-message',error.message);}finally{document.querySelector('#menu-share-password').value='';form.inert=false;}
 });
 
+function addAdvertisingInterstitial(orientation,id=''){
+  const container=document.querySelector('#advertising-interstitial-'+orientation);if(container.children.length>=10){showToast('Höchstens zehn Zwischenslides je Format.');return;}
+  const row=document.createElement('div');row.className='advertising-interstitial-row';
+  row.innerHTML=`<select aria-label="Zwischenslide"><option value="">Slide auswählen</option>${(state.advertisingSlideChoices||state.slides).map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name||slide.title)}${slide.status!=='published'?' (nicht veröffentlicht)':''}</option>`).join('')}</select><button type="button" class="icon-button" data-move="up" aria-label="Nach oben">↑</button><button type="button" class="icon-button" data-move="down" aria-label="Nach unten">↓</button><button type="button" class="icon-button danger-action" data-remove aria-label="Zwischenslide entfernen">×</button>`;
+  if(id&&!row.querySelector(`option[value="${CSS.escape(id)}"]`)){const option=new Option('Nicht mehr verfügbar',id);row.querySelector('select').add(option);}row.querySelector('select').value=id;
+  row.querySelector('[data-remove]').onclick=()=>row.remove();row.querySelector('[data-move="up"]').onclick=()=>{if(row.previousElementSibling)container.insertBefore(row,row.previousElementSibling);};row.querySelector('[data-move="down"]').onclick=()=>{if(row.nextElementSibling)container.insertBefore(row.nextElementSibling,row);};container.append(row);
+}
+document.querySelectorAll('[data-add-interstitial]').forEach(button=>button.addEventListener('click',()=>addAdvertisingInterstitial(button.dataset.addInterstitial)));
+document.querySelectorAll('[data-create-event-overview]').forEach(button=>button.addEventListener('click',async()=>{
+  const count=Number(button.dataset.createEventOverview),orientation=count===6?'landscape':'portrait',name=`Nächste Veranstaltungen · ${count} · ${orientation==='landscape'?'Quer':'Hochkant'}`;button.disabled=true;
+  try{const payload={name,orientation,type:'custom',status:'draft',tags:['Veranstaltungsübersicht'],document:{designOrientation:orientation,settings:{...defaultSlideSettings(),background:{mode:'solid',color1:'#0b1220'}},elements:[{id:'overview-heading',type:'text',x:4,y:3,width:92,height:7,text:'DEMNÄCHST BEI UNS',fontSize:orientation==='landscape'?36:28,fontSizeUnit:'pt',responsiveText:true,color:'#e2e8f0',fontWeight:700,background:'transparent'},{...createEditorElement('event-overview'),eventCount:count}]}};const result=await apiRequest('/api/slides',{method:'POST',body:JSON.stringify(payload)});await loadContent();setView('channels');openSlideEditor(state.slides.find(slide=>slide.id===result.slide.id));showToast('Dynamische Übersicht als Entwurf erstellt.');}catch(error){showToast(error.message);}finally{button.disabled=false;}
+}));
 function renderAdvertisingSettings(status){
   state.advertising=status;
+  for(const orientation of ['landscape','portrait']){const container=document.querySelector('#advertising-interstitial-'+orientation);container.replaceChildren();for(const id of status.settings?.interstitialSlideIds?.[orientation]||[])addAdvertisingInterstitial(orientation,id);}
   const settings=status.settings||{},types=status.availableEventTypes||[],selected=new Set(settings.eventTypes||[]);
   state.advertisingAvailableTypes=types;
   state.advertisingTypeDefaultMedia={...(settings.eventTypeDefaultMedia||{})};
@@ -2368,13 +2450,13 @@ function renderAdvertisingSettings(status){
 }
 async function loadAdvertisingSettings(){
   if(!document.querySelector('#advertising-settings-form'))return;
-  try{const[result,templates,locations,media]=await Promise.all([apiRequest('/api/settings/advertising'),licensedRead('/api/templates'),licensedRead('/api/locations'),licensedRead('/api/media',{folders:[],assets:[]})]);state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Automatisch anpassbare Werbevorlage erstellen</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateLandscapeId||result.settings?.templateId||'';const portrait=document.querySelector('#advertising-template-portrait');portrait.innerHTML=select.innerHTML;portrait.value=result.settings?.templatePortraitId||result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
+  try{const[result,templates,locations,media,slides]=await Promise.all([apiRequest('/api/settings/advertising'),licensedRead('/api/templates'),licensedRead('/api/locations'),licensedRead('/api/media',{folders:[],assets:[]}),licensedRead('/api/slides')]);state.advertisingSlideChoices=slides.data||[];state.locations=locations.data||state.locations||[];state.mediaFolders=media.folders||[];state.mediaAssets=media.assets||[];const select=document.querySelector('#advertising-template');select.innerHTML=`<option value="">Automatisch anpassbare Werbevorlage erstellen</option>${(templates.data||[]).map(template=>`<option value="${escapeHtml(template.id)}">${escapeHtml(template.name)} · ${escapeHtml(orientationLabels[template.orientation]||template.orientation)}</option>`).join('')}`;select.value=result.settings?.templateLandscapeId||result.settings?.templateId||'';const portrait=document.querySelector('#advertising-template-portrait');portrait.innerHTML=select.innerHTML;portrait.value=result.settings?.templatePortraitId||result.settings?.templateId||'';renderAdvertisingSettings(result);}catch(error){showToast(error.message);}
 }
 function renderAdvertisingTypeOptions(types=state.advertisingAvailableTypes||[],selected=new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value))){
   const list=document.querySelector('#advertising-event-types');if(!list)return;
   list.innerHTML=types.map(type=>{const active=selected.has(type),assetId=state.advertisingTypeDefaultMedia?.[type],asset=state.mediaAssets?.find(item=>item.id===assetId&&!item.deletedAt&&item.type==='image');return`<article class="advertising-type-default ${active?'':'is-inactive'}"><div class="advertising-type-default-preview">${asset?`<img src="${escapeHtml(asset.src)}" alt="">`:'Kein<br>Standardbild'}</div><div class="advertising-type-default-body"><label class="toggle-label"><input type="checkbox" data-advertising-event-type value="${escapeHtml(type)}" ${active?'checked':''}> ${escapeHtml(type)}</label><small title="${escapeHtml(asset?.name||'')}">${escapeHtml(asset?.name||'Veranstaltungsspezifisches Bild erforderlich')}</small><div class="advertising-type-default-actions"><button class="button button-secondary" type="button" data-advertising-type-media="${escapeHtml(type)}" ${active?'':'disabled'}>${asset?'Bild ersetzen':'Bild auswählen / hochladen'}</button>${asset?`<button class="button button-ghost" type="button" data-advertising-type-media-remove="${escapeHtml(type)}" ${active?'':'disabled'}>Entfernen</button>`:''}</div></div></article>`;}).join('')||'<p class="property-note">Noch keine Veranstaltungsarten vorhanden. Sie erscheinen nach dem Anlegen oder Importieren von Veranstaltungen.</p>';
 }
-function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumSlides:Number(document.querySelector('#advertising-maximum-slides').value),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:state.advertising?.settings?.templateId||undefined,templateLandscapeId:document.querySelector('#advertising-template').value,templatePortraitId:document.querySelector('#advertising-template-portrait').value,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
+function advertisingPayload(){const eventTypes=[...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value),eventTypeDefaultMedia=Object.fromEntries(eventTypes.flatMap(type=>state.advertisingTypeDefaultMedia?.[type]?[[type,state.advertisingTypeDefaultMedia[type]]]:[]));return{interstitialSlideIds:Object.fromEntries(['landscape','portrait'].map(orientation=>[orientation,[...document.querySelectorAll('#advertising-interstitial-'+orientation+' select')].map(select=>select.value).filter(Boolean)])),enabled:document.querySelector('#advertising-enabled').checked,channelName:document.querySelector('#advertising-channel-name').value.trim(),maximumSlides:Number(document.querySelector('#advertising-maximum-slides').value),maximumEvents:Number(document.querySelector('#advertising-maximum-events').value),durationSeconds:Number(document.querySelector('#advertising-duration').value),templateId:state.advertising?.settings?.templateId||undefined,templateLandscapeId:document.querySelector('#advertising-template').value,templatePortraitId:document.querySelector('#advertising-template-portrait').value,showDate:document.querySelector('#advertising-show-date').checked,showTime:document.querySelector('#advertising-show-time').checked,showSeconds:document.querySelector('#advertising-show-seconds').checked,hour12:document.querySelector('#advertising-hour12').checked,eventTypes,eventTypeDefaultMedia,locationIds:[...document.querySelectorAll('#advertising-location-options input:checked')].map(input=>input.value)};}
 document.querySelector('#advertising-event-types').addEventListener('change',event=>{if(event.target.matches('[data-advertising-event-type]'))renderAdvertisingTypeOptions(state.advertisingAvailableTypes,new Set([...document.querySelectorAll('#advertising-event-types input[data-advertising-event-type]:checked')].map(input=>input.value)));});
 document.querySelector('#advertising-event-types').addEventListener('click',event=>{const select=event.target.closest('[data-advertising-type-media]'),remove=event.target.closest('[data-advertising-type-media-remove]');if(select){const type=select.dataset.advertisingTypeMedia;openMediaLibrary(asset=>{state.advertisingTypeDefaultMedia={...(state.advertisingTypeDefaultMedia||{}),[type]:asset.id};renderAdvertisingTypeOptions();},'image-only',`Standardbild für „${type}“ auswählen oder hochladen`);}if(remove){const type=remove.dataset.advertisingTypeMediaRemove;delete state.advertisingTypeDefaultMedia[type];renderAdvertisingTypeOptions();}});
 document.querySelector('#advertising-settings-form').addEventListener('submit',async event=>{event.preventDefault();try{await apiRequest('/api/settings/advertising',{method:'PUT',body:JSON.stringify(advertisingPayload())});await loadAdvertisingSettings();await loadContent();showToast('Werbung wurde gespeichert und synchronisiert.');}catch(error){showToast(error.message);}});
@@ -3235,7 +3317,7 @@ state.channelRedo = [];
 state.channelHistoryCurrent = null;
 
 const slideTypeLabels = {
-  custom: 'Eigene Slide', 'event-stamp':'Event-Stempel', 'event-table':'Event-Tabelle', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
+  custom: 'Eigene Slide', 'event-stamp':'Event-Stempel', 'event-overview':'Veranstaltungsübersicht','event-table':'Event-Tabelle', event: 'Veranstaltung', 'event-field': 'Dynamisches Eventfeld', text: 'Freitext', ticker: 'Laufelement', weather: 'Wetterdaten', 'qr-code': 'QR-Code', countdown: 'Countdown', image: 'Bild', video: 'Video', web: 'Website', pdf: 'PDF', wayfinding: 'Beschilderung / Wegweisung'
 };
 const orientationLabels = { auto: 'Automatisch / responsiv', landscape: 'Querformat', portrait: 'Hochformat' };
 
@@ -3276,6 +3358,7 @@ function thumbnailElementMarkup(element, settings,event=null) {
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
   if (element.type === 'event') content = `<span class="slide-thumb-event">${eventWelcomeBlockMarkup(event,element.event||element.text||'Veranstaltung',element)}</span>`;
   if (element.type === 'event-stamp') content=eventStampMarkup(element,event,!event);
+  if (element.type === 'event-overview') content=eventOverviewMarkup(element);
   if (element.type === 'event-table') content = eventTableMarkup(event,element);
   if (element.type === 'event-field') content = element.field==='ticketQr'?eventFieldContent(event,element):escapeHtml(event?eventFieldPresentation(event,element.field,element).text:`${element.prefix||''}${element.fallback||'Veranstaltungsfeld'}`);
   return `<span class="slide-thumb-element type-${escapeHtml(element.type)}" style="${style}">${content}</span>`;
@@ -3382,8 +3465,8 @@ function slideForUi(record) {
 function tagInput(value){return[...new Set(String(value||'').split(',').map(tag=>tag.trim()).filter(Boolean))];}
 function contentTagMarkup(tags=[]){return tags.length?`<span class="content-tags">${tags.map(tag=>`<i>${escapeHtml(tag)}</i>`).join('')}</span>`:'';}
 function isAdvertisingContent(item){return Boolean(item?.automationKey?.startsWith('advertising:'))||(item?.tags||[]).some(tag=>String(tag).trim().toLocaleLowerCase('de-DE').replace(/\s+/g,' ').match(/^werbung(?: quer| hochkant)?$/));}
-function scopedSlides(){return state.slides.filter(slide=>state.contentScope==='advertising'?isAdvertisingContent(slide):!isAdvertisingContent(slide));}
-function scopedChannels(){return state.channels.filter(channel=>state.contentScope==='advertising'?isAdvertisingContent(channel):!isAdvertisingContent(channel));}
+function scopedSlides(){return state.slides;}
+function scopedChannels(){return state.channels.filter(channel=>state.contentScope!=='advertising'||isAdvertisingContent(channel));}
 function scopedTags(tags=[]){return state.contentScope==='advertising'?[...new Set([...tags,'Werbung'])]:tags;}
 function applyContentScopeUi(){
   const advertising=state.contentScope==='advertising';
@@ -3448,7 +3531,7 @@ function populateContentEventOptions() {
 function applyActiveChannel() {
   const channel = activeChannel();
   clearTimeout(state.channelAutosaveTimer);
-  state.playlist = channel ? channel.items.map(item => ({ slideId: item.slideId, duration: item.durationSeconds, transition: item.transition })) : [];
+  state.playlist = channel ? channel.items.map(item => ({ slideId: item.slideId, duration: item.durationSeconds, transition: item.transition, advertisingInterstitial:item.advertisingInterstitial===true })) : [];
   document.querySelector('#channel-builder-title').textContent = channel?.name || 'Noch keinen Kanal angelegt';
   document.querySelector('#channel-builder-meta').innerHTML = `<span class="status-dot"></span> ${escapeHtml(channel ? `${channel.status === 'published' ? 'Veröffentlicht' : channel.status === 'ready' ? 'Bereit' : channel.status === 'paused' ? 'Pausiert' : 'Entwurf'}${channel.description ? ` · ${channel.description}` : ''}` : 'Kanal auswählen oder neu anlegen')}`;
   document.querySelector('#channel-transition').value = channel?.defaultTransition || 'fade';
@@ -3598,6 +3681,8 @@ function draggedLibrarySlideIds(transfer) {
 }
 document.querySelector('#slide-bulk-add-channel').addEventListener('click',()=>addSlidesToPlaylist(state.slides.filter(slide=>state.selectedSlides.has(slide.id)).map(slide=>slide.id)));
 
+document.querySelector('#slide-sort-column').addEventListener('change',event=>{state.slideSort={key:event.target.value,direction:'asc'};document.querySelector('#slide-sort-direction').value='asc';renderSlideLibrary();});
+document.querySelector('#slide-sort-direction').addEventListener('change',event=>{state.slideSort={key:document.querySelector('#slide-sort-column').value,direction:event.target.value};renderSlideLibrary();});
 function renderSlideLibrary() {
   renderContentTagFolders('slides');
   const library = document.querySelector('#slide-library');
@@ -3606,10 +3691,10 @@ function renderSlideLibrary() {
   const filter = document.querySelector('#slide-filter').value;
   const tag=document.querySelector('#slide-tag-filter').value;
   const availableSlides=scopedSlides();
-  const visibleSlides = availableSlides.filter(slide => {
+  const visibleSlides = sortSlideRows(availableSlides.filter(slide => {
     const matchesSearch = !search || `${slide.title} ${slide.meta} ${(slide.tags||[]).join(' ')}`.toLowerCase().includes(search);
     return matchesSearch && (!tag||(slide.tags||[]).includes(tag)) && (filter === 'all' || slide.type === filter);
-  });
+  }));
   document.querySelector('#slide-count').textContent = availableSlides.length;
   const selectedVisible = visibleSlides.filter(slide => state.selectedSlides.has(slide.id)).length;
   const selectAll = document.querySelector('#slide-select-all');
@@ -3917,14 +4002,14 @@ function renderPlaylist() {
   playlist.innerHTML = state.playlist.map((entry, index) => {
     const slide = state.virtualAdvertisingSlides?.get(entry.slideId)||state.slides.find(item => item.id === entry.slideId);
     if (!slide) return '';
-    const editable=canEditContent&&!slide.virtual;
-    return `<div class="playlist-item" draggable="${editable}" data-playlist-index="${index}">
+    const editable=canEditContent&&!slide.virtual&&!entry.advertisingInterstitial;
+    return `<div class="playlist-item" draggable="${canEditContent&&!entry.advertisingInterstitial}" data-playlist-index="${index}">
       <span class="playlist-order">${index + 1}</span>
       ${slideThumb(slide)}
       <span class="playlist-item-info"><strong>${escapeHtml(slide.title)}</strong><small>${escapeHtml(slideTypeLabels[slide.type])} · ${escapeHtml(slide.meta)}</small></span>
       ${editable ? `<label class="transition-field"><span>Übergang danach</span><select data-transition-index="${index}" aria-label="Übergang nach ${escapeHtml(slide.title)}"><option value="inherit" ${!entry.transition || entry.transition === 'inherit' ? 'selected' : ''}>Kanaleinstellung</option><option value="fade" ${entry.transition === 'fade' ? 'selected' : ''}>Überblenden</option><option value="slide" ${entry.transition === 'slide' ? 'selected' : ''}>Wischen</option><option value="zoom" ${entry.transition === 'zoom' ? 'selected' : ''}>Zoom</option><option value="none" ${entry.transition === 'none' ? 'selected' : ''}>Ohne</option></select></label>
       <label class="duration-field"><input type="number" min="3" max="600" value="${entry.duration}" data-duration-index="${index}" aria-label="Dauer für ${escapeHtml(slide.title)}"><span>Sek.</span></label>
-      <button class="remove-slide" type="button" data-remove-index="${index}" aria-label="${escapeHtml(slide.title)} entfernen">×</button>` : `<span class="playlist-readonly-meta">${slide.virtual?'Automatisch aus Veranstaltung · ':''}${Number(entry.duration)} Sek. · ${escapeHtml(entry.transition && entry.transition !== 'inherit' ? playlistTransitionLabels[entry.transition] || entry.transition : 'Kanalübergang')}</span>`}
+      <button class="remove-slide" type="button" data-remove-index="${index}" aria-label="${escapeHtml(slide.title)} entfernen">×</button>` : `<span class="playlist-readonly-meta">${entry.advertisingInterstitial?'Zwischenslide · Einstellungen → Werbung · ':slide.virtual?'Automatisch aus Veranstaltung · ':''}${Number(entry.duration)} Sek. · ${escapeHtml(entry.transition && entry.transition !== 'inherit' ? playlistTransitionLabels[entry.transition] || entry.transition : 'Kanalübergang')}</span>`}
     </div>`;
   }).join('');
 
@@ -4189,6 +4274,7 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'countdown') return { ...base, countdownMode: 'daily', countdownDailyTime: '18:00', targetTime: '', prefix: 'Noch ', suffix: '', showSeconds: true, countdownFormat:'hhmmss', countdownEndBehavior:'countup', hideOnEnd:false, fontSize: 52, fontWeight: 700, color: '#ffffff', background: 'transparent', align: 'center', width: 48, height: 18 };
   if (type === 'event') return { ...base, eventHeading:'', event: '', text: '', fontSize: 38, color: '#ffffff', width: 80, height: 32, eventLayoutMode:'rows', eventRows:eventLayoutRowsFromDetails(base) };
   if (type === 'event-stamp') return {...base,text:'AUSVERKAUFT',stampCondition:'sold-out',stampField:'remainingTickets',stampStyle:'outline',color:'#b91c1c',background:'transparent',fontSize:48,fontWeight:800,rotation:-12,x:52,y:14,width:42,height:20};
+  if (type === 'event-overview') return {...base,eventCount:6,x:4,y:13,width:92,height:81,background:'transparent',color:'#f8fafc'};
   if (type === 'event-table') {const element={...base,eventHeading:'',eventDetails:['title','subtitle','date','eventStart','eventEnd','venue','room'],eventTableLabels:true,width:80,height:70,fontSize:28,eventLayoutMode:'rows'};element.eventRows=eventLayoutRowsFromDetails(element);return element;}
   if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: false, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
@@ -4421,6 +4507,7 @@ for(const id of ['editor-event-auto','editor-event-mode','editor-event-room'])do
 });
 function editorElementMarkup(element) {
   const event=editorSelectedEvent();
+  if(element.type==='event-overview')return eventOverviewMarkup(element);
   if (element.type === 'wayfinding') return wayfindingMarkup(element,state.editorSlideSettings,event);
   if (element.type === 'ticker') return `<div class="canvas-ticker ${element.tickerDirection==='right'?'is-right':''}" style="--ticker-duration:${Math.max(3,Math.min(60,Number(element.tickerDuration||15)))}s"><div class="ticker-track">${tickerItemsMarkup(element)}</div></div>`;
   if (element.type === 'weather') return weatherElementMarkup(element);
@@ -4784,6 +4871,7 @@ function syncEditorProperties() {
   document.querySelector('#property-event').value = element.event || '';
   renderEventLayoutEditor(element);
   document.querySelector('#property-event-heading').value=element.eventHeading??'Herzlich willkommen zu';
+  document.querySelector('#property-overview-count').value=element.eventCount||6;
   document.querySelector('#property-event-table-labels').checked=element.eventTableLabels!==false;
   document.querySelector('#property-event-table-empty').checked=element.eventTableShowEmpty===true;
   const details=new Set(element.type==='event-table'?eventTableFields(element):eventDetailsForElement(element));document.querySelectorAll('[data-event-detail]').forEach(input=>{input.checked=details.has(input.dataset.eventDetail);});
@@ -5115,12 +5203,14 @@ eventLayoutPanel.addEventListener('pointerdown',event=>{
   };window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);window.addEventListener('blur',end);
 });
 
+document.querySelector('#property-stamp-text-placeholder').innerHTML=Object.entries(eventDetailLabels).filter(([field])=>field!=='ticketQr').map(([field,label])=>`<option value="${escapeHtml(field)}">${escapeHtml(label)}</option>`).join('');
+document.querySelector('#property-stamp-text-insert').addEventListener('click',()=>{const input=document.querySelector('#property-text'),field=document.querySelector('#property-stamp-text-placeholder').value;input.setRangeText(`{{${eventDetailLabels[field]||field}}}`,input.selectionStart??input.value.length,input.selectionEnd??input.value.length,'end');input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();});
 document.querySelector('#property-stamp-field').innerHTML=Object.entries(eventDetailLabels).filter(([field])=>field!=='ticketQr').map(([field,label])=>`<option value="${field}">${escapeHtml(label)}</option>`).join('');
 document.querySelector('#property-text-condition-field').innerHTML=document.querySelector('#property-stamp-field').innerHTML;
 const propertyBindings = [
   ['property-text-condition','eventCondition',value=>value],['property-text-condition-field','eventConditionField',value=>value],['property-text-condition-value','eventConditionValue',value=>value],
   ['property-stamp-condition','stampCondition',value=>value],['property-stamp-field','stampField',value=>value],['property-stamp-value','stampValue',value=>value],['property-stamp-style','stampStyle',value=>value],['property-stamp-text-color','stampTextColor',value=>value],
-  ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
+  ['property-overview-count','eventCount',value=>Number(value)], ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
   ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
   ['property-x', 'x', Number], ['property-y', 'y', Number], ['property-width', 'width', Number], ['property-height', 'height', Number], ['property-background', 'background', value => value],
@@ -5460,7 +5550,7 @@ async function persistActiveChannel() {
   const channel = activeChannel();
   if (!channel) return null;
   state.playlist = state.playlist.map((entry, index) => ({ ...entry, duration: Math.max(3, Number(document.querySelector(`[data-duration-index="${index}"]`)?.value || entry.duration)), transition: document.querySelector(`[data-transition-index="${index}"]`)?.value || entry.transition || 'inherit' }));
-  const payload = { name: channel.name, description: channel.description, eventId: channel.eventId,tags:scopedTags(channel.tags||[]),locationIds:channel.locationIds||[], status: channel.status, orientation: document.querySelector('#channel-orientation').value, defaultTransition: document.querySelector('#channel-transition').value, repeatEnabled: document.querySelector('#channel-repeat').checked, items: state.playlist.map(entry => ({ slideId: entry.slideId, durationSeconds: Number(entry.duration), transition: entry.transition || 'inherit' })) };
+  const payload = { name: channel.name, description: channel.description, eventId: channel.eventId,tags:scopedTags(channel.tags||[]),locationIds:channel.locationIds||[], status: channel.status, orientation: document.querySelector('#channel-orientation').value, defaultTransition: document.querySelector('#channel-transition').value, repeatEnabled: document.querySelector('#channel-repeat').checked, items: state.playlist.map(entry => ({ slideId: entry.slideId, advertisingInterstitial:entry.advertisingInterstitial===true, durationSeconds: Number(entry.duration), transition: entry.transition || 'inherit' })) };
   const result = await apiRequest(`/api/channels/${channel.id}`, { method: 'PUT', body: JSON.stringify(payload) });
   const index = state.channels.findIndex(item => item.id === result.channel.id);
   if (index >= 0) state.channels[index] = result.channel;
@@ -5547,9 +5637,9 @@ function channelPreviewItems(channel, slides, events, nowMs=Date.now()) {
   const byId=new Map(slides.map(slide=>[slide.id,slide]));
   const eventsById=new Map(events.map(event=>[event.id,event]));
   return channel.items.flatMap(entry=>{
-    const slide=byId.get(entry.slideId);
+    const slide=entry.slide||byId.get(entry.slideId);
     if(!slide||slide.deletedAt||slide.status==='archived'||(slide.startsAt&&!(Date.parse(slide.startsAt)<=nowMs))||(slide.endsAt&&!(Date.parse(slide.endsAt)>nowMs)))return[];
-    return [{...entry,slide,event:selectSlideEvent(events,slide.document?.eventSelection||{},eventsById.get(slide.eventId||channel.eventId)||null,nowMs)}];
+    const previewSlide={...slide,document:previewOverviewDocument(slide.document,events)};return [{...entry,slide:previewSlide,event:selectSlideEvent(events,slide.document?.eventSelection||{},eventsById.get(slide.eventId||channel.eventId)||null,nowMs)}];
   });
 }
 
@@ -5629,7 +5719,7 @@ async function openChannelPreview() {
   closeChannelPreview();
   const generation=channelPreviewGeneration;
   // Read the current editor, including focused controls not yet autosaved.
-  const channel={...structuredClone(current),orientation:document.querySelector('#channel-orientation').value,defaultTransition:document.querySelector('#channel-transition').value,repeatEnabled:document.querySelector('#channel-repeat').checked,items:state.playlist.map((entry,index)=>({slideId:entry.slideId,durationSeconds:Math.max(3,Number(document.querySelector(`[data-duration-index="${index}"]`)?.value||entry.duration)||12),transition:document.querySelector(`[data-transition-index="${index}"]`)?.value||entry.transition||'inherit'}))};
+  const channel={...structuredClone(current),orientation:document.querySelector('#channel-orientation').value,defaultTransition:document.querySelector('#channel-transition').value,repeatEnabled:document.querySelector('#channel-repeat').checked,items:state.playlist.map((entry,index)=>({slideId:entry.slideId,slide:current.items.find(item=>item.slideId===entry.slideId)?.slide,durationSeconds:Math.max(3,Number(document.querySelector(`[data-duration-index="${index}"]`)?.value||entry.duration)||12),transition:document.querySelector(`[data-transition-index="${index}"]`)?.value||entry.transition||'inherit'}))};
   const dialog=document.querySelector('#preview-dialog');
   document.querySelector('#channel-preview-title').textContent=current.name;
   document.querySelector('#preview-slide-count').textContent='Aktuelle Inhalte werden geladen …';

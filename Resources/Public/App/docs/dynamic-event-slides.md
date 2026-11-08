@@ -123,3 +123,22 @@ Tabletgrößen im Hoch-/Querformat. Zusätzlich prüft sie die Layoutgrenzen der
 vorhandenen Dialoge. Chromium und WebKit sind Browserprüfungen, keine Tests auf
 angeschlossenen echten Android-/iOS-Geräten. CMS-Transportvarianten der Oberfläche
 ersetzen die separat in CI ausgeführten nativen CMS-Installationen nicht.
+
+## Dynamischer Stempeltext ab 3.33.0
+
+Event-Stempel unterstützen Freitext mit denselben öffentlichen Feldnamen und
+Bezeichnungen wie Event-Tabellen: `{{Titel}}`, `{{Beginn}}`, `{{Einlass}}`,
+`{{Ticketstatus}}` oder `{{remainingTickets}}`. Auch einzelne
+Klammern wie `{title}` funktionieren. Die Einfügehilfe im Stempelbereich setzt
+den Platzhalter an der aktuellen Textposition ein. Mehrere Felder können mit
+Freitext, Trennzeichen und Zeilenumbrüchen kombiniert werden.
+
+Die Sichtbarkeitsbedingung gilt unabhängig vom Text. Beispiel: Bedingung
+„Tickets ausverkauft“, Text `{{Titel}} – {{remainingTickets}}`. Es wird das
+verknüpfte oder automatisch gewählte Event der Slide verwendet. Die Definition
+bleibt beim Speichern einer Slide oder Vorlage erhalten; Vorschau und Player
+verwenden dieselbe Auflösung. Fehlende Werte werden leer eingesetzt; ein
+vollständig leerer Stempel bleibt in der Ausgabe ausgeblendet. Uhrzeiten werden
+wie in den Event-Tabellen formatiert, Null und Nein bleiben erhalten. Unbekannte
+Platzhalter bleiben zur Korrektur lesbar. Private Felder können nicht abgerufen
+werden; QR-Codes bleiben eigene Elemente beziehungsweise Tabellenfelder.

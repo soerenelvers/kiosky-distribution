@@ -1,5 +1,8 @@
 # Bulk-Import und Werbung mit Tags
 
+Ab 3.33.0 gelten für Reihenfolge, Zwischenslides und unabhängige Veranstaltungszahlen die [erweiterten Werbeabfolgen und Übersichten](advertising-sequences.md).
+Die folgenden historischen Gesamtgrenzen beschreiben den Stand bis 3.32.0.
+
 Ab 3.16.0 gelten dieselben Funktionen in Standalone, WordPress und TYPO3.
 
 ## Import

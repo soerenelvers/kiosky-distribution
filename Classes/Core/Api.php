@@ -386,6 +386,7 @@ final class Api
         }
         if (preg_match('#^/api/slides/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['slides'], rawurldecode($match[1]), 'Slide');
+            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['currentVersion']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
@@ -415,6 +416,7 @@ final class Api
             $source = $this->required($state['channels'], rawurldecode($match[1]), 'Kanal');
             $source=AdvertisingService::channel($state,$source);
             foreach($source['items'] as &$item)if(!empty($item['slide']['virtual'])){$copy=array_diff_key($item['slide'],array_flip(['id','createdAt','updatedAt','automationKey','virtual','currentVersion']));$copy['name'].=' (Kopie)';$copy['status']='draft';$saved=$this->saveSlide($state,$copy);$item['slideId']=$saved['id'];unset($item['slide']);}unset($item);
+            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['automationKey'], $source['deletedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
@@ -422,7 +424,7 @@ final class Api
         }
         if (preg_match('#^/api/channels/([^/]+)(?:/permanent)?$#', $path, $match)) {
             $id = rawurldecode($match[1]);
-            if ($method === 'PUT') return $this->ok(['channel' => $this->saveRecord($state, 'channels', $body, $id)], true);
+            if ($method === 'PUT') {$record=$this->saveRecord($state,'channels',$body,$id);return $this->ok(['channel'=>AdvertisingService::channel($state,$record)],true);}
             if ($method === 'DELETE') {
                 if (str_ends_with($path, '/permanent')) return $this->purgeRecord($state, 'channels', $id);
                 return $this->trashRecord($state, 'channels', 'channel', $id);
@@ -491,6 +493,7 @@ final class Api
 
         if (preg_match('#^/api/matrix-displays/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['matrices'], rawurldecode($match[1]), 'Matrix');
+            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'disabled';
@@ -1871,6 +1874,7 @@ final class Api
                 $scheduleRules=[];foreach(EasyJobService::roomUseTypes($state['easyjob']['roomUseTypeRules'] ?? []) as $rule)$scheduleRules[$rule['normalizedType']]=$rule;
                 $event['scheduleEntries']=array_values(array_map(static fn(array $entry):array=>array_intersect_key($entry,array_flip(['id','displayCaption','category','startAt','endAt','roomName'])),array_filter($state['eventSchedules'],static fn(array $entry):bool=>($entry['eventId'] ?? '')===$event['id']&&($entry['active'] ?? true)!==false&&!in_array($entry['category'] ?? '',['internal','cancelled'],true)&&($entry['visible'] ?? true)!==false&&($scheduleRules[EasyJobService::normalizedRoomUseType((string)($entry['type'] ?? ''))]['visible'] ?? true)!==false)));
             }
+            $slide=AdvertisingService::overviewSlide($slide,$this->license()->allows($state,'events')?$this->active($state['events']):[]);
             $slides[] = $item + ['slide' => $slide, 'event' => $event];
         }
         if($channel)$channel['items']=array_map(static fn(array $item):array=>array_diff_key($item,['slide'=>true]),$channel['items'] ?? []);
@@ -2343,7 +2347,11 @@ final class Api
             $config=is_array($body['config'] ?? null)?$body['config']:($current['config'] ?? []);$this->presetSchedules($config);
             $sourceId=$id ?: $this->uuid();$body['id']=$sourceId;PresetTimerActions::assertGraph($state['presets'],$sourceId,$config);
         }
-        if($collection==='channels'&&isset($body['items']))$body['items']=array_values(array_filter($body['items'],static fn(array $item):bool=>!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
+        if($collection==='channels'&&isset($body['items'])&&in_array($current['automationKey'] ?? '',['advertising:channel','advertising:channel:portrait'],true)){
+            $orientation=$current['automationKey']==='advertising:channel:portrait'?'portrait':'landscape';
+            $state['advertisingSettings']['channelSequences'][$orientation]=array_values(array_map(static fn(array $item):array=>array_intersect_key($item,array_flip(['slideId','durationSeconds','transition'])),array_filter($body['items'],static fn(array $item):bool=>empty($item['advertisingInterstitial']))));
+        }
+        if($collection==='channels'&&isset($body['items']))$body['items']= array_values(array_filter($body['items'],static fn(array $item):bool=>empty($item['advertisingInterstitial'])&&!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
         if($collection==='schedules'){
             $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');
             $contentId=$body['contentId'] ?? $body[$type.'Id'] ?? $merged['contentId'] ?? $merged[$type.'Id'] ?? '';
