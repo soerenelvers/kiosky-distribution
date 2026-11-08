@@ -1520,7 +1520,7 @@ final class Api
         if (preg_match('#^/api/v1/presets/([^/]+)/execute$#', $path, $match) && $method === 'POST') {
             $preset = $this->required($state['presets'], rawurldecode($match[1]), 'Preset');
             $config = is_array($preset['config'] ?? null) ? $preset['config'] : [];
-            if (($preset['type'] ?? '') !== 'emergency' && (array_key_exists('channelUpdates',$config)||array_key_exists('assignments',$config))) {
+            if (($preset['type'] ?? '') !== 'emergency' && (array_key_exists('channelUpdates',$config)||array_key_exists('assignments',$config)||array_key_exists('schedules',$config))) {
                 $execution=$this->executeStatePreset($state,$preset);
                 return $this->created(['execution'=>$execution]);
             }
@@ -1626,13 +1626,31 @@ final class Api
         if (!$collection || !$this->first($this->active($state[$collection]), fn(array $item): bool => $item['id'] === $target['id'])) throw new RuntimeException('Das Ausspielungsziel wurde nicht gefunden.');
     }
 
-    /** @return array<string,mixed> */
+    /** Resolve time-only slots on the trigger day, using the external schedule contract. */
+    private function presetSchedules(array $config): array
+    {
+        if (!array_key_exists('schedules',$config)) return [];
+        if (!is_array($config['schedules']) || !array_is_list($config['schedules']) || count($config['schedules'])>500) throw new RuntimeException('Ein Preset darf höchstens 500 Zeitzuweisungen enthalten.',422);
+        $at=time();
+        return array_map(static function(mixed $input) use($at): array {
+            if (!is_array($input)) throw new RuntimeException('Ungültige Zeitzuweisung im Preset.',422);
+            return ExternalSchedule::input($input,$at);
+        },$config['schedules']);
+    }
+
     private function executeStatePreset(array &$state,array $preset): array
     {
         $config=is_array($preset['config'] ?? null)?$preset['config']:[];
         $channelUpdates = is_array($config['channelUpdates'] ?? null) ? $config['channelUpdates'] : [];
         $assignmentInputs = is_array($config['assignments'] ?? null) ? $config['assignments'] : [];
-        if (!$channelUpdates && !$assignmentInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
+
+        $scheduleInputs=$this->presetSchedules($config);
+        if($scheduleInputs)$this->license()->assertPath($state,'/api/schedules');
+        foreach($scheduleInputs as $input){
+            $this->required($this->active($state[$input['targetType']==='display'?'displays':'groups']),$input['targetId'],'Ziel');
+            $this->required($this->active($state[$input['contentType']==='slide'?'slides':'channels']),$input['contentId'],'Inhalt');
+        }
+        if (!$channelUpdates && !$assignmentInputs && !$scheduleInputs) throw new RuntimeException('Das Preset enthält noch keine ausführbaren Zustände.', 422);
         $updatedChannels = [];
         foreach ($channelUpdates as $update) {
             if (!is_array($update)) continue;
@@ -1650,7 +1668,11 @@ final class Api
             if (!is_array($input)) continue;
             $assignments[] = $this->saveAssignment($state, ['target' => ['type' => $input['targetType'] ?? '', 'id' => $input['targetId'] ?? ''], 'content' => ['type' => $input['contentType'] ?? '', 'id' => $input['contentId'] ?? ''], 'priority' => 500],$runSource);
         }
-        $execution = $this->record(['presetId' => $preset['id'], 'targets' => array_map(static fn(array $item): array => $item['target'], $assignments), 'result' => ['action' => 'state_applied', 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
+        $schedules=[];
+        foreach($scheduleInputs as $input)$schedules[]=$this->collectionRoute($state,'POST','schedules','entry',$input)[1]['entry'];
+        $targets=array_merge(array_map(static fn(array $item): array=>$item['target'],$assignments),array_map(static fn(array $item): array=>['type'=>$item['targetType'],'id'=>$item['targetId']],$scheduleInputs));
+        $targets=array_values(array_unique($targets,SORT_REGULAR));
+        $execution = $this->record(['presetId' => $preset['id'], 'targets' => $targets, 'result' => ['action' => 'state_applied', 'schedules'=>$schedules, 'channelUpdates' => $updatedChannels, 'assignments' => $assignments], 'executedAt' => $this->now()]);
         $state['presetExecutions'][] = $execution;
         $state['presetExecutions'] = array_slice($state['presetExecutions'], -100);
         return $execution;
@@ -2267,6 +2289,7 @@ final class Api
             if(!is_string($color)||!preg_match('/^#[0-9a-f]{6}$/i',$color))throw new RuntimeException('Die Display-Hintergrundfarbe muss eine sechsstellige Hex-Farbe sein, z. B. #000000.',422);
             $body['playerBackgroundColor']=strtolower($color);
         }
+        if($collection==='presets')$this->presetSchedules(is_array($body['config'] ?? null)?$body['config']:($current['config'] ?? []));
         if($collection==='channels'&&isset($body['items']))$body['items']=array_values(array_filter($body['items'],static fn(array $item):bool=>!str_starts_with((string)($item['slideId'] ?? ''),'advertising-event:')));
         if($collection==='schedules'){
             $merged=array_replace($current,$body);$type=$body['contentType'] ?? $merged['contentType'] ?? (!empty($merged['slideId'])?'slide':'channel');
@@ -2373,6 +2396,7 @@ final class Api
             if (is_array($preset['config']['channelUpdates'] ?? null)) {
                 $preset['config']['channelUpdates'] = array_values(array_filter($preset['config']['channelUpdates'], static fn(mixed $item): bool => !is_array($item) || ($item['channelId'] ?? '') !== $id));
             }
+            if (is_array($preset['config']['schedules'] ?? null)) $preset['config']['schedules']=array_values(array_filter($preset['config']['schedules'],static fn(mixed $item): bool=>!is_array($item)||!(($item['content']['type'] ?? '')==='channel'&&($item['content']['id'] ?? '')===$id)));
             if (is_array($preset['config']['assignments'] ?? null)) {
                 $preset['config']['assignments'] = array_values(array_filter($preset['config']['assignments'], static fn(mixed $item): bool => !is_array($item) || !(($item['contentType'] ?? '') === 'channel' && ($item['contentId'] ?? '') === $id)));
             }

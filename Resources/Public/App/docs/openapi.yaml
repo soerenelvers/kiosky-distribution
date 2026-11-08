@@ -232,6 +232,7 @@ paths:
     post:
       tags: [Presets]
       summary: Betriebspreset ausführen
+      description: Führt gespeicherte Kanalzustände, direkte Zuweisungen und Zeitzuweisungen (config.schedules) atomar aus. Zeitzuweisungen erzeugen reguläre Zeitplaneinträge; deren IDs stehen in execution.result.schedules.
       parameters:
         - { name: presetId, in: path, required: true, schema: { type: string } }
       requestBody:

@@ -249,6 +249,10 @@ final class TransferService
     private function rewriteValue(mixed $value, array $maps, ?string $key = null): mixed
     {
         if (is_array($value)) {
+            if(in_array($key,['target','content'],true)&&isset($value['type'],$value['id'])){
+                $collection=($key==='content'?['slide'=>'slides','channel'=>'channels']:['display'=>'displays','group'=>'groups','matrix'=>'matrices'])[$value['type']] ?? null;
+                if($collection)$value['id']=$maps[$collection][$value['id']] ?? $value['id'];
+            }
             $rewritten = [];
             foreach ($value as $entryKey => $entry) $rewritten[$entryKey] = $this->rewriteValue($entry, $maps, is_string($entryKey) ? $entryKey : $key);
             return $rewritten;

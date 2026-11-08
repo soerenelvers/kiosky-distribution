@@ -1740,3 +1740,21 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 @media(max-width:700px){.event-template-card {align-items:stretch;flex-direction:column}.event-template-actions .button {flex:1;min-height:44px}}
 
 .event-editor-dialog .dialog-actions {flex-wrap:wrap}
+
+/* Preset timetable definitions share desktop and touch controls. */
+.preset-schedule-action { min-width:0; padding:12px; margin-top:12px; border:1px solid var(--line); border-radius:10px; }
+.preset-schedule-action .form-grid { margin-top:12px; }
+.preset-schedule-action .form-field { min-width:0; }
+.preset-schedule-action input:not([type="checkbox"]), .preset-schedule-action select { width:100%; min-width:0; min-height:44px; }
+.preset-schedule-targets { margin-top:12px; min-width:0; }
+.preset-schedule-targets > div { max-height:180px; overflow:auto; }
+.preset-schedule-targets label, .preset-schedule-weekdays label { display:flex; align-items:center; gap:8px; min-height:44px; overflow-wrap:anywhere; }
+.preset-schedule-weekdays { margin-top:12px; }
+.preset-schedule-weekdays label { display:inline-flex; margin-right:12px; }
+@media (max-width:700px) {
+  .preset-builder-head { flex-wrap:wrap; }
+  .preset-builder-head > div { min-width:0; }
+  .preset-action-row { grid-template-columns:minmax(0,1fr); }
+  .preset-schedule-action .form-grid { grid-template-columns:minmax(0,1fr); }
+  #preset-dialog .dialog-actions { flex-wrap:wrap; }
+}
