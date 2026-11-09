@@ -49,14 +49,29 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.34.0',
+            '3.35.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
             $portableUsers,
             'typo3',
             null,
-            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.34.0'),
+            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.35.0'),
+            fontStorage: new \Kiosky\Core\FontStorage($this->fontDirectory()),
+            canReadFonts: !$external && ($identity['id']??'')==='typo3:'.($GLOBALS['BE_USER']->user['uid']??'') && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::VIEW),
+            canManageFonts: !$external && ($identity['role']??'viewer')==='admin' && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::MANAGE_SETTINGS),
         );
+    }
+
+    private function fontDirectory(): string
+    {
+        $public = rtrim(\TYPO3\CMS\Core\Core\Environment::getPublicPath(), '/');
+        $var = rtrim(\TYPO3\CMS\Core\Core\Environment::getVarPath(), '/');
+        // Classic TYPO3 places var inside the public tree. Do not depend on
+        // Apache .htaccess being honored by an nginx/Plesk static-file route.
+        if ($var === $public || str_starts_with($var, $public . '/')) {
+            return dirname($public) . '/private/kiosky-fonts-' . substr(hash('sha256', $public), 0, 16);
+        }
+        return $var . '/kiosky/fonts';
     }
 }

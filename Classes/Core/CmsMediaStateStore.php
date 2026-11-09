@@ -21,6 +21,13 @@ final class CmsMediaStateStore implements StateStore
         return $this->media->exportAssetData($asset);
     }
 
+    /** Only used after session/player authorization and an exact registered-font hash lookup. */
+    public function registeredFontData(string $id): string
+    {
+        if(!method_exists($this->media,'registeredFontData'))throw new RuntimeException('Die registrierte Schriftdatei ist nicht verfügbar.',503);
+        return $this->media->registeredFontData($id);
+    }
+
     public function load(): array
     {
         $this->references = [];

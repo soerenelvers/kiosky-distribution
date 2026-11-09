@@ -56,13 +56,13 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             return new \TYPO3\CMS\Core\Http\RedirectResponse((string)$uriBuilder->buildUriFromRoute('web_kiosky',['menus'=>'1']),303,['Cache-Control'=>'no-store']);
         }
         if ($path === '/kiosky-player/') {
-            return new HtmlResponse($this->renderer->render('typo3', $base . '/kiosky-api/', $base . '/kiosky-player/', $request), 200, ['Cache-Control' => 'no-store']);
+            return new HtmlResponse($this->renderer->render('typo3', $base . '/kiosky-api/', $base . '/kiosky-player/', $request), 200, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
         }
         if ($path === '/kiosky-player-center/' || $path === '/player/') {
-            return new HtmlResponse($this->renderer->renderPlayerPortal('index', $base . '/kiosky-api/', $base . '/kiosky-player/', $base . '/kiosky-player-browser/', $request), 200, ['Cache-Control' => 'no-store']);
+            return new HtmlResponse($this->renderer->renderPlayerPortal('index', $base . '/kiosky-api/', $base . '/kiosky-player/', $base . '/kiosky-player-browser/', $request), 200, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
         }
         if ($path === '/kiosky-player-browser/') {
-            return new HtmlResponse($this->renderer->renderPlayerPortal('browser', $base . '/kiosky-api/', $base . '/kiosky-player/', $base . '/kiosky-player-browser/', $request), 200, ['Cache-Control' => 'no-store']);
+            return new HtmlResponse($this->renderer->renderPlayerPortal('browser', $base . '/kiosky-api/', $base . '/kiosky-player/', $base . '/kiosky-player-browser/', $request), 200, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
         }
         $directExternal = preg_match('#^/kiosky-api/v1(?:/|$)#', $path) === 1;
         if ($path !== '/kiosky-api/' && !$directExternal) return $handler->handle($request);
@@ -107,6 +107,6 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         unset($query['path']);
         $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat)$#',$apiPath)===1);
         [$status, $payload] = $api->handle($request->getMethod(), $apiPath, array_merge($query, is_array($body) ? $body : []), $request->getHeaderLine('X-Player-Key'));
-        return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store']);
+        return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
     }
 }

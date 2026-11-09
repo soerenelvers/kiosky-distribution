@@ -1,0 +1,18 @@
+[
+  {
+    "package": "@fontsource-variable/archivo",
+    "version": "5.3.0",
+    "tarball": "https://registry.npmjs.org/@fontsource-variable/archivo/-/archivo-5.3.0.tgz",
+    "integrity": "sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==",
+    "license": "OFL-1.1",
+    "licenseFile": "archivo-OFL.txt"
+  },
+  {
+    "package": "@fontsource/ibm-plex-mono",
+    "version": "5.3.0",
+    "tarball": "https://registry.npmjs.org/@fontsource/ibm-plex-mono/-/ibm-plex-mono-5.3.0.tgz",
+    "integrity": "sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==",
+    "license": "OFL-1.1",
+    "licenseFile": "plex-OFL.txt"
+  }
+]

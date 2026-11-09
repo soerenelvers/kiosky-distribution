@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "625e1d203fc19ca786706c75b329e2e385ff6db5",
+  "source_commit": "506dcbebcdbb81811652b15ad5456f5adc06038d",
   "product": "kiosky",
-  "version": "3.34.0",
-  "released_at": "2026-11-08T22:19:35.540Z",
+  "version": "3.35.0",
+  "released_at": "2026-11-09T14:16:48.534Z",
   "channel": "stable",
-  "release_notes": "## [3.34.0] – 2026-11-08\n\n- Position und Größe aller Slide-/Vorlagenelemente wahlweise in Prozent oder Entwurfspixeln eingeben; Einheit pro Element speichern und Ausgabe proportional skalieren.\n- Leere Veranstaltungsübersichten bei fehlenden oder ungültigen optionalen Endzeiten reparieren; nächste gültige Veranstaltungen chronologisch wählen und Anzahl von 1 bis 50 einstellen.\n- Auch automatische Veranstaltungswerbung bei leeren oder ungültigen Endzeiten zuverlässig aus dem Veranstaltungsbeginn erzeugen.\n- Vorschau mit Serverzeit und manueller Aktualisierung versorgen, alte Ereignis-Snapshots verwerfen und Auswahl pro Player-Abfrage gemeinsam berechnen.\n- Identische Auswahl, Speicherung und Ausgabe für Standalone, WordPress und TYPO3 prüfen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.34.0",
+  "release_notes": "## [3.35.0] – 2026-11-09\n\n- Eigene Schriften in Einstellungen verwalten und bei allen Textelementen, Eventdetails, QR-Begleittexten, Wegweisungen, Uhr-Overlay und Warnungsdesigner auswählen; Vorschau, Vorlagen und Player verwenden dieselbe Auswahl.\n- Schriftdateien privat und getrennt vom CMS-Zustand speichern; Verwaltung nur für Administratoren, Downloads nur mit Sitzung oder gültigem Player-Schlüssel und aktueller Inhaltszuweisung. Offline-Fontcache begrenzen und Datei-Hashes prüfen.\n- Archivo und IBM Plex Mono lokal mit Lizenz- und Herkunftsnachweisen ausliefern; externe Google-Font-Abfragen entfernen.\n- Freigegebene TYPO3-Rechtematrix vor jeder API-Aktion durchsetzen: Fachrollen dürfen weder fremde Inhalte verändern noch Notfallmeldungen oder Systemeinstellungen ohne Berechtigung steuern.\n- Verschiebe-Werkzeugleiste kleiner Elemente auch bei gescrollter mobiler Arbeitsfläche im sichtbaren Bereich halten.\n- Typische Zugangsdaten und Tokenmuster in Diagnoselogs/Audit-Metadaten und PHP-Fehlern schwärzen; Sicherheits-, Performance- und Betriebsroadmap für alle drei Varianten dokumentieren.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.35.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.34.0",
+    "core_version": "3.35.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.34.0",
-    "typo3_extension_version": "3.34.0"
+    "wordpress_plugin_version": "3.35.0",
+    "typo3_extension_version": "3.35.0"
   },
   "components": {
     "core": {
-      "version": "3.34.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.34.0.zip?ref=v3.34.0",
-      "sha256": "5bc9fd80a30e2f02f53bcfb428a6e4a5ec3b506a1b1fe7d7c7d4cb49fe4544dd"
+      "version": "3.35.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.35.0.zip?ref=v3.35.0",
+      "sha256": "f857f29558b798ee4dbe0b80f4fb44662f00b58d1b746bcdd4b8b016df024183"
     },
     "standalone": {
-      "version": "3.34.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.34.0.zip?ref=v3.34.0",
-      "sha256": "5bc9fd80a30e2f02f53bcfb428a6e4a5ec3b506a1b1fe7d7c7d4cb49fe4544dd"
+      "version": "3.35.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.35.0.zip?ref=v3.35.0",
+      "sha256": "f857f29558b798ee4dbe0b80f4fb44662f00b58d1b746bcdd4b8b016df024183"
     },
     "wordpress": {
-      "version": "3.34.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.34.0.zip?ref=v3.34.0",
-      "sha256": "41524fdcc56f456bff73f0e91532bdc48946806f6c5f5f22f398a385a5f86938",
+      "version": "3.35.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.35.0.zip?ref=v3.35.0",
+      "sha256": "4e17e7a7469db0e47330cdf182966cc7dbb733ef9086eefba0180f14b42f4e14",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.34.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.34.0.zip?ref=v3.34.0",
-      "sha256": "9d7f16bae4fbe84687a1fb10b0c9c5405452c7b51d87592d2ffb8409973c31fd",
+      "version": "3.35.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.35.0.zip?ref=v3.35.0",
+      "sha256": "e9c40db62242be364b50c2debef2036ccb136601334d1e1a7e8e54fe2e5c626f",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

@@ -26,14 +26,18 @@ final readonly class ApiController
     public function handleRequest(ServerRequestInterface $request): ResponseInterface
     {
         $backendUser = $GLOBALS['BE_USER'];
-        $body = json_decode((string)$request->getBody(), true);
         $configuredRole = (string)($backendUser->user['tx_kiosky_role'] ?? '');
-        $role = in_array($configuredRole, ['administrator', 'manager', 'editor', 'event_editor', 'display_operator', 'viewer', 'admin'], true)
+        $role = $backendUser->isAdmin() ? 'administrator' : (in_array($configuredRole, ['administrator', 'manager', 'editor', 'event_editor', 'display_operator', 'viewer', 'admin'], true)
             ? $configuredRole
-            : ($backendUser->isAdmin() ? 'administrator' : 'viewer');
+            : 'viewer');
         if (!$this->permissions->isGranted(PermissionService::VIEW, $backendUser)) {
             return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Kiosky-Zugriff verweigert.']], 403);
         }
+        $apiPath = (string)($request->getQueryParams()['path'] ?? '');
+        if (!$this->permissions->isApiGranted($request->getMethod(), $apiPath, $backendUser)) {
+            return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Für diese Kiosky-Aktion fehlt die TYPO3-Berechtigung.']], 403, ['Cache-Control' => 'no-store']);
+        }
+        $body = json_decode((string)$request->getBody(), true);
         $apiRole = match ($role) {
             'administrator', 'admin', 'manager' => 'admin',
             'editor', 'event_editor', 'display_operator' => 'editor',
@@ -44,8 +48,8 @@ final readonly class ApiController
             'name' => (string)($backendUser->user['realName'] ?: $backendUser->user['username']),
             'email' => (string)($backendUser->user['email'] ?: $backendUser->user['username']),
             'role' => $apiRole,
+            'canManageSettings' => $this->permissions->isGranted(PermissionService::MANAGE_SETTINGS, $backendUser),
         ];
-        $apiPath = (string)($request->getQueryParams()['path'] ?? '');
         if (str_starts_with($apiPath, '/api/updates')) {
             if (!$this->permissions->isGranted(PermissionService::MANAGE_SETTINGS, $backendUser)) {
                 return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Updates dürfen nur von TYPO3-Administratoren verwaltet werden.']], 403);

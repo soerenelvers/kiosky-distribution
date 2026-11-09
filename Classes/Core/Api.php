@@ -17,6 +17,8 @@ require_once __DIR__.'/PresetTriggers.php';
 require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
+require_once __DIR__.'/FontStorage.php';
+require_once __DIR__.'/SensitiveData.php';
 
 final class Api
 {
@@ -33,6 +35,9 @@ final class Api
         private readonly string $platform = 'cms',
         private readonly ?MenuSubscriptions $menuSubscriptions = null,
         private readonly ?LicenseClient $licenseClient = null,
+        private readonly ?FontStorage $fontStorage = null,
+        private readonly bool $canReadFonts = false,
+        private readonly bool $canManageFonts = false,
     ) {
     }
 
@@ -60,7 +65,7 @@ final class Api
             $status = $error instanceof RuntimeException ? max(400, min(599, $error->getCode() ?: 422)) : 500;
             return [$status, ['error' => [
                 'code' => $status === 409 && $path === '/api/schedules/block' ? 'SCHEDULE_CONFLICT' : ($status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST'))),
-                'message' => $error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.',
+                'message' => SensitiveData::text($error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.'),
             ]]];
         }
     }
@@ -212,6 +217,38 @@ final class Api
         }
 
         $this->assertRolePermission($method, $path);
+
+        if($path==='/api/fonts'||preg_match('#^/api/fonts/([a-f0-9]{64})$#D',$path,$fontMatch)){
+            if(!$this->canReadFonts)throw new RuntimeException('Eine gültige CMS-Benutzersitzung ist erforderlich.',401);
+            if($method!=='GET')throw new RuntimeException('Methode nicht erlaubt.',405);
+            return $this->ok($path==='/api/fonts'?['fonts'=>$this->fontCatalog($state)]:$this->fontFile($state,$fontMatch[1]));
+        }
+        if($path==='/api/settings/fonts'||preg_match('#^/api/settings/fonts/([a-f0-9]{64})$#D',$path,$fontMatch)){
+            // Explicit native administrator grant, independent of the coarse shared API role.
+            if(!$this->canManageFonts||!$this->canReadFonts||($this->identity['role']??'viewer')!=='admin')throw new RuntimeException('Eine native Administratorberechtigung ist erforderlich.',403);
+            if(!$this->fontStorage)throw new RuntimeException('Die Schriftablage ist nicht verfügbar.',503);
+            $fonts=$state['fonts'] ?? [];
+            if($path==='/api/settings/fonts'&&$method==='GET')return $this->ok(['fonts'=>$this->fontCatalog($state)]);
+            if($path==='/api/settings/fonts'&&$method==='POST'){
+                $name=$body['name'] ?? null;if(!is_string($name)||trim($name)===''||strlen(trim($name))>100)throw new RuntimeException('Bitte einen Schriftnamen mit 1 bis 100 Zeichen eingeben.',422);
+                $assetId=null;
+                if(!array_key_exists('data',$body)&&in_array($this->platform,['wordpress','typo3'],true)){
+                    if(!($this->store instanceof CmsMediaStateStore)||!is_string($body['assetId'] ?? null))throw new RuntimeException('Bitte die Schriftdatei im nativen CMS-Medienbrowser auswählen.',422);
+                    $asset=$this->required($state['mediaAssets'],$body['assetId'],'Schriftdatei');if(!empty($asset['deletedAt']))throw new RuntimeException('Die Schriftdatei ist nicht verfügbar.',422);
+                    $source=$this->store->exportAssetData($asset);$assetId=$asset['id'];
+                }else $source=$body['data'] ?? null;
+                $decoded=FontStorage::decode($source);$font=$decoded['font']+['name'=>trim($name)];if($assetId!==null)$font['assetId']=$assetId;$index=array_search($font['id'],array_column($fonts,'id'),true);
+                if($index===false&&count($fonts)>=20)throw new RuntimeException('Es können höchstens 20 eigene Schriftdateien verwaltet werden.',422);
+                $this->fontStorage->put($decoded['bytes']);if($index===false)$fonts[]=$font;else $fonts[$index]=$font;$state['fonts']=$fonts;
+                $this->audit($state,'font.registered',$font['id']);return $this->created(['font'=>array_diff_key($font,['assetId'=>true]),'fonts'=>$this->fontCatalog($state)]);
+            }
+            if($method==='DELETE'&&!empty($fontMatch[1])){
+                $id=$fontMatch[1];$this->required($fonts,$id,'Schriftart');
+                foreach(['slides','templates','presets','warningTemplates'] as $collection)if(FontStorage::references($state[$collection] ?? [],$id))throw new RuntimeException('Diese Schriftart wird noch in Inhalten oder Vorlagen verwendet.',409);
+                $state['fonts']=array_values(array_filter($fonts,static fn(array $font):bool=>$font['id']!==$id));return $this->ok(['fonts'=>$this->fontCatalog($state)],true);
+            }
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
 
         if(preg_match('#^/api/events/([^/]+)/schedule(?:/([^/]+))?$#',$path,$match))return $this->eventSchedule($state,$method,rawurldecode($match[1]),isset($match[2])?rawurldecode($match[2]):null,$body);
         if($path==='/api/dwd/warncells'&&$method==='GET'){
@@ -999,6 +1036,25 @@ final class Api
             return $this->ok(['slide'=>$updated],true);
         }
         throw new RuntimeException('Speisekarten-Endpunkt wurde nicht gefunden.',404);
+    }
+
+    private function fontCatalog(array $state,?array $content=null): array
+    {
+        $fonts=$state['fonts'] ?? [];if($content!==null)$fonts=array_values(array_filter($fonts,static fn(array $font):bool=>FontStorage::references($content,$font['id'])));
+        return array_map(static fn(array $font):array=>array_intersect_key($font,array_flip(['id','name','format','mime','size'])),$fonts);
+    }
+
+    private function fontFile(array $state,string $id): array
+    {
+        if(!$this->fontStorage)throw new RuntimeException('Die Schriftablage ist nicht verfügbar.',503);
+        $font=$this->required($state['fonts'] ?? [],$id,'Schriftart');
+        try{$file=$this->fontStorage->file($font);}catch(RuntimeException $error){
+            if($this->platform!=='wordpress'||!($this->store instanceof CmsMediaStateStore)||empty($font['assetId']))throw $error;
+            $decoded=FontStorage::decode($this->store->registeredFontData($font['assetId']));
+            if($decoded['font']['id']!==$id)throw new RuntimeException('Die registrierte Schriftdatei wurde verändert.',409);
+            $this->fontStorage->put($decoded['bytes']);$file=$this->fontStorage->file($font);
+        }
+        $file['font']=array_diff_key($file['font'],['assetId'=>true]);return $file;
     }
 
     private function assertRolePermission(string $method, string $path): void
@@ -1907,8 +1963,15 @@ final class Api
         $previous=$state['playbackRevisions'][$scope] ?? null;$changed=($previous['revision'] ?? null)!==$revision;
         if ($changed) $state['playbackRevisions'][$scope]=['revision'=>$revision,'epochMs'=>$previous?$this->milliseconds($serverTime,$serverTime):$playbackSync['epochMs']];
         $playbackSync['key']=$scope.':'.$revision;$playbackSync['epochMs']=$state['playbackRevisions'][$scope]['epochMs'];
+        $fontContent=$this->license()->playback($state,['slides'=>$slides,'warning'=>$emergency,'emergency'=>$emergency]);
+        $fonts=$this->fontCatalog($state,$fontContent);
+        if(array_key_exists('fontId',$body)){
+            $id=is_string($body['fontId'])?$body['fontId']:'';
+            if(!in_array($id,array_column($fonts,'id'),true))throw new RuntimeException('Diese Schrift ist dem Display nicht zugewiesen.',404);
+            return $this->ok($this->fontFile($state,$id),$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
+        }
         return $this->ok([
-            'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
+            'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $commands, 'serverTime' => $serverTime,
@@ -2522,6 +2585,7 @@ final class Api
             'role' => in_array($this->identity['role'], ['admin', 'editor', 'viewer'], true) ? $this->identity['role'] : 'viewer',
             'status' => 'active',
             'mustChangePassword' => false,
+            'canManageSettings' => ($this->identity['canManageSettings'] ?? ($this->identity['role'] === 'admin')) === true,
         ];
     }
 

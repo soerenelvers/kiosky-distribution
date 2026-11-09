@@ -38,3 +38,11 @@ erhalten; `@eslint/compat` bindet die klassischen Plugin-Regeln in ESLint 9 ein.
 Die Worker-API bleibt unverändert. CI prüft zusätzlich den Produktionsbuild,
 Lint und Verhalten der geschützten HTTP-Endpunkte. Diese Overrides bei einem
 späteren Upstream-Fix erneut prüfen und möglichst entfernen.
+
+## Aktueller Prüfstand (9. November 2026)
+
+Der historische Auditstand oben ist keine aktuelle Befundzahl. Der neue
+[Bericht](reviews/security-performance-resilience-2026-11-09.md) dokumentiert
+Rechtekorrekturen, Schriftauslieferung, Prüfgrenzen und Roadmap. Lokal meldet das
+Hauptprojekt 0, der optionale Update-Service 19 mittlere und keine hohen oder
+kritischen Dependency-Befunde.

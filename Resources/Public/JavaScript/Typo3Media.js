@@ -11,7 +11,7 @@
       const host = window.top.TYPO3?.Modal;
       if (!endpoint || typeof host?.advanced !== 'function') return Promise.reject(new Error('Bitte die Dateiauswahl im Kiosky-Backendmodul von TYPO3 öffnen.'));
       const field = `kiosky-media-${crypto.randomUUID()}`;
-      const extensions = type === 'video' ? videos : type === 'image-only' ? images : type === 'image' ? images + ',svg' : images + ',svg,' + videos;
+      const extensions = type==='font'?'woff2,woff,ttf,otf':type === 'video' ? videos : type === 'image-only' ? images : type === 'image' ? images + ',svg' : images + ',svg,' + videos;
       const url = new URL(endpoint, window.location.href);
       if (url.origin !== window.location.origin) return Promise.reject(new Error('Ungültige TYPO3-Dateiauswahl.'));
       url.searchParams.set('mode', 'file');
