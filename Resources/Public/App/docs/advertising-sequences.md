@@ -77,3 +77,27 @@ Europe/Berlin. Die Vorschau verwendet die Serverzeit und kann über
 Momentaufnahmen werden durch aktuelle Daten ersetzt. Die Auswahl wird pro
 Player-Abfrage einmal berechnet, auf 50 Karten begrenzt und gemeinsam verwendet;
 für einzelne Karten werden keine zusätzlichen API-Abfragen ausgeführt.
+
+## Veranstaltungskarten im Slide gestalten (ab 3.36.0)
+
+Das Element **Veranstaltungsübersicht** auf der Arbeitsfläche oder in der
+Ebenenliste auswählen und rechts unter **Eigenschaften → Karten gestalten**
+bearbeiten. Im Vorlageneditor stehen dieselben Einstellungen bereit:
+
+- Automatische oder 1–6 Spalten, Karten-/Innen-/Detailabstände, Rundung und Farbe.
+- Bild, Datum, Titel, Untertitel, Beginn, Einlass und Ticket-QR einzeln anzeigen
+  oder ausblenden. Leere Details und leere Ticket-Links samt Begleittext entfallen.
+- Pro Detail Zeile, Breite, Schriftgröße/-art, Ausrichtung, Fett und Text davor /
+  danach wählen. Gleiche Zeilennummern ordnen Details nebeneinander an; dafür
+  passende Breiten wählen, etwa je 50 % für Beginn und Einlass.
+- Reihenfolge durch Ziehen oder die Pfeiltasten verändern; Pfeile sind auch auf
+  Touchgeräten verfügbar. Für neue Zeilen eine andere Zeilennummer vergeben.
+- Bildhöhe, Beschneiden/Einpassen, Platzhaltertext und QR-Größe einstellen.
+
+Änderungen erscheinen direkt auf der Arbeitsfläche und werden mit der Slide
+bzw. Vorlage gespeichert. Die Player verwenden dieselbe Gestaltung und aktuelle
+Veranstaltungen. **Standardlayout wiederherstellen** entfernt nur die
+Kartengestaltung. Bereits vorhandene Übersichten bleiben unverändert, bis ihre
+Karten gestaltet werden. Keine Veranstaltungskopien oder zusätzlichen Abfragen
+pro Karte. Der [Veranstaltungs-Bildeditor](event-image-editor.md) wirkt ebenfalls
+auf die Bilder in diesen Karten.

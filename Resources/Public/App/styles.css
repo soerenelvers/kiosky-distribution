@@ -1812,3 +1812,42 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 .editor-geometry-properties select,.editor-geometry-properties input{min-width:0;width:100%;min-height:44px}
 
 #font-upload-form{display:grid;gap:12px;max-width:600px}#font-settings-list{display:grid;gap:10px;margin-top:20px}.font-settings-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:8px}.font-settings-item strong{display:block;overflow-wrap:anywhere}.font-settings-item small{color:var(--muted)}#property-font-family{min-height:44px;width:100%}
+
+/* Editable event-overview cards; scoped so existing overview documents retain their layout. */
+.event-overview-grid.is-designed{line-height:inherit}
+.event-overview-designed-card{display:flex;flex-direction:column;gap:var(--overview-detail-gap);padding:var(--overview-card-padding);background:var(--overview-card-color);border-radius:var(--overview-radius);color:inherit}
+.event-overview-designed-row{display:flex;flex-wrap:wrap;gap:var(--overview-detail-gap);min-height:0;flex:0 1 auto;align-items:center}
+.event-overview-designed-row.has-image{height:var(--overview-image-height);flex:1 1 var(--overview-image-height)}
+.event-overview-designed-field{min-width:0;max-width:100%;flex-grow:1;flex-shrink:1;overflow:hidden;overflow-wrap:anywhere;line-height:inherit}
+.event-overview-designed-field.is-imageUrl{height:100%}
+.event-overview-designed-field .event-overview-image{height:100%;font-size:inherit}
+.event-overview-designed-field.is-ticketQr{display:flex;flex-direction:column;align-items:flex-start;gap:var(--overview-detail-gap)}
+.event-overview-designed-field.is-ticketQr[style*="text-align:center"]{align-items:center}
+.event-overview-designed-field.is-ticketQr[style*="text-align:right"]{align-items:flex-end}
+.event-overview-designed-qr{width:var(--overview-qr-size);max-width:100%;aspect-ratio:1;flex-shrink:0;background:#fff}
+.event-overview-designed-qr svg{width:100%;height:100%;display:block}
+.overview-design-settings{min-width:0;margin:10px 0;border:1px solid var(--line);border-radius:8px;padding:8px}
+.overview-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.overview-design-fields details{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.overview-design-fields summary{padding:10px;cursor:grab;font-weight:700;font-size:.8rem;min-height:44px}
+.overview-design-field-content{padding:8px}
+.overview-design-actions{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.overview-design-actions .toggle-label{flex:1}
+.overview-design-actions button{min-width:44px;min-height:44px}
+#overview-card-editor input,#overview-card-editor select{max-width:100%;min-width:0;min-height:44px}
+.event-image-crop{display:block;width:100%;height:100%;max-width:100%}
+.event-image-preview>.event-image-crop{max-height:160px;height:160px}
+.event-image-editor-dialog{width:min(740px,96vw);max-height:94dvh;padding:0;overflow:auto}
+.event-image-editor-dialog>.dialog-content{padding:24px;min-width:0}
+.event-image-editor-stage{position:relative;margin:12px auto;background:#172338;overflow:hidden;touch-action:none}
+.event-image-editor-stage>img{display:block;width:100%;height:auto;user-select:none;pointer-events:none}
+.event-image-crop-box{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px #0008;cursor:move;touch-action:none}
+.event-image-crop-box::before,.event-image-crop-box::after{content:'';position:absolute;pointer-events:none;inset:33.333% 0;border-top:1px solid #fff8;border-bottom:1px solid #fff8}
+.event-image-crop-box::after{inset:0 33.333%;border:0;border-left:1px solid #fff8;border-right:1px solid #fff8}
+.event-image-crop-box>button{position:absolute;right:0;bottom:0;width:44px;height:44px;border:1px solid #fff;background:#2463d4;color:#fff;touch-action:none;cursor:nwse-resize}
+.event-image-editor-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.event-image-editor-controls input,.event-image-editor-controls select{min-width:0;width:100%;min-height:44px}
+.event-image-editor-preview{height:150px;background:#edf1f8;margin-top:8px}
+@media(max-width:480px){.event-image-editor-dialog>.dialog-content{padding:16px}.event-image-editor-dialog .dialog-actions{flex-wrap:wrap}.event-image-editor-dialog .dialog-actions button{flex:1;min-height:44px}}
+/* Move/delete controls remain usable if a narrow viewport leaves no free edge beside resize handles. */
+.editor-transform-toolbar{z-index:2003}

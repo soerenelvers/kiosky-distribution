@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/EventImageEdit.php';
 
 final class PublicEventCalendar
 {
@@ -68,7 +69,7 @@ final class PublicEventCalendar
                 'setup'=>self::dateTime($event['setupStart'] ?? null,$date),
                 'boxOfficeAvailable'=>(bool)($event['boxOfficeAvailable'] ?? false),
                 'boxOfficeOpenAt'=>self::dateTime($event['boxOfficeOpenAt'] ?? null,$date),
-                'imageUrl'=>self::safeUrl($event['imageUrl'] ?? null),
+                'imageUrl'=>self::safeUrl($event['imageUrl'] ?? null),'imageEdit'=>self::safeUrl($event['imageUrl'] ?? null)?EventImageEdit::normalize($event['imageEdit'] ?? null):null,
                 'externalNumber'=>self::text($event['externalNumber'] ?? '',100),
                 'status' => $status ?: 'published',
                 'remainingTickets' => self::text($event['remainingTickets'] ?? '', 200),
@@ -81,7 +82,7 @@ final class PublicEventCalendar
 
     private static function projectEvents(array $events,array $settings): array
     {
-        $fields=['showTime'=>['start'],'showEndTime'=>['end'],'showAdmission'=>['admission'],'showBreak'=>['breakStart','breakEnd'],'showSetupTime'=>['setup'],'showBoxOffice'=>['boxOfficeAvailable','boxOfficeOpenAt'],'showImage'=>['imageUrl'],'showSubtitle'=>['subtitle'],'showDescription'=>['description'],'showPublicNotes'=>['publicNotes'],'showEventNumber'=>['externalNumber'],'showLocation'=>['venue','room'],'showCategory'=>['eventType'],'showOrganizer'=>['organizer'],'showTickets'=>['ticketUrl'],'showRemainingTickets'=>['remainingTickets'],'showStatus'=>['status']];
+        $fields=['showTime'=>['start'],'showEndTime'=>['end'],'showAdmission'=>['admission'],'showBreak'=>['breakStart','breakEnd'],'showSetupTime'=>['setup'],'showBoxOffice'=>['boxOfficeAvailable','boxOfficeOpenAt'],'showImage'=>['imageUrl','imageEdit'],'showSubtitle'=>['subtitle'],'showDescription'=>['description'],'showPublicNotes'=>['publicNotes'],'showEventNumber'=>['externalNumber'],'showLocation'=>['venue','room'],'showCategory'=>['eventType'],'showOrganizer'=>['organizer'],'showTickets'=>['ticketUrl'],'showRemainingTickets'=>['remainingTickets'],'showStatus'=>['status']];
         foreach($events as &$event){
             if(($event['status'] ?? '')==='cancelled')unset($event['ticketUrl']);
             foreach($fields as $key=>$names)if(!$settings[$key])foreach($names as $name)unset($event[$name]);

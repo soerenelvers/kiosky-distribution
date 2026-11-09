@@ -17,6 +17,7 @@ require_once __DIR__.'/PresetTriggers.php';
 require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
+require_once __DIR__.'/EventImageEdit.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/SensitiveData.php';
 
@@ -343,7 +344,7 @@ final class Api
                     $index = $this->index($state['events'], $id); if ($index === null) { $result['missing']++; continue; }
                     $event = $state['events'][$index]; if (empty($event['sourceId'])) { $result['skippedManual']++; continue; }
                     $locks = is_array($event['lockedFields'] ?? null) ? $event['lockedFields'] : [];
-                    if ($field === 'imageUrl') $event['imageUrl'] = $imageUrl;
+                    if ($field === 'imageUrl') {$event['imageUrl'] = $imageUrl;$event['imageEdit']=null;}
                     else {
                         $value = $this->berlinEventTime((string)($event['date'] ?? ''), $time); if ($value === null) { $result['skippedWithoutDate']++; continue; }
                         $event[$field] = $value;
@@ -2402,6 +2403,7 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='events'){if(array_key_exists('imageEdit',$body))$body['imageEdit']=EventImageEdit::normalize($body['imageEdit']);elseif(array_key_exists('imageUrl',$body)&&($body['imageUrl'] ?? '')!==($current['imageUrl'] ?? ''))$body['imageEdit']=null;}
         if(in_array($collection,['slides','templates'],true)&&isset($body['document']))$body['document']=AdvertisingService::stripOverviewRuntime($body['document']);
         if($collection==='locations'){
             $color=array_key_exists('playerBackgroundColor',$body)?$body['playerBackgroundColor']:($current['playerBackgroundColor'] ?? '#000000');
