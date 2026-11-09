@@ -342,9 +342,6 @@ dialog { width: min(520px, calc(100% - 28px)); padding: 0; border: 0; border-rad
 .feature-link span { font-size: .9rem; }
 .feature-role-note { margin-top: 8px; color: var(--muted); font-size: .57rem; }
 
-body[data-user-role="editor"] [data-action="new-display"],
-body[data-user-role="editor"] [data-action="new-matrix"],
-body[data-user-role="editor"] [data-duplicate-matrix],
 body[data-user-role="viewer"] [data-view-link="media"],
 body[data-user-role="viewer"] [data-view-link="operations"],
 body[data-user-role="viewer"] [data-preset],
@@ -1851,3 +1848,21 @@ html:has(body.player-mode){overflow:hidden;height:100%}
 @media(max-width:480px){.event-image-editor-dialog>.dialog-content{padding:16px}.event-image-editor-dialog .dialog-actions{flex-wrap:wrap}.event-image-editor-dialog .dialog-actions button{flex:1;min-height:44px}}
 /* Move/delete controls remain usable if a narrow viewport leaves no free edge beside resize handles. */
 .editor-transform-toolbar{z-index:2003}
+
+/* Object-level permissions are enforced by the API; keep unavailable actions out of the workflow. */
+body[data-user-role="designer"] :is([data-action="new-channel"],[data-action="duplicate-channel"],[data-action="edit-channel"],[data-action="save-channel"],[data-action="save-template"],[data-edit-template-id],[data-delete-template-id],[data-export-template-id],#templates-export,#channel-export,#channel-undo-button,#channel-redo-button,#channel-select-all,#channel-bulk-actions,#channel-bulk-toolbar,.content-package-actions,[data-import-content-package],[data-export-content-package],[data-channel-select],[data-view-link="schedule"],[data-view-link="displays"],[data-content-package-action]){display:none!important}
+.role-badge.designer{color:#653e90;background:#f0e8fa}
+.dwd-controls > .form-field{min-width:0}
+.dwd-controls :is(input,select){width:100%;min-width:0;max-width:100%}
+@media(max-width:560px){.dwd-controls{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.cms-integrated .topbar{grid-template-columns:minmax(0,1fr) auto}}
+.content-access-dialog{width:min(640px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:0;border:1px solid var(--line);border-radius:12px}
+.content-access-dialog form{padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.content-access-dialog :is(select,fieldset){min-width:0;max-width:100%}
+.content-access-dialog fieldset>div{display:grid;gap:8px;max-height:45dvh;overflow:auto}
+.content-access-dialog .toggle-label{min-height:44px;align-items:center;overflow-wrap:anywhere}
+.content-access-dialog .dialog-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.content-access-dialog .dialog-close{position:static;min-width:44px;min-height:44px}
+.content-access-dialog .dialog-actions{position:sticky;bottom:0;background:var(--paper,#fff);padding:12px 0 0;flex-wrap:wrap}
+
+body[data-user-role="designer"] :is([data-media-action="new-folder"],[data-media-page-action="new-folder"],[data-rename-media-folder],[data-delete-media-folder],[data-edit-media],[data-delete-media],[data-restore-media],[data-purge-media],[data-media-trash]){display:none!important}

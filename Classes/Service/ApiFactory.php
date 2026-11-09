@@ -34,7 +34,7 @@ final readonly class ApiFactory
             $configured = (string)($user['tx_kiosky_role'] ?? '');
             $role = (bool)($user['admin'] ?? false) || in_array($configured, ['administrator', 'admin', 'manager'], true)
                 ? 'admin'
-                : (in_array($configured, ['editor', 'event_editor', 'display_operator'], true) ? 'editor' : 'viewer');
+                : (in_array($configured, ['editor', 'event_editor', 'display_operator'], true) ? 'editor' : ($configured==='designer'?'designer':'viewer'));
             return [
                 'id' => 'typo3:' . $user['uid'],
                 'email' => (string)($user['email'] ?: $user['username'] . '@users.kiosky.invalid'),
@@ -49,14 +49,14 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.36.0',
+            '3.37.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
             $portableUsers,
             'typo3',
             null,
-            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.36.0'),
+            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.37.0'),
             fontStorage: new \Kiosky\Core\FontStorage($this->fontDirectory()),
             canReadFonts: !$external && ($identity['id']??'')==='typo3:'.($GLOBALS['BE_USER']->user['uid']??'') && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::VIEW),
             canManageFonts: !$external && ($identity['role']??'viewer')==='admin' && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::MANAGE_SETTINGS),

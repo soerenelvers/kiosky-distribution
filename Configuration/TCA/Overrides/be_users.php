@@ -17,6 +17,7 @@ $columns = [
                 ['label' => 'Kiosky Administrator', 'value' => 'administrator'],
                 ['label' => 'Kiosky Manager', 'value' => 'manager'],
                 ['label' => 'Kiosky Redakteur', 'value' => 'editor'],
+                ['label'=>'Kiosky Mediengestalter','value'=>'designer'],
                 ['label' => 'Kiosky Veranstaltungsredaktion', 'value' => 'event_editor'],
                 ['label' => 'Kiosky Display-Steuerung', 'value' => 'display_operator'],
                 ['label' => 'Kiosky Nur-Lesen', 'value' => 'viewer'],

@@ -18,6 +18,7 @@ require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 require_once __DIR__.'/EventImageEdit.php';
+require_once __DIR__.'/ContentAccess.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/SensitiveData.php';
 
@@ -79,10 +80,11 @@ final class Api
         if ($token === '' || strlen($token) > 512 || (!str_starts_with($token,'kiosky_') && ($legacyKey === '' || !hash_equals($legacyKey,$token)))) return [401,['error'=>['code'=>'UNAUTHORIZED','message'=>'Der API-Schlüssel fehlt oder ist ungültig.']]];
         try {
             $state = $this->state();
+            $previousUsers=$state['apiUsers'] ?? [];
             $user = ApiAccess::authenticate($state,$token);
             $legacy = !$user && $legacyKey !== '' && $token !== '' && hash_equals($legacyKey,$token);
             if (!$user && !$legacy) return [401,['error'=>['code'=>'UNAUTHORIZED','message'=>'Der API-Schlüssel fehlt, ist ungültig oder wurde widerrufen.']]];
-            if ($user) $this->store->save($state);
+            if ($user && ($state['apiUsers'] ?? [])!==$previousUsers) $this->store->save($state);
             $identity = ['id'=>$user['id'] ?? 'cms:legacy-api','name'=>$user['name'] ?? 'Externe API','email'=>'','role'=>'admin','actorType'=>'api_key','requestId'=>$requestId,'ipAddress'=>$ipAddress];
             $api = new self($this->store,$identity,$this->version,$this->crewBrain,$this->dwd,$this->easyJob,$this->platformUsers,$this->platform,$this->menuSubscriptions,$this->licenseClient);
             $result = $api->handle($method,$path,$body);
@@ -218,6 +220,32 @@ final class Api
         }
 
         $this->assertRolePermission($method, $path);
+        $designer=($this->identity['role'] ?? '')==='designer';$actorId=(string)$this->identity['id'];
+        if($designer)ContentAccess::check($state,$actorId,$path,$body,$method);
+        if(str_starts_with($path,'/api/content-access'))$this->license()->assertPath($state,'/api/channels');
+        if($path==='/api/content-access'&&$method==='GET'){
+            if(!in_array($this->identity['role'] ?? '',['admin','editor'],true))ContentAccess::fail();
+            $users=array_values(array_map(static fn(array $user):array=>['id'=>$user['id'],'displayName'=>$user['displayName'],'channelIds'=>ContentAccess::ids($state,$user['id'])],array_filter($this->platformUsers,static fn(array $user):bool=>($user['role'] ?? '')==='designer'&&($user['status'] ?? 'active')==='active')));
+            return $this->ok(['users'=>$users,'channels'=>array_values(array_map(static fn(array $channel):array=>['id'=>$channel['id'],'name'=>$channel['name']],array_filter($this->active($state['channels']),static fn(array $channel):bool=>empty($channel['automationKey']))))]);
+        }
+        if(preg_match('#^/api/content-access/users/([^/]+)$#',$path,$match)&&$method==='PUT'){
+            if(!in_array($this->identity['role'] ?? '',['admin','editor'],true))ContentAccess::fail();
+            $userId=rawurldecode($match[1]);$target=$this->first($this->platformUsers,static fn(array $user):bool=>$user['id']===$userId);
+            if(($target['role'] ?? '')!=='designer'||!is_array($body['channelIds'] ?? null)||count($body['channelIds'])>1000)throw new RuntimeException('Bitte einen Mediengestalter und gültige Kanäle auswählen.',422);
+            $known=array_column(array_filter($this->active($state['channels']),static fn(array $channel):bool=>empty($channel['automationKey'])),'id');
+            foreach($body['channelIds'] as $id)if(!is_string($id)||!in_array($id,$known,true))ContentAccess::fail();
+            $state['contentChannelAccess'][$userId]=array_values(array_unique($body['channelIds']));$this->audit($state,'content.channel-access.updated',$userId);
+            return $this->ok(['ok'=>true],true);
+        }
+        if(preg_match('#^/api/content-access/channels/([^/]+)/slides$#',$path,$match)&&$method==='POST'){
+            if(!$designer)ContentAccess::fail();$channelId=rawurldecode($match[1]);
+            $channel=$this->required($this->active($state['channels']),$channelId,'Kanal');
+            if(!empty($channel['automationKey'])||!in_array($channelId,ContentAccess::ids($state,$actorId),true))ContentAccess::fail();
+            if(!is_array($body['slideIds'] ?? null)||!count($body['slideIds'])||count($body['slideIds'])>500)throw new RuntimeException('Bitte eigene Slides auswählen.',422);
+            $existing=array_column($channel['items'] ?? [],'slideId');
+            foreach(array_unique($body['slideIds']) as $id){if(!is_string($id))ContentAccess::fail();$slide=ContentAccess::own($state,$actorId,$id);if(!empty($slide['deletedAt'])||($slide['status'] ?? '')==='archived')ContentAccess::fail();if(!in_array($id,$existing,true)){$channel['items'][]=['slideId'=>$id,'durationSeconds'=>10,'transition'=>'inherit'];$existing[]=$id;}}
+            $saved=$this->saveRecord($state,'channels',$channel,$channelId);$this->audit($state,'channel.slides.appended',$channelId);return $this->ok(['channel'=>$saved],true);
+        }
 
         if($path==='/api/fonts'||preg_match('#^/api/fonts/([a-f0-9]{64})$#D',$path,$fontMatch)){
             if(!$this->canReadFonts)throw new RuntimeException('Eine gültige CMS-Benutzersitzung ist erforderlich.',401);
@@ -399,7 +427,7 @@ final class Api
             return $this->created(['slides'=>$slides]);
         }
         if ($path === '/api/slides') {
-            if ($method === 'GET') return $this->ok(['data' => $this->listCollection($state,'slides')]);
+            if ($method === 'GET') return $this->ok(['data' => array_values(array_filter($this->listCollection($state,'slides'),fn(array $slide):bool=>!$designer||(($slide['ownerId'] ?? '')===$actorId&&!array_key_exists('menu',$slide['document'] ?? [])&&!array_key_exists('menuPdf',$slide['document'] ?? [])&&empty($slide['automationKey'])&&empty($slide['virtual']))))]);
             if ($method === 'POST') {
                 $slide = $this->saveSlide($state, $body);
                 return $this->created(['slide' => $slide]);
@@ -424,7 +452,7 @@ final class Api
         }
         if (preg_match('#^/api/slides/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['slides'], rawurldecode($match[1]), 'Slide');
-            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
+            foreach($source['items'] ?? [] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['currentVersion']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
@@ -440,7 +468,7 @@ final class Api
         }
 
         if ($path === '/api/channels') {
-            if ($method === 'GET') return $this->ok(['data' => $this->listCollection($state,'channels')]);
+            if ($method === 'GET') return $this->ok(['data' => array_values(array_filter($this->listCollection($state,'channels'),fn(array $channel):bool=>!$designer||in_array($channel['id'],ContentAccess::ids($state,$actorId),true)))]);
             if ($method === 'POST') return $this->created(['channel' => $this->saveRecord($state, 'channels', $body + ['items' => []])]);
         }
         if (preg_match('#^/api/channels/([^/]+)/usage$#', $path, $match) && $method === 'GET') {
@@ -454,7 +482,7 @@ final class Api
             $source = $this->required($state['channels'], rawurldecode($match[1]), 'Kanal');
             $source=AdvertisingService::channel($state,$source);
             foreach($source['items'] as &$item)if(!empty($item['slide']['virtual'])){$copy=array_diff_key($item['slide'],array_flip(['id','createdAt','updatedAt','automationKey','virtual','currentVersion']));$copy['name'].=' (Kopie)';$copy['status']='draft';$saved=$this->saveSlide($state,$copy);$item['slideId']=$saved['id'];unset($item['slide']);}unset($item);
-            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
+            foreach($source['items'] ?? [] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt'], $source['automationKey'], $source['deletedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'draft';
@@ -531,7 +559,7 @@ final class Api
 
         if (preg_match('#^/api/matrix-displays/([^/]+)/duplicate$#', $path, $match) && $method === 'POST') {
             $source = $this->required($state['matrices'], rawurldecode($match[1]), 'Matrix');
-            foreach($source['items'] as &$item)unset($item['advertisingInterstitial']);unset($item);
+            foreach($source['items'] ?? [] as &$item)unset($item['advertisingInterstitial']);unset($item);
             unset($source['id'], $source['createdAt'], $source['updatedAt']);
             $source['name'] .= ' (Kopie)';
             $source['status'] = 'disabled';
@@ -563,7 +591,7 @@ final class Api
             unset($schedule);
             return $this->ok(['count' => count($state['schedules'])], true);
         }
-        if ($path === '/api/trash' && $method === 'GET') return $this->ok(['data' => $state['trash']]);
+        if ($path === '/api/trash' && $method === 'GET') return $this->ok(['data' => array_values(array_filter($state['trash'],fn(array $item):bool=>!$designer||(($item['type'] ?? '')==='slide'&&($this->first($state['slides'],static fn(array $slide):bool=>$slide['id']===$item['id'])['ownerId'] ?? '')===$actorId)))]);
         if (preg_match('#^/api/trash/([^/]+)/([^/]+)$#', $path, $match)) {
             $type = rawurldecode($match[1]);
             $id = rawurldecode($match[2]);
@@ -1064,20 +1092,13 @@ final class Api
         if ($role === 'admin') return;
         if ($path === '/api/settings/features' && $method === 'GET') return;
 
-        $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/advertising', '/api/v1'];
+        $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/updates', '/api/v1'];
         if ($this->pathStartsWithAny($path, $adminOnly)) {
             throw new RuntimeException('Für diese Funktion fehlen die erforderlichen Rechte.', 403);
         }
 
-        if ($role === 'editor') {
-            if ($method === 'POST' && ($path === '/api/displays' || $path === '/api/matrix-displays' || preg_match('#^/api/matrix-displays/[^/]+/duplicate$#', $path))) {
-                throw new RuntimeException('Neue Displays dürfen nur Administratoren anlegen.', 403);
-            }
-            if ($method === 'DELETE' && (str_ends_with($path, '/permanent') || str_starts_with($path, '/api/trash/'))) {
-                throw new RuntimeException('Endgültiges Löschen ist Administratoren vorbehalten.', 403);
-            }
-            return;
-        }
+        if ($role === 'editor') {if($method==='DELETE'&&(str_ends_with($path,'/permanent')||str_starts_with($path,'/api/trash/')))throw new RuntimeException('Endgültiges Löschen ist Administratoren vorbehalten.',403);return;}
+        if ($role === 'designer') { if(!ContentAccess::allowed($method,$path))ContentAccess::fail();return; }
 
         $viewerBlocked = ['/api/content-packages', '/api/media', '/api/presets', '/api/preset-triggers', '/api/warning-templates', '/api/warnings', '/api/operations', '/api/dwd', '/api/trash'];
         if ($this->pathStartsWithAny($path, $viewerBlocked)) {
@@ -2377,6 +2398,8 @@ final class Api
     private function saveSlide(array &$state, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state['slides'], $id, 'Slide') : null;
+        unset($body['automationKey'],$body['virtual']);
+        $body['ownerId']=$current['ownerId'] ?? ($current?null:(string)$this->identity['id']);
         if (isset($current['document']['menuPdf']) && !isset($body['document']['menuPdf'])) $body['document']['menuPdf']=$current['document']['menuPdf'];
         if (isset($current['document']['menu']) && !isset($body['document']['menu'])) $body['document']['menu'] = $current['document']['menu'];
         if(AdvertisingService::formats(array_replace($current ?? [],$body)) && empty($body['endsAt'])) $body['endsAt']=$current['endsAt'] ?? gmdate('c',max(time(),strtotime((string)($body['startsAt'] ?? '')) ?: 0)+7*86400);

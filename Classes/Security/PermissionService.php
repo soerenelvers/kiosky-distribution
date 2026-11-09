@@ -24,7 +24,8 @@ final class PermissionService
             self::VIEW, self::MANAGE_DISPLAYS, self::MANAGE_CONTENT, self::MANAGE_EVENTS,
             self::CONTROL_DISPLAYS, self::TRIGGER_EMERGENCY, self::VIEW_LOGS,
         ],
-        'editor' => [self::VIEW, self::MANAGE_CONTENT],
+        'editor' => [self::VIEW,self::MANAGE_DISPLAYS,self::MANAGE_CONTENT,self::MANAGE_EVENTS,self::CONTROL_DISPLAYS,self::TRIGGER_EMERGENCY,self::VIEW_LOGS],
+        'designer' => [self::VIEW,self::MANAGE_CONTENT,self::MANAGE_EVENTS],
         'event_editor' => [self::VIEW, self::MANAGE_EVENTS],
         'display_operator' => [self::VIEW, self::CONTROL_DISPLAYS],
         'viewer' => [self::VIEW],
@@ -54,9 +55,18 @@ final class PermissionService
         $read = in_array(strtoupper($method), ['GET', 'HEAD'], true);
         $matches = static fn(string $prefix): bool => $path === $prefix || str_starts_with($path, $prefix . '/');
         if ($path === '/api/settings/features' && $read) return true;
-        foreach (['/api/settings','/api/integrations','/api/api-users','/api/users','/api/content-transfer','/api/updates','/api/v1','/api/advertising'] as $prefix) {
+        if($matches('/api/menus/access'))return $this->isGranted(self::MANAGE_SETTINGS,$user);
+        if($matches('/api/menus'))return true; // The shared menu API checks explicit kitchen/card grants.
+        $actor=$user ?? $GLOBALS['BE_USER'] ?? null;
+        if($actor instanceof BackendUserAuthentication && !$actor->isAdmin() && ($actor->user['tx_kiosky_role'] ?? '') === 'designer') {
+            if(!class_exists(\Kiosky\Core\ContentAccess::class)){ $root=dirname(__DIR__,2);require_once (is_dir($root.'/Classes/Core')?$root.'/Classes/Core':dirname($root).'/php-core/src').'/ContentAccess.php'; }
+            return \Kiosky\Core\ContentAccess::allowed(strtoupper($method),$path);
+        }
+        if($matches('/api/content-access'))return $this->isGranted(self::CONTROL_DISPLAYS,$user)&&$this->isGranted(self::MANAGE_EVENTS,$user)&&$this->isGranted(self::MANAGE_CONTENT,$user);
+        foreach (['/api/settings','/api/integrations','/api/api-users','/api/users','/api/content-transfer','/api/updates','/api/v1'] as $prefix) {
             if ($matches($prefix)) return $this->isGranted(self::MANAGE_SETTINGS, $user);
         }
+        if ($matches('/api/advertising')) return $this->isGranted(self::MANAGE_CONTENT,$user)&&$this->isGranted(self::CONTROL_DISPLAYS,$user);
         if ($matches('/api/audit-logs')) return $this->isGranted(self::VIEW_LOGS, $user);
         if ($matches('/api/menus/access')) return $this->isGranted(self::MANAGE_SETTINGS, $user);
         if ($path === '/api/auth/logout' && strtoupper($method) === 'POST') return true;

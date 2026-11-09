@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "c3ece6b9a2bc8764aa45b48a003f4c10e108ba02",
+  "source_commit": "def0c29d2201d112ec27668edfd76332925c75e4",
   "product": "kiosky",
-  "version": "3.36.0",
-  "released_at": "2026-11-09T15:57:52.796Z",
+  "version": "3.37.0",
+  "released_at": "2026-11-09T21:50:43.361Z",
   "channel": "stable",
-  "release_notes": "## [3.36.0] – 2026-11-09\n\n- Veranstaltungsübersichten direkt im Slide-/Vorlageneditor gestalten: Kartenraster, Abstände, Farben, Bilder und QR-Größe sowie Sichtbarkeit, Zeile, Breite, Reihenfolge, Typografie und Begleittexte pro Detail bearbeiten; Vorschau und Player verwenden dieselben gespeicherten Einstellungen.\n- Veranstaltungsbilder aus Mediathek oder URL mit Ausschnitt, Zoom, Seitenverhältnis, Verschieben und Ziehecke bearbeiten; Originaldatei erhalten und Bearbeitung mit der Veranstaltung speichern.\n- Bildausschnitte in Event-Details, Übersichten, dynamischen Werbebildern und freigegebenen Kalenderbildern berücksichtigen; bei Kopien und Vorlagen übernehmen. Standalone ergänzt die additive Migration 045; beide CMS verwenden den vorhandenen Zustand.\n\n- Mobile Verschiebe-Leisten kleiner Slide-Elemente vor überlagernden Kopfzeilen und Größen-Griffen schützen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.36.0",
+  "release_notes": "## [3.37.0] – 2026-11-09\n\n- Leere Website-Adressen im Player ausdrücklich als leere Dokumente behandeln; versehentliches erneutes Einbetten des eigenen Players und dadurch verschachtelte Wiedergaben verhindern.\n- Kanalrechte gegen Unicode-Varianten von Werbe-Tags und geerbte Tags bei partiellen CMS-Updates absichern; geschützte Menükarten aus generischen Mediengestalter-Aktionen herausnehmen und ausdrückliche Küchenrechte erhalten.\n- Standalone-Passwortwechsel prüfen die aktuelle Sitzung auch nach dem Lesen der Anfrage und innerhalb der Schreibtransaktion; andere Sitzungen werden beendet, die geprüfte aktuelle Anmeldung bleibt erhalten.\n- Standalone-Ersteinrichtung atomar gegen parallele Administrator-Registrierungen absichern, Auth-Anfragen auf 16 KB begrenzen und wechselnde Anmeldenamen zusätzlich über eine gemeinsame Fehlversuchsgrenze schützen.\n- Mediengestalter mit eigenen Slides, eigenem Archiv und gezielten Kanalfreigaben ergänzen; Administratoren und Redakteure vergeben diese unter Slides & Kanäle. Eigentum, Versionen, Medienimport und jede Kanalzuweisung an der API prüfen; fremde Inhalte und Kanaleinstellungen erhalten.\n- Redakteure für die Inhalts- und Betriebsverwaltung einschließlich Displays freigeben; Einstellungen, Zugänge, Benutzerverwaltung und endgültiges Löschen geschützt halten. Native TYPO3-Fachrollen sowie ausdrückliche Küchenrechte erhalten.\n- CrewBrain-/easyjob-Anfragen gegen Weitergabe von API-Schlüsseln, Authorization-Headern und Anmeldeformularen über fremde Weiterleitungsziele schützen. Antwortgrößen, Streams, Weiterleitungsschleifen und Wiederholungswartezeiten begrenzen; bekannte Zugangsdaten vor dem Kürzen von Fehlertexten entfernen.\n- HTML- und Attributinjektionen in Player-/Beschilderungsinhalten schließen und ausführbare JavaScript-URLs in Website-Elementen unterbinden; Vorschau und tatsächliche Ausgabe absichern.\n- Schreiblast häufiger Sitzungs-/API-Abfragen verringern, ohne Ablauf-, Rollen- oder Widerrufsprüfungen zu überspringen; CMS-Zustände bei unveränderten API-Abfragen nicht erneut speichern.\n- Gleichzeitige easyjob-Anmeldungen und Token-Erneuerungen bündeln; native Weiterleitungen teilen sich ein Zeitbudget.\n- WordPress-Kopfzeile und DWD-Auswahlfelder auf schmalen Displays korrigieren; Hash-Navigation synchronisieren, mobile Kanalfreigaben und erreichbare Touch-Aktionen ergänzen. Chromium/WebKit prüfen sieben Bildschirmgrößen und alle drei Oberflächentransporte.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.37.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.36.0",
+    "core_version": "3.37.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.36.0",
-    "typo3_extension_version": "3.36.0"
+    "wordpress_plugin_version": "3.37.0",
+    "typo3_extension_version": "3.37.0"
   },
   "components": {
     "core": {
-      "version": "3.36.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.36.0.zip?ref=v3.36.0",
-      "sha256": "8330dfeb0932c2e2a35a9f092134d42a7c955f919cc51b1fe87a350d8f6b0749"
+      "version": "3.37.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.37.0.zip?ref=v3.37.0",
+      "sha256": "d1636a7edb24bacf30426a5cd37356779b45f4ec7e726718bc6a4886f0cd9b46"
     },
     "standalone": {
-      "version": "3.36.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.36.0.zip?ref=v3.36.0",
-      "sha256": "8330dfeb0932c2e2a35a9f092134d42a7c955f919cc51b1fe87a350d8f6b0749"
+      "version": "3.37.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.37.0.zip?ref=v3.37.0",
+      "sha256": "d1636a7edb24bacf30426a5cd37356779b45f4ec7e726718bc6a4886f0cd9b46"
     },
     "wordpress": {
-      "version": "3.36.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.36.0.zip?ref=v3.36.0",
-      "sha256": "e02123f804aab6ba38e252ac99887e63c3d99386137f0b88684b5de0f3549b95",
+      "version": "3.37.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.37.0.zip?ref=v3.37.0",
+      "sha256": "cd604f684ca52d0ab5d947658af6fe0655f26236de06b54d5d201e186504c415",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.36.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.36.0.zip?ref=v3.36.0",
-      "sha256": "51b39dd0456c6112e35d4c217cf03c4690c6f6a7b03a568fc7b7c26006f10469",
+      "version": "3.37.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.37.0.zip?ref=v3.37.0",
+      "sha256": "c3da420d1f91effc5fb27e1eec0836d61625a1aa44bbc7173ab9c27c939914c0",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

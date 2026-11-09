@@ -27,7 +27,7 @@ final readonly class ApiController
     {
         $backendUser = $GLOBALS['BE_USER'];
         $configuredRole = (string)($backendUser->user['tx_kiosky_role'] ?? '');
-        $role = $backendUser->isAdmin() ? 'administrator' : (in_array($configuredRole, ['administrator', 'manager', 'editor', 'event_editor', 'display_operator', 'viewer', 'admin'], true)
+        $role = $backendUser->isAdmin() ? 'administrator' : (in_array($configuredRole, ['administrator', 'manager', 'editor', 'event_editor', 'display_operator', 'designer', 'viewer', 'admin'], true)
             ? $configuredRole
             : 'viewer');
         if (!$this->permissions->isGranted(PermissionService::VIEW, $backendUser)) {
@@ -41,6 +41,7 @@ final readonly class ApiController
         $apiRole = match ($role) {
             'administrator', 'admin', 'manager' => 'admin',
             'editor', 'event_editor', 'display_operator' => 'editor',
+            'designer' => 'designer',
             default => 'viewer',
         };
         $identity = [

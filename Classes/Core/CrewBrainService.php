@@ -6,6 +6,7 @@ namespace Kiosky\Core;
 
 use RuntimeException;
 use Throwable;
+require_once __DIR__.'/SensitiveData.php';
 
 final class CrewBrainService
 {
@@ -321,7 +322,7 @@ final class CrewBrainService
             usleep(($retryAfter > 0 ? min($retryAfter, 3) * 1_000_000 : 250_000 * (2 ** $attempt)));
         }
         if (!$response) throw new RuntimeException('CrewBrain konnte nicht erreicht werden.', 502);
-        $this->assertStatus($response);
+        $this->assertStatus($response,$config);
         return $response->json();
     }
 
@@ -339,7 +340,7 @@ final class CrewBrainService
         };
     }
 
-    private function assertStatus(HttpResponse $response): void
+    private function assertStatus(HttpResponse $response,array $config): void
     {
         if ($response->status >= 200 && $response->status < 300) return;
         $detail = '';
@@ -360,7 +361,11 @@ final class CrewBrainService
             429 => 'Das CrewBrain-Rate-Limit wurde erreicht.',
             default => $response->status >= 500 ? 'CrewBrain meldet einen Serverfehler.' : 'Unerwartete CrewBrain-Antwort (HTTP ' . $response->status . ').',
         };
-        if ($detail !== '' && !in_array($response->status, [401, 403], true)) $message .= ' ' . substr($detail, 0, 240);
+        if ($detail !== '' && !in_array($response->status, [401, 403], true)) {
+            $credential=$this->crypto->decrypt((string)$config['encryptedCredential']);
+            foreach(['apiKey','password','token','accessToken'] as $field){$secret=$credential[$field] ?? '';if(is_string($secret)&&$secret!=='')$detail=str_replace([$secret,rawurlencode($secret)],'[REDACTED]',$detail);}
+            $message .= ' ' . substr(SensitiveData::text($detail), 0, 240);
+        }
         throw new RuntimeException($message, in_array($response->status, [401, 403, 404, 429], true) ? $response->status : 502);
     }
 
