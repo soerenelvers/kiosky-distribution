@@ -23,7 +23,7 @@
     let view=['agenda','month','categories','week','day'].includes(settings.view)?settings.view:'agenda';
     const enabled=key=>settings[key]!==false;
     const fieldMap={showTime:['start'],showEndTime:['end'],showAdmission:['admission'],showBreak:['breakStart','breakEnd'],showSetupTime:['setup'],showImage:['imageUrl','imageEdit'],showBoxOffice:['boxOfficeAvailable','boxOfficeOpenAt'],showSubtitle:['subtitle'],showDescription:['description'],showPublicNotes:['publicNotes'],showEventNumber:['externalNumber'],showLocation:['venue','room'],showCategory:['eventType'],showOrganizer:['organizer'],showTickets:['ticketUrl'],showRemainingTickets:['remainingTickets'],showStatus:['status']};
-    const events=(Array.isArray(payload.events)?payload.events:[]).filter(e=>day(e.date)&&e.title).sort((a,b)=>String(a.start||a.date).localeCompare(String(b.start||b.date))).map(event=>{const e={...event};if(e.status==='cancelled')delete e.ticketUrl;for(const [key,fields] of Object.entries(fieldMap))if(!enabled(key))for(const field of fields)delete e[field];if(!enabled('showTime'))delete e.end;return e;});
+    const events=(Array.isArray(payload.events)?payload.events:[]).filter(e=>day(e.date)&&e.title).sort((a,b)=>String(a.start||a.date).localeCompare(String(b.start||b.date))).map(event=>{const e={...event};if(e.status==='cancelled')delete e.ticketUrl;for(const [key,fields] of Object.entries(fieldMap))if(!enabled(key)&&!(key==='showStatus'&&e.status==='cancelled'))for(const field of fields)delete e[field];if(!enabled('showTime'))delete e.end;return e;});
     const $=selector=>root.querySelector(selector),all=selector=>root.querySelectorAll(selector);
     const grid=$('[data-kiosky-grid]'),results=$('[data-kiosky-results]'),caption=$('[data-kiosky-caption]'),search=$('[data-kiosky-search]'),jump=$('[data-kiosky-jump]'),categories=$('[data-kiosky-categories]'),focus=$('[data-kiosky-focus]'),week=$('[data-kiosky-week]'),strip=$('[data-kiosky-strip]'),dialog=$('[data-kiosky-dialog]');
     const today=new Date();today.setHours(12,0,0,0);
@@ -41,7 +41,7 @@
       return `<img class="kiosky-calendar__event-image" src="${escapeHtml(e.imageUrl)}" alt="" loading="lazy" decoding="async">`;
     };
     const ticketSoldOut=e=>e.status==='sold_out'||!/\b(?:nicht|not)\s+(?:ausverkauft|sold[ _-]*out)\b/i.test(String(e.remainingTickets??''))&&(/\b(?:ausverkauft|sold[ _-]*out)\b/i.test(String(e.remainingTickets??''))||/^(?:0(?:\s*(?:karten|tickets|restkarten))?|keine\s*(?:karten|tickets|restkarten))$/i.test(String(e.remainingTickets??'').trim()));
-    const status=e=>enabled('showStatus')&&(e.status==='cancelled'||ticketSoldOut(e))?`<strong class="kiosky-calendar__status">${e.status==='cancelled'?'Abgesagt':'Ausverkauft'}</strong>`:'';
+    const status=e=>(e.status==='cancelled'||enabled('showStatus')&&ticketSoldOut(e))?`<strong class="kiosky-calendar__status">${e.status==='cancelled'?'Abgesagt':'Ausverkauft'}</strong>`:'';
     const ticket=e=>enabled('showTickets')&&e.ticketUrl&&/^https?:\/\//i.test(e.ticketUrl)&&e.status!=='cancelled'?`<a class="kiosky-calendar__ticket" href="${escapeHtml(e.ticketUrl)}" rel="noopener">Tickets</a>`:'';
     const action=e=>`${canDetail(e)?`<button type="button" data-kiosky-detail="${escapeHtml(e.id)}">Details</button>`:''}${ticket(e)}`;
     function card(e,compact=false){

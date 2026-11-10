@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/EventLifecycle.php';
 
 use RuntimeException;
 require_once __DIR__.'/ExternalSchedule.php';
@@ -146,6 +147,7 @@ final class AdvertisingService
         foreach(array_slice(self::eligible($state,$settings),0,min($settings['maximumEvents'],$limit ?? $settings['maximumEvents'])) as $event){
             $document=$base;$fallback=$fallbacks[self::normalizeType($event['eventType'] ?? '')] ?? null;
             $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl']));
+            if(($event['status'] ?? '')==='cancelled'&&!array_filter($elements,static fn(array $e):bool=>($e['type'] ?? '')==='event-stamp'&&($e['stampCondition'] ?? '')==='cancelled'))$elements[]=['id'=>'advertising-cancelled','type'=>'event-stamp','text'=>'ABGESAGT','stampCondition'=>'cancelled','x'=>10,'y'=>12,'width'=>80,'height'=>14,'fontSize'=>64,'color'=>'#c52828','background'=>'transparent','rotation'=>-8,'fontWeight'=>800,'align'=>'center'];
             $document=array_replace($document,['elements'=>$elements,'responsiveLayouts'=>[$orientation=>$elements],'designOrientation'=>$orientation,'orientation'=>$orientation,'type'=>'event','width'=>$orientation==='portrait'?1080:1920,'height'=>$orientation==='portrait'?1920:1080]);
             $document['advertisingConfigHash']=hash('sha256',json_encode($document,JSON_THROW_ON_ERROR));
             $date=self::overviewDay($event['date'] ?? '');$boundary=self::overviewInstant($event['eventEnd'] ?? '',$date) ?? self::overviewInstant($event['eventStart'] ?? '',$date);
@@ -189,7 +191,7 @@ final class AdvertisingService
         $select=static function()use($events,$now):array{
             $today=(new \DateTimeImmutable('@'.$now))->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('Ymd');$rows=[];
             foreach($events as $event){
-                if(!empty($event['deletedAt'])||!empty($event['archivedAt'])||in_array($event['status'] ?? '',['cancelled','archived','ended'],true))continue;
+                if(!EventLifecycle::visible($event,$now))continue;
                 $date=self::overviewDay($event['date'] ?? '');$start=self::overviewInstant($event['eventStart'] ?? '',$date);$end=self::overviewInstant($event['eventEnd'] ?? '',$date);$boundary=$end ?? $start;
                 if($boundary!==null?$boundary<$now:($date===''||$date<$today))continue;
                 $order=$start ?? ($date!==''?strtotime(substr($date,0,4).'-'.substr($date,4,2).'-'.substr($date,6,2).'T00:00:00Z'):false);if($order===false)continue;
@@ -250,7 +252,7 @@ final class AdvertisingService
         $types = array_flip(array_map([self::class,'normalizeType'],$settings['eventTypes']));
         $today = (new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd');
         $events = array_values(array_filter($state['events'],static function(array $event) use ($types,$today): bool {
-            if (!empty($event['deletedAt']) || !empty($event['archivedAt']) || in_array($event['status'] ?? '',['cancelled','archived'],true) || (!empty($event['sourceId'])&&!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]))) return false;
+            if (!EventLifecycle::visible($event) || (!empty($event['sourceId'])&&!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]))) return false;
             $date=self::overviewDay($event['date'] ?? '');$boundary=self::overviewInstant($event['eventEnd'] ?? '',$date) ?? self::overviewInstant($event['eventStart'] ?? '',$date);
             return $boundary !== null ? $boundary >= time() : $date >= $today;
         }));

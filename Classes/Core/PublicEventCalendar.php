@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/EventLifecycle.php';
 require_once __DIR__.'/EventImageEdit.php';
 
 final class PublicEventCalendar
@@ -45,7 +46,8 @@ final class PublicEventCalendar
         foreach (is_array($state['events'] ?? null) ? $state['events'] : [] as $event) {
             if (!is_array($event) || !empty($event['deletedAt']) || !empty($event['archivedAt'])) continue;
             $status = strtolower((string)($event['status'] ?? ''));
-            if (!in_array($status, ['ready', 'published', 'sold_out', 'ended', 'cancelled'], true)) continue;
+            if (!EventLifecycle::visible($event)) continue;
+            $status=EventLifecycle::status($status);
             $date = self::date($event);
             if ($date === null || self::text($event['title'] ?? '', 300) === '') continue;
             $start = self::dateTime($event['eventStart'] ?? null, $date);
@@ -85,7 +87,7 @@ final class PublicEventCalendar
         $fields=['showTime'=>['start'],'showEndTime'=>['end'],'showAdmission'=>['admission'],'showBreak'=>['breakStart','breakEnd'],'showSetupTime'=>['setup'],'showBoxOffice'=>['boxOfficeAvailable','boxOfficeOpenAt'],'showImage'=>['imageUrl','imageEdit'],'showSubtitle'=>['subtitle'],'showDescription'=>['description'],'showPublicNotes'=>['publicNotes'],'showEventNumber'=>['externalNumber'],'showLocation'=>['venue','room'],'showCategory'=>['eventType'],'showOrganizer'=>['organizer'],'showTickets'=>['ticketUrl'],'showRemainingTickets'=>['remainingTickets'],'showStatus'=>['status']];
         foreach($events as &$event){
             if(($event['status'] ?? '')==='cancelled')unset($event['ticketUrl']);
-            foreach($fields as $key=>$names)if(!$settings[$key])foreach($names as $name)unset($event[$name]);
+            foreach($fields as $key=>$names)if(!$settings[$key]&&!($key==='showStatus'&&($event['status'] ?? '')==='cancelled'))foreach($names as $name)unset($event[$name]);
             if(!$settings['showTime'])unset($event['end']);
         }unset($event);
         return $events;

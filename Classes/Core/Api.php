@@ -18,6 +18,7 @@ require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 require_once __DIR__.'/EventImageEdit.php';
+require_once __DIR__.'/EventLifecycle.php';
 require_once __DIR__.'/ContentAccess.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/SensitiveData.php';
@@ -53,10 +54,11 @@ final class Api
             $body = array_merge($query, $body);
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             $state = $this->state();
+            $lifecycleChanged=EventLifecycle::synchronize($state);
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
             if ($result[2] && preg_match('#^/api/(events|slides|templates|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
-            if ($result[2]) {
+            if ($result[2] || $lifecycleChanged) {
                 $state['updatedAt'] = $this->now();
                 $this->store->save($state);
                 if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
@@ -346,9 +348,9 @@ final class Api
             $snapshot=$this->eventReuseSnapshot($state,rawurldecode($match[1]),$body['input'] ?? null);$body['title']??=EventReuse::copyTitle($snapshot['input']['title']);return $this->eventReuseCreate($state,$snapshot,$body);
         }
         if ($path === '/api/events') {
-            if ($method === 'GET') return $this->ok(['data' => $this->active($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? []),'serverTime'=>$this->now()]);
+            if ($method === 'GET') return $this->ok(['data' => array_values($state['events']),'fieldSettings'=>EventEditorSettings::normalize($state['eventEditorSettings'] ?? []),'serverTime'=>$this->now()]);
             if ($method === 'POST') {
-                $event = $this->saveRecord($state, 'events', $body);
+                $event = $this->saveRecord($state, 'events', $this->eventEditorBody($body));
                 $this->ensureEventChannel($state, $event);
                 return $this->created(['event' => $event]);
             }
@@ -384,7 +386,7 @@ final class Api
                 return $this->ok(['ok' => true, 'count' => $result['updated']] + $result, true);
             }
             foreach ($ids as $id) {
-                if ($action === 'archive') $this->trashRecord($state, 'events', 'event', $id);
+                if ($action === 'archive') {$event=$this->required($state['events'],$id,'Veranstaltung');$this->saveRecord($state,'events',['status'=>'archived'],$id);}
                 elseif ($action === 'delete') $this->purgeEvent($state, $id);
                 else throw new RuntimeException('Unbekannte Sammelaktion.', 422);
             }
@@ -395,6 +397,7 @@ final class Api
             if ($method === 'GET') return $this->ok(['event' => $this->required($state['events'], $id, 'Veranstaltung')]);
             if ($method === 'PUT') {
                 $current = $this->required($state['events'], $id, 'Veranstaltung');
+                $body=$this->eventEditorBody($body);
                 if (($current['sourceId'] ?? '') === 'source-crewbrain') {
                     $locked = array_values(array_unique(array_merge(
                         is_array($current['lockedFields'] ?? null) ? $current['lockedFields'] : [],
@@ -404,7 +407,7 @@ final class Api
                 }
                 return $this->ok(['event' => $this->saveRecord($state, 'events', $body, $id)], true);
             }
-            if ($method === 'DELETE') return $this->trashRecord($state, 'events', 'event', $id);
+            if ($method === 'DELETE') {if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Löschen ist Administratoren vorbehalten.',403);$this->purgeEvent($state,$id);return $this->ok(['ok'=>true],true);}
         }
         if (preg_match('#^/api/events/([^/]+)/usage$#', $path, $match) && $method === 'GET') {
             return $this->ok($this->eventUsage($state, rawurldecode($match[1])));
@@ -1136,7 +1139,7 @@ final class Api
     /** @param array<string,mixed> $state */
     private function eventReuseSnapshot(array $state,string $eventId,mixed $override=null):array
     {
-        $event=$this->required($state['events'],$eventId,'Veranstaltung');if(!empty($event['deletedAt'])||!empty($event['archivedAt']))throw new RuntimeException('Veranstaltung wurde nicht gefunden.',404);
+        $event=$this->required($state['events'],$eventId,'Veranstaltung');if(!empty($event['deletedAt']))throw new RuntimeException('Veranstaltung wurde nicht gefunden.',404);
         $snapshot=['input'=>EventReuse::input($event),'schedule'=>EventReuse::schedule(array_values(array_filter($state['eventSchedules'],static fn(array $entry):bool=>($entry['eventId'] ?? '')===$eventId&&($entry['active'] ?? true)!==false)))];
         if($override===null)return $snapshot;$input=EventReuse::input($override);$shifted=EventReuse::copy($snapshot,['date'=>$input['date'] ?? null]);return ['input'=>$input,'schedule'=>$shifted['schedule']];
     }
@@ -1186,15 +1189,14 @@ final class Api
 
     private function purgeEvent(array &$state, string $eventId): void
     {
-        $this->required($state['events'], $eventId, 'Veranstaltung');
-        foreach ($state['slides'] as &$slide) if (($slide['eventId'] ?? '') === $eventId) unset($slide['eventId']);
-        unset($slide);
-        foreach ($state['channels'] as &$channel) if (($channel['eventId'] ?? '') === $eventId) unset($channel['eventId']);
-        unset($channel);
-        $this->purge($state['events'], $eventId);
-        $state['eventSchedules']=array_values(array_filter($state['eventSchedules'],static fn(array $item):bool=>($item['eventId'] ?? '')!==$eventId));
-        $state['trash'] = array_values(array_filter($state['trash'], static fn(array $item): bool => !(($item['type'] ?? '') === 'event' && ($item['id'] ?? '') === $eventId)));
-        $this->audit($state, 'event.purged', $eventId);
+        $index=$this->index($state['events'],$eventId);if($index===null)throw new RuntimeException('Veranstaltung wurde nicht gefunden.',404);
+        $state['events'][$index]=EventLifecycle::tombstone($state['events'][$index],$this->now());EventLifecycle::synchronize($state);
+        $this->audit($state,'event.purged',$eventId);
+    }
+
+    private function eventEditorBody(array $body):array
+    {
+        return array_intersect_key($body,array_flip(['title','subtitle','description','organizer','eventType','date','setupStart','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room','status','publicNotes','internalNotes','imageUrl','imageEdit','ticketUrl','remainingTickets','boxOfficeAvailable','boxOfficeOpenAt']));
     }
 
     /**
@@ -1210,10 +1212,11 @@ final class Api
             && (string)($event['externalObjectType'] ?? '') === (string)($mapped['externalObjectType'] ?? '')
         );
         if (!$existing) {
-            $event = $this->saveRecord($state, 'events', $mapped + ['status' => 'review', 'lockedFields' => []]);
+            $event = $this->saveRecord($state, 'events', $mapped + ['status' => 'draft', 'lockedFields' => []]);
             $this->ensureEventChannel($state, $event);
             return ['event' => $event, 'action' => 'created'];
         }
+        if(EventLifecycle::effective($existing)==='removed')return ['event'=>$existing,'eventId'=>$existing['id'],'action'=>'unchanged'];
         if (($existing['importHash'] ?? '') === ($mapped['importHash'] ?? '')) {
             return ['event' => $existing, 'action' => 'unchanged'];
         }
@@ -1234,14 +1237,15 @@ final class Api
     {
         $existing = $this->first($state['events'], static fn(array $event): bool => ($event['sourceId'] ?? '') === ($mapped['sourceId'] ?? '') && (string)($event['externalId'] ?? '') === (string)($mapped['externalId'] ?? ''));
         if (!$existing) {
-            $event = $this->saveRecord($state, 'events', $mapped + ['status' => 'review', 'lockedFields' => []]);
+            $event = $this->saveRecord($state, 'events', $mapped + ['status' => 'draft', 'lockedFields' => []]);
             $this->ensureEventChannel($state, $event);
             return ['event' => $event, 'eventId' => $event['id'], 'action' => 'created'];
         }
+        if(EventLifecycle::effective($existing)==='removed')return ['event'=>$existing,'eventId'=>$existing['id'],'action'=>'unchanged'];
         if (($existing['importHash'] ?? '') === ($mapped['importHash'] ?? '')) return ['event' => $existing, 'eventId' => $existing['id'], 'action' => 'unchanged'];
         $locked = is_array($existing['lockedFields'] ?? null) ? $existing['lockedFields'] : [];
         $updated = $existing;
-        foreach ($mapped as $key => $value) if (!in_array($key, $locked, true)) $updated[$key] = $value;
+        foreach ($mapped as $key => $value) if ($key!=='status' && !in_array($key, $locked, true)) $updated[$key] = $value;
         $updated['lockedFields'] = $locked;
         $updated['syncStatus'] = $locked ? 'manually_modified' : ($mapped['syncStatus'] ?? 'synced');
         if (isset($mapped['importHash'])) $updated['importHash'] = $mapped['importHash'];
@@ -1285,6 +1289,7 @@ final class Api
     /** @param array<string,mixed> $state @param array<string,mixed> $event @return array<string,mixed> */
     private function syncEasyJobAdvertisingImages(array &$state, array $event, string $projectId, ?string $jobId = null): array
     {
+        if(EventLifecycle::effective($event)==='removed')return ['source'=>'none','found'=>0,'imported'=>0,'updated'=>0,'removed'=>0,'warnings'=>[]];
         $service = $this->easyJob();
         $config = $state['easyjob']['config'];
         $warnings = [];
@@ -1900,8 +1905,9 @@ final class Api
         $rawDisplay = $this->first($state['displays'], fn(array $item): bool => ($item['slug'] ?? '') === $slug && empty($item['deletedAt']) && ($item['status'] ?? '') !== 'archived');
         $display = $rawDisplay ? $this->listCollection(array_replace($state, ['displays' => [$rawDisplay]]), 'displays')[0] : null;
         if (!$display || !hash_equals((string)($display['playerKey'] ?? ''), $playerKey)) throw new RuntimeException('Display wurde nicht gefunden.', 404);
+        $preview=($body['preview'] ?? '')==='1'||($body['preview'] ?? null)===1;
         $deliveryChanged=false;
-        if (in_array($action,['state','commands'],true) && $method==='GET') {
+        if (!$preview && in_array($action,['state','commands'],true) && $method==='GET') {
             $pending=array_values(array_filter($state['commands'],fn(array $item): bool => ($item['displayId'] ?? '')===$display['id']));
             $ids=array_column($pending,'id');$deliveryChanged=($state['deliveredPlayerCommands'][$display['id']] ?? [])!==$ids;
             $state['deliveredPlayerCommands'][$display['id']]=$ids;
@@ -1947,6 +1953,7 @@ final class Api
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
             $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
+            if($event&&!EventLifecycle::visible($event))$event=null;
             $event=SlideEventSelection::select($this->license()->allows($state,'events')?$this->active($state['events']):[],is_array($slide['document']['eventSelection'] ?? null)?$slide['document']['eventSelection']:[],$event);
             if($event){
                 unset($event['internalNotes'],$event['lockedFields']);
@@ -1996,7 +2003,7 @@ final class Api
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
-            'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $commands, 'serverTime' => $serverTime,
+            'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $preview?[]:$commands, 'serverTime' => $serverTime,
         ],$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
     }
 
@@ -2426,7 +2433,12 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
-        if($collection==='events'){if(array_key_exists('imageEdit',$body))$body['imageEdit']=EventImageEdit::normalize($body['imageEdit']);elseif(array_key_exists('imageUrl',$body)&&($body['imageUrl'] ?? '')!==($current['imageUrl'] ?? ''))$body['imageEdit']=null;}
+        if($collection==='events'){
+            if($current&&EventLifecycle::effective($current)==='removed')throw new RuntimeException('Veranstaltung wurde gelöscht, weitere Daten sind nicht mehr verfügbar.',409);
+            $status=$current?EventLifecycle::status($body['status'] ?? $current['status'] ?? 'draft'):'draft';
+            if($status==='removed'){if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Löschen ist Administratoren vorbehalten.',403);$this->purgeEvent($state,(string)$id);return $this->required($state['events'],(string)$id,'Veranstaltung');}
+            $body['status']=$status;$body['archivedAt']=$status==='archived'?($current['archivedAt'] ?? $this->now()):null;
+            if(array_key_exists('imageEdit',$body))$body['imageEdit']=EventImageEdit::normalize($body['imageEdit']);elseif(array_key_exists('imageUrl',$body)&&($body['imageUrl'] ?? '')!==($current['imageUrl'] ?? ''))$body['imageEdit']=null;}
         if(in_array($collection,['slides','templates'],true)&&isset($body['document']))$body['document']=AdvertisingService::stripOverviewRuntime($body['document']);
         if($collection==='locations'){
             $color=array_key_exists('playerBackgroundColor',$body)?$body['playerBackgroundColor']:($current['playerBackgroundColor'] ?? '#000000');

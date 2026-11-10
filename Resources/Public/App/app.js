@@ -153,7 +153,7 @@ function slideEventDay(time) { return new Intl.DateTimeFormat('en-CA',{timeZone:
 function selectSlideEvent(events, selection={}, linked=null, now=Date.now()) {
   if(!['current','today','next'].includes(selection.mode||''))return linked;
   const room=typeof selection.room==='string'?selection.room.trim().toLowerCase():'';
-  const candidates=events.filter(event=>['ready','published','sold_out'].includes(event.status)&&!(event.deletedAt)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(event.eventStart||'')&&Number.isFinite(Date.parse(event.eventStart||''))&&(!room||(event.room||'').trim().toLowerCase()===room)).sort((a,b)=>Date.parse(a.eventStart)-Date.parse(b.eventStart)||(a.id<b.id?-1:a.id>b.id?1:0));
+  const candidates=events.filter(event=>['published','cancelled','ready','sold_out'].includes(event.status)&&!(event.deletedAt)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(event.eventStart||'')&&Number.isFinite(Date.parse(event.eventStart||''))&&(!room||(event.room||'').trim().toLowerCase()===room)).sort((a,b)=>Date.parse(a.eventStart)-Date.parse(b.eventStart)||(a.id<b.id?-1:a.id>b.id?1:0));
   const running=candidates.filter(event=>Date.parse(event.eventStart)<=now&&(event.eventEnd?Date.parse(event.eventEnd)>now:slideEventDay(Date.parse(event.eventStart))===slideEventDay(now))).at(-1)||null;
   if(selection.mode==='current')return running;
   if(selection.mode==='next')return candidates.find(event=>Date.parse(event.eventStart)>=now)||null;
@@ -405,7 +405,7 @@ function editorOverviewNow(){return state.overviewClock?state.overviewClock.serv
 function overviewUpcomingEvents(events,now=Date.now()){
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(now).replaceAll('-','');
   return events.flatMap(event=>{
-    if(event.deletedAt||event.archivedAt||['cancelled','archived','ended'].includes(event.status))return [];
+    if(event.deletedAt||event.archivedAt||!['published','cancelled','ready','sold_out'].includes(event.status))return [];
     const date=overviewEventDay(event.date),start=overviewEventInstant(event.eventStart,date),end=overviewEventInstant(event.eventEnd,date),boundary=Number.isFinite(end)?end:start;
     if(Number.isFinite(boundary)?boundary<now:!date||date<today)return [];
     const order=Number.isFinite(start)?start:Date.parse(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T00:00:00Z`);if(!Number.isFinite(order))return [];
@@ -1446,8 +1446,8 @@ async function apiRequest(path, options = {}) {
   return result;
 }
 
-const eventStatusLabels = { review: 'Zu prüfen', draft: 'Entwurf', ready: 'Bereit', published: 'Veröffentlicht', cancelled: 'Abgesagt', archived: 'Archiviert' };
-const eventStatusTones = { review: 'blue', draft: 'muted', ready: 'coral', published: 'green', cancelled: 'coral', archived: 'muted' };
+const eventStatusLabels = {review:'Entwurf',ready:'Bereit',draft:'Entwurf',published:'Veröffentlicht',cancelled:'Abgesagt',archived:'Archiviert',removed:'Gelöscht'};
+const eventStatusTones = { review: 'blue', draft: 'muted', ready: 'coral', published: 'green', cancelled: 'coral', archived: 'muted', removed:'muted' };
 
 function eventDateInput(value) {
   if (!value) return '';
@@ -1532,7 +1532,7 @@ function renderEvents() {
     const source = item.sourceId === 'source-crewbrain' ? 'CrewBrain' : item.sourceId === 'source-easyjob' ? 'easyjob' : 'Manuell';
     const syncLabel = item.syncStatus === 'manually_modified' ? 'redaktionell angepasst' : item.syncStatus === 'synced' ? 'synchronisiert' : 'manuell';
     const objectLabel=item.externalObjectType==='PROJECT'?'Projekt':item.externalObjectType==='JOB'?'Job':'';
-    return `<div class="table-row" role="row" data-event-row="${escapeHtml(item.id)}"><span><label class="table-check"><input type="checkbox" data-event-select="${escapeHtml(item.id)}" ${state.selectedEvents.has(item.id)?'checked':''}><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.externalNumber || 'Eigene Veranstaltung')} · ${escapeHtml([objectLabel,item.eventType,item.organizer,syncLabel].filter(Boolean).join(' · '))}</small></span></label></span><span>${escapeHtml(formattedDate)}${time ? ` · ${escapeHtml(time)}` : ''}</span><span>${escapeHtml(item.venue || item.room || '–')}</span><span class="source-label">${escapeHtml(source)}</span><span><i class="tag ${eventStatusTones[item.status] || 'muted'}">${escapeHtml(eventStatusLabels[item.status] || item.status)}</i></span><button class="row-menu" type="button" data-edit-event="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.title)} bearbeiten">Bearbeiten</button></div>`;
+    return `<div class="table-row" role="row" data-event-row="${escapeHtml(item.id)}"><span><label class="table-check"><input type="checkbox" data-event-select="${escapeHtml(item.id)}" ${state.selectedEvents.has(item.id)?'checked':''} ${item.status==='removed'?'disabled':''}><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.externalNumber || 'Eigene Veranstaltung')} · ${escapeHtml([objectLabel,item.eventType,item.organizer,syncLabel].filter(Boolean).join(' · '))}</small></span></label></span><span>${escapeHtml(formattedDate)}${time ? ` · ${escapeHtml(time)}` : ''}</span><span>${escapeHtml(item.venue || item.room || '–')}</span><span class="source-label">${escapeHtml(source)}</span><span><i class="tag ${eventStatusTones[item.status] || 'muted'}">${escapeHtml(eventStatusLabels[item.status] || item.status)}</i></span><button class="row-menu" type="button" data-edit-event="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.title)} bearbeiten">${item.status==='removed'?'Ansehen':'Bearbeiten'}</button></div>`;
   }).join('') || '<div class="event-table-empty">Keine passenden Veranstaltungen vorhanden. Importiere Termine aus CrewBrain oder easyjob oder lege eine Veranstaltung manuell an.</div>'}`;
   const selected=state.selectedEvents.size,selectedImported=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.sourceId).length;document.querySelector('#bulk-edit-events').disabled=!selectedImported;document.querySelector('#bulk-edit-events').title=selected&&!selectedImported?'Massenänderungen gelten nur für importierte Veranstaltungen':'';document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
 }
@@ -1555,6 +1555,7 @@ async function loadEvents() {
   try {
     const result = await licensedRead('/api/events');
     state.events = result.data || [];
+    state.selectedEvents=new Set([...state.selectedEvents].filter(id=>state.events.some(event=>event.id===id&&event.status!=='removed')));
     rememberOverviewClock(result);state.overviewLoadedAt=performance.now();
     state.eventFieldSettings=result.fieldSettings||{};
     renderEvents();return result;
@@ -1584,6 +1585,8 @@ document.querySelector('#event-type-new').addEventListener('keydown',event=>{if(
 document.querySelector('#event-type').addEventListener('change',()=>showNewEventType(false));
 
 async function openEventEditor(item = null,options={}) {
+  if(item?.status==='removed'||item?.readOnly){const dialog=document.querySelector('#removed-event-dialog');dialog.querySelector('[data-removed-event-title]').textContent=item.title||'Veranstaltung';dialog.querySelector('[data-removed-event-date]').textContent=eventDateInput(item.date)||'Kein Datum hinterlegt';dialog.showModal();return;}
+
   const template=options.template||null;state.editingEventTemplateId=template?.id||null;state.eventEditorOriginalInput=structuredClone(item||{});
 
   document.querySelector('#event-form').reset();
@@ -1599,6 +1602,8 @@ async function openEventEditor(item = null,options={}) {
   document.querySelector('#event-organizer').value = item?.organizer || '';
   eventTypeDrafts=[];renderEventTypeOptions(item?.eventType||'');showNewEventType(false);
   document.querySelector('#event-status').value = item?.status || 'draft';
+  document.querySelector('#event-status').disabled=!item?.id;
+  document.querySelector('#event-status option[value=removed]').disabled=state.currentUser?.role!=='admin';
   const referenceDate=eventDateInput(item?.date)||eventLocalDateTime(item?.eventStart||item?.setupStart||item?.admissionStart||item?.breakStart||item?.breakEnd||item?.eventEnd||item?.boxOfficeOpenAt).slice(0,10)||(template?(eventLocalDateTime(template.schedule?.[0]?.startAt).slice(0,10)||eventLocalDateTime(new Date().toISOString()).slice(0,10)):'');
   document.querySelector('#event-date').value=referenceDate;if(referenceDate&&!state.eventEditorOriginalInput.date)state.eventEditorOriginalInput.date=referenceDate.replaceAll('-','');
   document.querySelector('#event-venue').value = item?.venue || '';
@@ -1721,7 +1726,7 @@ document.querySelector('#event-table').addEventListener('click', event => {
   if (button) openEventEditor(state.events.find(item => item.id === button.dataset.editEvent));
 });
 document.querySelector('#event-table').addEventListener('change',event=>{
-  if(event.target.id==='event-select-all'){visibleEventRows().forEach(item=>event.target.checked?state.selectedEvents.add(item.id):state.selectedEvents.delete(item.id));renderEvents();return;}
+  if(event.target.id==='event-select-all'){visibleEventRows().filter(item=>item.status!=='removed').forEach(item=>event.target.checked?state.selectedEvents.add(item.id):state.selectedEvents.delete(item.id));renderEvents();return;}
   if(event.target.matches('[data-event-select]')){event.target.checked?state.selectedEvents.add(event.target.dataset.eventSelect):state.selectedEvents.delete(event.target.dataset.eventSelect);renderEvents();}
 });
 function renderEventBulkFields(){
@@ -1791,12 +1796,13 @@ document.querySelector('#event-bulk-form').addEventListener('submit',async event
   const button=event.submitter;button.disabled=true;
   try{const result=await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify(payload)});document.querySelector('#event-bulk-dialog').close();state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);const skipped=Number(result.skippedManual||0)+Number(result.skippedWithoutDate||0);showToast(`${result.count} importierte Veranstaltung${result.count===1?'':'en'} aktualisiert${skipped?` · ${skipped} übersprungen`:''}.`);}catch(error){showToast(error.message);}finally{button.disabled=false;}
 });
-async function bulkEvents(action){const ids=[...state.selectedEvents];if(!ids.length)return;const label=action==='archive'?'archivieren':'endgültig löschen';if(!confirm(`${ids.length} gewählte Veranstaltung${ids.length===1?'':'en'} ${label}?`))return;try{await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify({ids,action})});state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);showToast(`${ids.length} Veranstaltung${ids.length===1?'':'en'} wurde${ids.length===1?'':'n'} verarbeitet.`);}catch(error){showToast(error.message);}}
+async function bulkEvents(action){const ids=[...state.selectedEvents];if(!ids.length)return;const label=action==='archive'?'archivieren':'löschen und auf Name, Datum und Herkunft reduzieren (nicht wiederherstellbar)';if(!confirm(`${ids.length} gewählte Veranstaltung${ids.length===1?'':'en'} ${label}?`))return;try{await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify({ids,action})});state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);showToast(`${ids.length} Veranstaltung${ids.length===1?'':'en'} wurde${ids.length===1?'':'n'} verarbeitet.`);}catch(error){showToast(error.message);}}
 document.querySelector('#bulk-archive-events').addEventListener('click',()=>bulkEvents('archive'));
 document.querySelector('#bulk-delete-events').addEventListener('click',()=>bulkEvents('delete'));
 document.querySelector('#event-form').addEventListener('submit', async event => {
   event.preventDefault();
   const id = document.querySelector('#event-id').value;
+  if(document.querySelector('#event-status').value==='removed'&&!confirm('Veranstaltung löschen? Nur Name, Datum und Herkunft bleiben erhalten. Weitere Daten und Ablaufpunkte werden unwiderruflich entfernt.'))return;
   const button = document.querySelector('#save-event-button'); button.disabled = true;
   try {
     if(state.editingEventTemplateId){await apiRequest('/api/event-templates/'+encodeURIComponent(state.editingEventTemplateId),{method:'PUT',body:JSON.stringify({name:document.querySelector('#event-template-name').value.trim(),input:collectEventEditor(),schedule:state.eventSchedule})});document.querySelector('#event-dialog').close();await openEventTemplates();showToast('Veranstaltungsvorlage wurde gespeichert.');return;}
@@ -1810,9 +1816,9 @@ document.querySelector('#event-form').addEventListener('submit', async event => 
 document.querySelector('#archive-event-button').addEventListener('click', async () => {
   const id = document.querySelector('#event-id').value;
   const title = document.querySelector('#event-title').value.trim();
-  if (!id || !window.confirm(`Veranstaltung „${title}“ wirklich archivieren? Sie kann im Papierkorb wiederhergestellt werden.`)) return;
+  if (!id || !window.confirm(`Veranstaltung „${title}“ wirklich archivieren? Sie bleibt in der Liste und kann über ihren Status wieder aktiviert werden.`)) return;
   try {
-    await apiRequest(`/api/events/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await apiRequest(`/api/events/${encodeURIComponent(id)}`, { method: 'PUT', body:JSON.stringify({...collectEventEditor(),status:'archived'}) });
     document.querySelector('#event-dialog').close();
     await loadEvents();
     showToast(`Veranstaltung „${title}“ wurde archiviert.`);
@@ -3460,10 +3466,10 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 }
 
-function slideThumb(slide) {
+function slideThumb(slide,eventOverride=undefined) {
   const defaults = defaultSlideSettings();
   const settings = { ...defaults, ...(slide.settings || {}), background: { ...defaults.background, ...(slide.settings?.background || {}) }, logo: { ...defaults.logo, ...(slide.settings?.logo || {}) }, clock: { ...defaults.clock, ...(slide.settings?.clock || {}) } };
-  const event=selectSlideEvent(state.events||[],slide.document?.eventSelection||{},(state.events||[]).find(event=>event.id===slide.eventId)||null);
+  const event=eventOverride!==undefined?eventOverride:selectSlideEvent(state.events||[],slide.document?.eventSelection||{},(state.events||[]).find(event=>event.id===slide.eventId)||null);
   const elements = (slide.elements || []).map(element => thumbnailElementMarkup(element, settings,event)).join('');
   return `<span class="slide-thumb slide-thumb-designed type-${escapeHtml(slide.type)} ${slide.ratio === 'auto' ? 'is-auto' : ''}"><span class="slide-thumb-surface ${slide.ratio === 'portrait' ? 'is-portrait' : ''}">${slideDecorationsMarkup(settings)}${elements || `<span class="slide-thumb-empty">${escapeHtml(slideTypeLabels[slide.type] || 'Slide')}</span>`}</span>${slide.ratio === 'auto' ? '<i class="slide-thumb-auto-badge">AUTO</i>' : ''}</span>`;
 }
@@ -3659,7 +3665,7 @@ for(const [prefix,kind,render] of [['slide','slides',renderSlideLibrary],['chann
 }
 
 function populateContentEventOptions() {
-  const options = state.events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(event.title)}</option>`).join('');
+  const options = state.events.filter(event=>!['archived','removed'].includes(event.status)).map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(event.title)}</option>`).join('');
   for(const id of ['channel-event','slide-event']){const select=document.getElementById(id),selected=select.value;select.innerHTML=`<option value="">Keine feste Veranstaltung</option>${options}`;if([...select.options].some(option=>option.value===selected))select.value=selected;}
 
 }
@@ -5993,7 +5999,7 @@ function playerUrl(displayOrSlug) {
 }
 
 state.locations=[];state.matrices=[];state.trash=[];state.displayPage=1;
-async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${state.channels.map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#display-default-slide').innerHTML=`<option value="">Keine Standardslide</option>${state.slides.map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name)}</option>`).join('')}`;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
+async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${[...state.channels].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#display-default-slide').innerHTML=`<option value="">Keine Standardslide</option>${[...state.slides].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name)}</option>`).join('')}`;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();}catch(error){showToast(error.message);}}
 
 function displayTheme(channel) {
   if (channel === 'Restaurant') return 'restaurant';
@@ -6058,23 +6064,40 @@ function renderDisplays() {
   grid.querySelectorAll('[data-delete-display]').forEach(button=>button.addEventListener('click',async()=>{const display=state.displays.find(item=>item.id===button.dataset.deleteDisplay);if(!confirm(`Display „${display.name}“ in den Papierkorb verschieben?`))return;try{await apiRequest(`/api/displays/${display.id}`,{method:'DELETE'});await loadDisplays();showToast('Display wurde in den Papierkorb verschoben.');}catch(error){showToast(error.message);}}));
 }
 
+const displayOutputSnapshots=new Map();let displayOutputPollRunning=false;
+async function refreshDisplayOutputs(){
+  if(displayOutputPollRunning||state.view!=='displays'||document.hidden||!document.querySelector('#display-live-overview').open)return;
+  displayOutputPollRunning=true;
+  try{
+    const queue=[...state.displays],ids=new Set(queue.map(display=>display.id));for(const id of displayOutputSnapshots.keys())if(!ids.has(id))displayOutputSnapshots.delete(id);
+    await Promise.all(Array.from({length:Math.min(4,queue.length)},async()=>{while(queue.length){const display=queue.shift();if(document.hidden||!document.querySelector('#display-live-overview').open||state.view!=='displays')break;
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+      try{const output=await apiRequest(`/api/player/${encodeURIComponent(display.slug)}/state?preview=1`,{headers:{'X-Player-Key':display.playerKey},cache:'no-store',signal:controller.signal});if(document.querySelector('#display-live-overview').open&&state.view==='displays')displayOutputSnapshots.set(display.id,{output,receivedAt:Date.now()});}
+      catch{if(document.querySelector('#display-live-overview').open&&state.view==='displays')displayOutputSnapshots.set(display.id,{error:true,receivedAt:Date.now()});}finally{clearTimeout(timeout);}
+    }}));
+    renderDisplayLiveOverview();
+  }finally{displayOutputPollRunning=false;}
+}
 function liveContentForDisplay(display){
-  const channel=display.currentChannelName||state.channels.find(item=>item.id===display.currentChannelId)?.name;
-  const slide=display.currentSlideName||state.slides.find(item=>item.id===display.currentSlideId)?.name;
-  const channelRecord=state.channels.find(item=>item.id===(display.currentChannelId||display.defaultChannelId));
-  const slideRecord=state.virtualAdvertisingSlides?.get(display.currentSlideId)||state.slides.find(item=>item.id===display.currentSlideId)||state.virtualAdvertisingSlides?.get(channelRecord?.items?.[0]?.slideId)||state.slides.find(item=>item.id===channelRecord?.items?.[0]?.slideId);
-  return{channel:channel||display.channel||'Kein Inhalt',slide:slide||slideRecord?.name||'–',slideRecord,reported:Boolean(display.currentChannelId||display.currentSlideId),lastSeenAt:display.lastSeenAt};
+  const snapshot=displayOutputSnapshots.get(display.id),output=snapshot?.output;
+  if(!output||snapshot.error)return {channel:snapshot?.error?'Ausgabe nicht abrufbar':'Ausgabe wird ermittelt …',slide:'–',slideRecord:null,reported:false,lastSeenAt:display.lastSeenAt};
+  const items=output.slides||[],serverTime=Date.parse(output.serverTime)||snapshot.receivedAt,now=serverTime+Date.now()-snapshot.receivedAt;
+  const elapsed=Math.max(0,now-Number(output.playbackSync?.epochMs||serverTime));
+  const position=channelPreviewPosition(items,elapsed,output.channel?.repeatEnabled!==false),item=position?items[position.index]:items[0];
+  const slideRecord=item?.slide?slideForUi(item.slide):null;if(slideRecord){const orientation=item.slide.orientation==='auto'?(output.display?.orientation||display.orientation):item.slide.orientation;slideRecord.elements=playbackItemElements(item,orientation);slideRecord.ratio=orientation;}
+  return {channel:output.warning?.title||output.emergency?.title||output.channel?.name||output.directSlide?.name||'Kein gültiger Inhalt',slide:item?.slide?.name||'–',slideRecord,event:item?.event||null,warning:output.warning||output.emergency,source:output.warning||output.emergency?'Warnung':output.assignment?'Preset / Zuweisung':'Aktuelle Konfiguration',reported:Boolean(display.currentSlideId),lastSeenAt:display.lastSeenAt};
 }
 function displayLivePreview(display){
   const live=liveContentForDisplay(display);
-  const preview=live.slideRecord?slideThumb(live.slideRecord):`<span class="display-live-empty"><strong>${escapeHtml(live.channel)}</strong><small>${display.online?'Player meldet noch keine Slide':'Kein aktueller Player-Inhalt'}</small></span>`;
-  return`<article class="display-live-card"><div class="display-live-screen">${preview}<span class="display-live-state ${display.online?'is-online':''}">${display.online?'Live':'Offline'}</span></div><footer><span><strong>${escapeHtml(display.name)}</strong><small>${escapeHtml(live.channel)}${display.matrix?` · ${escapeHtml(display.matrix.name)}`:''}</small></span><time>${display.lastSeenAt?escapeHtml(formatLastSeen(display.lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
+  const preview=live.warning?`<span class="display-live-empty" style="background:${/^#[0-9a-f]{6}$/i.test(live.warning.document?.backgroundColor||'')?live.warning.document.backgroundColor:'#b91c1c'};color:${/^#[0-9a-f]{6}$/i.test(live.warning.document?.textColor||'')?live.warning.document.textColor:'#ffffff'}"><strong>${escapeHtml(live.warning.title||'Warnung')}</strong><small>${escapeHtml(live.warning.message||live.warning.instructions||'')}</small></span>`:live.slideRecord?slideThumb(live.slideRecord,live.event):`<span class="display-live-empty"><strong>${escapeHtml(live.channel)}</strong></span>`;
+  return `<article class="display-live-card" data-output-display="${escapeHtml(display.id)}"><div class="display-live-screen">${preview}<span class="display-live-state ${display.online?'is-online':''}">${display.online?'Verbunden':'Offline'}</span></div><footer><span><strong>${escapeHtml(display.name)}</strong><small>${escapeHtml(live.channel)} · ${escapeHtml(live.slide)}</small><small>${escapeHtml(live.source||'Konfigurierte Ausgabe')} · ${display.online?'Player verbunden':'Wiedergabe nicht bestätigt'}</small>${display.currentSlideName?`<small>Zuletzt gemeldet: ${escapeHtml(display.currentSlideName)}</small>`:''}</span><time>${display.lastSeenAt?escapeHtml(formatLastSeen(display.lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
 }
+
 function matrixLivePreview(matrix){
   const members=[...matrix.members].sort((a,b)=>a.row-b.row||a.column-b.column),displayById=new Map(state.displays.map(display=>[display.id,display]));
-  const cells=Array.from({length:matrix.rows*matrix.columns},(_,index)=>{const row=Math.floor(index/matrix.columns),column=index%matrix.columns,member=members.find(item=>item.row===row&&item.column===column),display=member?displayById.get(member.displayId):null,live=display?liveContentForDisplay(display):null;return`<span class="matrix-live-cell">${live?.slideRecord?slideThumb(live.slideRecord):`<i>${display?escapeHtml(live.channel):'Leer'}</i>`}</span>`;}).join('');
+  const cells=Array.from({length:matrix.rows*matrix.columns},(_,index)=>{const row=Math.floor(index/matrix.columns),column=index%matrix.columns,member=members.find(item=>item.row===row&&item.column===column),display=member?displayById.get(member.displayId):null,live=display?liveContentForDisplay(display):null;return`<span class="matrix-live-cell">${live?.slideRecord?slideThumb(live.slideRecord,live.event):`<i>${display?escapeHtml(live.channel):'Leer'}</i>`}</span>`;}).join('');
   const online=members.filter(member=>displayById.get(member.displayId)?.online).length,lastSeenAt=members.map(member=>displayById.get(member.displayId)?.lastSeenAt).filter(Boolean).sort().at(-1);
-  return`<article class="display-live-card is-matrix"><div class="display-live-screen"><div class="matrix-live-preview" style="--matrix-columns:${matrix.columns};--matrix-rows:${matrix.rows}">${cells}</div><span class="display-live-state ${online===members.length&&members.length?'is-online':''}">${online}/${members.length} live</span></div><footer><span><strong>${escapeHtml(matrix.name)}</strong><small>Matrix-Display · ${matrix.rows} × ${matrix.columns}</small></span><time>${lastSeenAt?escapeHtml(formatLastSeen(lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
+  return`<article class="display-live-card is-matrix"><div class="display-live-screen"><div class="matrix-live-preview" style="--matrix-columns:${matrix.columns};--matrix-rows:${matrix.rows}">${cells}</div><span class="display-live-state ${online===members.length&&members.length?'is-online':''}">${online}/${members.length} verbunden</span></div><footer><span><strong>${escapeHtml(matrix.name)}</strong><small>Matrix-Display · ${matrix.rows} × ${matrix.columns}</small></span><time>${lastSeenAt?escapeHtml(formatLastSeen(lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
 }
 function renderDisplayLiveOverview(){
   const overview=document.querySelector('#display-live-overview'),table=document.querySelector('#display-live-table'),updated=document.querySelector('#display-live-updated');if(!overview||!table||!updated)return;
@@ -6096,7 +6119,8 @@ function renderManagementTables(){
 }
 
 document.querySelectorAll('[data-display-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-display-tab]').forEach(item=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-display-tab-panel]').forEach(panel=>panel.classList.toggle('is-active',panel.dataset.displayTabPanel===button.dataset.displayTab));}));
-document.querySelector('#display-live-overview').addEventListener('toggle',renderDisplayLiveOverview);
+document.querySelector('#display-live-overview').addEventListener('toggle',()=>{if(!document.querySelector('#display-live-overview').open)displayOutputSnapshots.clear();renderDisplayLiveOverview();void refreshDisplayOutputs();});
+setInterval(()=>{void refreshDisplayOutputs();},10000);
 ['display-search','display-status-filter','display-location-filter','display-group-filter','display-matrix-filter'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',()=>{state.displayPage=1;renderDisplays();}));
 ['group-search','matrix-search','location-search','trash-search','trash-type-filter'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',renderManagementTables));
 document.querySelectorAll('[data-display-page]').forEach(button=>button.addEventListener('click',()=>{state.displayPage+=Number(button.dataset.displayPage);renderDisplays();}));
@@ -6122,6 +6146,17 @@ function syncDisplayResolutionFields(display=null){
   document.querySelector('#display-resolution-help').textContent=fixed?'Der Player nutzt diese feste Zielauflösung für Planung und Matrix-Berechnung.':detected?`Zuletzt vom Browser gemeldet: ${detected.width} × ${detected.height} px${display.devicePixelRatio?` · Pixeldichte ${display.devicePixelRatio}`:''}.`:'Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.';
 }
 
+function renderDisplayDefaultOptions(){
+  for(const [kind,selectId,searchId,rows,empty] of [['channel','display-channel','display-channel-search',state.channels,'Kein Standardkanal'],['slide','display-default-slide','display-slide-search',state.slides,'Keine Standardslide']]){
+    const select=document.getElementById(selectId),input=document.getElementById(searchId),selected=select.value,query=input.value.trim().toLocaleLowerCase('de-DE');
+    const sorted=[...rows].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'de',{numeric:true,sensitivity:'base'})||String(a.id).localeCompare(String(b.id)));
+    const matches=sorted.filter(row=>!query||String(row.name||'').toLocaleLowerCase('de-DE').includes(query));
+    const visible=sorted.filter(row=>row.id===selected||!query||String(row.name||'').toLocaleLowerCase('de-DE').includes(query));
+    select.innerHTML=`<option value="">${empty}</option>`+visible.map(row=>`<option value="${escapeHtml(row.id)}">${escapeHtml(row.name)}</option>`).join('');select.value=selected;
+    document.getElementById('display-'+kind+'-search-result').textContent=query?`${matches.length} Treffer${selected&&!matches.some(row=>row.id===selected)?' · aktuelle Auswahl bleibt erhalten':''}`:'';
+  }
+}
+for(const id of ['display-channel-search','display-slide-search'])document.getElementById(id).addEventListener('input',renderDisplayDefaultOptions);
 function renderDisplayDefaultFields(){
   const slide=document.querySelector('#display-default-content-type').value==='slide';
   document.querySelector('#display-default-slide-field').hidden=!slide;
@@ -6130,6 +6165,7 @@ function renderDisplayDefaultFields(){
 document.querySelector('#display-default-content-type').addEventListener('change',renderDisplayDefaultFields);
 function openDisplayDialog(displayId = null) {
   const display = state.displays.find(item => item.id === displayId);
+  document.querySelector('#display-channel-search').value='';document.querySelector('#display-slide-search').value='';renderDisplayDefaultOptions();
   document.querySelector('#display-dialog-title').textContent = display ? 'Display bearbeiten' : 'Display hinzufügen';
   document.querySelector('#display-edit-id').value = display ? display.id : '';
   document.querySelector('#display-name').value = display ? display.name : '';
