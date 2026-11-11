@@ -27,7 +27,7 @@ final readonly class Typo3HttpClient implements HttpClient
         $deadline=microtime(true)+max(1,$timeoutSeconds);
         try {
             $response = $this->requestFactory->request($url, strtoupper($method), [
-                'headers' => $headers + ['User-Agent' => 'Kiosky/3.39.0 TYPO3'],
+                'headers' => $headers + ['User-Agent' => 'Kiosky/3.39.1 TYPO3'],
                 'body' => $body,
                 'timeout' => $timeoutSeconds,
                 'verify' => $verifyTls,

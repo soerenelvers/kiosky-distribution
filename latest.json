@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "a10669d0a5467ce33bbfdef2259ad0540f033be6",
+  "source_commit": "e87060cd12258e4f4903bc6b1dc5dc17b358459d",
   "product": "kiosky",
-  "version": "3.39.0",
-  "released_at": "2026-11-11T07:37:47.830Z",
+  "version": "3.39.1",
+  "released_at": "2026-11-11T08:04:11.134Z",
   "channel": "stable",
-  "release_notes": "## [3.39.0]\n\n- Vollständiger passwortverschlüsselter Systemumzug zwischen Standalone, WordPress und TYPO3 sowie innerhalb jeder Plattform; bestehende selektive Kopierimporte bleiben verfügbar.\n- Vorschau mit Bestandsprüfung, ausdrückliche Zielersetzung und Benutzerzuordnung; IDs, Medien, Schriftdateien, Archive, Slide-Versionen, Preset-Termine und Einstellungen bleiben übertragbar.\n- Display-Kopplungen und API-/Schnittstellen-Zugänge optional erhalten; Zielanmeldung und Lizenzidentität bleiben lokal, native CMS-Rechte werden nicht automatisch erweitert.\n- Konfliktschutz, Paket-/Dateiprüfung, wiederholbarer Import ohne Duplikate und Rücknahme neu erzeugter CMS-Dateien bei fehlgeschlagener Speicherung.\n- Lokaler Medienabruf unterstützt auch Videos, Audio und PDFs sowie Byte-Teilabrufe für Videowiedergabe.\n- Regressionstests für alle neun Plattformkombinationen, reale Administrator-Sitzungen, native CMS-Speicher/-Medien und mobile Import-/Export-Oberflächen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.39.0",
+  "release_notes": "## [3.39.1]\n\n- Vollständige Umzüge ersetzen die Schriftregistrierung jetzt innerhalb derselben Transaktion. Auch Ziele mit bereits 20 eigenen Schriften können die Quellschriften übernehmen; ein fehlgeschlagener Import stellt die bisherige Registrierung wieder her.\n- Die Paketprüfung setzt die Grenze von 20 eigenen Schriften in Standalone, WordPress und TYPO3 einheitlich durch.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.39.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.39.0",
+    "core_version": "3.39.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.39.0",
-    "typo3_extension_version": "3.39.0"
+    "wordpress_plugin_version": "3.39.1",
+    "typo3_extension_version": "3.39.1"
   },
   "components": {
     "core": {
-      "version": "3.39.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.0.zip?ref=v3.39.0",
-      "sha256": "232f80802c378d025c57e8454be9d391ffb4ccd0e07227473d07a4f983da9bd3"
+      "version": "3.39.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.1.zip?ref=v3.39.1",
+      "sha256": "4c3aad4565924026ee4f6299d0e629b7a697aed39a346640a16b1f548382a3bf"
     },
     "standalone": {
-      "version": "3.39.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.0.zip?ref=v3.39.0",
-      "sha256": "232f80802c378d025c57e8454be9d391ffb4ccd0e07227473d07a4f983da9bd3"
+      "version": "3.39.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.1.zip?ref=v3.39.1",
+      "sha256": "4c3aad4565924026ee4f6299d0e629b7a697aed39a346640a16b1f548382a3bf"
     },
     "wordpress": {
-      "version": "3.39.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.39.0.zip?ref=v3.39.0",
-      "sha256": "1c6e35cada463d9376131e6331900dd28310e9092483c7fa7ef6b82111ad9d5d",
+      "version": "3.39.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.39.1.zip?ref=v3.39.1",
+      "sha256": "096ba25f8f8e07ca9ba82f19e7b08d284f83724c48d7c14833cf96be3534f6c9",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.39.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.39.0.zip?ref=v3.39.0",
-      "sha256": "a0ce93d582c1da2243f83c3060cf20620df7abc0984ec6ce6bb162bcca052ee5",
+      "version": "3.39.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.39.1.zip?ref=v3.39.1",
+      "sha256": "b2fed480ec6ceb93b68151545f976844153128e7500b7554376fb68a6e659f87",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
