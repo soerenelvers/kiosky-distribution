@@ -290,6 +290,11 @@ final class EasyJobService
     }
 
     /** @param array<string,mixed> $config @return array{username:string,password:string} */
+    public function migrationConfiguration(array $config):array
+    {
+        $copy=$config;unset($copy['encryptedCredentials']);if(!empty($config['encryptedCredentials']))$copy['credentials']=$this->credentials($config);return $copy;
+    }
+
     private function credentials(array $config): array
     {
         $encrypted = (string)($config['encryptedCredentials'] ?? '');

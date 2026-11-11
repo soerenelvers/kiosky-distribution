@@ -1866,3 +1866,10 @@ body[data-user-role="designer"] :is([data-action="new-channel"],[data-action="du
 .content-access-dialog .dialog-actions{position:sticky;bottom:0;background:var(--paper,#fff);padding:12px 0 0;flex-wrap:wrap}
 
 body[data-user-role="designer"] :is([data-media-action="new-folder"],[data-media-page-action="new-folder"],[data-rename-media-folder],[data-delete-media-folder],[data-edit-media],[data-delete-media],[data-restore-media],[data-purge-media],[data-media-trash]){display:none!important}
+
+/* Full system-move controls remain usable with long filenames and mobile keyboards. */
+#system-migration-dialog label, #migration-export-options > label { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; min-width: 0; }
+#system-migration-dialog .checkbox-label, #migration-export-options > .checkbox-label { flex-direction: row; align-items: flex-start; }
+#system-migration-dialog input:not([type=checkbox]), #system-migration-dialog select, #migration-export-options input:not([type=checkbox]), #transfer-mode { width: 100%; max-width: 100%; min-width: 0; }
+#system-migration-file, #system-migration-source, #system-migration-notices, #system-migration-users label { overflow-wrap: anywhere; }
+#system-migration-counts { display: block; overflow-wrap: anywhere; line-height: 1.7; }

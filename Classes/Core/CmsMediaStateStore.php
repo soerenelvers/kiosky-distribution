@@ -11,14 +11,19 @@ final class CmsMediaStateStore implements StateStore
     private array $snapshot = ['folders'=>[], 'assets'=>[]];
     private array $references = [];
     private array $legacyMedia = [];
+    private array $linkedMedia = [];
+    private bool $migrationActive = false;
+    private array $migrationAssets = [];
+    private array $migrationFolders = [];
+    private bool $readingMigration = false;
 
     public function __construct(private readonly StateStore $store, private readonly MediaLibrary $media, private readonly bool $migrate = true, private readonly bool $hydrateMedia = true) {}
 
-    public function exportAssetData(array $asset): string
+    public function exportAssetData(array $asset, int $maximumBytes = 20000000): string
     {
         if (str_starts_with((string)($asset['src'] ?? ''),'data:')) return $asset['src'];
         if (!method_exists($this->media,'exportAssetData')) throw new RuntimeException('Die CMS-Medienbibliothek unterstützt keinen Dateiexport.',422);
-        return $this->media->exportAssetData($asset);
+        return $this->media->exportAssetData($asset,$maximumBytes);
     }
 
     /** Only used after session/player authorization and an exact registered-font hash lookup. */
@@ -32,6 +37,7 @@ final class CmsMediaStateStore implements StateStore
     {
         $this->references = [];
         $state = $this->store->load();
+        $this->linkedMedia=$state['externalMediaAssets'] ?? [];
         $this->legacyMedia = array_intersect_key($state, array_flip(['mediaFolders','mediaAssets']));
         // Machine control requests need stored content IDs, not a full CMS file inventory.
         if (!$this->hydrateMedia) return $state;
@@ -40,13 +46,22 @@ final class CmsMediaStateStore implements StateStore
         $legacyAssets = $state['mediaAssets'] ?? [];
         $state['mediaFolders'] = $this->merge($this->snapshot['folders'], $legacyFolders);
         $state['mediaAssets'] = $this->merge($this->snapshot['assets'], $legacyAssets);
-        if ($this->migrate && ($legacyFolders || $legacyAssets)) {
+        if ($this->migrate && !$this->readingMigration && ($legacyFolders || $legacyAssets)) {
             $this->persist($state);
             $this->snapshot = $this->media->read();
             $state['mediaFolders'] = $this->snapshot['folders'];
             $state['mediaAssets'] = $this->snapshot['assets'];
         }
+        $state['mediaAssets']=[...$state['mediaAssets'],...$this->linkedMedia];
         return $this->hydrate($state, array_column($state['mediaAssets'], null, 'id'));
+    }
+
+    /** Preview/export must not trigger the historical automatic media migration. */
+    public function loadForMigration(): array
+    {
+        $this->readingMigration = true;
+        try { return $this->load(); }
+        finally { $this->readingMigration = false; }
     }
 
     private function hydrate(mixed $value, array $assets): mixed
@@ -79,6 +94,16 @@ final class CmsMediaStateStore implements StateStore
         $this->persist($state);
     }
 
+    public function saveMigration(array $state): void
+    {
+        $this->migrationActive=true;$this->migrationAssets=[];$this->migrationFolders=[];
+        try{$this->persist($state);}catch(\Throwable $error){
+            foreach(array_reverse($this->migrationAssets) as $id)try{$this->media->deleteAsset($id);}catch(\Throwable){}
+            foreach(array_reverse($this->migrationFolders) as $id)try{$this->media->deleteFolder($id);}catch(\Throwable){}
+            throw $error;
+        }finally{$this->migrationActive=false;$this->migrationAssets=[];$this->migrationFolders=[];}
+    }
+
     private function persist(array &$state): void
     {
         $folders = array_column($this->snapshot['folders'], null, 'id');
@@ -104,6 +129,7 @@ final class CmsMediaStateStore implements StateStore
                 if (!isset($folders[$oldId]) || $folder !== $folders[$oldId]) {
                     $saved = $this->media->saveFolder($folder);
                     $this->references[$oldId] = $saved['id'];
+                    if($this->migrationActive&&!isset($folders[$saved['id']]))$this->migrationFolders[]=$saved['id'];
                 }
                 $done[$oldId] = true;
                 unset($pending[$key]);
@@ -116,13 +142,18 @@ final class CmsMediaStateStore implements StateStore
             $previous = $assets[$native['id']] ?? null;
             if ($previous && $previous['src'] !== $native['src']) $this->references[$previous['src']] = $native['src'];
         }
+        $linked=[];$linkedIds=array_column($this->linkedMedia,null,'id');
         foreach ($state['mediaAssets'] ?? [] as $asset) {
+            if(isset($linkedIds[$asset['id']])){$linked[]=$asset;continue;}
+            if($this->migrationActive&&!str_starts_with((string)($asset['src'] ?? ''),'data:')&&!isset($assets[$asset['id']])){$linked[]=$asset;continue;}
             $oldId = $asset['id'];
             if (isset($assets[$oldId]) && $asset === $assets[$oldId]) continue;
             $oldSrc = (string)($asset['src'] ?? '');
             $resolved = $this->resolveReferences($asset);
             if (str_starts_with($oldSrc,'data:')) $resolved['src'] = $oldSrc;
-            $saved = $this->media->saveAsset($resolved);
+            $saved = $this->media->saveAsset($resolved,$this->migrationActive?128000000:20000000);
+            if($this->migrationActive&&!isset($assets[$saved['id']]))$this->migrationAssets[]=$saved['id'];
+            foreach($state['migrationMediaAliases'] ?? [] as $alias=>$targetId)if($targetId===$oldId)$this->references[$alias]=$saved['src'];
             $this->references[$oldId] = $saved['id'];
             if (isset($assets[$oldId]) && $assets[$oldId]['src'] !== $saved['src']) $this->references[$assets[$oldId]['src']] = $saved['src'];
             if ($oldSrc !== '' && $oldSrc !== $saved['src']) $this->references[$oldSrc] = $saved['src'];
@@ -134,6 +165,7 @@ final class CmsMediaStateStore implements StateStore
             if (!in_array($id, array_column($state['mediaFolders'] ?? [], 'id'), true)) $this->media->deleteFolder($id);
         }
         $state = $this->resolveReferences($state);
+        $state['externalMediaAssets']=$this->resolveReferences($linked);unset($state['migrationMediaAliases']);
         $stored = $state;
         unset($stored['mediaAssets'], $stored['mediaFolders']);
         $this->store->save($stored);

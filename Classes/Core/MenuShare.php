@@ -21,7 +21,7 @@ final class MenuShare
         $record=$state['menuShare'] ?? [];
         if (isset($input['password']) && $input['password']!=='') {
             if (!is_string($input['password']) || preg_match_all('/./us',$input['password'])<12 || preg_match_all('/./us',$input['password'])>256 || strlen($input['password'])>1024) throw new RuntimeException('Das Freigabepasswort muss mindestens 12 Zeichen lang sein.',422);
-            $record['salt']=bin2hex(random_bytes(16));
+            $record['passwordAlgorithm']='pbkdf2-sha256-600000-32';$record['salt']=bin2hex(random_bytes(16));
             $record['passwordHash']=hash_pbkdf2('sha256',$input['password'],$record['salt'],600000,64);
         }
         if ($input['enabled'] && empty($record['passwordHash'])) throw new RuntimeException('Bitte zuerst ein Freigabepasswort setzen.',422);
@@ -47,7 +47,9 @@ final class MenuShare
         $previous=$attempts[$key] ?? null;
         if ($previous && $previous['count']>=5) throw new RuntimeException('Zu viele Versuche. Bitte nach fünf Minuten erneut versuchen.',429);
         $password=is_string($input['password'] ?? null) && strlen($input['password'])<=1024?$input['password']:'';
-        $hash=hash_pbkdf2('sha256',$password,$record['salt'],600000,64);
+        $algorithm=$record['passwordAlgorithm'] ?? 'pbkdf2-sha256-600000-32';
+        if($algorithm==='scrypt-16384-8-1-64'){if(!function_exists('sodium_crypto_pwhash_scryptsalsa208sha256')||strlen($record['salt'])!==32)throw new RuntimeException('Für den übernommenen Speisekarten-Zugang ist PHP Sodium erforderlich.',503);$hash=bin2hex(sodium_crypto_pwhash_scryptsalsa208sha256(64,$password,$record['salt'],524288,16777216));}
+        else $hash=hash_pbkdf2('sha256',$password,$record['salt'],600000,64);
         if (!hash_equals($record['passwordHash'],$hash)) {
             $attempts[$key]=['count'=>($previous['count'] ?? 0)+1,'until'=>$previous['until'] ?? time()+300];
             $state['menuShareAttempts']=array_slice($attempts,-256,null,true);

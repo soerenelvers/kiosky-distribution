@@ -65,12 +65,12 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         return $src;
     }
 
-    public function exportAssetData(array $asset): string
+    public function exportAssetData(array $asset, int $maximumBytes = 20000000): string
     {
         if (!str_starts_with((string)$asset['id'],'fal:')) throw new RuntimeException('Ungültiges CMS-Medium.',422);
         $file = $this->factory->getFileObject((int)substr($asset['id'],4));
         if (!$file->checkActionPermission('read')) throw new RuntimeException('Keine Leseberechtigung für dieses TYPO3-Medium.',403);
-        if ($file->getSize()>20000000) throw new RuntimeException('Die Mediendatei ist größer als 20 MB.',422);
+        if ($file->getSize()>min(128000000,$maximumBytes)) throw new RuntimeException('Die Mediendatei ist größer als 20 MB.',422);
         return 'data:'.$file->getMimeType().';base64,'.base64_encode($file->getContents());
     }
 
@@ -111,7 +111,7 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         $folder->delete();
     }
 
-    public function saveAsset(array $asset): array
+    public function saveAsset(array $asset, int $maximumBytes = 20000000): array
     {
         $file = str_starts_with($asset['id'],'fal:') ? $this->factory->getFileObject((int)substr($asset['id'],4)) : null;
         if (!$file) {
@@ -129,7 +129,7 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
                 if ($response->getStatusCode() !== 200 || strlen($bytes)>20_000_000) throw new RuntimeException('Das bisherige Medium konnte nicht importiert werden.',422);
                 $asset['src']='data:application/octet-stream;base64,'.base64_encode($bytes);
             }
-            $upload = MediaUpload::decode($asset);
+            $upload = MediaUpload::decode($asset,$maximumBytes);
             if ($file) $file->setContents($upload['bytes']);
             else {
                 $folder = !empty($asset['folderId']) ? $this->folder($asset['folderId']) : $this->defaultFolder();

@@ -17,15 +17,15 @@ final class MediaUpload
         foreach ($ips as $ip) if (!filter_var($ip,FILTER_VALIDATE_IP,FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) throw new RuntimeException('Medienimporte aus privaten Netzwerken sind nicht erlaubt.',422);
     }
 
-    public static function decode(array $asset): array
+    public static function decode(array $asset, int $maximumBytes = 20_000_000): array
     {
         $src = (string)($asset['src'] ?? '');
         if (!preg_match('#^data:([^;,]+);base64,(.+)$#s', $src, $match)) {
             throw new RuntimeException('Bitte eine Datei hochladen oder ein vorhandenes CMS-Medium auswählen.', 422);
         }
         $bytes = base64_decode($match[2], true);
-        if ($bytes === false || $bytes === '' || strlen($bytes) > 20_000_000) {
-            throw new RuntimeException('Ungültige Mediendatei oder Datei größer als 20 MB.', 422);
+        if ($bytes === false || $bytes === '' || strlen($bytes) > min(128_000_000,max(1,$maximumBytes))) {
+            throw new RuntimeException('Ungültige Mediendatei oder Datei größer als die erlaubte Dateigrenze.', 422);
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
         $extensions = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp','image/avif'=>'avif','video/mp4'=>'mp4','video/webm'=>'webm','video/quicktime'=>'mov','audio/mpeg'=>'mp3','audio/ogg'=>'ogg','audio/wav'=>'wav','application/pdf'=>'pdf'];

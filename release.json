@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "4db45ec6e698792d2d69454755976e1cdd78893f",
+  "source_commit": "a10669d0a5467ce33bbfdef2259ad0540f033be6",
   "product": "kiosky",
-  "version": "3.38.0",
-  "released_at": "2026-11-10T07:09:44.538Z",
+  "version": "3.39.0",
+  "released_at": "2026-11-11T07:37:47.830Z",
   "channel": "stable",
-  "release_notes": "## [3.38.0]\n\n- Einheitlicher Veranstaltungsablauf für Standalone, WordPress und TYPO3: neue Veranstaltungen und Importe als Entwurf, Veröffentlichung und Absage steuern Werbung/Kalender, vergangene Termine werden archiviert.\n- Gelöschte Veranstaltungen bleiben als kompakte, gesperrte Restdatensätze in der Programmverwaltung sichtbar; erneute Importe befüllen sie nicht wieder. Bestehende Papierkorb-Veranstaltungen werden entsprechend reduziert: vor dem Update sichern.\n- Abgesagte Veranstaltungen bleiben in öffentlichen Ausgaben sichtbar und erhalten einen Stempel in automatischer Werbung.\n- Standard-Slides und -Kanäle in Display-Einstellungen alphabetisch sortiert und durchsuchbar; Filtern erhält die bestehende Auswahl.\n- „Aktuelle Ausspielung“ zeigt die aufgelöste Player-Ausgabe einschließlich Warnungen und Zuweisungen. Verbindung basiert weiter auf echten Heartbeats; Vorschau übernimmt keine Player-Befehle.\n- Kunden-/Vertrags- und Monetarisierungsvorschlag dokumentiert, ohne Änderungen an laufenden Verträgen oder Zahlungen.\n\n\nAlle wesentlichen Änderungen an Kiosky werden in dieser Datei dokumentiert.\nDas Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.38.0",
+  "release_notes": "## [3.39.0]\n\n- Vollständiger passwortverschlüsselter Systemumzug zwischen Standalone, WordPress und TYPO3 sowie innerhalb jeder Plattform; bestehende selektive Kopierimporte bleiben verfügbar.\n- Vorschau mit Bestandsprüfung, ausdrückliche Zielersetzung und Benutzerzuordnung; IDs, Medien, Schriftdateien, Archive, Slide-Versionen, Preset-Termine und Einstellungen bleiben übertragbar.\n- Display-Kopplungen und API-/Schnittstellen-Zugänge optional erhalten; Zielanmeldung und Lizenzidentität bleiben lokal, native CMS-Rechte werden nicht automatisch erweitert.\n- Konfliktschutz, Paket-/Dateiprüfung, wiederholbarer Import ohne Duplikate und Rücknahme neu erzeugter CMS-Dateien bei fehlgeschlagener Speicherung.\n- Lokaler Medienabruf unterstützt auch Videos, Audio und PDFs sowie Byte-Teilabrufe für Videowiedergabe.\n- Regressionstests für alle neun Plattformkombinationen, reale Administrator-Sitzungen, native CMS-Speicher/-Medien und mobile Import-/Export-Oberflächen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.39.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.38.0",
+    "core_version": "3.39.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.38.0",
-    "typo3_extension_version": "3.38.0"
+    "wordpress_plugin_version": "3.39.0",
+    "typo3_extension_version": "3.39.0"
   },
   "components": {
     "core": {
-      "version": "3.38.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.38.0.zip?ref=v3.38.0",
-      "sha256": "5313bd506cb58f2bf0068389fb31cf06efe94d1e179a91829d51b36b917dd5f5"
+      "version": "3.39.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.0.zip?ref=v3.39.0",
+      "sha256": "232f80802c378d025c57e8454be9d391ffb4ccd0e07227473d07a4f983da9bd3"
     },
     "standalone": {
-      "version": "3.38.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.38.0.zip?ref=v3.38.0",
-      "sha256": "5313bd506cb58f2bf0068389fb31cf06efe94d1e179a91829d51b36b917dd5f5"
+      "version": "3.39.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.39.0.zip?ref=v3.39.0",
+      "sha256": "232f80802c378d025c57e8454be9d391ffb4ccd0e07227473d07a4f983da9bd3"
     },
     "wordpress": {
-      "version": "3.38.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.38.0.zip?ref=v3.38.0",
-      "sha256": "1cb72ef5a9a460b92e71963930ca8322c6e6345c7dc0fce109dda6fe5b1c61b4",
+      "version": "3.39.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.39.0.zip?ref=v3.39.0",
+      "sha256": "1c6e35cada463d9376131e6331900dd28310e9092483c7fa7ef6b82111ad9d5d",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.38.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.38.0.zip?ref=v3.38.0",
-      "sha256": "47a47b4f7e69e339e08be0ecde47054f1df5927e1f468b61531ef96a6f3adf3e",
+      "version": "3.39.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.39.0.zip?ref=v3.39.0",
+      "sha256": "a0ce93d582c1da2243f83c3060cf20620df7abc0984ec6ce6bb162bcca052ee5",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

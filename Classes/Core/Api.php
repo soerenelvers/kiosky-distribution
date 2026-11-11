@@ -22,6 +22,7 @@ require_once __DIR__.'/EventLifecycle.php';
 require_once __DIR__.'/ContentAccess.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/SensitiveData.php';
+require_once __DIR__.'/SystemMigration.php';
 
 final class Api
 {
@@ -47,20 +48,23 @@ final class Api
     /** @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>} */
     public function handle(string $method, string $path, array $body = [], string $playerKey = '', int $attempt = 0): array
     {
+        $migrationLock=null;
         try {
             $method = strtoupper($method);
             $query = [];
             parse_str((string)(parse_url($path, PHP_URL_QUERY) ?: ''), $query);
             $body = array_merge($query, $body);
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
-            $state = $this->state();
-            $lifecycleChanged=EventLifecycle::synchronize($state);
+            if($path==='/api/content-transfer/migration/import'&&$method==='POST'&&($this->identity['role'] ?? '')==='admin')$migrationLock=SystemMigration::lock();
+            $state = $this->state(str_starts_with($path,'/api/content-transfer/migration/'));
+            $lifecycleChanged=!str_starts_with($path,'/api/content-transfer/migration/')&&EventLifecycle::synchronize($state);
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
             if ($result[2] && preg_match('#^/api/(events|slides|templates|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
             if ($result[2] || $lifecycleChanged) {
                 $state['updatedAt'] = $this->now();
-                $this->store->save($state);
+                $migrationSaving=!empty($state['_migrationSaving']);unset($state['_migrationSaving']);
+                if($this->store instanceof CmsMediaStateStore&&$migrationSaving)$this->store->saveMigration($state);else $this->store->save($state);
                 if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
             }
             return [$result[0], $result[1]];
@@ -71,7 +75,7 @@ final class Api
                 'code' => $status === 409 && $path === '/api/schedules/block' ? 'SCHEDULE_CONFLICT' : ($status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST'))),
                 'message' => SensitiveData::text($error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.'),
             ]]];
-        }
+        } finally {if(is_resource($migrationLock)){flock($migrationLock,LOCK_UN);fclose($migrationLock);}}
     }
 
     /** Only the External Control API is exposed to machine credentials. */
@@ -320,6 +324,37 @@ final class Api
             $result = (new ContentPackage())->import($state,$body);
             $this->audit($state,'content_package.imported','content');
             return $this->ok(['imported'=>$result],true);
+        }
+
+        if(str_starts_with($path,'/api/content-transfer/migration/')&&$method==='POST'){
+            if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Systemumzüge sind Administratoren vorbehalten.',403);
+            $action=basename($path);
+            $users=array_values(array_column([$this->user(),...$this->platformUsers],null,'id'));
+            if($action==='export'){
+                $source=$state;$credentials=($body['includeCredentials'] ?? false)===true;
+                if($credentials){
+                    if(!empty($source['crewbrain']['config']['encryptedCredential']))$source['crewbrain']['config']=$this->crewBrain()->exportConfiguration($source['crewbrain']['config'],$source['crewbrain']['mapping'])['connection'];
+                    if(!empty($source['easyjob']['config']['encryptedCredentials'])){if(!$this->easyJob)throw new RuntimeException('Der easyjob-Dienst ist nicht verfügbar.',503);$source['easyjob']['config']=$this->easyJob->migrationConfiguration($source['easyjob']['config']);}
+                }
+                if(!empty($source['fonts'])&&!$this->canReadFonts)throw new RuntimeException('Keine Berechtigung zum Export eigener Schriften.',403);
+                $payload=SystemMigration::snapshot($source,$this->platform,$this->version,$users,$credentials,$this->store instanceof CmsMediaStateStore?fn(array $asset):string=>$this->store->exportAssetData($asset,SystemMigration::LIMIT):null,fn(string $id):array=>$this->fontFile($state,$id));
+                $package=SystemMigration::seal($payload,$body['password'] ?? null);$this->audit($state,'system_migration.exported',$payload['id']);return $this->ok($package,true);
+            }
+            $payload=SystemMigration::open(is_array($body['package'] ?? null)?$body['package']:[],$body['password'] ?? null);
+            if($action==='preview')return $this->ok(['preview'=>SystemMigration::preview($state,$payload,$users)]);
+            if($action==='import'){
+                $staged=$state;$result=SystemMigration::stage($staged,$payload,is_array($body['options'] ?? null)?$body['options']:[],$users);
+                if(!empty($result['alreadyImported']))return $this->ok(['imported'=>$result]);
+                if(!empty($payload['fontFiles'])&&(!$this->fontStorage||!$this->canManageFonts))throw new RuntimeException('Keine Berechtigung zum Import eigener Schriften.',403);
+                foreach($payload['fontFiles'] ?? [] as $entry)$this->fontStorage->put(base64_decode($entry['data'],true));
+                $crew=$staged['crewbrain']['config'] ?? [];$easy=$staged['easyjob']['config'] ?? [];
+                if(!empty($crew['baseUrl']))$staged['crewbrain']['config']=$this->crewBrain()->saveConfig([],$crew);
+                if(!empty($easy['baseUrl'])){if(!$this->easyJob)throw new RuntimeException('Der easyjob-Dienst ist nicht verfügbar.',503);$staged['easyjob']['config']=$this->easyJob->saveConfig([],array_replace($easy,$easy['credentials'] ?? []));}
+                unset($staged['crewbrain']['config']['credential'],$staged['easyjob']['config']['credentials']);
+                if(!empty($staged['menuShare']['passwordHash']))$staged['menuShare']['secret']=bin2hex(random_bytes(32));
+                $staged['_migrationSaving']=true;$state=$staged;$this->audit($state,'system_migration.imported',$payload['id']);return $this->created(['imported'=>$result]);
+            }
+            throw new RuntimeException('Unbekannte Umzugsaktion.',404);
         }
 
         if ($path === '/api/content-transfer/export' && in_array($method, ['GET', 'POST'], true)) {
@@ -2535,7 +2570,7 @@ final class Api
     {
         $this->purge($state[$collection], $id);
         if ($collection === 'channels') $this->removeChannelReferences($state, $id);
-        if($collection==='slides'){foreach($state['displays'] as &$display)if(($display['defaultSlideId'] ?? '')===$id)$display['defaultSlideId']=null;unset($display);}
+        if($collection==='slides'){$state['slideVersions']=array_values(array_filter($state['slideVersions'],static fn(array $version):bool=>($version['slideId'] ?? '')!==$id));foreach($state['displays'] as &$display)if(($display['defaultSlideId'] ?? '')===$id)$display['defaultSlideId']=null;unset($display);}
         return $this->ok(['ok' => true], true);
     }
 
@@ -2630,9 +2665,9 @@ final class Api
     private function license(): LicenseClient{return $this->licenseClient ?? new LicenseClient();}
     public function runLicenseSync(): array{$state=$this->state();$changed=$this->license()->runDue($state);if($changed)$this->store->save($state);return ['ran'=>$changed,'status'=>$this->license()->status($state)];}
 
-    private function state(): array
+    private function state(bool $migration = false): array
     {
-        $stored = $this->store->load();
+        $stored = $migration && $this->store instanceof CmsMediaStateStore ? $this->store->loadForMigration() : $this->store->load();
         if (!array_key_exists('titleExclusions', $stored)) {
             $stored['titleExclusions'] = $stored['crewbrain']['config']['titleExclusions'] ?? [];
         }

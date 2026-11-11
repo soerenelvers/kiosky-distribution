@@ -1434,6 +1434,7 @@ async function apiRequest(path, options = {}) {
     credentials: 'same-origin',
     headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...kioskyRuntime.requestHeaders, ...(options.headers || {}) }
   });
+  if(response.ok && options.responseType === 'blob') return response.blob();
   let result = null;
   try { result = await response.json(); } catch (error) { /* handled below */ }
   if (!response.ok) {
@@ -2769,6 +2770,7 @@ const contentTransferMessage = document.querySelector('#content-transfer-message
 const contentTransferExportDialog = document.querySelector('#content-transfer-export-dialog');
 const contentTransferImportDialog = document.querySelector('#content-transfer-import-dialog');
 let pendingContentTransfer = null;
+let pendingSystemMigration=null,systemMigrationPreview=null,systemMigrationBusy=false;
 const contentTransferSectionLabels = {
   settings: 'Einstellungen', events: 'Veranstaltungen', displays: 'Displays', slides: 'Slides',
   channels: 'Kanäle', schedules: 'Zeitplanung', operations: 'Presets & Warnhinweise',
@@ -2812,6 +2814,7 @@ document.querySelectorAll('[data-transfer-selection]').forEach(button => button.
 
 document.querySelector('#content-transfer-export-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if(document.querySelector('#transfer-mode').value==='migration'){await exportSystemMigration(event.currentTarget);return;}
   const sections = [...document.querySelectorAll('input[name="transfer-section"]:checked')].map(input => input.value);
   if (!sections.length) {
     showAuthMessage('content-transfer-export-error', 'Bitte wähle mindestens einen Bereich aus.');
@@ -2850,6 +2853,7 @@ contentTransferFile.addEventListener('change', async event => {
     return;
   }
   try {
+    if(/\"format\"\s*:\s*\"kiosky-system-migration\"/.test(await file.slice(0,2048).text())){openSystemMigration(file);return;}
     try { pendingContentTransfer = JSON.parse(await file.text()); }
     catch { throw new Error('Die ausgewählte Datei enthält kein gültiges JSON.'); }
     if (pendingContentTransfer?.format === 'kiosky-content-package') {
@@ -2910,6 +2914,48 @@ document.querySelector('#content-transfer-import-form').addEventListener('submit
     button.textContent = 'Jetzt importieren';
   }
 });
+
+const systemMigrationDialog=document.querySelector('#system-migration-dialog');
+const migrationExportPassword=document.querySelector('#migration-export-password');
+document.querySelector('#transfer-mode').addEventListener('change',event=>{
+  const full=event.target.value==='migration';document.querySelector('#migration-export-options').hidden=!full;document.querySelector('#transfer-merge-options').hidden=full;document.querySelectorAll('#migration-export-options input').forEach(input=>{input.disabled=!full;});
+});
+function downloadMigrationBlob(blob){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`kiosky-systemumzug-${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function exportSystemMigration(form){
+  const pass=migrationExportPassword.value,button=form.querySelector('[type="submit"]');
+  if(new TextEncoder().encode(pass).length<12||new TextEncoder().encode(pass).length>256||pass!==document.querySelector('#migration-export-password-repeat').value){showAuthMessage('content-transfer-export-error','Bitte ein Paketpasswort mit 12 bis 256 UTF-8-Bytes zweimal gleich eingeben.');return;}
+  button.disabled=true;button.textContent='Systemumzug wird erstellt …';
+  try{const blob=await apiRequest('/api/content-transfer/migration/export',{method:'POST',responseType:'blob',body:JSON.stringify({password:pass,includeCredentials:document.querySelector('#migration-export-credentials').checked})});downloadMigrationBlob(blob);setContentTransferMessage('Verschlüsseltes Umzugspaket erstellt. Passwort getrennt davon aufbewahren.','success');contentTransferExportDialog.close();}
+  catch(error){showAuthMessage('content-transfer-export-error',error.message);}finally{button.disabled=false;button.textContent='Transferpaket erstellen';migrationExportPassword.value='';document.querySelector('#migration-export-password-repeat').value='';}
+}
+contentTransferExportDialog.addEventListener('close',()=>{migrationExportPassword.value='';document.querySelector('#migration-export-password-repeat').value='';});
+function resetSystemMigrationPreview(){systemMigrationPreview=null;document.querySelector('#system-migration-review').hidden=true;document.querySelector('#system-migration-import').disabled=true;document.querySelector('#system-migration-confirmation').value='';document.querySelector('#system-migration-replace').checked=false;document.querySelectorAll('#system-migration-review input,#system-migration-review select').forEach(control=>{control.disabled=true;});}
+function openSystemMigration(file){pendingContentTransfer=null;pendingSystemMigration=file;resetSystemMigrationPreview();document.querySelector('#system-migration-password').value='';document.querySelector('#system-migration-error').textContent='';document.querySelector('#system-migration-file').textContent=file.name;systemMigrationDialog.showModal();}
+function migrationRequest(options={}){return new Blob(['{"password":',JSON.stringify(document.querySelector('#system-migration-password').value),',"package":',pendingSystemMigration,',"options":',JSON.stringify(options),'}'],{type:'application/json'});}
+function setSystemMigrationBusy(busy){systemMigrationBusy=busy;systemMigrationDialog.querySelectorAll('button,input,select').forEach(control=>{control.disabled=busy;});document.querySelector('#system-migration-import').disabled=busy||!systemMigrationPreview;if(!systemMigrationPreview)document.querySelectorAll('#system-migration-review input,#system-migration-review select').forEach(control=>{control.disabled=true;});}
+document.querySelector('#system-migration-password').addEventListener('input',resetSystemMigrationPreview);
+document.querySelector('#system-migration-preview').addEventListener('click',async()=>{
+  if(!pendingSystemMigration||systemMigrationBusy)return;resetSystemMigrationPreview();setSystemMigrationBusy(true);document.querySelector('#system-migration-error').textContent='';
+  try{const {preview}=await apiRequest('/api/content-transfer/migration/preview',{method:'POST',body:migrationRequest()});systemMigrationPreview=preview;
+    document.querySelector('#system-migration-source').textContent=`Quelle: ${preview.source.platform} ${preview.source.version} · ${preview.alreadyImported?'Dieses Paket wurde bereits übernommen.':'Vorschau; noch keine Umzugsdaten geschrieben.'}`;
+    document.querySelector('#system-migration-counts').textContent=Object.entries(preview.counts).map(([key,count])=>`${key}: ${count}`).join(' · ');
+    document.querySelector('#system-migration-notices').textContent=preview.notices.join(' ');
+    const users=document.querySelector('#system-migration-users');users.replaceChildren();
+    for(const source of preview.users){const label=document.createElement('label');label.textContent=source.displayName||source.username||source.id;const select=document.createElement('select');select.dataset.migrationUser=source.id;select.add(new Option('Nicht zuordnen / als gesperrtes Profil übernehmen',''));for(const target of preview.targetUsers)select.add(new Option(`${target.displayName||target.name||target.username||target.id} (${target.role})`,target.id));label.append(select);users.append(label);}
+    document.querySelector('#system-migration-review').hidden=false;
+  }catch(error){document.querySelector('#system-migration-error').textContent=error.message;}finally{setSystemMigrationBusy(false);}
+});
+document.querySelector('#system-migration-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!pendingSystemMigration||!systemMigrationPreview||systemMigrationBusy)return;
+  const confirmation=document.querySelector('#system-migration-confirmation').value;
+  if(confirmation!=='KIOSKY UMZIEHEN'||!document.querySelector('#system-migration-replace').checked){document.querySelector('#system-migration-error').textContent='Bitte das Ersetzen bestätigen und KIOSKY UMZIEHEN eingeben.';return;}
+  const userMap=Object.fromEntries([...systemMigrationDialog.querySelectorAll('[data-migration-user]')].filter(input=>input.value).map(input=>[input.dataset.migrationUser,input.value]));
+  const options={confirmation,replaceExisting:true,userMap,targetDigest:systemMigrationPreview.targetDigest,sourceDigest:systemMigrationPreview.sourceDigest};setSystemMigrationBusy(true);
+  try{await apiRequest('/api/content-transfer/migration/import',{method:'POST',body:migrationRequest(options)});systemMigrationDialog.close();setContentTransferMessage('Systemumzug abgeschlossen. Ansicht wird neu geladen.','success');window.location.reload();}
+  catch(error){document.querySelector('#system-migration-error').textContent=error.message;if(error.status===409)resetSystemMigrationPreview();}finally{setSystemMigrationBusy(false);}
+});
+systemMigrationDialog.addEventListener('cancel',event=>{if(systemMigrationBusy)event.preventDefault();});
+systemMigrationDialog.addEventListener('close',()=>{pendingSystemMigration=null;systemMigrationPreview=null;document.querySelector('#system-migration-password').value='';});
 
 document.querySelector('[data-action="test-crewbrain"]').addEventListener('click', async event => {
   const button = event.currentTarget;

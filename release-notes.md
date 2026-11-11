@@ -1,12 +1,8 @@
-## [3.38.0]
+## [3.39.0]
 
-- Einheitlicher Veranstaltungsablauf für Standalone, WordPress und TYPO3: neue Veranstaltungen und Importe als Entwurf, Veröffentlichung und Absage steuern Werbung/Kalender, vergangene Termine werden archiviert.
-- Gelöschte Veranstaltungen bleiben als kompakte, gesperrte Restdatensätze in der Programmverwaltung sichtbar; erneute Importe befüllen sie nicht wieder. Bestehende Papierkorb-Veranstaltungen werden entsprechend reduziert: vor dem Update sichern.
-- Abgesagte Veranstaltungen bleiben in öffentlichen Ausgaben sichtbar und erhalten einen Stempel in automatischer Werbung.
-- Standard-Slides und -Kanäle in Display-Einstellungen alphabetisch sortiert und durchsuchbar; Filtern erhält die bestehende Auswahl.
-- „Aktuelle Ausspielung“ zeigt die aufgelöste Player-Ausgabe einschließlich Warnungen und Zuweisungen. Verbindung basiert weiter auf echten Heartbeats; Vorschau übernimmt keine Player-Befehle.
-- Kunden-/Vertrags- und Monetarisierungsvorschlag dokumentiert, ohne Änderungen an laufenden Verträgen oder Zahlungen.
-
-
-Alle wesentlichen Änderungen an Kiosky werden in dieser Datei dokumentiert.
-Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
+- Vollständiger passwortverschlüsselter Systemumzug zwischen Standalone, WordPress und TYPO3 sowie innerhalb jeder Plattform; bestehende selektive Kopierimporte bleiben verfügbar.
+- Vorschau mit Bestandsprüfung, ausdrückliche Zielersetzung und Benutzerzuordnung; IDs, Medien, Schriftdateien, Archive, Slide-Versionen, Preset-Termine und Einstellungen bleiben übertragbar.
+- Display-Kopplungen und API-/Schnittstellen-Zugänge optional erhalten; Zielanmeldung und Lizenzidentität bleiben lokal, native CMS-Rechte werden nicht automatisch erweitert.
+- Konfliktschutz, Paket-/Dateiprüfung, wiederholbarer Import ohne Duplikate und Rücknahme neu erzeugter CMS-Dateien bei fehlgeschlagener Speicherung.
+- Lokaler Medienabruf unterstützt auch Videos, Audio und PDFs sowie Byte-Teilabrufe für Videowiedergabe.
+- Regressionstests für alle neun Plattformkombinationen, reale Administrator-Sitzungen, native CMS-Speicher/-Medien und mobile Import-/Export-Oberflächen.

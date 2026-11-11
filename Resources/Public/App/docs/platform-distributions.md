@@ -145,3 +145,9 @@ den gesamten Import. PDF-Seiten verwenden weiterhin den bestehenden PDF-Import.
 `POST /api/slides/from-media` erwartet `{ "mediaAssetIds": ["…"] }` und liefert
 `201 { "slides": […] }`. Erforderlich sind Bearbeitungsrechte sowie die Module
 Medien und Slides/Kanäle. Doppelte IDs werden einmal übernommen.
+
+## Systemumzug zwischen Plattformen
+
+Ab 3.39.0 unterstützt das passwortverschlüsselte Umzugspaket alle Kombinationen
+zwischen den drei Ausgaben. Ablauf, Datenumfang, native Benutzerzuordnung,
+Player-/API-URL-Wechsel und Hosting-Grenzen stehen unter [Systemumzug](system-migration.md).

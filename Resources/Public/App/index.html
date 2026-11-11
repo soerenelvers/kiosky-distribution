@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.38.0-20261110070943%2B4db45ec6" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.38.0-20261110070943%2B4db45ec6">
+  <link href="player/fonts/builtins.css?v=3.39.0-20261111073746%2Ba10669d0" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.39.0-20261111073746%2Ba10669d0">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -532,7 +532,7 @@
             <button class="button button-secondary" type="button" data-action="import-content-transfer">Transferpaket importieren</button>
             <button class="button button-primary" type="button" data-action="export-content-transfer">Transferpaket exportieren</button>
           </div>
-          <p class="credential-note config-transfer-note">Passwörter, Sitzungen, API-Schlüssel, Player-Schlüssel und Zugangsdaten werden nie exportiert. Player und sichere Zugänge müssen auf der Zielinstanz neu verbunden werden.</p>
+          <p class="credential-note config-transfer-note">Vollständige Umzüge werden mit einem eigenen Passwort verschlüsselt. Auf Wunsch bleiben API-Zugänge und Display-Kopplungen erhalten. Sitzungen, CMS-Anmeldungen, Lizenzidentität und Serverkonfiguration bleiben auf dem Ziel separat.</p>
           <p class="connection-message" id="content-transfer-message" role="status" hidden></p>
         </article>
 
@@ -1173,6 +1173,15 @@
       <button class="dialog-close" type="button" data-close-dialog="content-transfer-export-dialog" aria-label="Dialog schließen">×</button>
       <span class="dialog-icon">⇄</span><p class="eyebrow">Portables Transferpaket</p><h2>Was soll exportiert werden?</h2>
       <p>Die Auswahl kann in Standalone, TYPO3 und WordPress importiert werden. Technisch benötigte Abhängigkeiten werden automatisch ergänzt.</p>
+      <label>Exportart<select id="transfer-mode"><option value="migration">Vollständiger Systemumzug (verschlüsselt)</option><option value="merge">Ausgewählte Bereiche als neue Kopien</option></select></label>
+      <div id="migration-export-options">
+        <p>Übernimmt Kiosky-Inhalte, Archive, Einstellungen, Schriftdateien, Medien und Verknüpfungen. Auf dem Ziel werden bestehende Kiosky-Inhalte nach Prüfung ersetzt.</p>
+        <label>Paketpasswort (mindestens 12 Zeichen)<input id="migration-export-password" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label>
+        <label>Paketpasswort wiederholen<input id="migration-export-password-repeat" type="password" autocomplete="new-password" maxlength="256"></label>
+        <label class="checkbox-label"><input id="migration-export-credentials" type="checkbox" checked> Schnittstellen-Zugänge, API-Schlüssel und Display-Kopplungen erhalten</label>
+        <p class="property-note">Passwort getrennt vom Paket aufbewahren. CMS-Anmeldungen, Lizenzaktivierung, Server-/E-Mail-/SSO-Konfiguration und Website-Seiten werden nicht übertragen. Bei neuer Adresse müssen Player-URLs angepasst werden. Maximal 128 MB Nutzdaten; externe Medienlinks bleiben Links.</p>
+      </div>
+      <div id="transfer-merge-options" hidden>
       <div class="transfer-selection-actions"><button type="button" data-transfer-selection="all">Alles auswählen</button><button type="button" data-transfer-selection="none">Auswahl aufheben</button></div>
       <div class="transfer-section-grid">
         <label><input type="checkbox" name="transfer-section" value="settings" checked><span><strong>Einstellungen</strong><small>Module, Navigation und gemeinsame Regeln</small></span></label>
@@ -1187,6 +1196,7 @@
         <label><input type="checkbox" name="transfer-section" value="integrations" checked><span><strong>Weitere Schnittstellen</strong><small>CrewBrain, easyjob und Feldzuordnungen</small></span></label>
       </div>
       <p class="transfer-security-note">Sicherheitsdaten werden entfernt. Auf der Zielinstanz werden neue Player- und API-Schlüssel erzeugt; Passwörter und Schnittstellen-Zugänge müssen neu gesetzt werden.</p>
+      </div>
       <p class="auth-message" id="content-transfer-export-error" role="alert"></p>
       <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="content-transfer-export-dialog">Abbrechen</button><button class="button button-primary" type="submit">Transferpaket erstellen</button></div>
     </form>
@@ -1200,6 +1210,26 @@
       <div class="transfer-import-summary" id="content-transfer-import-summary"></div>
       <p class="transfer-security-note">Der Import legt neue Inhalte an und ergänzt Einstellungen. Vorhandene Inhalte bleiben bestehen. Sichere Zugänge und Player werden nicht ungeprüft übernommen.</p>
       <div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="content-transfer-import-dialog">Abbrechen</button><button class="button button-primary" type="submit">Jetzt importieren</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="system-migration-dialog" class="wide-dialog transfer-dialog" aria-labelledby="system-migration-title">
+    <form class="dialog-content" id="system-migration-form">
+      <button class="dialog-close" type="button" data-close-dialog="system-migration-dialog" aria-label="Dialog schließen">×</button>
+      <p class="eyebrow">Standalone · WordPress · TYPO3</p><h2 id="system-migration-title">Systemumzug prüfen</h2>
+      <p id="system-migration-file"></p>
+      <label>Paketpasswort<input id="system-migration-password" type="password" autocomplete="off" minlength="12" maxlength="256" required></label>
+      <button class="button button-secondary" id="system-migration-preview" type="button">Paket prüfen</button>
+      <div id="system-migration-review" hidden>
+        <p id="system-migration-source"></p><div id="system-migration-counts" class="transfer-import-summary"></div>
+        <p id="system-migration-notices" class="property-note"></p>
+        <h3>Benutzerkonten zuordnen</h3><p>Bestehende Zielkonten behalten ihre Anmeldedaten und Rollen. CMS-Konten werden nicht automatisch angelegt. Nicht zugeordnete CMS-Eigentümer bleiben gesperrt; in Standalone werden neue Konten übernommen beziehungsweise deaktiviert angelegt.</p>
+        <div id="system-migration-users"></div>
+        <label class="checkbox-label"><input id="system-migration-replace" type="checkbox" required> Ich habe das Ziel gesichert. Bestehende Kiosky-Inhalte und Einstellungen ersetzen; vorhandene native CMS-Medien erhalten.</label>
+        <label>Zur Bestätigung KIOSKY UMZIEHEN eingeben<input id="system-migration-confirmation" type="text" autocomplete="off" required></label>
+      </div>
+      <p id="system-migration-error" class="auth-message" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button button-secondary" data-close-dialog="system-migration-dialog">Abbrechen</button><button id="system-migration-import" type="submit" class="button button-primary" disabled>Systemumzug durchführen</button></div>
     </form>
   </dialog>
 
@@ -1784,13 +1814,13 @@
     </aside>
   </div>
 <dialog class="content-access-dialog" id="content-access-dialog" aria-labelledby="content-access-title"><form id="content-access-form"><div class="dialog-heading"><h2 id="content-access-title">Kanalfreigaben</h2><button class="dialog-close" type="button" data-content-access-close aria-label="Schließen">×</button></div><p>Mediengestalter dürfen eigene Slides den freigegebenen Kanälen hinzufügen. Benutzer und Rollen werden durch Administratoren verwaltet.</p><label class="form-field">Mediengestalter<select id="content-access-user" required></select></label><fieldset id="content-access-channels"><legend>Freigegebene Kanäle</legend><div></div></fieldset><p id="content-access-message" role="status"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-content-access-close>Abbrechen</button><button class="button button-primary" type="submit">Freigaben speichern</button></div></form></dialog>
-  <script src="runtime-config.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="player/fullscreen-control.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="player/media-placement.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="player/editor-alignment.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="player/event-image.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="player/font-library.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
-  <script src="app.js?v=3.38.0-20261110070943%2B4db45ec6"></script>
+  <script src="runtime-config.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="player/fullscreen-control.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="player/media-placement.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="player/editor-alignment.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="player/event-image.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="player/font-library.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
+  <script src="app.js?v=3.39.0-20261111073746%2Ba10669d0"></script>
 
 </body>
 </html>

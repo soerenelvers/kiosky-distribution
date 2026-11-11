@@ -298,3 +298,14 @@ Sichtbarkeitsgrenzen, Erstellung, Änderung, Version und Tags. Die Sortierung gi
 nur für die Verwaltung, verändert keine Kanalabfolge und erhält die Auswahl.
 Fehlende Werte stehen in beiden Richtungen am Ende; gleiche Werte bleiben stabil.
 Nach einem Neuladen gilt für Veranstaltungen wieder die chronologische Vorgabe.
+
+## Plattformübergreifender Systemumzug
+
+`tests/system-migration*.test.ts` prüfen den vollständigen verschlüsselten Umzug
+zwischen SQLite und PHP-Core in allen neun Richtungen, native Datenschemata,
+Medien/Schriften, Display-Identitäten, Schnittstellen und Fehler-Rollback.
+Nach dem Build prüft `python3 tests/system-migration-browser-smoke.py` den echten
+Dateiablauf samt Vorschau, Passwort, Zielersetzung und Mobilansicht.
+`KIOSKY_BROWSER_PLATFORM=wordpress|typo3` aktiviert die gemeinsamen CMS-Transporte;
+`KIOSKY_BROWSER_ENGINE=webkit` prüft WebKit. Native Medien und CAS-Speicher laufen
+zusätzlich im installierten CMS über `tests/cms-media-smoke.php`.
