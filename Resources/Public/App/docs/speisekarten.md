@@ -29,8 +29,10 @@ Die eigenständige Küchenadresse `/speisekarten` bleibt ebenfalls erhalten.
    vorhandenes Benutzerkonto auswählen, **Speisekarten bearbeiten erlauben**
    aktivieren und die zulässigen Karten markieren. **Rechte speichern** übernimmt
    die Zuweisung sofort.
-6. Externe Zugänge und zusätzlich PDF-Weblink-Abonnements werden unter
-   **Einstellungen → Module → Speisekarten: externe Links konfigurieren** verwaltet.
+6. Unter **Hauptmenü → Speisekarten → Bearbeitungslink ohne Benutzerkonto**
+   Karten auswählen, Passwort setzen und die Freigabe aktivieren. Dafür werden
+   keine CMS-Konten angelegt. PDF-Weblink-Abonnements bleiben zusätzlich unter
+   **Einstellungen → Module → Speisekarten: externe Links konfigurieren** erreichbar.
 
 Für Küchenkonten empfiehlt sich die bestehende Rolle **Betrachter**. Das eigene
 Speisekarten-Recht erweitert diese Rolle ausschließlich um die Bearbeitung der
@@ -155,7 +157,9 @@ unverändert. Wenn die Standardvorlage archiviert wurde, eine andere Vorgabe wä
 
 ## Passwort-Link ohne Benutzerkonto ab 3.7.0
 
-1. **Einstellungen → Module → Speisekarten: externe Links konfigurieren → Inhaltsbearbeitung mit Freigabepasswort** öffnen.
+1. **Hauptmenü → Speisekarten → Bearbeitungslink ohne Benutzerkonto** öffnen.
+   Seit 3.39.2 liegt die Freigabe direkt im Modul neben der kontogebundenen
+   Rechteverwaltung. Der bisherige Einstellungsbereich verlinkt dorthin.
 2. Die ausdrücklich freizugebenden Karten auswählen, ein eigenes Passwort mit
    **12 bis 256 Zeichen** setzen und den Inhaltszugang aktivieren.
 3. Speichern. Den angezeigten Link über **Link kopieren** an die Küche geben;

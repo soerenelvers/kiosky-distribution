@@ -1146,7 +1146,7 @@ function setView(view) {
     if(licenseAllows('api'))loadApiUsers();
   }
   if(view==='settings'){showSettingsLevel();loadFeatureSettings();if(licenseAllows('advertising'))loadAdvertisingSettings();if(licenseAllows('events'))loadPublicCalendarSettings();}
-  if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin')loadMenuModuleSettings();}
+  if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin'&&state.currentUser?.canManageSettings!==false){loadMenuModuleSettings();loadMenuShareSettings();}}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
   if (['channels','advertising'].includes(view)) loadContent();
@@ -2517,7 +2517,7 @@ async function loadMenuModuleSettings(loadLinks=false){
     document.querySelector('#menu-default-template').innerHTML='<option value="blue">Blau · Klar</option><option value="light">Hell · Bistro</option><option value="dark">Dunkel · Abendkarte</option>'+own.map(item=>`<option value="template:${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
     if(settings.defaultTemplate?.startsWith('template:')&&!own.some(item=>`template:${item.id}`===settings.defaultTemplate))document.querySelector('#menu-default-template').add(new Option('Gespeicherte Vorlage nicht mehr verfügbar',settings.defaultTemplate));
     for(const [key,id] of Object.entries({defaultTemplate:'template',defaultOrientation:'orientation',defaultTitle:'title',defaultSubtitle:'subtitle',defaultFooter:'footer'}))document.querySelector(`#menu-default-${id}`).value=settings[key];
-    if(loadLinks){await mountMenuModule('menu-module-management-root','links');await loadMenuShareSettings();}
+    if(loadLinks)await mountMenuModule('menu-module-management-root','links');
   }catch(error){showAuthMessage('menu-module-settings-message',error.message);}finally{form.inert=false;}
 }
 document.querySelector('#menu-module-settings-form').addEventListener('submit',async event=>{
@@ -2535,23 +2535,34 @@ function menuShareUrl(shareId){
   const fallback=kioskyRuntime.playerBaseUrl?new URL('../speisekarten',new URL(kioskyRuntime.playerBaseUrl,location.href)):new URL('speisekarten',location.href);
   const url=new URL(kioskyRuntime.menuBaseUrl||fallback,location.href);url.search='';url.hash='';url.searchParams.set('freigabe',shareId);return url.href;
 }
+let menuShareResetPending=false,menuShareSettingsDirty=false,menuShareLoadSequence=0;
 async function loadMenuShareSettings(){
-  const [share,cards]=await Promise.all([apiRequest('/api/settings/menu-share'),licensedRead('/api/slides')]);
-  document.querySelector('#menu-share-enabled').checked=share.enabled;
-  document.querySelector('#menu-share-password').value='';
-  document.querySelector('#menu-share-password-status').textContent=share.hasPassword?'Ein Freigabepasswort ist gesetzt.':'Noch kein Freigabepasswort gesetzt.';
-  document.querySelector('#menu-share-cards').innerHTML=(cards.data||[]).filter(slide=>slide.document?.menu||slide.document?.menuPdf).map(slide=>`<label class="toggle-label"><input type="checkbox" value="${escapeHtml(slide.id)}" ${share.slideIds.includes(slide.id)?'checked':''}>${escapeHtml(slide.name)}</label>`).join('')||'<p>Zuerst eine Speisekarte anlegen.</p>';
-  const url=menuShareUrl(share.shareId);document.querySelector('#menu-share-url').value=url;
-  document.querySelector('#menu-share-copy').disabled=!url;
-  const open=document.querySelector('#menu-share-open');open.hidden=!url;open.href=url||'#';
+  if(state.currentUser?.role!=='admin'||state.currentUser?.canManageSettings===false||menuShareSettingsDirty)return;
+  const form=document.querySelector('#menu-share-settings-form'),sequence=++menuShareLoadSequence;form.inert=true;
+  try{
+    const [share,cards]=await Promise.all([apiRequest('/api/settings/menu-share'),apiRequest('/api/menus')]);
+    if(sequence!==menuShareLoadSequence)return;
+    document.querySelector('#menu-share-enabled').checked=share.enabled;
+    document.querySelector('#menu-share-password').value='';
+    document.querySelector('#menu-share-password-status').textContent=share.hasPassword?'Ein Freigabepasswort ist gesetzt. Leer lassen behält es bei.':'Noch kein Freigabepasswort gesetzt.';
+    document.querySelector('#menu-share-cards').innerHTML=(cards.data||[]).map(slide=>`<label class="toggle-label"><input type="checkbox" value="${escapeHtml(slide.id)}" ${share.slideIds.includes(slide.id)?'checked':''}>${escapeHtml(slide.name)}</label>`).join('')||'<p>Zuerst eine Speisekarte anlegen.</p>';
+    const active=share.enabled&&share.hasPassword&&share.moduleEnabled,url=menuShareUrl(share.shareId);
+    document.querySelector('#menu-share-state').textContent=active?'Aktiv: Mit Link und Passwort sind ausschließlich die ausgewählten Karten bearbeitbar.':'Inaktiv: Karten auswählen, Passwort setzen und den Inhaltszugang aktivieren.';
+    document.querySelector('#menu-share-url').value=url;document.querySelector('#menu-share-copy').disabled=!active||!url;
+    const open=document.querySelector('#menu-share-open');open.hidden=!active||!url;open.href=url||'#';
+  }catch(error){if(sequence===menuShareLoadSequence)showAuthMessage('menu-share-message',error.message);}
+  finally{if(sequence===menuShareLoadSequence)form.inert=false;}
 }
-let menuShareResetPending=false;
-document.querySelector('#menu-share-reset').addEventListener('click',()=>{menuShareResetPending=true;showAuthMessage('menu-share-message','Beim nächsten Speichern wird ein neuer Link erzeugt; der bisherige Link wird ungültig.');});
-document.querySelector('#menu-share-copy').addEventListener('click',async()=>{await copyText(document.querySelector('#menu-share-url').value);showToast('Speisekarten-Link kopiert.');});
+document.querySelectorAll('[data-open-menu-share]').forEach(button=>button.addEventListener('click',()=>{
+  setView('menus');const panel=document.querySelector('#menu-share-panel');panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});panel.querySelector('summary').focus();
+}));
+document.querySelector('#menu-share-settings-form').addEventListener('input',()=>{menuShareSettingsDirty=true;});
+document.querySelector('#menu-share-reset').addEventListener('click',()=>{menuShareResetPending=true;menuShareSettingsDirty=true;showAuthMessage('menu-share-message','Beim nächsten Speichern wird ein neuer Link erzeugt; der bisherige Link wird ungültig.');});
+document.querySelector('#menu-share-copy').addEventListener('click',async()=>{try{await copyText(document.querySelector('#menu-share-url').value);showToast('Speisekarten-Link kopiert.');}catch{showAuthMessage('menu-share-message','Bitte den angezeigten Link markieren und kopieren.');}});
 document.querySelector('#menu-share-settings-form').addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;form.inert=true;
   try{await apiRequest('/api/settings/menu-share',{method:'PUT',body:JSON.stringify({enabled:document.querySelector('#menu-share-enabled').checked,password:document.querySelector('#menu-share-password').value,slideIds:[...document.querySelectorAll('#menu-share-cards input:checked')].map(input=>input.value),resetLink:menuShareResetPending})});
-    menuShareResetPending=false;await loadMenuShareSettings();showAuthMessage('menu-share-message','Freigabe gespeichert. Bestehende Freigabesitzungen wurden beendet.',true);
+    menuShareResetPending=false;menuShareSettingsDirty=false;await loadMenuShareSettings();showAuthMessage('menu-share-message','Freigabe gespeichert. Link und Passwort getrennt weitergeben. Bestehende Freigabesitzungen wurden beendet.',true);
   }catch(error){showAuthMessage('menu-share-message',error.message);}finally{document.querySelector('#menu-share-password').value='';form.inert=false;}
 });
 

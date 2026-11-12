@@ -1873,3 +1873,10 @@ body[data-user-role="designer"] :is([data-media-action="new-folder"],[data-media
 #system-migration-dialog input:not([type=checkbox]), #system-migration-dialog select, #migration-export-options input:not([type=checkbox]), #transfer-mode { width: 100%; max-width: 100%; min-width: 0; }
 #system-migration-file, #system-migration-source, #system-migration-notices, #system-migration-users label { overflow-wrap: anywhere; }
 #system-migration-counts { display: block; overflow-wrap: anywhere; line-height: 1.7; }
+
+/* Guest menu access: touch targets and checkbox layout, including WebKit. */
+#menu-share-panel fieldset { min-width: 0; }
+#menu-share-panel .toggle-label { min-width: 0; min-height: 44px; padding: 10px 0; white-space: normal; overflow-wrap: anywhere; }
+#menu-share-panel input[type="checkbox"] { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; padding: 0; }
+#menu-share-panel .dialog-actions { flex-wrap: wrap; }
+#menu-share-panel .form-field { min-width: 0; }

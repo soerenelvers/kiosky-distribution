@@ -309,3 +309,13 @@ Dateiablauf samt Vorschau, Passwort, Zielersetzung und Mobilansicht.
 `KIOSKY_BROWSER_PLATFORM=wordpress|typo3` aktiviert die gemeinsamen CMS-Transporte;
 `KIOSKY_BROWSER_ENGINE=webkit` prüft WebKit. Native Medien und CAS-Speicher laufen
 zusätzlich im installierten CMS über `tests/cms-media-smoke.php`.
+
+## Speisekarten-Gastzugang
+
+`python3 tests/menu-share-browser.py` prüft nach dem Build den Gastzugang direkt
+im Speisekartenmodul: Kartenauswahl, eigenes Passwort, konto- und cookiefreie
+Bearbeitung, Kartenbegrenzung, unverändertes Layout/Veröffentlichung,
+Passwortwechsel, Deaktivierung und Mobilansicht. `KIOSKY_BROWSER_PLATFORM=wordpress`
+oder `typo3` prüft die gemeinsamen CMS-Transporte; `KIOSKY_BROWSER_ENGINE=webkit`
+prüft WebKit. Die nativen CMS-Gates prüfen zusätzlich die tatsächliche Einbettung
+im Backend und den öffentlichen Editor-Aufruf ohne CMS-Sitzung/Nonce.
