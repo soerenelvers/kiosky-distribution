@@ -12,7 +12,7 @@ final class PublicEventCalendar
         'view'=>'agenda','colorMode'=>'theme',
         'backgroundColor'=>'#f8fafc','surfaceColor'=>'#ffffff','textColor'=>'#0f172a','accentColor'=>'#1968d2','accentTextColor'=>'#ffffff','controlBackground'=>'#ffffff','controlTextColor'=>'#183153','controlBorderColor'=>'#ccd8e6',
         'showTime'=>true,'showLocation'=>true,'showCategory'=>true,'showOrganizer'=>true,'showDescription'=>true,'showStatus'=>true,'showTickets'=>true,'showRemainingTickets'=>true,'showDetails'=>true,
-        'showSubtitle'=>true,'showAdmission'=>true,'showBreak'=>false,'showEndTime'=>true,'showImage'=>false,'showPublicNotes'=>true,'showBoxOffice'=>false,'showSetupTime'=>false,'showEventNumber'=>false,'allowViewSwitch'=>true,
+        'showSubtitle'=>true,'showAdmission'=>true,'showBreak'=>false,'showEndTime'=>true,'showImage'=>true,'showPublicNotes'=>true,'showBoxOffice'=>false,'showSetupTime'=>false,'showEventNumber'=>false,'allowViewSwitch'=>true,
         'title' => 'Veranstaltungskalender',
         'upcomingTitle' => 'Nächste Veranstaltungen',
         'upcomingCount' => 10,
@@ -42,7 +42,11 @@ final class PublicEventCalendar
     /** @param array<string,mixed> $state @return list<array<string,mixed>> */
     public static function events(array $state, ?array $settings=null): array
     {
-        $events = [];
+        $events = [];$images=[];$assets=[];
+        $defaults=$state['advertisingSettings']['eventTypeDefaultMedia'] ?? [];$defaults=is_array($defaults)?array_slice($defaults,0,100,true):[];
+        $wanted=array_fill_keys(array_filter(array_values($defaults),'is_string'),true);
+        foreach(($state['mediaAssets'] ?? []) as $asset)if(is_array($asset)&&isset($wanted[(string)($asset['id'] ?? '')])&&($asset['type'] ?? '')==='image'&&empty($asset['deletedAt']))$assets[(string)$asset['id']]=$asset;
+        foreach($defaults as $type=>$id){$asset=is_string($id)?($assets[$id] ?? null):null;if($asset&&($src=self::safeImageUrl($asset['src'] ?? null)))$images[self::imageType((string)$type)]=$src;}
         foreach (is_array($state['events'] ?? null) ? $state['events'] : [] as $event) {
             if (!is_array($event) || !empty($event['deletedAt']) || !empty($event['archivedAt'])) continue;
             $status = strtolower((string)($event['status'] ?? ''));
@@ -50,6 +54,7 @@ final class PublicEventCalendar
             $status=EventLifecycle::status($status);
             $date = self::date($event);
             if ($date === null || self::text($event['title'] ?? '', 300) === '') continue;
+            $ownImage=self::safeImageUrl($event['imageUrl'] ?? null);$image=$ownImage ?? ($images[self::imageType((string)($event['eventType'] ?? $event['type'] ?? ''))] ?? null);
             $start = self::dateTime($event['eventStart'] ?? null, $date);
             $end = self::dateTime($event['eventEnd'] ?? null, $date);
             $events[] = array_filter([
@@ -71,7 +76,7 @@ final class PublicEventCalendar
                 'setup'=>self::dateTime($event['setupStart'] ?? null,$date),
                 'boxOfficeAvailable'=>(bool)($event['boxOfficeAvailable'] ?? false),
                 'boxOfficeOpenAt'=>self::dateTime($event['boxOfficeOpenAt'] ?? null,$date),
-                'imageUrl'=>self::safeUrl($event['imageUrl'] ?? null),'imageEdit'=>self::safeUrl($event['imageUrl'] ?? null)?EventImageEdit::normalize($event['imageEdit'] ?? null):null,
+                'imageUrl'=>$image,'imageEdit'=>$ownImage?EventImageEdit::normalize($event['imageEdit'] ?? null):null,
                 'externalNumber'=>self::text($event['externalNumber'] ?? '',100),
                 'status' => $status ?: 'published',
                 'remainingTickets' => self::text($event['remainingTickets'] ?? '', 200),
@@ -143,6 +148,20 @@ final class PublicEventCalendar
     {
         $text = trim(strip_tags((string)$value));
         return function_exists('mb_substr') ? mb_substr($text, 0, $length) : substr($text, 0, $length);
+    }
+
+    private static function imageType(string $value): string
+    {
+        if(class_exists(\Normalizer::class))$value=\Normalizer::normalize($value,\Normalizer::FORM_KC) ?: $value;
+        $value=trim(preg_replace('/\s+/u',' ',$value) ?? $value);
+        return function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtr(strtolower($value),['Ä'=>'ä','Ö'=>'ö','Ü'=>'ü']);
+    }
+
+    private static function safeImageUrl(mixed $value): ?string
+    {
+        $url=trim((string)$value);if($url===''||preg_match('/[\x00-\x1f\\\\]/',$url))return null;
+        if(preg_match('#^/(?!/)#',$url))return $url;
+        return self::safeUrl($url);
     }
 
     private static function safeUrl(mixed $value): ?string

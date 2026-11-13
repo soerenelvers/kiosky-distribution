@@ -189,3 +189,18 @@ und gilt über Geräte und Browser hinweg in allen drei Varianten.
 Vorlagen und unabhängige Kopien manueller Veranstaltungen sind in
 [event-templates.md](event-templates.md) beschrieben. Neue Kopien starten als
 Entwurf und werden erst nach Freigabe in Kalender und Werbung sichtbar.
+
+## Veranstaltungsbilder und Standardbilder
+
+Ab 3.40.1 ist „Veranstaltungsbild“ standardmäßig eingeschaltet. Ein eigenes Bild
+der Veranstaltung hat Vorrang. Fehlt ein gültiges Bild, verwendet der Kalender
+das unter Werbung für den Veranstaltungstyp zugewiesene Standardbild, auch wenn
+die Werbeautomatik ausgeschaltet ist. Gelöschte Medien und Videos werden nicht
+als Standardbild verwendet. Uploads aus der Mediathek und Bild-Links funktionieren.
+
+Das Bild erscheint in Veranstaltungskarten, der Zusatzliste und im Detailfenster.
+Ein gespeicherter Bildausschnitt gilt nur für das eigene Veranstaltungsbild,
+nicht für das ersatzweise verwendete Standardbild. Ohne beide Bilder bleibt die
+Bildfläche weg. Eine ausdrücklich deaktivierte Bildanzeige bleibt deaktiviert;
+bei vorhandenen Installationen gegebenenfalls unter Einstellungen →
+Website-Kalender → Veranstaltungsbild aktivieren.

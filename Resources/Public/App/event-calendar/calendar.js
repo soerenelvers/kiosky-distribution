@@ -18,7 +18,7 @@
     if(initializedCalendars.has(root))return;
     let payload;try{payload=JSON.parse(root.querySelector('[data-kiosky-data]').textContent);}catch{return;}
     initializedCalendars.add(root);root.dataset.kioskyReady='true';const detailTitleId=`kiosky-event-details-${++dialogSequence}-${Math.random().toString(36).slice(2,9)}`;
-    const settings={showBreak:false,showSetupTime:false,showImage:false,showBoxOffice:false,showEventNumber:false,...payload.settings};
+    const settings={showBreak:false,showSetupTime:false,showImage:true,showBoxOffice:false,showEventNumber:false,...payload.settings};
     for(const [key,parent] of Object.entries({showAdmission:'showTime',showEndTime:'showTime',showSubtitle:'showDescription',showPublicNotes:'showDescription'}))if(settings[key]===undefined)settings[key]=settings[parent]!==false;
     let view=['agenda','month','categories','week','day'].includes(settings.view)?settings.view:'agenda';
     const enabled=key=>settings[key]!==false;
@@ -35,7 +35,7 @@
     const canDetail=e=>enabled('showDetails')&&Boolean(e.title);
     const extraTimes=e=>[['Einlass',e.admission],['Pause',e.breakStart],['Fortsetzung',e.breakEnd],['Aufbau',e.setup],['Abendkasse ab',e.boxOfficeOpenAt]].filter(([,v])=>v).map(([label,v])=>`<span>${label}: ${escapeHtml(time(v))} Uhr</span>`).join('');
     const image=e=>{
-      if(!e.imageUrl||!/^https?:\/\//i.test(e.imageUrl))return '';
+      if(!e.imageUrl||/[\u0000-\u001f\\]/.test(e.imageUrl)||!(/^(?:https?:\/\/|\/(?!\/))/i.test(e.imageUrl)))return '';
       const crop=e.imageEdit;
       if(crop&&['x','y','width','height','naturalWidth','naturalHeight'].every(key=>Number.isFinite(crop[key]))&&crop.width>=5&&crop.height>=5&&crop.naturalWidth>0&&crop.naturalHeight>0){const width=crop.width*crop.naturalWidth/100,height=crop.height*crop.naturalHeight/100,x=crop.x*crop.naturalWidth/100,y=crop.y*crop.naturalHeight/100,clipId='calendar-crop-'+[x,y,width,height].join('_').replaceAll('.','d');return `<svg xmlns="http://www.w3.org/2000/svg" class="kiosky-calendar__event-image" data-event-image-crop viewBox="${crop.x*crop.naturalWidth/100} ${crop.y*crop.naturalHeight/100} ${width} ${height}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${escapeHtml(e.title||'Veranstaltungsbild')}" style="aspect-ratio:${width}/${height};overflow:hidden"><defs><clipPath id="${clipId}"><rect x="${x}" y="${y}" width="${width}" height="${height}"/></clipPath></defs><image clip-path="url(#${clipId})" href="${escapeHtml(e.imageUrl)}" width="${crop.naturalWidth}" height="${crop.naturalHeight}"/></svg>`;}
       return `<img class="kiosky-calendar__event-image" src="${escapeHtml(e.imageUrl)}" alt="" loading="lazy" decoding="async">`;
