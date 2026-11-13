@@ -1,5 +1,6 @@
-## [3.40.1]
+## [3.40.2]
 
-- Website-Kalender verwenden das eigene Veranstaltungsbild und ersatzweise das Standardbild des Veranstaltungstyps. Dies funktioniert auch bei ausgeschalteter Werbeautomatik in WordPress, TYPO3 und Standalone.
-- Lokale Medienpfade werden unterstützt; Bilder erscheinen in Veranstaltungskarten, Zusatzliste und Details. Bildausschnitte werden nur auf das eigene Bild angewandt.
-- Neue Kalender zeigen Bilder standardmäßig; eine ausdrücklich abgeschaltete Bildanzeige bleibt erhalten. Gelöschte Medien, Videos und unsichere Bildquellen werden nicht als Ersatz verwendet.
+- Geöffnete Lizenznehmer-Oberflächen übernehmen geänderte Modulfreigaben ohne Neuladen: Navigation, Einstellungen, offene Editoren und die angezeigte Freigabeliste folgen dem nächsten erfolgreichen Abgleich.
+- WordPress und TYPO3 erneuern fällige Lizenzen zusätzlich bei aktiver Nutzung und gültigen Player-Anfragen, auch ohne laufenden Scheduler. Instanzbezogene Sperren vermeiden parallele Netzabfragen; Speicher-Konflikte erhalten zwischenzeitliche Änderungen.
+- Entzogene Veranstaltungsfreigaben sperren Veranstaltungs-Elemente und entfernen die Laufzeitdaten eingebetteter Veranstaltungsübersichten aus der Player-Ausgabe. Gespeicherte Inhalte und lokale Modulschalter bleiben erhalten.
+- Automatische Hintergrundprüfungen verändern die vereinbarte Offline-Regel nicht: Bei einem Ausfall bleibt die letzte gültige Freigabe erhalten, einschließlich bereits bestätigter Sperren.

@@ -1555,7 +1555,7 @@ document.querySelector('#event-field-settings-form').addEventListener('submit',a
 async function loadEvents() {
   try {
     const result = await licensedRead('/api/events');
-    state.events = result.data || [];
+    state.events = licenseAllows('events')?(result.data || []):[];
     state.selectedEvents=new Set([...state.selectedEvents].filter(id=>state.events.some(event=>event.id===id&&event.status!=='removed')));
     rememberOverviewClock(result);state.overviewLoadedAt=performance.now();
     state.eventFieldSettings=result.fieldSettings||{};
@@ -2395,14 +2395,24 @@ function firstAvailableNavigationView(){
   return normalizedNavigationOrder(state.navigationOrder).find(navigationViewAvailable)||'dashboard';
 }
 
+function syncCmsModuleNavigation(){
+  if(kioskyRuntime.platform!=='wordpress'||window.parent===window)return;
+  const views={kiosky:'dashboard','kiosky-events':'events','kiosky-displays':'displays','kiosky-content':'channels','kiosky-advertising':'advertising','kiosky-menus':'menus','kiosky-schedule':'schedule','kiosky-operations':'operations','kiosky-integrations':'integrations','kiosky-update-center':'updates','kiosky-settings':'settings'};
+  try{
+    for(const link of window.parent.document.querySelectorAll('#toplevel_page_kiosky .wp-submenu a[href]')){
+      const view=views[new URL(link.href).searchParams.get('page')];if(view){const row=link.closest('li');if(row)row.hidden=!navigationViewAvailable(view);}
+    }
+  }catch{/* Parent navigation can be inaccessible in isolated embeddings. API gates remain authoritative. */}
+}
+const licensedSettingsModules={editor:'channels',advertising:'advertising',calendar:'events',events:'events'};
 function applyNavigationConfig(settings={},order=[]){
   state.featureSettings=settings;
   state.navigationOrder=normalizedNavigationOrder(order);
   const navigation=document.querySelector('#main-navigation'),help=navigation.querySelector('.nav-help');
   state.navigationOrder.forEach(view=>{const item=navigation.querySelector(`.nav-item[data-view="${CSS.escape(view)}"]`);if(item)navigation.insertBefore(item,help);});
   navigation.querySelectorAll('.nav-item[data-view]').forEach(item=>{if(item.classList.contains('nav-help'))return;item.hidden=!navigationViewAvailable(item.dataset.view);});
-  for(const button of document.querySelectorAll('[data-settings-open]')){const module={editor:'channels',advertising:'advertising',calendar:'events'}[button.dataset.settingsOpen];if(module){button.disabled=!licenseAllows(module);button.title=button.disabled?'Nicht durch die Lizenz freigeschaltet':'';}}
-  applyEditorElementVisibility();
+  for(const button of document.querySelectorAll('[data-settings-open]')){const module=licensedSettingsModules[button.dataset.settingsOpen];if(module){button.disabled=!licenseAllows(module);button.title=button.disabled?'Nicht durch die Lizenz freigeschaltet':'';}}
+  applyEditorElementVisibility();syncCmsModuleNavigation();
   const editingHiddenSettings=state.view==='settings'&&state.currentUser?.role==='admin'&&state.currentUser?.canManageSettings!==false;
   if(state.currentUser&&state.view&&!navigationViewAvailable(state.view)&&!editingHiddenSettings)setView(firstAvailableNavigationView());
 }
@@ -2413,17 +2423,46 @@ function renderModuleSwitching(){
 }
 
 const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-overview':'Veranstaltungsübersicht','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
-function editorElementEnabled(type,settings=state.featureSettings||{}){return settings[`editor_${type}`]!==false;}
+function editorElementEnabled(type,settings=state.featureSettings||{}){return (!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&settings[`editor_${type}`]!==false;}
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
   const list=document.querySelector('#editor-element-settings');if(!list)return;
-  list.innerHTML=Object.entries(editorElementLabels).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
+  list.innerHTML=Object.entries(editorElementLabels).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')||(['event','event-table','event-field','event-stamp','event-overview'].includes(type)&&!licenseAllows('events'))?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
 }
 
-async function loadFeatureSettings(){
-  try{const result=await apiRequest('/api/settings/features');state.licensedModules=result.licensedModules||null;state.menuAccess=Boolean(result.menuAccess);applyNavigationConfig(result.data||{},result.navigationOrder||[]);if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}return result;}
-  catch(error){showToast(error.message);return null;}
+let featureSettingsRequest=null,featureSettingsSnapshot='';
+async function loadFeatureSettings({background=false}={}){
+  if(featureSettingsRequest)return featureSettingsRequest;
+  featureSettingsRequest=(async()=>{
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25_000);
+    try{
+      const result=await apiRequest('/api/settings/features',{cache:'no-store',signal:controller.signal}),snapshot=JSON.stringify(result);
+      if(background&&snapshot===featureSettingsSnapshot)return result;
+      featureSettingsSnapshot=snapshot;
+      const previous=state.licensedModules;state.licensedModules=result.licensedModules||null;state.menuAccess=Boolean(result.menuAccess);
+      const revoked=Array.isArray(previous)&&previous.some(module=>!licenseAllows(module));
+      if(revoked&&!licenseAllows(licenseModuleForFeature(state.view||''))){
+        for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='account-dialog')dialog.close();
+        showToast('Die Lizenzfreigabe wurde geändert. Dieses Modul ist nicht mehr verfügbar.');
+      }
+      if(revoked&&!licenseAllows('events')){state.events=[];state.editorEventSchedules={};state.overviewLoadedAt=0;if(slideDialog.open)renderEditorCanvas();}
+      if(Array.isArray(state.licensedModules))renderLicenseGrants(state.licensedModules);
+      applyNavigationConfig(result.data||{},result.navigationOrder||[]);
+      const blockedSetting=[...document.querySelectorAll('[data-settings-detail]')].find(detail=>!detail.hidden&&licensedSettingsModules[detail.dataset.settingsDetail]&&!licenseAllows(licensedSettingsModules[detail.dataset.settingsDetail]));
+      if(blockedSetting)showSettingsLevel();
+      if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}
+      return result;
+    }catch(error){if(!background)showToast(error.message);return null;}finally{clearTimeout(timeout);}
+  })();
+  try{return await featureSettingsRequest;}finally{featureSettingsRequest=null;}
 }
+function refreshLicensedModules(){
+  if(!state.currentUser||state.currentUser.mustChangePassword||document.hidden)return;
+  void loadFeatureSettings({background:true});
+}
+setInterval(refreshLicensedModules,60_000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshLicensedModules();});
+window.addEventListener('focus',refreshLicensedModules);
 
 async function loadPublicCalendarSettings(){
   try{
@@ -7246,11 +7285,12 @@ initializeAuthentication();
 const licenseModuleLabels={dashboard:'Übersicht',events:'Veranstaltungen',channels:'Slides und Kanäle',menus:'Speisekarten',advertising:'Werbung',media:'Mediendatenbank',displays:'Displays',schedule:'Zeitplanung',operations:'Presets und Warnhinweise',integrations:'Schnittstellen',easyjob:'Easyjob',crewbrain:'CrewBrain',api:'Externe API',updates:'Updates'};
 let licenseRegistry=null,editingLicense=null;
 const licenseTime=value=>value?new Date(value).toLocaleString('de-DE'):'Noch kein Abgleich';
+function renderLicenseGrants(modules){document.querySelector('#license-grants').textContent='Freigegeben: '+(modules.map(key=>licenseModuleLabels[key]||key).join(', ')||'Keine Module');}
 function renderLicenseEditor(license=null){editingLicense=license;const form=document.querySelector('#license-create-form');form.reset();form.elements.label.value=license?.label||'';form.elements.seats.value=license?.seats||1;form.elements.revoked.checked=!!license?.revoked;document.querySelector('#license-edit-heading').textContent=license?'Lizenz bearbeiten':'Lizenz erstellen';document.querySelector('#license-module-options').innerHTML=Object.entries(licenseModuleLabels).map(([key,label])=>`<label class="toggle-label"><input type="checkbox" name="module" value="${key}" ${!license||license.modules.includes(key)?'checked':''}>${escapeHtml(label)}</label>`).join('');}
 async function loadLicensing(){
  try{const result=await apiRequest('/api/settings/licensing');document.querySelector('#license-status').textContent=result.mode==='master'?'Dieser Standalone-Server ist die zentrale Lizenzverwaltung.':result.mode==='staged'?'Übergangsbetrieb: Lizenzpflicht ist noch nicht serverseitig eingerichtet. Bestehende Funktionen bleiben verfügbar.':`${result.hasLicenseKey?'Lizenz hinterlegt':'Keine Lizenz aktiviert'} · Letzter Erfolg: ${licenseTime(result.lastSuccess)}`;
   document.querySelector('#license-authority').textContent=result.serverUrl?`Lizenzserver: ${result.serverUrl} · Schlüssel-Fingerabdruck: ${result.fingerprint||'Konfiguration ungültig'}`:'Für verwaltete Installationen KIOSKY_LICENSE_SERVER_URL und KIOSKY_LICENSE_PUBLIC_KEY serverseitig hinterlegen. Diese Vertrauensbasis kann hier nicht geändert werden.';
-  document.querySelector('#license-client-form').inert=!result.configured||result.mode==='master';document.querySelector('#license-client-form [name=name]').value=result.name;document.querySelector('#license-grants').textContent='Freigegeben: '+(result.modules.map(key=>licenseModuleLabels[key]||key).join(', ')||'Keine Module');
+  document.querySelector('#license-client-form').inert=!result.configured||result.mode==='master';document.querySelector('#license-client-form [name=name]').value=result.name;renderLicenseGrants(result.modules);
   const masterSetup=document.querySelector('#license-master-setup');if(masterSetup)masterSetup.hidden=!result.masterAvailable||result.mode==='master'||cmsManagedServices;document.querySelector('#license-master').hidden=result.mode!=='master';
   showAuthMessage('license-message',result.error||'Lizenzstatus geladen.',!result.error);
   if(result.mode==='master')await loadLicenseRegistry();

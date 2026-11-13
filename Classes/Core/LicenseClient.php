@@ -49,7 +49,7 @@ final class LicenseClient
     }
     public function assertPath(array $state,string $path): void{if(!$this->allows($state,...self::required($path)))throw new RuntimeException('Dieses Modul ist durch die Lizenz nicht freigeschaltet.',403);}
     public static function feature(string $key): ?string{return $key==='content'||str_starts_with($key,'editor_')?'channels':($key==='presets_warnings'?'operations':(in_array($key,self::MODULES,true)?$key:null));}
-    public function features(array $state): array{$flags=$state['featureSettings'] ?? [];foreach(array_unique([...self::MODULES,'content','presets_warnings',...array_keys($flags)]) as $key){$module=self::feature($key);if($module&&!$this->allows($state,$module))$flags[$key]=false;}return $flags;}
+    public function features(array $state): array{$flags=$state['featureSettings'] ?? [];foreach(array_unique([...self::MODULES,'content','presets_warnings',...array_keys($flags)]) as $key){$module=self::feature($key);if($module&&!$this->allows($state,$module))$flags[$key]=false;}if(!$this->allows($state,'events'))foreach(['editor_event','editor_event-table','editor_event-field','editor_event-stamp','editor_event-overview'] as $key)$flags[$key]=false;return $flags;}
     public function status(array $state): array {
         $client=$this->stored($state);$fingerprint='';try{$key=self::authority()[1];$der=base64_decode(preg_replace('/-----[^-]+-----|\s/','',$key));$fingerprint=hash('sha256',$der);}catch(\Throwable){}
         return ['mode'=>self::managed()?'managed':'staged','serverUrl'=>self::setting('KIOSKY_LICENSE_SERVER_URL'),'fingerprint'=>$fingerprint,'configured'=>$fingerprint!=='','masterAvailable'=>false,'instanceId'=>$client['instanceId'] ?? null,'name'=>$client['name'] ?? 'Kiosky','hasLicenseKey'=>!empty($client['licenseKey']),'modules'=>$this->grants($state),'catalog'=>self::MODULES,'lastSuccess'=>$client['lastSuccess'] ?? null,'lastAttempt'=>$client['lastAttempt'] ?? null,'error'=>$client['error'] ?? '', 'intervalMinutes'=>15,'offlinePolicy'=>'last-valid-indefinitely'];
@@ -69,13 +69,20 @@ final class LicenseClient
         if(!extension_loaded('curl'))throw new RuntimeException('Lizenzabgleich benötigt PHP cURL.',503);
         $ch=curl_init($url.'/api/license-server/lease');$data='';curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode($input,JSON_THROW_ON_ERROR),CURLOPT_HTTPHEADER=>['Content-Type: application/json'],CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>15,CURLOPT_WRITEFUNCTION=>static function($ch,string $chunk)use(&$data):int{if(strlen($data)+strlen($chunk)>64000)return 0;$data.=$chunk;return strlen($chunk);}]);$ok=curl_exec($ch);$status=curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);if($ok===false||$status!==200)throw new RuntimeException('Lizenzabgleich fehlgeschlagen.',502);return json_decode($data,true,32,JSON_THROW_ON_ERROR);
     }
-    public function runDue(array &$state): bool{if(!self::managed())return false;$client=$this->stored($state);if(empty($client['licenseKey'])||microtime(true)*1000-($client['lastAttempt'] ?? 0)<900000)return false;$this->synchronize($state);return true;}
+    public function isDue(array $state): bool{if(!self::managed())return false;$client=$this->stored($state);return !empty($client['licenseKey'])&&microtime(true)*1000-($client['lastAttempt'] ?? 0)>=900000;}
+    public function synchronizationKey(array $state): string{return hash('sha256',$this->platform."\0".self::setting('KIOSKY_LICENSE_SERVER_URL')."\0".($this->stored($state)['instanceId'] ?? ''));}
+    public function runDue(array &$state): bool{if(!$this->isDue($state))return false;$this->synchronize($state);return true;}
+    private static function withoutEventOverviews(mixed $value): mixed {
+        if(!is_array($value))return $value;
+        foreach($value as $key=>$item)$value[$key]=($value['type'] ?? '')==='event-overview'&&$key==='events'?[]:self::withoutEventOverviews($item);
+        return $value;
+    }
     public function playback(array $state,array $value): array {
         if(!self::managed())return $value;$allowed=$this->grants($state);$enabled=static fn($slide):bool=>in_array(isset($slide['document']['menu'])||isset($slide['document']['menuPdf'])?'menus':(isset($slide['document']['advertisingConfigHash'])?'advertising':'channels'),$allowed,true);$blocked=!in_array('displays',$allowed,true);
         $slides=$blocked?[]:array_values(array_filter($value['slides'] ?? [],static fn($item):bool=>$enabled($item['slide'])));if(!in_array('events',$allowed,true))foreach($slides as &$item)$item['event']=null;unset($item);
         $revision=hash('sha256',json_encode([$value['contentRevision'] ?? '',$allowed]));$value=array_replace($value,['slides'=>$slides,'licenseBlocked'=>$blocked||(!empty($value['slides'])&&!$slides),'contentRevision'=>$revision]);
         if($blocked){foreach(['channel','directSlide','assignment','matrix'] as $key)$value[$key]=null;}elseif(!$enabled($value['directSlide'] ?? null))$value['directSlide']=null;
         if($blocked||!in_array('operations',$allowed,true))$value['warning']=$value['emergency']=null;
-        if(isset($value['playbackSync']))$value['playbackSync']['key'].=':license:'.$revision;return $value;
+        if(isset($value['playbackSync']))$value['playbackSync']['key'].=':license:'.$revision;return in_array('events',$allowed,true)?$value:self::withoutEventOverviews($value);
     }
 }

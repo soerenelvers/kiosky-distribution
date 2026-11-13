@@ -15,13 +15,27 @@ alle irgendwo betriebenen Kiosky-Installationen.
   fehlende Freigabe ersetzen. Direkte API-Aufrufe werden ebenfalls geprüft.
 - Der Server fragt alle 15 Minuten nach einer neuen signierten Freigabe. In den
   Einstellungen ist ein sofortiger Abgleich möglich. Der Standalone-Timer prüft
-  die Fälligkeit alle 30 Sekunden; CMS benötigen einen laufenden Scheduler.
+  die Fälligkeit alle 30 Sekunden. WordPress und TYPO3 prüfen sie zusätzlich
+  bei berechtigten Modulabfragen und gültigen Player-Zustandsabfragen.
+  Ein Scheduler bleibt für Installationen ohne aktive Nutzung empfohlen.
+- Geöffnete Oberflächen laden die effektiven Modulfreigaben jede Minute und
+  bei Rückkehr in den Tab neu. Ein entzogener Bereich wird ausgeblendet; ein
+  darin offener Editor wird geschlossen. Unveränderte Hintergrundantworten
+  setzen keine laufenden Moduleinstellungen zurück. API-Zugriffe prüfen die
+  aktuelle bestätigte Freigabe unabhängig von der Oberfläche.
+- CMS erneuern fällige Freigaben mit einer instanzbezogenen Sperre: parallele
+  Player lösen keine mehrfachen Netzabfragen aus. Bei Speicher-Konflikten
+  wird der aktuelle Zustand neu geladen, damit andere Änderungen erhalten bleiben.
 - Bei Netzfehlern, ungültigen Signaturen und nicht bestätigten Antworten gilt die
   letzte gültige Freigabe **ohne zeitliches Ablaufdatum** weiter. Bestehende
   Inhalte, Benutzerrechte und lokale Modulschalter bleiben gespeichert.
 - Ein ausdrücklich bestätigter Entzug einer Lizenz oder Instanz liefert eine
   signierte Sperre. Sie sperrt alle Fachmodule **und die Player**. Diese Sperre
   bleibt auch bei anschließendem Serverausfall erhalten.
+- Das Veranstaltungsmodul steuert auch Veranstaltungs-Elemente im Slide-Editor
+  und die Laufzeitdaten eingebetteter Veranstaltungsübersichten. Ein Entzug
+  löscht keine gespeicherten Veranstaltungen oder Slides. Eine spätere Freigabe
+  berücksichtigt weiterhin die lokal gesetzten Modulschalter.
 - Ein einzelner Modulentzug entfernt die betroffenen Inhalte aus der Ausspielung.
   Ohne Display-Freigabe wird die gesamte Ausspielung gesperrt. Der Player erhält
   erfolgreich einen leeren Zustand, überschreibt seinen bisherigen Cache und

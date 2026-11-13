@@ -57,6 +57,14 @@ final class Api
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             if($path==='/api/content-transfer/migration/import'&&$method==='POST'&&($this->identity['role'] ?? '')==='admin')$migrationLock=SystemMigration::lock();
             $state = $this->state(str_starts_with($path,'/api/content-transfer/migration/'));
+            // Active installations also renew due grants when Cron/Scheduler is unavailable.
+            // Authenticate before allowing an incoming request to cause outbound work.
+            if($method==='GET'&&$path==='/api/settings/features'){
+                $this->assertRolePermission($method,$path);$this->refreshLicenseState($state);
+            }elseif($method==='GET'&&preg_match('#^/api/player/([^/]+)/state$#',$path,$licensePlayer)){
+                $display=$this->first($state['displays'],static fn(array $item):bool=>($item['slug'] ?? '')===rawurldecode($licensePlayer[1])&&empty($item['deletedAt'])&&($item['status'] ?? '')!=='archived');
+                if($display&&$playerKey!==''&&hash_equals((string)($display['playerKey'] ?? ''),$playerKey))$this->refreshLicenseState($state);
+            }
             $lifecycleChanged=!str_starts_with($path,'/api/content-transfer/migration/')&&EventLifecycle::synchronize($state);
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
@@ -109,7 +117,7 @@ final class Api
     public function runScheduledTasks(): array
     {
         $state = $this->state();
-        $licenseChanged=$this->license()->runDue($state);
+        $licenseChanged=$this->refreshLicenseState($state);
         $presetTriggerRuns=$this->runDuePresetTriggers($state);
         $summary = ($state['activeEventSource'] ?? null) === 'easyjob'
             ? $this->runAutomaticEasyJobImport($state)
@@ -146,7 +154,7 @@ final class Api
     public function runMenuSubscriptions(): array
     {
         $state=$this->state();
-        $licenseChanged=$this->license()->runDue($state);
+        $licenseChanged=$this->refreshLicenseState($state);
         if(!$this->license()->allows($state,'menus')){if($licenseChanged)$this->store->save($state);return ['ran'=>false,'menuChecks'=>0];}
         $count=($this->menuSubscriptions ?? new MenuSubscriptions())->runDue($state,
             function(array &$target,array $body,?string $id): array{return $this->saveSlide($target,$body,$id);},
@@ -2663,7 +2671,26 @@ final class Api
 
     /** @return array<string,mixed> */
     private function license(): LicenseClient{return $this->licenseClient ?? new LicenseClient();}
-    public function runLicenseSync(): array{$state=$this->state();$changed=$this->license()->runDue($state);if($changed)$this->store->save($state);return ['ran'=>$changed,'status'=>$this->license()->status($state)];}
+    public function runLicenseSync(): array{$state=$this->state();$changed=$this->refreshLicenseState($state);return ['ran'=>$changed,'status'=>$this->license()->status($state)];}
+
+    /** One due renewal per installation; never write a stale request snapshot. */
+    private function refreshLicenseState(array &$state): bool
+    {
+        $client=$this->license();if(!$client->isDue($state))return false;
+        $path=sys_get_temp_dir().'/kiosky-license-'.$client->synchronizationKey($state).'.lock';
+        $lock=@fopen($path,'c');if(!is_resource($lock))$lock=@fopen($path,'r');
+        if(!is_resource($lock))return false;
+        @chmod($path,0600);
+        if(!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);return false;}
+        try{
+            for($attempt=0;$attempt<3;$attempt++){
+                $fresh=$this->state();if(!$client->runDue($fresh)){$state=$fresh;return false;}
+                try{$this->store->save($fresh);$state=$fresh;return true;}
+                catch(StateConflict $error){if($attempt===2)throw $error;}
+            }
+            return false;
+        }finally{flock($lock,LOCK_UN);fclose($lock);}
+    }
 
     private function state(bool $migration = false): array
     {
