@@ -10,7 +10,7 @@ final class PublicEventCalendar
 {
     public const DEFAULTS = [
         'view'=>'agenda','colorMode'=>'theme',
-        'accentColor'=>'#1968d2','accentTextColor'=>'#ffffff','controlBackground'=>'#ffffff','controlTextColor'=>'#183153','controlBorderColor'=>'#ccd8e6',
+        'backgroundColor'=>'#f8fafc','surfaceColor'=>'#ffffff','textColor'=>'#0f172a','accentColor'=>'#1968d2','accentTextColor'=>'#ffffff','controlBackground'=>'#ffffff','controlTextColor'=>'#183153','controlBorderColor'=>'#ccd8e6',
         'showTime'=>true,'showLocation'=>true,'showCategory'=>true,'showOrganizer'=>true,'showDescription'=>true,'showStatus'=>true,'showTickets'=>true,'showRemainingTickets'=>true,'showDetails'=>true,
         'showSubtitle'=>true,'showAdmission'=>true,'showBreak'=>false,'showEndTime'=>true,'showImage'=>false,'showPublicNotes'=>true,'showBoxOffice'=>false,'showSetupTime'=>false,'showEventNumber'=>false,'allowViewSwitch'=>true,
         'title' => 'Veranstaltungskalender',
@@ -33,7 +33,7 @@ final class PublicEventCalendar
         ];
         $result['view']=in_array($settings['view'],['agenda','month','categories','week','day'],true)?$settings['view']:'agenda';
         $result['colorMode']=in_array($settings['colorMode'],['theme','custom'],true)?$settings['colorMode']:'theme';
-        foreach(['accentColor','accentTextColor','controlBackground','controlTextColor','controlBorderColor'] as $key)$result[$key]=is_string($settings[$key])&&preg_match('/^#[0-9a-f]{6}$/i',$settings[$key])?strtolower($settings[$key]):self::DEFAULTS[$key];
+        foreach(['backgroundColor','surfaceColor','textColor','accentColor','accentTextColor','controlBackground','controlTextColor','controlBorderColor'] as $key)$result[$key]=is_string($settings[$key])&&preg_match('/^#[0-9a-f]{6}$/i',$settings[$key])?strtolower($settings[$key]):self::DEFAULTS[$key];
         foreach(['showTime','showLocation','showCategory','showOrganizer','showDescription','showStatus','showTickets','showRemainingTickets','showDetails','showSubtitle','showAdmission','showBreak','showEndTime','showImage','showPublicNotes','showBoxOffice','showSetupTime','showEventNumber','allowViewSwitch'] as $key)$result[$key]=filter_var($settings[$key],FILTER_VALIDATE_BOOL,FILTER_NULL_ON_FAILURE) ?? self::DEFAULTS[$key];
         foreach(['showAdmission'=>'showTime','showEndTime'=>'showTime','showSubtitle'=>'showDescription','showPublicNotes'=>'showDescription'] as $key=>$parent)if(!array_key_exists($key,$input))$result[$key]=$result[$parent];
         return $result;

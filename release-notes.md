@@ -1,6 +1,7 @@
-## [3.39.2]
+## [3.40.0]
 
-- Passwortgeschützte Bearbeitungslinks für Speisekarten liegen direkt im Speisekartenmodul, auch in WordPress und TYPO3. Die bisherigen Moduleinstellungen verlinken auf dieselbe Freigabeverwaltung.
-- Kartenauswahl, Passwort, Aktivierungsstatus und Link sind gemeinsam erreichbar; vorhandene CMS-Benutzerrechte bleiben getrennt. Gäste benötigen ausschließlich Link und Freigabepasswort.
-- Nicht gespeicherte Freigabe-Eingaben bleiben beim Wechsel des Arbeitsbereichs erhalten. Checkboxen und Aktionen sind auch auf Smartphone/Tablet und in WebKit bedienbar.
-- Zusätzliche Browser- und native CMS-Prüfungen für konto-/cookiefreie Bearbeitung, Kartenbegrenzung, Passwortwechsel und Widerruf.
+- Website-Veranstaltungskalender für WordPress, TYPO3 und Standalone vollständig neu gestaltet: übersichtliche Karten, strukturierte Veranstaltungsdaten, Bildbereich und klar getrennte Ticket-/Detailaktionen.
+- Auswahl zwischen CMS-/Website-Farben und eigener Farbgebung einschließlich Kalenderhintergrund, Karten-/Detailhintergrund und Veranstaltungstext; eigene Werte bleiben beim Moduswechsel erhalten.
+- Undurchsichtige Flächen und automatische Textkontrastprüfung verhindern unleserliche Buttons auch bei problematischen Website-Themes oder eigenen Farben.
+- Alle fünf Ansichten, Detaildialog und Zusatzliste passen sich Smartphone, Tablet und schmalen Website-Spalten an. Suche, Feldfreigaben und begrenztes Nachladen bleiben erhalten.
+- Browser-Regressionsprüfungen für Kontrast, Theme-Isolation und Bedienung in Chromium und WebKit.

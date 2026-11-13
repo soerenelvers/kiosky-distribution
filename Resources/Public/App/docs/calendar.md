@@ -26,21 +26,34 @@ mit Tastatur bedienbar.
 
 ## Farben und Theme
 
-„Automatisch aus dem Theme“ übernimmt Schrift und Textfarbe der Einbettung sowie
+Unter **Einstellungen → Website-Kalender → Farben** stehen zwei Modi bereit.
+
+**CMS-/Website-Farben verwenden** übernimmt Hintergrund und Schriftfarbe des
+veröffentlichten Website-Themes sowie die Schriftfamilie der Einbettung und
 Akzentfarben in dieser Reihenfolge: `--kiosky-theme-accent`,
 `--wp--preset--color--primary`, `--bs-primary`, `--primary-color`, sichtbare
-Website-Linkfarbe, schließlich Blau. Die Steuerelemente orientieren sich an
-sichtbaren Website-Buttons. Themes ohne passende Variablen können
+Website-Linkfarbe, schließlich Blau. Die Flächen werden undurchsichtig dargestellt,
+Textkontraste geprüft und fremde Button-Farben nicht ungeprüft übernommen.
+Themes ohne passende Variablen können
 `--kiosky-theme-accent` am umgebenden Element setzen. Änderungen der Theme-Klasse
 oder Farben an `html`/`body` werden übernommen. Da Themes unterschiedlich aufgebaut
 sind, sollte die konkrete Website nach dem Update visuell geprüft werden.
 
-„Eigene Farben“ erlaubt fünf einzelne Hex-Farben: Akzent, Akzenttext,
+**Eigene Farben festlegen** erlaubt acht einzelne Hex-Farben: Kalenderhintergrund,
+Karten-/Detailhintergrund, Veranstaltungstext, Akzent, Akzenttext,
 Steuerelement-Hintergrund, Steuerelement-Text und Steuerelement-Rahmen. Ein
 manuell gefärbter Kalender bleibt von der automatischen Farbwahl anderer
-Einbettungen unabhängig. Auf ausreichenden Textkontrast achten.
+Einbettungen unabhängig. Unleserliche Textfarben werden in der Ausgabe automatisch
+auf mindestens 4,5:1 Kontrast korrigiert; die gespeicherten Farben bleiben erhalten.
+Dies gilt auch für Tickets, ausgewählte Tage, Kategorien, Suche und Detaildialog.
 
-## Spalten und Optionen
+Ab 3.40.0 werden Termine als Karten mit Datumsmarke, klarer Titelhierarchie,
+Metadaten und getrennten Ticket-/Detailaktionen dargestellt. Bilder stehen neben
+dem Inhalt und auf schmalen Geräten darüber. Die Zusatzliste bleibt kompakt.
+Alle fünf Ansichten reagieren auf die verfügbare Breite ihrer Einbettung; das
+Wochenraster scrollt innerhalb des Kalenders.
+
+## Inhalte und Optionen
 
 Einzeln ein-/ausblendbar sind Untertitel, Bild, Uhrzeit, Ende, Einlass, Pause,
 Wiederbeginn, Aufbau, Abendkasse, Veranstaltungsnummer, Ort/Raum, Kategorie,

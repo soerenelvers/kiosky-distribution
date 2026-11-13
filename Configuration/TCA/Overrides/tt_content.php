@@ -37,7 +37,7 @@ ExtensionManagementUtility::addTCAcolumns('tt_content', [
 
 $extraColumns=[
     'tx_kiosky_cal_view'=>['exclude'=>true,'label'=>'Kalenderansicht','config'=>['type'=>'select','renderType'=>'selectSingle','default'=>'','items'=>[['label'=>'Zentrale Vorgabe','value'=>''],['label'=>'Agenda','value'=>'agenda'],['label'=>'Monatskalender','value'=>'month'],['label'=>'Kategorien-Explorer','value'=>'categories'],['label'=>'Wochenkalender','value'=>'week'],['label'=>'Tagesfokus mit Wochenleiste','value'=>'day']]]],
-    'tx_kiosky_cal_color_mode'=>['exclude'=>true,'label'=>'Farbwahl','config'=>['type'=>'select','renderType'=>'selectSingle','default'=>'','items'=>[['label'=>'Zentrale Vorgabe','value'=>''],['label'=>'Automatisch aus dem Website-Theme','value'=>'theme'],['label'=>'Individuelle Farben','value'=>'custom']]]],
+    'tx_kiosky_cal_color_mode'=>['exclude'=>true,'label'=>'Farbwahl','config'=>['type'=>'select','renderType'=>'selectSingle','default'=>'','items'=>[['label'=>'Zentrale Vorgabe','value'=>''],['label'=>'CMS-/Website-Farben verwenden','value'=>'theme'],['label'=>'Eigene Farben festlegen','value'=>'custom']]]],
 ];
 foreach(['accent_color'=>'Akzentfarbe','accent_text_color'=>'Text auf Akzentflächen','control_background'=>'Steuerelemente: Hintergrund','control_text_color'=>'Steuerelemente: Text','control_border_color'=>'Steuerelemente: Rahmen'] as $field=>$label)$extraColumns['tx_kiosky_cal_'.$field]=['exclude'=>true,'label'=>$label,'description'=>'Hex-Farbe wie #1968d2. Leer übernimmt die zentrale Farbe. Bei individueller Farbwahl wirksam.','config'=>['type'=>'input','max'=>7,'eval'=>'trim','default'=>'']];
 $columnFields=[];

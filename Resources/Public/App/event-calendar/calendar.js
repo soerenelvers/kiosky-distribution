@@ -45,9 +45,10 @@
     const ticket=e=>enabled('showTickets')&&e.ticketUrl&&/^https?:\/\//i.test(e.ticketUrl)&&e.status!=='cancelled'?`<a class="kiosky-calendar__ticket" href="${escapeHtml(e.ticketUrl)}" rel="noopener">Tickets</a>`:'';
     const action=e=>`${canDetail(e)?`<button type="button" data-kiosky-detail="${escapeHtml(e.id)}">Details</button>`:''}${ticket(e)}`;
     function card(e,compact=false){
-      const columns=[...(enabled('showTime')?['minmax(3.8rem,.6fr)']:[]),'minmax(0,2fr)',...(enabled('showLocation')?['minmax(0,1fr)']:[]),...(enabled('showCategory')?['minmax(0,.7fr)']:[]),...(enabled('showOrganizer')?['minmax(0,1fr)']:[]),...(action(e)?['auto']:[])];
-      const info=`${enabled('showTime')?`<div class="kiosky-calendar__time" data-calendar-field="time">${time(e.start)?`${time(e.start)}${e.end?`–${time(e.end)}`:''} Uhr`:'Ganztägig'}</div>`:''}<div class="kiosky-calendar__summary">${image(e)}<h4>${escapeHtml(e.title)}</h4>${e.subtitle?`<p class="kiosky-calendar__subtitle">${escapeHtml(e.subtitle)}</p>`:''}${e.description?`<p class="kiosky-calendar__excerpt">${escapeHtml(e.description.slice(0,220))}${e.description.length>220?'…':''}</p>`:''}${e.publicNotes?`<p>${escapeHtml(e.publicNotes)}</p>`:''}${extraTimes(e)?`<div class="kiosky-calendar__times">${extraTimes(e)}</div>`:''}${e.boxOfficeAvailable!==undefined?`<small>${e.boxOfficeAvailable?'Abendkasse verfügbar':'Keine Abendkasse'}</small>`:''}${e.externalNumber?`<small>Veranstaltung: ${escapeHtml(e.externalNumber)}</small>`:''}${status(e)}${enabled('showRemainingTickets')&&e.remainingTickets?`<small>${escapeHtml(e.remainingTickets)}</small>`:''}</div>${enabled('showLocation')?`<div class="kiosky-calendar__location" data-calendar-field="location">${escapeHtml(where(e))}</div>`:''}${enabled('showCategory')?`<div data-calendar-field="category">${e.eventType?`<span class="kiosky-calendar__tag">${escapeHtml(e.eventType)}</span>`:''}</div>`:''}${enabled('showOrganizer')?`<div class="kiosky-calendar__organizer" data-calendar-field="organizer">${escapeHtml(e.organizer)}</div>`:''}${action(e)?`<div class="kiosky-calendar__actions">${action(e)}</div>`:''}`;
-      return `<article class="kiosky-calendar__event${compact?' is-compact':''}" data-calendar-event="${escapeHtml(e.id)}"><time class="kiosky-calendar__date" datetime="${escapeHtml(e.date)}"><strong>${formatDay(day(e.date),{day:'2-digit'})}</strong><span>${formatDay(day(e.date),{month:'short',weekday:'short'})}</span></time><div class="kiosky-calendar__event-content" style="grid-template-columns:${columns.join(' ')}">${info}</div></article>`;
+      const media=image(e);
+      const metadata=[enabled('showTime')?`<span class="kiosky-calendar__time" data-calendar-field="time">${time(e.start)?`${time(e.start)}${e.end?`–${time(e.end)}`:''} Uhr`:'Ganztägig'}</span>`:'',enabled('showLocation')&&where(e)?`<span class="kiosky-calendar__location" data-calendar-field="location">${escapeHtml(where(e))}</span>`:'',enabled('showOrganizer')&&e.organizer?`<span class="kiosky-calendar__organizer" data-calendar-field="organizer">${escapeHtml(e.organizer)}</span>`:''].filter(Boolean).join('');
+      const info=`${media?`<div class="kiosky-calendar__media">${media}</div>`:''}<div class="kiosky-calendar__summary">${enabled('showCategory')&&e.eventType?`<div data-calendar-field="category"><span class="kiosky-calendar__tag">${escapeHtml(e.eventType)}</span></div>`:''}<h4>${escapeHtml(e.title)}</h4>${e.subtitle?`<p class="kiosky-calendar__subtitle">${escapeHtml(e.subtitle)}</p>`:''}${status(e)}${metadata?`<div class="kiosky-calendar__metadata">${metadata}</div>`:''}${!compact&&e.description?`<p class="kiosky-calendar__excerpt">${escapeHtml(e.description.slice(0,220))}${e.description.length>220?'…':''}</p>`:''}${!compact&&e.publicNotes?`<p class="kiosky-calendar__excerpt">${escapeHtml(e.publicNotes)}</p>`:''}${!compact&&extraTimes(e)?`<div class="kiosky-calendar__times">${extraTimes(e)}</div>`:''}${!compact&&e.boxOfficeAvailable!==undefined?`<small>${e.boxOfficeAvailable?'Abendkasse verfügbar':'Keine Abendkasse'}</small>`:''}${!compact&&e.externalNumber?`<small>Veranstaltung: ${escapeHtml(e.externalNumber)}</small>`:''}${enabled('showRemainingTickets')&&e.remainingTickets?`<small>${escapeHtml(e.remainingTickets)}</small>`:''}${action(e)?`<div class="kiosky-calendar__actions">${action(e)}</div>`:''}</div>`;
+      return `<article class="kiosky-calendar__event${compact?' is-compact':''}" data-calendar-event="${escapeHtml(e.id)}"><time class="kiosky-calendar__date" datetime="${escapeHtml(e.date)}"><strong>${formatDay(day(e.date),{day:'2-digit'})}</strong><span>${formatDay(day(e.date),{month:'short',weekday:'short'})}</span></time><div class="kiosky-calendar__event-content${media?' has-media':''}">${info}</div></article>`;
     }
     const list=matches=>matches.length?matches.slice(0,renderLimit).map(e=>card(e)).join('')+(matches.length>renderLimit?`<button type="button" data-kiosky-more>Weitere Veranstaltungen laden (${matches.length-renderLimit})</button>`:''):'<p class="kiosky-calendar__empty-message">Keine Veranstaltungen gefunden.</p>';
     function dayButton(d,compact=false){const key=dateKey(d),count=dayCounts.get(key)||0;return `<button type="button" data-kiosky-day="${key}" class="${key===selected?'is-selected ':''}${key===dateKey(today)?'is-today ':''}${count?'has-events':''}" aria-label="${escapeHtml(formatDay(d,{dateStyle:'full'}))}${count?`, ${count} Veranstaltungen`:''}"${key===selected?' aria-current="date"':''}>${compact?`<span>${formatDay(d,{weekday:'short'})}</span>`:''}<strong>${d.getDate()}</strong>${count?`<small>${count} ${count===1?'Termin':'Termine'}</small>`:''}</button>`;}
@@ -79,6 +80,7 @@
       if(query&&['week','day'].includes(view)){const matches=filtered();results.innerHTML=`<p class="kiosky-calendar__result-count">${matches.length} Suchergebnisse</p>${list(matches)}`;}
       if(view==='day'&&!query){focus.innerHTML=`<div class="kiosky-calendar__focus-date"><strong>${day(selected).getDate()}</strong><span>${escapeHtml(formatDay(day(selected),{weekday:'long',month:'long',year:'numeric'}))}</span></div>`;results.innerHTML=list(filtered().filter(e=>e.date===selected));strip.innerHTML=`<button type="button" data-kiosky-shift="-7" aria-label="Vorherige Woche">‹</button>${Array.from({length:7},(_,i)=>dayButton(plusDays(start,i),true)).join('')}<button type="button" data-kiosky-shift="7" aria-label="Nächste Woche">›</button>`;}
       if(view==='week'&&!query)renderWeek();
+      protectControls();
     }
     let detailTrigger=null;
     function closeDetails(){for(const key of ['display','visibility','opacity','transform'])dialog.style.removeProperty(key);if(typeof dialog.close==='function'&&dialog.open)dialog.close();else dialog.removeAttribute('open');dialog.removeAttribute('data-kiosky-fallback');detailTrigger?.focus();}
@@ -90,7 +92,7 @@
       for(const [key,value] of Object.entries({display:'block',visibility:'visible',opacity:'1',transform:'none'}))dialog.style.setProperty(key,value,'important');
       dialog.setAttribute('aria-labelledby',detailTitleId);dialog.setAttribute('aria-modal','true');
       if(typeof dialog.showModal==='function'){if(!dialog.open)dialog.showModal();}else{dialog.setAttribute('open','');dialog.dataset.kioskyFallback='true';}
-      dialog.querySelector('[data-kiosky-close]').focus();
+      protectControls();dialog.querySelector('[data-kiosky-close]').focus();
     }
     dialog.addEventListener('close',()=>{for(const key of ['display','visibility','opacity','transform'])dialog.style.removeProperty(key);detailTrigger?.focus();});
     dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDetails();}});
@@ -113,19 +115,36 @@
     jump.addEventListener('change',()=>{if(day(jump.value)){anchor=day(jump.value);selected=jump.value;render();}});
     search?.addEventListener('input',()=>{query=search.value.trim().toLocaleLowerCase(locale);renderLimit=100;render();});
     const upcoming=$('[data-kiosky-upcoming]');if(upcoming){const future=events.filter(e=>e.date>=dateKey(today)&&(!e.start||+new Date(e.start)>=Date.now())).slice(0,Number(settings.upcomingCount)||10);upcoming.innerHTML=future.length?future.map(e=>card(e,true)).join(''):'<p>Keine kommenden Veranstaltungen.</p>';}
+    // Host themes often use !important button rules. Pin only the contrast-critical
+    // properties; semantic tokens still distinguish tickets, dates and categories.
+    function protectControls(){
+      for(const node of all('button,input,select,a.kiosky-calendar__ticket')){
+        for(const [key,value] of Object.entries({color:'var(--kiosky-button-fg,var(--kiosky-safe-control-text))','background-color':'var(--kiosky-button-bg,var(--kiosky-safe-control-bg))','background-image':'none','border-color':'var(--kiosky-button-border,var(--kiosky-safe-control-border))','text-shadow':'none',opacity:'1',filter:'none'}))node.style.setProperty(key,value,'important');
+        for(const child of node.querySelectorAll('span,strong,small'))child.style.setProperty('color',child.matches('.kiosky-calendar__status')?'#78350f':'inherit','important');
+      }
+    }
     function themeColors(){
-      let parent=root.parentElement,surface='Canvas';while(parent){const background=getComputedStyle(parent).backgroundColor;if(background&&background!=='rgba(0, 0, 0, 0)'&&background!=='transparent'){surface=background;break;}parent=parent.parentElement;}
-      root.style.setProperty('--kiosky-week-surface',surface);root.style.setProperty('--kiosky-dialog-surface',surface);
-      if(settings.colorMode==='custom')return;
-      const computed=getComputedStyle(root);
-      const variable=names=>names.map(name=>computed.getPropertyValue(name).trim()).find(Boolean);
-      const outside=selector=>[...document.querySelectorAll(selector)].find(node=>!node.closest('[data-kiosky-event-calendar]')&&node.getClientRects().length);
-      const link=outside('a[href]'),button=outside('button,input[type=submit],.button,.btn');
-      const accent=variable(['--kiosky-theme-accent','--wp--preset--color--primary','--bs-primary','--primary-color'])||(link?getComputedStyle(link).color:'#1968d2');
-      const buttonStyle=button?getComputedStyle(button):null,bg=buttonStyle?.backgroundColor;
-      const chosen={'accent':accent,'control-text':buttonStyle?.color||computed.color,'control-bg':bg&&bg!=='rgba(0, 0, 0, 0)'?bg:'transparent','control-border':buttonStyle?.borderColor||computed.color};
-      const canvas=document.createElement('canvas').getContext('2d');canvas.fillStyle=accent;const parsed=canvas.fillStyle;let rgb;if(/^#[0-9a-f]{6}$/i.test(parsed))rgb=[1,3,5].map(i=>parseInt(parsed.slice(i,i+2),16));else rgb=parsed.match(/[\d.]+/g)?.slice(0,3).map(Number);if(rgb){const linear=rgb.map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});const lum=linear[0]*.2126+linear[1]*.7152+linear[2]*.0722;chosen['accent-text']=lum>.179?'#111111':'#ffffff';}
-      Object.entries(chosen).forEach(([name,value])=>{if(value)root.style.setProperty('--kiosky-'+name,value);});
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d',{willReadFrequently:true});
+      const rgb=value=>{context.clearRect(0,0,1,1);context.fillStyle='#1968d2';context.fillStyle=value;context.fillRect(0,0,1,1);return [...context.getImageData(0,0,1,1).data];};
+      const luminance=c=>c.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+      const contrast=(a,b)=>{const x=luminance(rgb(a)),y=luminance(rgb(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+      const readable=(preferred,bg,minimum=4.5)=>contrast(preferred,bg)>=minimum?preferred:contrast('#000000',bg)>contrast('#ffffff',bg)?'#000000':'#ffffff';
+      let backdrop=matchMedia('(prefers-color-scheme:dark)').matches?[15,23,42]:[255,255,255];
+      const ancestors=[];for(let node=root.parentElement;node;node=node.parentElement)ancestors.unshift(node);
+      for(const node of ancestors){const c=rgb(getComputedStyle(node).backgroundColor),alpha=c[3]/255;backdrop=backdrop.map((v,i)=>Math.round(c[i]*alpha+v*(1-alpha)));}
+      const custom=settings.colorMode==='custom',themeSurface=`rgb(${backdrop.join(', ')})`;
+      const surface=custom?settings.backgroundColor||'#f8fafc':themeSurface,card=custom?settings.surfaceColor||'#ffffff':themeSurface;
+      const dark=luminance(rgb(surface))<.18,preferred=custom?settings.textColor||'#0f172a':getComputedStyle(root.parentElement||document.body).color;
+      const text=readable(preferred,surface),cardText=readable(preferred,card),muted=readable(dark?'#cbd5e1':'#475569',surface),cardMuted=readable(luminance(rgb(card))<.18?'#cbd5e1':'#475569',card);
+      const computed=getComputedStyle(root),variable=names=>names.map(name=>computed.getPropertyValue(name).trim()).find(Boolean);
+      const link=[...document.querySelectorAll('a[href]')].find(node=>!node.closest('[data-kiosky-event-calendar]')&&node.getClientRects().length);
+      const accent=custom?settings.accentColor||'#1968d2':variable(['--kiosky-theme-accent','--wp--preset--color--primary','--bs-primary','--primary-color'])||(link?getComputedStyle(link).color:'#1968d2');
+      // Composite transparent brand colors onto the opaque component surface.
+      const opaque=value=>{const c=rgb(value),bg=rgb(card),a=c[3]/255;return `rgb(${c.slice(0,3).map((v,i)=>Math.round(v*a+bg[i]*(1-a))).join(', ')})`;};
+      const action=opaque(accent),control=custom?opaque(settings.controlBackground||'#ffffff'):card;
+      const chosen={accent,'accent-text':readable(custom?settings.accentTextColor||'#fff':'#fff',action),surface,'card-surface':card,text,muted,'card-text':cardText,'card-muted':cardMuted,'accent-ink':readable(action,card),'action-bg':action,'action-border':readable(action,card,3),'action-text':readable(custom?settings.accentTextColor||'#fff':'#fff',action),'safe-control-bg':control,'safe-control-text':readable(custom?settings.controlTextColor||text:text,control),'safe-control-border':readable(custom?settings.controlBorderColor||muted:muted,control,3),'line':dark?'#334155':'#dce3ed','dialog-surface':card,'week-surface':card};
+      for(const [name,value] of Object.entries(chosen))root.style.setProperty('--kiosky-'+name,value);
+      root.style.colorScheme=dark?'dark':'light';
     }
     themeColors();render();
     {let scheduled=false;const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;themeColors();});});observer.observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-bs-theme']});observer.observe(document.body,{attributes:true,attributeFilter:['class','style','data-theme']});}
