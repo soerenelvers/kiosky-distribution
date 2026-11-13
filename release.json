@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "1218f14a931bbc246a6d19fd7e86b09564cda7f2",
+  "source_commit": "d7f4f386a9775561e7e3396d15a25087ab79f1d4",
   "product": "kiosky",
-  "version": "3.40.3",
-  "released_at": "2026-11-13T18:06:51.441Z",
+  "version": "3.40.4",
+  "released_at": "2026-11-13T20:18:53.610Z",
   "channel": "stable",
-  "release_notes": "## [3.40.3]\n\n- Alle 14 Lizenzmodule werden bei Entzug in der Lizenznehmer-Oberfläche vollständig ausgeblendet, einschließlich Unterbereichen, lokalen Modulschaltern, Dashboard-Verknüpfungen, Editor- und Medienfunktionen.\n- CrewBrain und easyjob sind nur mit eigener Freigabe plus Schnittstellen-Freigabe sichtbar und aktivierbar. Der allgemeine Quellen-Umschalter prüft diese Freigaben jetzt ebenfalls serverseitig.\n- Nicht freigegebene Quellen werden nicht als aktive Quellen gemeldet. Ihre Konfiguration bleibt zur Wiederfreigabe erhalten; verspätete Antworten können gesperrte Oberflächen nicht wieder einblenden.\n- Neue Tests prüfen Entzug und Wiederfreigabe jedes einzelnen Katalogmoduls sowie die Quellen-Aktivierung in Standalone, WordPress und TYPO3.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.3",
+  "release_notes": "## [3.40.4]\n\n- Der Website-Kalender in WordPress und TYPO3 löst Typ-Standardbilder direkt aus der nativen Mediathek auf, auch wenn kein Kiosky-Medienkatalog gespeichert ist. Eigene Veranstaltungsbilder bleiben vorrangig.\n- Detailfenster laden ihre Bilder sofort. Ausgeblendete Bilder bleiben auch im öffentlichen Datensatz ausgeblendet.\n- Gezielte, deduplizierte Bildabfragen vermeiden einen vollständigen Medienscan; private, gelöschte oder nicht öffentlich lesbare native Standardbilder werden nicht veröffentlicht. Neue Regressionen prüfen die echten CMS-Ausgaben und geladene Bilder im Browser.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.4",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.40.3",
+    "core_version": "3.40.4",
     "api_version": "1",
-    "wordpress_plugin_version": "3.40.3",
-    "typo3_extension_version": "3.40.3"
+    "wordpress_plugin_version": "3.40.4",
+    "typo3_extension_version": "3.40.4"
   },
   "components": {
     "core": {
-      "version": "3.40.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.3.zip?ref=v3.40.3",
-      "sha256": "a23280c1e22d8661c23087f02dc4903a672de8076af8e410d3928824d7b32212"
+      "version": "3.40.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.4.zip?ref=v3.40.4",
+      "sha256": "42875ac2c4b23dc78181ac62a10a98096a839f2eaa2a30d8d093d8ff416e19ae"
     },
     "standalone": {
-      "version": "3.40.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.3.zip?ref=v3.40.3",
-      "sha256": "a23280c1e22d8661c23087f02dc4903a672de8076af8e410d3928824d7b32212"
+      "version": "3.40.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.4.zip?ref=v3.40.4",
+      "sha256": "42875ac2c4b23dc78181ac62a10a98096a839f2eaa2a30d8d093d8ff416e19ae"
     },
     "wordpress": {
-      "version": "3.40.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.3.zip?ref=v3.40.3",
-      "sha256": "4ed50dcade61a11c931b61503e6691a3842ba2c9128c8512f6aab21938c2d1c6",
+      "version": "3.40.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.4.zip?ref=v3.40.4",
+      "sha256": "e46007e2db7a894b7487ed31b9eb517d0044ab85d8ea131b68557081b84b4b75",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.40.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.3.zip?ref=v3.40.3",
-      "sha256": "15b4332279c53f00ae96ed26f366ba93789f2ebad800f62b988089252a49fe9a",
+      "version": "3.40.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.4.zip?ref=v3.40.4",
+      "sha256": "9ee367dc3f6383a9bdaa579d5017316e2ee7972aa1bea1e4e8249cd64b12241e",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

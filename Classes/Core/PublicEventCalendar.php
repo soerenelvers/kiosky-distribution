@@ -40,12 +40,18 @@ final class PublicEventCalendar
     }
 
     /** @param array<string,mixed> $state @return list<array<string,mixed>> */
-    public static function events(array $state, ?array $settings=null): array
+    public static function events(array $state, ?array $settings=null, ?callable $resolveImage=null): array
     {
         $events = [];$images=[];$assets=[];
         $defaults=$state['advertisingSettings']['eventTypeDefaultMedia'] ?? [];$defaults=is_array($defaults)?array_slice($defaults,0,100,true):[];
         $wanted=array_fill_keys(array_filter(array_values($defaults),'is_string'),true);
-        foreach(($state['mediaAssets'] ?? []) as $asset)if(is_array($asset)&&isset($wanted[(string)($asset['id'] ?? '')])&&($asset['type'] ?? '')==='image'&&empty($asset['deletedAt']))$assets[(string)$asset['id']]=$asset;
+        foreach([...($state['mediaAssets'] ?? []),...($state['externalMediaAssets'] ?? [])] as $asset)if(is_array($asset)&&isset($wanted[(string)($asset['id'] ?? '')])&&($asset['type'] ?? '')==='image'&&empty($asset['deletedAt']))$assets[(string)$asset['id']]=$asset;
+        // Public CMS output resolves only explicitly configured images, never a full media inventory.
+        if ($resolveImage && ($settings['showImage'] ?? true)) foreach (array_keys($wanted) as $id) {
+            $asset=$resolveImage((string)$id);
+            if(is_array($asset)&&($asset['id'] ?? '')===$id&&($asset['type'] ?? '')==='image'&&empty($asset['deletedAt']))$assets[$id]=$asset;
+            elseif(str_starts_with((string)$id,'wp:')||str_starts_with((string)$id,'fal:'))unset($assets[$id]);
+        }
         foreach($defaults as $type=>$id){$asset=is_string($id)?($assets[$id] ?? null):null;if($asset&&($src=self::safeImageUrl($asset['src'] ?? null)))$images[self::imageType((string)$type)]=$src;}
         foreach (is_array($state['events'] ?? null) ? $state['events'] : [] as $event) {
             if (!is_array($event) || !empty($event['deletedAt']) || !empty($event['archivedAt'])) continue;
@@ -99,14 +105,14 @@ final class PublicEventCalendar
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $overrides */
-    public static function render(array $state, array $overrides = []): string
+    public static function render(array $state, array $overrides = [], ?callable $resolveImage=null): string
     {
         foreach(['showAdmission'=>'showTime','showEndTime'=>'showTime','showSubtitle'=>'showDescription','showPublicNotes'=>'showDescription'] as $key=>$parent)if(array_key_exists($parent,$overrides)&&$overrides[$parent]===false&&!array_key_exists($key,$overrides))$overrides[$key]=false;
         $settings = self::normalizeSettings(array_replace(
             is_array($state['publicCalendarSettings'] ?? null) ? $state['publicCalendarSettings'] : [],
             array_filter($overrides, static fn(mixed $value): bool => $value !== null && $value !== '')
         ));
-        $events=self::events($state,$settings);
+        $events=self::events($state,$settings,$resolveImage);
         $payload = json_encode(['events' => $events, 'settings' => $settings], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $id = 'kiosky-calendar-' . bin2hex(random_bytes(6));
         $search = $settings['showSearch'] ? '<label class="kiosky-calendar__search"><span>Kalender durchsuchen</span><input type="search" data-kiosky-search autocomplete="off" placeholder="Veranstaltung, Ort oder Stichwort"></label>' : '';
