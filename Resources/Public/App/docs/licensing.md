@@ -252,3 +252,39 @@ Navigation und Mobilansicht. Benötigt werden Python Playwright, Chromium unter
 `/usr/bin/chromium` und OpenSSL. `KIOSKY_BROWSER_ROOT` kann auf ein entpacktes
 Release-Paket zeigen, `KIOSKY_BROWSER_OUT` legt den Ergebnisordner fest. Keine
 externen Kundenserver oder echten Lizenzschlüssel werden dafür benötigt.
+
+## Vollständig ausgeblendete Module ab 3.40.3
+
+Nicht freigegebene Lizenzmodule erscheinen weder in der Navigation noch als
+aktivierbare lokale Moduleinstellungen. Zugehörige Untermenüs, Formulare,
+Importvorschauen, Dashboard-Kacheln und Schnellaktionen werden ausgeblendet.
+Die verbleibenden Module lassen sich weiterhin sortieren. Ein Entzug löscht
+keine Inhalte, Zugangsdaten oder lokal gewählten Einstellungen.
+
+| Lizenzmodul | Geprüfte Bereiche |
+| --- | --- |
+| dashboard | Übersicht und Navigation |
+| events | Programmverwaltung, Website-Kalender und Event-Elemente |
+| channels | Slides, Kanäle, Vorlagen und Editor-Einstellungen |
+| menus | Speisekarten, externe Abonnements und Bearbeitungslinks |
+| advertising | Werbebereich und Werbeeinstellungen |
+| media | Mediathek, Medienauswahl und neue Bild-/Videoelemente |
+| displays | Displays, Gruppen, Matrizen und Dashboard-Anzeigen |
+| schedule | Zeitplanung und geplante Wechsel |
+| operations | Presets, Warnungen und zugehörige Schnellaktionen |
+| integrations | Schnittstellenverwaltung und abhängige Datenquellen |
+| crewbrain | CrewBrain-Karte, Konfiguration, Vorschau und Aktivierung |
+| easyjob | easyjob-Karte, Konfiguration, Vorschau und Aktivierung |
+| api | Verwaltung externer API-Zugänge und deren API-Berechtigung |
+| updates | Update-Bereich und Update-API |
+
+CrewBrain und easyjob benötigen zusätzlich die Freigabe `integrations`.
+Der allgemeine Quellen-Umschalter prüft beide Freigaben auch serverseitig.
+Eine entzogene Quelle wird in öffentlichen Konfigurationsantworten nicht als
+aktiv angezeigt; die bisherige Auswahl bleibt für eine Wiederfreigabe gespeichert.
+Bereits vorhandene Bilder und Videos bleiben Bestandteil gespeicherter Slides;
+der Entzug von `media` sperrt die Medienverwaltung und neue Medienauswahlen.
+
+Anmeldung, Lizenzverwaltung sowie die rollenabhängige Benutzerverwaltung bleiben
+zur Administration erreichbar. Der signierte Abgleich und die dokumentierte
+Offline-Regel bleiben unverändert. Ein bloßes Ausblenden ersetzt keine API-Sperre.

@@ -1018,6 +1018,7 @@ if (cmsManagedServices) {
 }
 
 const state = {
+  licensedModules: [],
   view: 'dashboard',
   currentUser: null,
   users: [],
@@ -1140,7 +1141,7 @@ function setView(view) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (view === 'integrations') {
     loadIntegrationSources();
-    loadTitleExclusions();
+    if(['crewbrain','easyjob'].some(licenseAllows))loadTitleExclusions();
     if (licenseAllows('crewbrain')&&!state.crewbrainConfigLoaded) loadCrewBrainConfiguration();
     if(licenseAllows('easyjob'))loadEasyJobConfiguration();
     if(licenseAllows('api'))loadApiUsers();
@@ -1242,6 +1243,7 @@ window.addEventListener('hashchange', () => {
 document.querySelectorAll('[data-view-link]').forEach(item => item.addEventListener('click', () => setView(item.dataset.viewLink)));
 
 function showSettingsLevel(level = '') {
+  if(licensedSettingsModules[level]&&!licenseAllows(licensedSettingsModules[level]))level='';
   const overview = document.querySelector('[data-settings-overview]');
   const details = [...document.querySelectorAll('[data-settings-detail]')];
   if (!overview) return;
@@ -1268,9 +1270,9 @@ document.querySelectorAll('[data-settings-open]').forEach(button => button.addEv
   if(level==='modules'&&licenseAllows('menus'))loadMenuModuleSettings(true);
   if(level==='licensing')loadLicensing();
   if(level==='fonts')loadFontSettings();
-  if(level==='advertising')loadAdvertisingSettings();
-  if(level==='calendar')loadPublicCalendarSettings();
-  if(level==='events')loadEventFieldSettings();
+  if(level==='advertising'&&licenseAllows('advertising'))loadAdvertisingSettings();
+  if(level==='calendar'&&licenseAllows('events'))loadPublicCalendarSettings();
+  if(level==='events'&&licenseAllows('events'))loadEventFieldSettings();
   if(level==='zugangswerk'&&!cmsManagedServices)loadZugangswerkSettings();
 }));
 document.querySelectorAll('[data-settings-anchor]').forEach(button => button.addEventListener('click', () => {
@@ -1292,7 +1294,7 @@ function filterFeatures() {
   featureCards.forEach(card => {
     const matchesCategory = activeFeatureFilter === 'all' || card.dataset.featureCategory === activeFeatureFilter;
     const searchableText = `${card.textContent} ${card.dataset.featureSearch || ''}`.toLocaleLowerCase('de-DE');
-    const visible = matchesCategory && (!query || searchableText.includes(query));
+    const visible = card.dataset.licenseHidden!=='true'&&matchesCategory && (!query || searchableText.includes(query));
     card.hidden = !visible;
     if (visible) visibleCount += 1;
   });
@@ -2375,7 +2377,7 @@ function moduleEnabled(view,settings=state.featureSettings||{}){
   return legacyKey?settings[legacyKey]!==false:true;
 }
 
-function licenseAllows(module){return ['settings','users'].includes(module)||!state.licensedModules||state.licensedModules.includes(module);}
+function licenseAllows(module){if(['settings','users'].includes(module))return true;if(!Array.isArray(state.licensedModules))return false;return state.licensedModules.includes(module)&&(!['crewbrain','easyjob'].includes(module)||state.licensedModules.includes('integrations'));}
 function licenseModuleForFeature(key){return key==='content'||key.startsWith('editor_')?'channels':key==='presets_warnings'?'operations':key;}
 async function licensedRead(path,empty={data:[]}){const match=path.match(/^\/api\/(slides|templates|channels|media|locations|displays|events|schedules|presets|warning-templates)/);const module=match?({slides:'channels',templates:'channels',locations:'displays',schedules:'schedule',presets:'operations','warning-templates':'operations'}[match[1]]||match[1]):null;return module&&!licenseAllows(module)?empty:apiRequest(path);}
 
@@ -2404,6 +2406,44 @@ function syncCmsModuleNavigation(){
     }
   }catch{/* Parent navigation can be inaccessible in isolated embeddings. API gates remain authoritative. */}
 }
+// License visibility is independent of local visibility switches and async loading state.
+function applyLicenseVisibility(){
+  for(const node of document.querySelectorAll('[data-license-modules],[data-license-any]')){
+    const all=(node.dataset.licenseModules||'').split(/\s+/).filter(Boolean),any=(node.dataset.licenseAny||'').split(/\s+/).filter(Boolean);
+    const allowed=all.every(licenseAllows)&&(!any.length||any.some(licenseAllows));
+    if(!allowed){
+      if(node.dataset.licenseHidden!=='true'){node.dataset.licensePreviousHidden=String(node.hidden);node.dataset.licensePreviousInert=String(node.inert);}
+      node.dataset.licenseHidden='true';node.hidden=true;node.inert=true;
+    }else if(node.dataset.licenseHidden==='true'){
+      if(node.dataset.licensePreviousHidden!=='true')node.hidden=false;
+      if(node.dataset.licensePreviousInert!=='true')node.inert=false;
+      delete node.dataset.licenseHidden;delete node.dataset.licensePreviousHidden;delete node.dataset.licensePreviousInert;
+    }
+  }
+}
+function configureLicenseVisibility(){
+  for(const section of document.querySelectorAll('[data-view-panel]')){const module=licenseModuleForFeature(section.dataset.viewPanel);if(Object.hasOwn(licenseModuleLabels,module))section.dataset.licenseModules=module;}
+  for(const link of document.querySelectorAll('[data-view-link]')){
+    const module=licenseModuleForFeature(link.dataset.viewLink);if(pageMeta[link.dataset.viewLink]&&(Object.hasOwn(licenseModuleLabels,module)||['settings','users'].includes(module))){const node=link.closest('.feature-card')||link;node.dataset.licenseModules=module;}
+  }
+  for(const node of document.querySelectorAll('[data-settings-open],[data-settings-detail]')){
+    const key=node.dataset.settingsOpen||node.dataset.settingsDetail,module=licensedSettingsModules[key];if(module)node.dataset.licenseModules=module;
+  }
+  document.body.dataset.licenseMissing=Object.keys(licenseModuleLabels).filter(module=>!licenseAllows(module)).join(' ');
+  for(const button of document.querySelectorAll('[data-preset]'))button.dataset.licenseModules='operations';
+  const areas={
+    'crewbrain-config-form':'integrations crewbrain','easyjob-config-form':'integrations easyjob','external-api-panel':'api',
+    'dashboard-event-count':'events','dashboard-display-count':'displays','dashboard-channel-count':'channels','dashboard-next-time':'schedule'
+  };
+  for(const [id,modules] of Object.entries(areas)){let node=document.getElementById(id);if(!node)continue;if(id.startsWith('dashboard-'))node=node.closest('.metric-card')||node;node.dataset.licenseModules=modules;}
+  const overview=document.querySelector('.display-overview');if(overview)overview.dataset.licenseModules='displays';
+  const next=document.getElementById('dashboard-change-count')?.parentElement;if(next)next.dataset.licenseModules='schedule';
+  for(const id of ['sidebar-sync-status','source-strip-text']){const node=document.getElementById(id)?.parentElement;if(node){node.dataset.licenseModules='integrations';node.dataset.licenseAny='crewbrain easyjob';}}
+  for(const card of document.querySelectorAll('[data-source-card]'))card.dataset.licenseModules='integrations '+card.dataset.sourceCard;
+  for(const button of document.querySelectorAll('[data-settings-anchor]')){
+    const target=document.getElementById(button.dataset.settingsAnchor);if(target?.dataset.licenseModules)button.dataset.licenseModules=target.dataset.licenseModules;
+  }
+}
 const licensedSettingsModules={editor:'channels',advertising:'advertising',calendar:'events',events:'events'};
 function applyNavigationConfig(settings={},order=[]){
   state.featureSettings=settings;
@@ -2412,22 +2452,23 @@ function applyNavigationConfig(settings={},order=[]){
   state.navigationOrder.forEach(view=>{const item=navigation.querySelector(`.nav-item[data-view="${CSS.escape(view)}"]`);if(item)navigation.insertBefore(item,help);});
   navigation.querySelectorAll('.nav-item[data-view]').forEach(item=>{if(item.classList.contains('nav-help'))return;item.hidden=!navigationViewAvailable(item.dataset.view);});
   for(const button of document.querySelectorAll('[data-settings-open]')){const module=licensedSettingsModules[button.dataset.settingsOpen];if(module){button.disabled=!licenseAllows(module);button.title=button.disabled?'Nicht durch die Lizenz freigeschaltet':'';}}
-  applyEditorElementVisibility();syncCmsModuleNavigation();
+  configureLicenseVisibility();applyLicenseVisibility();applyEditorElementVisibility();syncCmsModuleNavigation();
   const editingHiddenSettings=state.view==='settings'&&state.currentUser?.role==='admin'&&state.currentUser?.canManageSettings!==false;
   if(state.currentUser&&state.view&&!navigationViewAvailable(state.view)&&!editingHiddenSettings)setView(firstAvailableNavigationView());
 }
 
 function renderModuleSwitching(){
-  const list=document.querySelector('#module-switching-list'),order=normalizedNavigationOrder(state.navigationOrder);
+  const list=document.querySelector('#module-switching-list'),order=normalizedNavigationOrder(state.navigationOrder).filter(view=>licenseAllows(licenseModuleForFeature(view)));
   list.innerHTML=order.map((view,index)=>{const module=navigationModules.find(item=>item.view===view);return`<article class="module-switching-item" draggable="true" data-module-view="${escapeHtml(view)}"><button class="module-drag-handle" type="button" aria-label="${escapeHtml(module.label)} verschieben" title="Ziehen zum Sortieren">⠿</button><span class="module-switching-icon">${module.icon}</span><span class="module-switching-copy"><strong>${escapeHtml(module.label)}</strong><small>${escapeHtml(module.description)}</small></span><label class="module-visibility-toggle"><input type="checkbox" data-feature-setting="${escapeHtml(view)}" ${moduleEnabled(view)?'checked':''} ${!licenseAllows(licenseModuleForFeature(view))?'disabled':''}><span>${!licenseAllows(licenseModuleForFeature(view))?'Nicht lizenziert':view==='menus'?'Modul aktivieren':'In Seitenleiste anzeigen'}</span></label><span class="module-order-actions"><button type="button" data-module-move="-1" aria-label="${escapeHtml(module.label)} nach oben" ${index===0?'disabled':''}>↑</button><button type="button" data-module-move="1" aria-label="${escapeHtml(module.label)} nach unten" ${index===order.length-1?'disabled':''}>↓</button></span></article>`;}).join('');
 }
 
 const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-overview':'Veranstaltungsübersicht','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
-function editorElementEnabled(type,settings=state.featureSettings||{}){return (!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&settings[`editor_${type}`]!==false;}
+function editorElementLicensed(type){return licenseAllows('channels')&&(!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&(!['image','video'].includes(type)||licenseAllows('media'));}
+function editorElementEnabled(type,settings=state.featureSettings||{}){return editorElementLicensed(type)&& (!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&settings[`editor_${type}`]!==false;}
 function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
 function renderEditorElementSettings(){
   const list=document.querySelector('#editor-element-settings');if(!list)return;
-  list.innerHTML=Object.entries(editorElementLabels).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')||(['event','event-table','event-field','event-stamp','event-overview'].includes(type)&&!licenseAllows('events'))?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
+  list.innerHTML=Object.entries(editorElementLabels).filter(([type])=>editorElementLicensed(type)).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')||(['event','event-table','event-field','event-stamp','event-overview'].includes(type)&&!licenseAllows('events'))?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
 }
 
 let featureSettingsRequest=null,featureSettingsSnapshot='';
@@ -2439,18 +2480,25 @@ async function loadFeatureSettings({background=false}={}){
       const result=await apiRequest('/api/settings/features',{cache:'no-store',signal:controller.signal}),snapshot=JSON.stringify(result);
       if(background&&snapshot===featureSettingsSnapshot)return result;
       featureSettingsSnapshot=snapshot;
-      const previous=state.licensedModules;state.licensedModules=result.licensedModules||null;state.menuAccess=Boolean(result.menuAccess);
+      const previous=state.licensedModules;state.licensedModules=Array.isArray(result.licensedModules)?result.licensedModules:[];state.menuAccess=Boolean(result.menuAccess);
       const revoked=Array.isArray(previous)&&previous.some(module=>!licenseAllows(module));
       if(revoked&&!licenseAllows(licenseModuleForFeature(state.view||''))){
         for(const dialog of document.querySelectorAll('dialog[open]'))if(dialog.id!=='account-dialog')dialog.close();
         showToast('Die Lizenzfreigabe wurde geändert. Dieses Modul ist nicht mehr verfügbar.');
       }
       if(revoked&&!licenseAllows('events')){state.events=[];state.editorEventSchedules={};state.overviewLoadedAt=0;if(slideDialog.open)renderEditorCanvas();}
+      if(state.activeSource&&!licenseAllows(state.activeSource))renderSource();
       if(Array.isArray(state.licensedModules))renderLicenseGrants(state.licensedModules);
       applyNavigationConfig(result.data||{},result.navigationOrder||[]);
-      const blockedSetting=[...document.querySelectorAll('[data-settings-detail]')].find(detail=>!detail.hidden&&licensedSettingsModules[detail.dataset.settingsDetail]&&!licenseAllows(licensedSettingsModules[detail.dataset.settingsDetail]));
+      const blockedSetting=[...document.querySelectorAll('[data-settings-detail]')].find(detail=>(!detail.hidden||detail.dataset.licensePreviousHidden==='false')&&licensedSettingsModules[detail.dataset.settingsDetail]&&!licenseAllows(licensedSettingsModules[detail.dataset.settingsDetail]));
       if(blockedSetting)showSettingsLevel();
       if(state.view==='settings'){renderModuleSwitching();renderEditorElementSettings();}
+      if(Array.isArray(previous)&&state.view==='integrations'){
+        void loadIntegrationSources();
+        if(licenseAllows('crewbrain')&&(!previous.includes('crewbrain')||!previous.includes('integrations')))void loadCrewBrainConfiguration();
+        if(licenseAllows('easyjob')&&(!previous.includes('easyjob')||!previous.includes('integrations')))void loadEasyJobConfiguration();
+        if(licenseAllows('api')&&!previous.includes('api'))void loadApiUsers();
+      }
       return result;
     }catch(error){if(!background)showToast(error.message);return null;}finally{clearTimeout(timeout);}
   })();
@@ -2500,7 +2548,8 @@ const moduleSwitchingList=document.querySelector('#module-switching-list');
 moduleSwitchingList.addEventListener('change',event=>{if(event.target.matches('[data-feature-setting]'))state.featureSettings={...(state.featureSettings||{}),[event.target.dataset.featureSetting]:event.target.checked};});
 moduleSwitchingList.addEventListener('click',event=>{
   const button=event.target.closest('[data-module-move]'),row=event.target.closest('[data-module-view]');if(!button||!row)return;
-  const order=normalizedNavigationOrder(state.navigationOrder),index=order.indexOf(row.dataset.moduleView),target=index+Number(button.dataset.moduleMove);
+  const order=normalizedNavigationOrder(state.navigationOrder),index=order.indexOf(row.dataset.moduleView);let target=index+Number(button.dataset.moduleMove);
+  while(target>=0&&target<order.length&&!licenseAllows(licenseModuleForFeature(order[target])))target+=Number(button.dataset.moduleMove);
   if(index<0||target<0||target>=order.length)return;
   [order[index],order[target]]=[order[target],order[index]];state.navigationOrder=order;renderModuleSwitching();
 });
@@ -3257,7 +3306,7 @@ function renderApiUsers() {
 }
 
 async function loadApiUsers() {
-  if (state.currentUser?.role !== 'admin') return;
+  if (state.currentUser?.role !== 'admin'||!licenseAllows('api')) return;
   try {
     const result = await apiRequest('/api/api-users');
     state.apiUsers = result.data || [];
@@ -3473,6 +3522,7 @@ document.querySelector('#crewbrain-preview-from').value = previewToday.toISOStri
 document.querySelector('#crewbrain-preview-until').value = previewUntil.toISOString().slice(0, 10);
 
 function renderSource(){
+  if(state.activeSource&&!licenseAllows(state.activeSource))state.activeSource=null;
   const names={crewbrain:'CrewBrain',easyjob:'easyjob'},activeName=state.activeSource?names[state.activeSource]:'';
   const strip=document.querySelector('#source-strip-text');
   strip.dataset.status = state.activeSource ? 'active' : 'inactive';
@@ -3484,18 +3534,19 @@ function renderSource(){
   document.querySelectorAll('[data-source-toggle]').forEach(input=>{
     const source=input.dataset.sourceToggle,configured=Boolean(state.integrationSources[source]?.configured);
     input.checked=state.activeSource===source;
-    input.disabled=!configured;
+    input.disabled=!configured||!licenseAllows(source);
     const hint=document.querySelector(`#${source}-activation-hint`);
     if(hint)hint.textContent=!configured?'Zuerst Zugangsdaten speichern':input.checked?'Aktiv · alle anderen Quellen sind deaktiviert':'Inaktiv';
   });
 }
 
 async function loadIntegrationSources(){
+  if(!licenseAllows('integrations')){state.activeSource=null;state.integrationSources={};renderSource();return null;}
   try{
     const result=await apiRequest('/api/integrations/sources');
     state.activeSource=result.activeSource||null;
     state.integrationSources=result.sources||{};
-    renderSource();
+    renderSource();applyLicenseVisibility();
     return result;
   }catch(error){
     if(state.view==='integrations')showToast(error.message);
@@ -3505,6 +3556,7 @@ async function loadIntegrationSources(){
 
 document.querySelectorAll('[data-source-toggle]').forEach(input=>input.addEventListener('change',async event=>{
   const toggle=event.currentTarget,requested=toggle.checked?toggle.dataset.sourceToggle:null;
+  if(!licenseAllows('integrations')||(requested&&!licenseAllows(requested))){toggle.checked=false;return;}
   document.querySelectorAll('[data-source-toggle]').forEach(item=>{item.disabled=true;});
   try{
     const result=await apiRequest('/api/integrations/sources',{method:'PUT',body:JSON.stringify({activeSource:requested})});
@@ -5616,6 +5668,7 @@ document.querySelector('#property-video-library').addEventListener('click', () =
 }, 'video', 'Video für das ausgewählte Element auswählen'));
 
 function openMediaLibrary(handler = null, typeFilter = '', context = 'Medium für die Slide auswählen', { multiple = false } = {}) {
+  if(!licenseAllows('media'))return;
   const selectHandler = handler || (asset => {
     const selected = selectedEditorElement();
     if (selected && ['image', 'video'].includes(selected.type)) selected.type = asset.type === 'video' ? 'video' : 'image';
@@ -7285,7 +7338,7 @@ initializeAuthentication();
 const licenseModuleLabels={dashboard:'Übersicht',events:'Veranstaltungen',channels:'Slides und Kanäle',menus:'Speisekarten',advertising:'Werbung',media:'Mediendatenbank',displays:'Displays',schedule:'Zeitplanung',operations:'Presets und Warnhinweise',integrations:'Schnittstellen',easyjob:'Easyjob',crewbrain:'CrewBrain',api:'Externe API',updates:'Updates'};
 let licenseRegistry=null,editingLicense=null;
 const licenseTime=value=>value?new Date(value).toLocaleString('de-DE'):'Noch kein Abgleich';
-function renderLicenseGrants(modules){document.querySelector('#license-grants').textContent='Freigegeben: '+(modules.map(key=>licenseModuleLabels[key]||key).join(', ')||'Keine Module');}
+function renderLicenseGrants(modules){const effective=modules.filter(module=>!['crewbrain','easyjob'].includes(module)||modules.includes('integrations'));document.querySelector('#license-grants').textContent='Freigegeben: '+(effective.map(key=>licenseModuleLabels[key]||key).join(', ')||'Keine Module');}
 function renderLicenseEditor(license=null){editingLicense=license;const form=document.querySelector('#license-create-form');form.reset();form.elements.label.value=license?.label||'';form.elements.seats.value=license?.seats||1;form.elements.revoked.checked=!!license?.revoked;document.querySelector('#license-edit-heading').textContent=license?'Lizenz bearbeiten':'Lizenz erstellen';document.querySelector('#license-module-options').innerHTML=Object.entries(licenseModuleLabels).map(([key,label])=>`<label class="toggle-label"><input type="checkbox" name="module" value="${key}" ${!license||license.modules.includes(key)?'checked':''}>${escapeHtml(label)}</label>`).join('');}
 async function loadLicensing(){
  try{const result=await apiRequest('/api/settings/licensing');document.querySelector('#license-status').textContent=result.mode==='master'?'Dieser Standalone-Server ist die zentrale Lizenzverwaltung.':result.mode==='staged'?'Übergangsbetrieb: Lizenzpflicht ist noch nicht serverseitig eingerichtet. Bestehende Funktionen bleiben verfügbar.':`${result.hasLicenseKey?'Lizenz hinterlegt':'Keine Lizenz aktiviert'} · Letzter Erfolg: ${licenseTime(result.lastSuccess)}`;

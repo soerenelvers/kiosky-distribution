@@ -847,6 +847,7 @@ final class Api
         if ($path === '/api/integrations/sources' && $method === 'PUT') {
             $activeSource = $body['activeSource'] ?? null;
             if ($activeSource !== null && !in_array($activeSource, ['crewbrain', 'easyjob'], true)) throw new RuntimeException('Die ausgewählte Datenquelle ist ungültig.', 422);
+            if($activeSource!==null)$this->license()->assertPath($state,'/api/integrations/'.$activeSource);
             if ($activeSource === 'crewbrain' && empty($state['crewbrain']['config']['encryptedCredential'])) throw new RuntimeException('CrewBrain muss zuerst vollständig konfiguriert werden.', 422);
             if ($activeSource === 'easyjob' && empty($state['easyjob']['config']['encryptedCredentials'])) throw new RuntimeException('easyjob muss zuerst vollständig konfiguriert werden.', 422);
             $state['activeEventSource'] = $activeSource;
@@ -2748,11 +2749,10 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed> */
     private function integrationSources(array $state): array
     {
-        $active = in_array($state['activeEventSource'] ?? null, ['crewbrain', 'easyjob'], true) ? $state['activeEventSource'] : null;
-        return ['activeSource' => $active, 'sources' => [
-            'crewbrain' => ['enabled' => $active === 'crewbrain', 'configured' => !empty($state['crewbrain']['config']['encryptedCredential'])],
-            'easyjob' => ['enabled' => $active === 'easyjob', 'configured' => !empty($state['easyjob']['config']['encryptedCredentials'])],
-        ]];
+        $active=in_array($state['activeEventSource'] ?? null,['crewbrain','easyjob'],true)?$state['activeEventSource']:null;
+        if($active&&!$this->license()->allows($state,'integrations',$active))$active=null;
+        $sources=['crewbrain'=>['enabled'=>$active==='crewbrain','configured'=>!empty($state['crewbrain']['config']['encryptedCredential'])],'easyjob'=>['enabled'=>$active==='easyjob','configured'=>!empty($state['easyjob']['config']['encryptedCredentials'])]];
+        return ['activeSource'=>$active,'sources'=>array_filter($sources,fn(string $source):bool=>$this->license()->allows($state,'integrations',$source),ARRAY_FILTER_USE_KEY)];
     }
 
     /** @param array<string,mixed> $state @return array<int,string> */

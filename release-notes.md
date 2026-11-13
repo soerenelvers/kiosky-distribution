@@ -1,6 +1,6 @@
-## [3.40.2]
+## [3.40.3]
 
-- Geöffnete Lizenznehmer-Oberflächen übernehmen geänderte Modulfreigaben ohne Neuladen: Navigation, Einstellungen, offene Editoren und die angezeigte Freigabeliste folgen dem nächsten erfolgreichen Abgleich.
-- WordPress und TYPO3 erneuern fällige Lizenzen zusätzlich bei aktiver Nutzung und gültigen Player-Anfragen, auch ohne laufenden Scheduler. Instanzbezogene Sperren vermeiden parallele Netzabfragen; Speicher-Konflikte erhalten zwischenzeitliche Änderungen.
-- Entzogene Veranstaltungsfreigaben sperren Veranstaltungs-Elemente und entfernen die Laufzeitdaten eingebetteter Veranstaltungsübersichten aus der Player-Ausgabe. Gespeicherte Inhalte und lokale Modulschalter bleiben erhalten.
-- Automatische Hintergrundprüfungen verändern die vereinbarte Offline-Regel nicht: Bei einem Ausfall bleibt die letzte gültige Freigabe erhalten, einschließlich bereits bestätigter Sperren.
+- Alle 14 Lizenzmodule werden bei Entzug in der Lizenznehmer-Oberfläche vollständig ausgeblendet, einschließlich Unterbereichen, lokalen Modulschaltern, Dashboard-Verknüpfungen, Editor- und Medienfunktionen.
+- CrewBrain und easyjob sind nur mit eigener Freigabe plus Schnittstellen-Freigabe sichtbar und aktivierbar. Der allgemeine Quellen-Umschalter prüft diese Freigaben jetzt ebenfalls serverseitig.
+- Nicht freigegebene Quellen werden nicht als aktive Quellen gemeldet. Ihre Konfiguration bleibt zur Wiederfreigabe erhalten; verspätete Antworten können gesperrte Oberflächen nicht wieder einblenden.
+- Neue Tests prüfen Entzug und Wiederfreigabe jedes einzelnen Katalogmoduls sowie die Quellen-Aktivierung in Standalone, WordPress und TYPO3.

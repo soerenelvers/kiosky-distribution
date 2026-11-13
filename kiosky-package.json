@@ -1,9 +1,9 @@
 {
   "name": "Kiosky",
-  "version": "3.40.2",
+  "version": "3.40.3",
   "platform": "typo3",
   "mode": "native",
-  "builtAt": "2026-11-13T15:19:31.404Z",
+  "builtAt": "2026-11-13T18:06:49.850Z",
   "sharedFrontend": true,
   "canonicalBackend": "included",
   "updateManifestUrl": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/latest.json?ref=main"

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "81000211e184fc3f3a208f94bb9230acca3e9dfa",
+  "source_commit": "1218f14a931bbc246a6d19fd7e86b09564cda7f2",
   "product": "kiosky",
-  "version": "3.40.2",
-  "released_at": "2026-11-13T15:19:32.986Z",
+  "version": "3.40.3",
+  "released_at": "2026-11-13T18:06:51.441Z",
   "channel": "stable",
-  "release_notes": "## [3.40.2]\n\n- Geöffnete Lizenznehmer-Oberflächen übernehmen geänderte Modulfreigaben ohne Neuladen: Navigation, Einstellungen, offene Editoren und die angezeigte Freigabeliste folgen dem nächsten erfolgreichen Abgleich.\n- WordPress und TYPO3 erneuern fällige Lizenzen zusätzlich bei aktiver Nutzung und gültigen Player-Anfragen, auch ohne laufenden Scheduler. Instanzbezogene Sperren vermeiden parallele Netzabfragen; Speicher-Konflikte erhalten zwischenzeitliche Änderungen.\n- Entzogene Veranstaltungsfreigaben sperren Veranstaltungs-Elemente und entfernen die Laufzeitdaten eingebetteter Veranstaltungsübersichten aus der Player-Ausgabe. Gespeicherte Inhalte und lokale Modulschalter bleiben erhalten.\n- Automatische Hintergrundprüfungen verändern die vereinbarte Offline-Regel nicht: Bei einem Ausfall bleibt die letzte gültige Freigabe erhalten, einschließlich bereits bestätigter Sperren.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.2",
+  "release_notes": "## [3.40.3]\n\n- Alle 14 Lizenzmodule werden bei Entzug in der Lizenznehmer-Oberfläche vollständig ausgeblendet, einschließlich Unterbereichen, lokalen Modulschaltern, Dashboard-Verknüpfungen, Editor- und Medienfunktionen.\n- CrewBrain und easyjob sind nur mit eigener Freigabe plus Schnittstellen-Freigabe sichtbar und aktivierbar. Der allgemeine Quellen-Umschalter prüft diese Freigaben jetzt ebenfalls serverseitig.\n- Nicht freigegebene Quellen werden nicht als aktive Quellen gemeldet. Ihre Konfiguration bleibt zur Wiederfreigabe erhalten; verspätete Antworten können gesperrte Oberflächen nicht wieder einblenden.\n- Neue Tests prüfen Entzug und Wiederfreigabe jedes einzelnen Katalogmoduls sowie die Quellen-Aktivierung in Standalone, WordPress und TYPO3.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.40.2",
+    "core_version": "3.40.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.40.2",
-    "typo3_extension_version": "3.40.2"
+    "wordpress_plugin_version": "3.40.3",
+    "typo3_extension_version": "3.40.3"
   },
   "components": {
     "core": {
-      "version": "3.40.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.2.zip?ref=v3.40.2",
-      "sha256": "a6c359ff7c34cb08b84be43a4e0a5868449438facf573bd6e2d6667a5248792e"
+      "version": "3.40.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.3.zip?ref=v3.40.3",
+      "sha256": "a23280c1e22d8661c23087f02dc4903a672de8076af8e410d3928824d7b32212"
     },
     "standalone": {
-      "version": "3.40.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.2.zip?ref=v3.40.2",
-      "sha256": "a6c359ff7c34cb08b84be43a4e0a5868449438facf573bd6e2d6667a5248792e"
+      "version": "3.40.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.3.zip?ref=v3.40.3",
+      "sha256": "a23280c1e22d8661c23087f02dc4903a672de8076af8e410d3928824d7b32212"
     },
     "wordpress": {
-      "version": "3.40.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.2.zip?ref=v3.40.2",
-      "sha256": "34faad72ae25da1bd5d38246c127f5b11120e0e0e8b347c72e9ce215f4d99b54",
+      "version": "3.40.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.3.zip?ref=v3.40.3",
+      "sha256": "4ed50dcade61a11c931b61503e6691a3842ba2c9128c8512f6aab21938c2d1c6",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.40.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.2.zip?ref=v3.40.2",
-      "sha256": "249cf62d6295f42c8f13537bb88729b0f99cd3914cf1b3f4299b8787b4b8a0ee",
+      "version": "3.40.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.3.zip?ref=v3.40.3",
+      "sha256": "15b4332279c53f00ae96ed26f366ba93789f2ebad800f62b988089252a49fe9a",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

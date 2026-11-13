@@ -1880,3 +1880,9 @@ body[data-user-role="designer"] :is([data-media-action="new-folder"],[data-media
 #menu-share-panel input[type="checkbox"] { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; padding: 0; }
 #menu-share-panel .dialog-actions { flex-wrap: wrap; }
 #menu-share-panel .form-field { min-width: 0; }
+
+/* A late response cannot reveal a centrally withdrawn module. */
+[data-license-hidden="true"] { display:none!important; }
+
+/* Native media pickers and dynamically rendered editor actions share the license gate. */
+body[data-license-missing~="media"] :is(#event-image-select,#event-bulk-image-select,#font-native-select,#property-image-library,#property-video-library,[data-action="bulk-media-slides"],[data-action="open-media-library"],[data-advertising-type-media],[data-way-action="logo"],[data-way-media],[data-slide-media]) { display:none!important; }
