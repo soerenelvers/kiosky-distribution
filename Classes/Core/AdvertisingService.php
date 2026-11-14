@@ -8,6 +8,8 @@ require_once __DIR__.'/EventLifecycle.php';
 use RuntimeException;
 require_once __DIR__.'/ExternalSchedule.php';
 
+require_once __DIR__.'/TicketLinks.php';
+
 /** CMS counterpart of the standalone advertising generator; works only on the current state snapshot. */
 final class AdvertisingService
 {
@@ -199,7 +201,7 @@ final class AdvertisingService
             }
             usort($rows,static fn(array $a,array $b):int=>$a['order']<=>$b['order'] ?: strcmp((string)$a['event']['id'],(string)$b['event']['id']));
             return array_map(static function(array $row):array{
-                $event=$row['event'];$out=array_intersect_key($event,array_flip(['id','title','subtitle','date','eventStart','admissionStart','imageUrl','imageEdit','ticketUrl','remainingTickets','status']));$date=self::overviewDay($event['date'] ?? '');if($date!=='')$out['date']=$date;
+                $event=$row['event'];$out=array_intersect_key($event,array_flip(['id','title','subtitle','date','eventStart','admissionStart','imageUrl','imageEdit','ticketUrl','remainingTickets','status']));$providers=count(TicketLinks::links($event));if($providers>1)$out['ticketProviderCount']=$providers;$date=self::overviewDay($event['date'] ?? '');if($date!=='')$out['date']=$date;
                 foreach(['eventStart','admissionStart'] as $key){$time=self::overviewInstant($event[$key] ?? '',$date);if($time!==null)$out[$key]=gmdate('Y-m-d\TH:i:s\Z',$time);}return $out;
             },array_slice($rows,0,50));
         };

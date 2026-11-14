@@ -77,6 +77,11 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             [$status,$payload]=$api->handle($request->getMethod(),$apiPath,$body ?? [],$token);
             return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer']);
         }
+        if(preg_match('#^/api/public/tickets/[^/]{1,300}$#',$apiPath)&&strtoupper($request->getMethod())==='GET'){
+            $api=$this->apiFactory->create(['id'=>'public-tickets','name'=>'Ticketanbieter','email'=>'','role'=>'viewer'],true);
+            [$status,$payload]=$api->handle('GET',$apiPath);
+            return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer','X-Content-Type-Options'=>'nosniff']);
+        }
         $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof|commands)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
         $isExternal = $apiPath === '/api/v1' || str_starts_with($apiPath, '/api/v1/');
         if (!$isPlayer && !$isExternal) {

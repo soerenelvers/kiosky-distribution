@@ -26,7 +26,7 @@ globalThis.KioskyFonts?.configure({fetchFile:id=>apiRequest('/api/fonts/'+id),af
 const appAssetVersion=new URL(document.currentScript?.src||window.location.href).searchParams.get('v')||'';
 
 function qrElementPayload(element = {},event=null) {
-  if(element.qrKind==='event-ticket')return eventTicketUrl(event);
+  if(element.qrKind==='event-ticket')return eventTicketQrUrl(event);
   const escapeWifi = value => String(value || '').replaceAll('\\', '\\\\').replaceAll(';', '\\;').replaceAll(',', '\\,').replaceAll(':', '\\:').replaceAll('"', '\\"');
   if (element.qrKind === 'wifi') {
     const encryption = element.wifiEncryption === 'WEP' ? 'WEP' : element.wifiEncryption === 'nopass' ? 'nopass' : 'WPA';
@@ -443,7 +443,7 @@ function overviewDesignedMarkup(element,events,count){
     const grouped=new Map();for(const field of design.fields){
       if(!field.visible)continue;let content='';
       if(field.key==='imageUrl')content=`<div class="event-overview-image">${event.imageUrl?(event.imageEdit&&globalThis.KioskyEventImage?KioskyEventImage.markup(event,design.imageFit):`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager" style="object-fit:${design.imageFit}">`):`<span>${escapeHtml(design.imagePlaceholder)}</span>`}</div>`;
-      else if(field.key==='ticketQr'){const url=eventTicketUrl(event);if(!url)continue;content=`<div class="event-overview-designed-qr">${qrSvgMarkup(url,'#0f172a','#ffffff')}</div>${field.prefix||field.suffix?`<span>${escapeHtml(field.prefix+field.suffix)}</span>`:''}`;}
+      else if(field.key==='ticketQr'){const url=eventTicketQrUrl(event);if(!url)continue;content=`<div class="event-overview-designed-qr">${qrSvgMarkup(url,'#0f172a','#ffffff')}</div>${field.prefix||field.suffix?`<span>${escapeHtml(field.prefix+field.suffix)}</span>`:''}`;}
       else {const value=field.key==='title'?String(event.title||''):field.key==='subtitle'?String(event.subtitle||''):eventFieldPresentation(event,field.key).text;if(!String(value).trim())continue;content=escapeHtml(field.prefix+value+field.suffix);}
       if(!grouped.has(field.row))grouped.set(field.row,[]);grouped.get(field.row).push({field,content});
     }
@@ -456,12 +456,23 @@ function eventOverviewMarkup(element,previewEvents){
   const events=previewEvents?editorOverviewEvents(previewEvents).slice(0,count):Array.isArray(element.events)?element.events:editorOverviewEvents(state.events||[]).slice(0,count);
   if(element.overviewDesign)return overviewDesignedMarkup(element,events,count);
   const columns=Math.min(count,count===10?2:3),rows=Math.ceil(count/columns);
-  return `<div class="event-overview-grid" data-overview-count="${count}" style="--overview-columns:${columns};--overview-rows:${rows}">${events.length?events.slice(0,count).map(event=>{const ticket=eventTicketUrl(event),date=eventFieldPresentation(event,'date').text,start=eventFieldPresentation(event,'eventStart').text,admission=eventFieldPresentation(event,'admissionStart').text;return `<article class="event-overview-card" data-overview-event="${escapeHtml(event.id)}"><div class="event-overview-image">${event.imageUrl?(event.imageEdit&&globalThis.KioskyEventImage?KioskyEventImage.markup(event):`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager">`):'<span>LIVE</span>'}</div><div class="event-overview-title"><time>${escapeHtml(date)}</time><strong>${escapeHtml(event.title||'')}</strong>${event.subtitle?`<small>${escapeHtml(event.subtitle)}</small>`:''}</div><div class="event-overview-footer"><div>${start?`<span>Beginn <b>${escapeHtml(start)}</b></span>`:''}${admission?`<span>Einlass <b>${escapeHtml(admission)}</b></span>`:''}</div>${ticket?`<div class="event-overview-ticket">${qrSvgMarkup(ticket,'#0f172a','#ffffff')}<small>Tickets</small></div>`:''}</div></article>`;}).join(''):'<p class="event-overview-empty">Keine kommenden Veranstaltungen gefunden.</p>'}</div>`;
+  return `<div class="event-overview-grid" data-overview-count="${count}" style="--overview-columns:${columns};--overview-rows:${rows}">${events.length?events.slice(0,count).map(event=>{const ticket=eventTicketQrUrl(event),date=eventFieldPresentation(event,'date').text,start=eventFieldPresentation(event,'eventStart').text,admission=eventFieldPresentation(event,'admissionStart').text;return `<article class="event-overview-card" data-overview-event="${escapeHtml(event.id)}"><div class="event-overview-image">${event.imageUrl?(event.imageEdit&&globalThis.KioskyEventImage?KioskyEventImage.markup(event):`<img src="${escapeHtml(event.imageUrl)}" alt="" loading="eager">`):'<span>LIVE</span>'}</div><div class="event-overview-title"><time>${escapeHtml(date)}</time><strong>${escapeHtml(event.title||'')}</strong>${event.subtitle?`<small>${escapeHtml(event.subtitle)}</small>`:''}</div><div class="event-overview-footer"><div>${start?`<span>Beginn <b>${escapeHtml(start)}</b></span>`:''}${admission?`<span>Einlass <b>${escapeHtml(admission)}</b></span>`:''}</div>${ticket?`<div class="event-overview-ticket">${qrSvgMarkup(ticket,'#0f172a','#ffffff')}<small>Tickets</small></div>`:''}</div></article>`;}).join(''):'<p class="event-overview-empty">Keine kommenden Veranstaltungen gefunden.</p>'}</div>`;
 }
 function eventTicketUrl(event){
   const value=String(event?.ticketUrl||'').trim();
   if(!value||/[\u0000-\u001f\u007f]/.test(value)||new TextEncoder().encode(value).length>2953)return '';
   try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?value:'';}catch{return '';}
+}
+function eventTicketQrUrl(event){
+  const direct=eventTicketUrl(event);if(!direct)return '';
+  const urls=new Set((Array.isArray(event?.ticketLinks)?event.ticketLinks:[]).map(link=>eventTicketUrl({ticketUrl:link?.url})).filter(Boolean));
+  if(Math.max(urls.size,Number(event.ticketProviderCount)||0)<2||!event.id)return direct;
+  const page=new URL(assetUrl('/event-calendar/tickets.html'),window.location.href);
+  const path='/api/public/tickets/'+encodeURIComponent(event.id);
+  const source=kioskyRuntime.platform==='typo3'&&kioskyRuntime.playerBaseUrl?new URL('../kiosky-api/',new URL(kioskyRuntime.playerBaseUrl,window.location.href)):new URL(apiUrl(path),window.location.href);
+  if(kioskyRuntime.platform==='typo3'&&kioskyRuntime.playerBaseUrl)source.searchParams.set('path',path);
+  page.searchParams.set('source',source.origin===page.origin?source.pathname+source.search:source.toString());
+  return page.toString();
 }
 function eventQrMarkup(element,event){
   const payload=qrElementPayload(element,event);
@@ -5319,7 +5330,7 @@ function syncEditorProperties() {
   renderQrCaptionEditor(element);
   for(const id of ['property-event-prefix','property-event-fallback'])document.getElementById(id).closest('label').hidden=element.type==='event-field'&&element.field==='ticketQr';
   document.querySelector('#property-event-ticket-note').hidden=!dynamicQr;
-  document.querySelector('#property-event-ticket-note').textContent=eventTicketUrl(editorSelectedEvent())?'Der Ticket-Link des ausgewählten Events wird automatisch übernommen.':'Kein gültiger Ticket-Link für dieses Event. Der QR-Code bleibt auf dem Player ausgeblendet.';
+  document.querySelector('#property-event-ticket-note').textContent=eventTicketUrl(editorSelectedEvent())?'Bei mehreren Ticketanbietern öffnet der QR-Code die Anbieterauswahl; bei einem Anbieter direkt den Ticketshop. Die Auswahl ist für veröffentlichte Veranstaltungen verfügbar.':'Kein gültiger Ticket-Link für dieses Event. Der QR-Code bleibt auf dem Player ausgeblendet.';
   document.querySelector('#property-qr-wifi-fields').hidden = !wifiQr;
   document.querySelector('#property-countdown-mode').value = element.countdownMode || 'daily';
   document.querySelector('#property-countdown-daily-time').value = element.countdownDailyTime || '18:00';

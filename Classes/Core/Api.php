@@ -197,6 +197,12 @@ final class Api
         if ($path === '/api/auth/me' && $method === 'GET') return $this->ok(['user' => $this->user()]);
         if ($path === '/api/auth/logout' && $method === 'POST') return $this->ok(['ok' => true]);
         if ($path === '/api/auth/password' && $method === 'POST') throw new RuntimeException('Passwörter werden vom CMS verwaltet.', 409);
+        if(preg_match('#^/api/public/tickets/([^/]{1,300})$#',$path,$ticketMatch)&&$method==='GET'){
+            $event=$this->first($state['events'],static fn(array $row):bool=>($row['id']??'')===rawurldecode($ticketMatch[1]));
+            $data=TicketLinks::publicEvent($event,($state['featureSettings']['events']??true)!==false&&($state['publicCalendarSettings']['showTickets']??true)!==false);
+            if(!$data)throw new RuntimeException('Tickets sind für diese Veranstaltung nicht verfügbar.',404);
+            return $this->ok(['data'=>$data]);
+        }
         if ($path === '/api/public/calendar' && $method === 'GET') {
             return $this->ok([
                 'data' => PublicEventCalendar::events($state),

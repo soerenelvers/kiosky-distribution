@@ -1,5 +1,5 @@
-## [3.40.6]
+## [3.40.7]
 
-- Veranstaltungen unterstützen bis zu zehn benannte Ticketanbieter mit Plus-Schaltfläche, Entfernen und Auswahl des Hauptlinks. Kalender und Detailfenster zeigen alle freigegebenen Ticketanbieter; bestehende QR-Codes verwenden weiterhin den Hauptlink. Kopien, Vorlagen und Umzüge erhalten die Links.
-- Zeitplanwoche und Ansicht bleiben nach Neuladen erhalten. Gemeinsame Zuweisungen benötigen zum Entfernen ausdrückliche Kennungen; unvollständige Zielkataloge und doppelte Altzuweisungen führen nicht mehr zu stillschweigender Löschung.
-- Zusätzliche Regressionen prüfen den Erhalt fester und wiederkehrender Zuweisungen über Datenbankmigration, Neustart und WordPress-Update. Die Recherche zu öffentlichen Ticketbeständen ist in docs/ticket-links-and-availability.md dokumentiert. Ein automatischer Restkartenabruf ist nicht Bestandteil dieses Updates.
+- Ticket-QR-Codes öffnen bei mehreren Anbietern automatisch eine mobile Auswahlseite, bei einem Anbieter weiterhin direkt den Ticketshop. Eventdaten, Event-Tabellen und Veranstaltungsübersichten verwenden dieselbe Logik.
+- Die Auswahl lädt aktuelle Anbieter ohne Anmeldung; Entwürfe, abgesagte, archivierte und gelöschte Veranstaltungen sowie ausgeblendete Tickets bleiben gesperrt. QR-Codes enthalten keine Player-Schlüssel oder CMS-Zugangsdaten.
+- Regressionen prüfen anonyme CMS-Routen, Unterverzeichnisse, direkte Einzellinks, Änderungen der Anbieter und mobile Auswahlseiten.

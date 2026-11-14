@@ -2,7 +2,7 @@
 
 Ab 3.40.6 lassen sich in einer Veranstaltung über **＋ Weiteren Ticket-Link hinzufügen**
 bis zu zehn Anbieter mit Name und URL pflegen. Der erste Eintrag ist der Hauptlink.
-**Als Hauptlink** wechselt das Ziel bestehender Ticket-QR-Codes und Ticket-Platzhalter;
+**Als Hauptlink** wechselt das Ziel bestehender Ticket-Platzhalter;
 die weiteren Anbieter bleiben erhalten. Manuell gespeicherte Anbieterlisten und ihr
 Hauptlink gelten als lokale Angaben; spätere Veranstaltungsimporte überschreiben sie nicht. Kopien, Vorlagen und vollständige Systemumzüge
 übernehmen die Liste. Vor einem Umzug beide Installationen aktualisieren.
@@ -15,6 +15,29 @@ nutzbar. Die neue optionale API-Eigenschaft lautet `ticketLinks: [{label,url}]`;
 `ticketUrl` bleibt der kompatible Hauptlink. Ältere Clients können den Hauptlink ändern,
 ohne die zusätzlichen Anbieter zu verlieren. Zulässig sind HTTP-/HTTPS-Links ohne
 Zugangsdaten in der URL. Die Liste lädt keine fremden Ticketseiten im Hintergrund.
+
+## Ticket-QR-Code mit Anbieterauswahl (ab 3.40.7)
+
+Bei **einem Anbieter** öffnet der Ticket-QR-Code direkt den Ticketshop. Bei
+**mehreren unterschiedlichen Anbietern** öffnet er eine kleine, mobile Auswahlseite
+mit Veranstaltungstitel, Anbietername und Anbieter-Domain. Dies gilt auch für
+Ticket-QR-Codes in Eventdaten, Event-Tabellen und Veranstaltungsübersichten.
+Statische QR-Codes und gewöhnliche Ticket-Link-Platzhalter bleiben unverändert.
+
+Die Auswahl wird beim Öffnen aus der aktuellen Veranstaltung geladen. Änderungen
+an Anbietern gelten damit auch für einen zuvor erzeugten Auswahl-QR-Code. Ein
+alter Auswahl-Link mit nur noch einem Anbieter bietet diesen weiterhin an.
+Es werden weder Player-Schlüssel noch CMS-Nonces oder Anmeldedaten in den QR-Code
+aufgenommen. Der anonyme Endpunkt `GET /api/public/tickets/{id}` liefert nur
+`data: {title, links: [{label, url}]}`. Er lädt keine Ticketshops im Hintergrund.
+
+Die Veranstaltung muss veröffentlicht, noch nicht beendet und das
+Veranstaltungsmodul freigegeben sein. Entwürfe, abgesagte, archivierte und gelöschte
+Veranstaltungen geben keine Links frei. Die globale Kalender-Einstellung
+**Tickets anzeigen** gilt auch für diese öffentliche Auswahlseite. Ein öffentlicher
+Standalone-Kalender muss dafür nicht zusätzlich aktiviert werden.
+Bei fehlender Verbindung wird eine verständliche Meldung mit „Erneut versuchen“
+gezeigt. Die Serveradresse muss vom Smartphone aus erreichbar sein.
 
 ## Automatische Restkarten: Ergebnis der Prüfung
 

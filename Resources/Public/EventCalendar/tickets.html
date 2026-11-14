@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Tickets auswählen · Kiosky</title>
+  <link rel="stylesheet" href="tickets.css?v=1">
+  <script defer src="tickets.js?v=1"></script>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Tickets</p>
+    <h1 id="event-title">Ticketanbieter auswählen</h1>
+    <p id="status" role="status" aria-live="polite">Ticketanbieter werden geladen …</p>
+    <nav id="providers" aria-label="Ticketanbieter" hidden></nav>
+    <button id="retry" type="button" hidden>Erneut versuchen</button>
+    <p class="hint">Die Buchung erfolgt direkt beim ausgewählten Anbieter.</p>
+  </main>
+</body>
+</html>

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/EventLifecycle.php';
 final class TicketLinks
 {
  public static function url(mixed $value):?string{
@@ -20,6 +21,10 @@ final class TicketLinks
   }return $links;
  }
  public static function links(array $event):array{$links=self::normalize($event['ticketLinks']??null,false);$url=self::url($event['ticketUrl']??null);return $links?:($url?[['label'=>'','url'=>$url]]:[]);}
+ public static function publicEvent(?array $event,bool $enabled=true):?array{
+  if(!$enabled||!$event||EventLifecycle::effective($event)!=='published')return null;
+  $links=self::links($event);preg_match('/^.{0,300}/us',(string)(($event['title']??'')?:'Veranstaltung'),$title);return $links?['title'=>$title[0]??'Veranstaltung','links'=>$links]:null;
+ }
  public static function apply(array $input,array $current=[]):array{
   if(array_key_exists('ticketLinks',$input)){$links=self::normalize($input['ticketLinks']);if(isset($current['ticketLinks'])&&$links===$current['ticketLinks']&&array_key_exists('ticketUrl',$input)&&($input['ticketUrl']??null)!==($links[0]['url']??null)){if(trim((string)($input['ticketUrl']??''))==='')array_shift($links);else{$url=self::url($input['ticketUrl']);if(!$url)throw new \RuntimeException('Der Ticket-Link muss eine gültige HTTP-/HTTPS-Adresse sein.',422);$links[0]=['label'=>$links[0]['label']??'','url'=>$url];}}if(!$links&&($url=self::url($input['ticketUrl']??null)))$links[]=['label'=>'','url'=>$url];return array_replace($input,['ticketLinks'=>$links,'ticketUrl'=>$links[0]['url']??null]);}
   if(empty($current['ticketLinks']))return $input;
