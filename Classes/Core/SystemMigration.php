@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Kiosky\Core;
 use RuntimeException;
+require_once __DIR__.'/TicketLinks.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/MediaUpload.php';
 
@@ -58,6 +59,7 @@ final class SystemMigration
         $nodes=0;$visit=static function(mixed $value,int $depth=0)use(&$visit,&$nodes):void{if(++$nodes>1000000||$depth>64)throw new RuntimeException('Das Umzugspaket ist zu komplex.',422);if(is_array($value))foreach($value as $key=>$entry){if(in_array($key,['__proto__','constructor','prototype'],true))throw new RuntimeException('Ungültiger Eigenschaftsname im Umzugspaket.',422);$visit($entry,$depth+1);}};$visit($payload);
         $state=$payload['state'];$ids=[];
         foreach([...self::COLLECTIONS,'users','apiUsers'] as $name){$records=$state[$name] ?? null;if(!is_array($records)||!array_is_list($records)||count($records)>10000)throw new RuntimeException('Ungültige Sammlung: '.$name,422);$ids[$name]=[];foreach($records as $record){$id=$record['id'] ?? null;if(!is_string($id)||$id===''||strlen($id)>200||preg_match('/[\x00-\x1f]/',$id)||isset($ids[$name][$id]))throw new RuntimeException('Ungültige oder doppelte Kennung: '.$name,422);$ids[$name][$id]=true;}}
+        foreach($state['events'] as $event)if(array_key_exists('ticketLinks',$event))TicketLinks::normalize($event['ticketLinks']);
         foreach([['slides','eventId','events'],['channels','eventId','events'],['eventSchedules','eventId','events'],['slideVersions','slideId','slides'],['displays','defaultSlideId','slides'],['displays','defaultChannelId','channels'],['displays','locationId','locations'],['matrices','defaultChannelId','channels'],['mediaAssets','folderId','mediaFolders'],['mediaFolders','parentId','mediaFolders'],['presetTriggers','presetId','presets']] as [$collection,$key,$target])foreach($state[$collection] as $row)if(!empty($row[$key])&&!isset($ids[$target][$row[$key]]))throw new RuntimeException('Fehlende Verknüpfung: '.$collection.'.'.$key,422);
         foreach($state['channels'] as $channel)foreach($channel['items'] ?? [] as $item)if(!empty($item['slideId'])&&!isset($ids['slides'][$item['slideId']]))throw new RuntimeException('Ein Kanal enthält eine fehlende Slide.',422);
         foreach($state['groups'] as $group)foreach($group['displayIds'] ?? [] as $id)if(!isset($ids['displays'][$id]))throw new RuntimeException('Eine Displaygruppe enthält ein fehlendes Display.',422);

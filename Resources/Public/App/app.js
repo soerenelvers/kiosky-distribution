@@ -1545,7 +1545,7 @@ function renderEvents() {
   const selected=state.selectedEvents.size,selectedImported=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.sourceId).length;document.querySelector('#bulk-edit-events').disabled=!selectedImported;document.querySelector('#bulk-edit-events').title=selected&&!selectedImported?'Massenänderungen gelten nur für importierte Veranstaltungen':'';document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
 }
 
-const eventEditorFieldLabels={title:'Titel (Pflichtfeld)',subtitle:'Untertitel',status:'Status',organizer:'Veranstalter / Kunde',eventType:'Veranstaltungs-/Jobtyp',date:'Datum',venue:'Spielort',room:'Raum / Saal',setupStart:'Aufbau / Veranstalter vor Ort',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',description:'Öffentliche Beschreibung',publicNotes:'Öffentliche Hinweise',internalNotes:'Interne Notizen',ticketUrl:'Ticket-Link',remainingTickets:'Ticketstatus / Restkarten',imageUrl:'Veranstaltungsbild / Mediathek',boxOfficeAvailable:'Abendkasse verfügbar',boxOfficeOpenAt:'Abendkasse öffnet',schedule:'Ablauf / Raumnutzung'};
+const eventEditorFieldLabels={title:'Titel (Pflichtfeld)',subtitle:'Untertitel',status:'Status',organizer:'Veranstalter / Kunde',eventType:'Veranstaltungs-/Jobtyp',date:'Datum',venue:'Spielort',room:'Raum / Saal',setupStart:'Aufbau / Veranstalter vor Ort',admissionStart:'Einlass',eventStart:'Beginn',breakStart:'Pause von',breakEnd:'Pause bis',eventEnd:'Ende',description:'Öffentliche Beschreibung',publicNotes:'Öffentliche Hinweise',internalNotes:'Interne Notizen',ticketUrl:'Ticket-Links / Anbieter',remainingTickets:'Ticketstatus / Restkarten',imageUrl:'Veranstaltungsbild / Mediathek',boxOfficeAvailable:'Abendkasse verfügbar',boxOfficeOpenAt:'Abendkasse öffnet',schedule:'Ablauf / Raumnutzung'};
 const eventEditorFieldIds={title:'event-title',subtitle:'event-subtitle',status:'event-status',organizer:'event-organizer',eventType:'event-type',date:'event-date',venue:'event-venue',room:'event-room',setupStart:'event-setup',admissionStart:'event-admission',eventStart:'event-start',breakStart:'event-break',breakEnd:'event-break-end',eventEnd:'event-end',description:'event-description',publicNotes:'event-public-notes',internalNotes:'event-internal-notes',ticketUrl:'event-ticket-url',remainingTickets:'event-remaining-tickets',imageUrl:'event-image-url',boxOfficeAvailable:'event-box-office',boxOfficeOpenAt:'event-box-office-open'};
 function applyEventEditorFields(){
   const fields=state.eventFieldSettings?.fields||{};
@@ -1625,7 +1625,7 @@ async function openEventEditor(item = null,options={}) {
   document.querySelector('#event-description').value = item?.description || '';
   document.querySelector('#event-public-notes').value = item?.publicNotes || '';
   document.querySelector('#event-internal-notes').value = item?.internalNotes || '';
-  document.querySelector('#event-ticket-url').value = item?.ticketUrl || '';
+  renderEventTicketLinks(item);
   document.querySelector('#event-remaining-tickets').value = item?.remainingTickets || '';
   document.querySelector('#event-image-url').value = item?.imageUrl || '';eventImageEdit=globalThis.KioskyEventImage?.normalize(item?.imageEdit)||null;
   renderEventImagePreview();
@@ -1717,10 +1717,34 @@ document.querySelector('#event-schedule-form').addEventListener('submit',async e
   await apiRequest(`/api/events/${encodeURIComponent(state.currentScheduleEventId)}/schedule${id?`/${encodeURIComponent(id)}`:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(payload)});document.querySelector('#event-schedule-dialog').close();await loadEventSchedule(state.currentScheduleEventId);showToast('Ablaufpunkt gespeichert.');}catch(error){showToast(error.message);}
 });
 
+function collectEventTicketLinks(){
+  const links=[{label:document.querySelector('#event-ticket-provider').value.trim(),url:document.querySelector('#event-ticket-url').value.trim()}];
+  document.querySelectorAll('#event-ticket-links .event-ticket-row').forEach(row=>links.push({label:row.querySelector('[data-event-ticket-label]').value.trim(),url:row.querySelector('[data-event-ticket-url]').value.trim()}));
+  return links.filter(link=>link.label||link.url);
+}
+function renderEventTicketLinks(event={}){
+  const links=Array.isArray(event?.ticketLinks)&&event.ticketLinks.length?event.ticketLinks:event?.ticketUrl?[{label:'',url:event.ticketUrl}]:[];
+  document.querySelector('#event-ticket-provider').value=links[0]?.label||'';document.querySelector('#event-ticket-url').value=links[0]?.url||'';
+  document.querySelector('#event-ticket-links').innerHTML=links.slice(1).map(link=>`<div class="event-ticket-row"><label>Anbieter<input data-event-ticket-label maxlength="80" value="${escapeHtml(link.label||'')}" placeholder="z. B. ADticket"></label><label>Ticket-Link<input data-event-ticket-url type="url" maxlength="2000" value="${escapeHtml(link.url||'')}" placeholder="https://…"></label><div class="event-ticket-actions"><button type="button" class="button button-secondary" data-event-ticket-primary>Als Hauptlink</button><button type="button" class="button button-secondary" data-event-ticket-remove aria-label="Ticket-Link entfernen">Entfernen</button></div></div>`).join('');
+  document.querySelector('#event-ticket-add').disabled=links.length>=10;
+}
+document.querySelector('#event-ticket-add').addEventListener('click',()=>{
+  const rows=[...document.querySelectorAll('#event-ticket-links .event-ticket-row')];
+  if(rows.length>=9){showToast('Höchstens 10 Ticket-Links pro Veranstaltung.');return;}
+  const links=[{label:document.querySelector('#event-ticket-provider').value,url:document.querySelector('#event-ticket-url').value},...rows.map(row=>({label:row.querySelector('[data-event-ticket-label]').value,url:row.querySelector('[data-event-ticket-url]').value})),{label:'',url:''}];
+  renderEventTicketLinks({ticketLinks:links});document.querySelector('#event-ticket-links .event-ticket-row:last-child input').focus();
+});
+document.querySelector('#event-ticket-links').addEventListener('click',event=>{
+  const button=event.target.closest('[data-event-ticket-remove],[data-event-ticket-primary]');if(!button)return;
+  const rows=[...document.querySelectorAll('#event-ticket-links .event-ticket-row')],row=button.closest('.event-ticket-row'),links=[{label:document.querySelector('#event-ticket-provider').value,url:document.querySelector('#event-ticket-url').value},...rows.map(item=>({label:item.querySelector('[data-event-ticket-label]').value,url:item.querySelector('[data-event-ticket-url]').value}))],index=rows.indexOf(row)+1;
+  if(button.hasAttribute('data-event-ticket-remove'))links.splice(index,1);else [links[0],links[index]]=[links[index],links[0]];
+  renderEventTicketLinks({ticketLinks:links});
+});
+
 function collectEventEditor() {
   if(!applyNewEventType())throw new Error('Bitte einen gültigen Veranstaltungs-/Jobtyp eingeben.');
   const date = document.querySelector('#event-date').value;
-  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventEditorTimestamp(date,document.querySelector('#event-setup').value,'setupStart'), admissionStart: eventEditorTimestamp(date,document.querySelector('#event-admission').value,'admissionStart'), eventStart: eventEditorTimestamp(date,document.querySelector('#event-start').value,'eventStart'), breakStart: eventEditorTimestamp(date,document.querySelector('#event-break').value,'breakStart'), breakEnd:eventEditorTimestamp(date,document.querySelector('#event-break-end').value,'breakEnd'), eventEnd: eventEditorTimestamp(date,document.querySelector('#event-end').value,'eventEnd'), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), imageEdit:eventImageEdit, boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventEditorTimestamp(date,document.querySelector('#event-box-office-open').value,'boxOfficeOpenAt') };
+  return { title: document.querySelector('#event-title').value.trim(), subtitle: document.querySelector('#event-subtitle').value.trim(), organizer:document.querySelector('#event-organizer').value.trim(),eventType:document.querySelector('#event-type').value.trim(), status: document.querySelector('#event-status').value, date: date ? date.replaceAll('-', '') : undefined, venue: document.querySelector('#event-venue').value.trim(), room: document.querySelector('#event-room').value.trim(), setupStart:eventEditorTimestamp(date,document.querySelector('#event-setup').value,'setupStart'), admissionStart: eventEditorTimestamp(date,document.querySelector('#event-admission').value,'admissionStart'), eventStart: eventEditorTimestamp(date,document.querySelector('#event-start').value,'eventStart'), breakStart: eventEditorTimestamp(date,document.querySelector('#event-break').value,'breakStart'), breakEnd:eventEditorTimestamp(date,document.querySelector('#event-break-end').value,'breakEnd'), eventEnd: eventEditorTimestamp(date,document.querySelector('#event-end').value,'eventEnd'), description: document.querySelector('#event-description').value.trim(), publicNotes: document.querySelector('#event-public-notes').value.trim(), internalNotes: document.querySelector('#event-internal-notes').value.trim(), ticketUrl: document.querySelector('#event-ticket-url').value.trim(), ticketLinks:collectEventTicketLinks(), remainingTickets: document.querySelector('#event-remaining-tickets').value.trim(), imageUrl: document.querySelector('#event-image-url').value.trim(), imageEdit:eventImageEdit, boxOfficeAvailable: document.querySelector('#event-box-office').checked, boxOfficeOpenAt: eventEditorTimestamp(date,document.querySelector('#event-box-office-open').value,'boxOfficeOpenAt') };
 }
 
 document.querySelector('#event-sort-column').addEventListener('change',event=>setEventListSort(event.target.value));
@@ -6460,6 +6484,9 @@ state.scheduleTargetSearch='';
 state.scheduleOnlineOnly=false;
 try { state.scheduleOnlineOnly=localStorage.getItem('kiosky.scheduleOnlineOnly')==='true'; } catch {}
 document.querySelector('#schedule-online-only').checked=state.scheduleOnlineOnly;
+try{const saved=JSON.parse(localStorage.getItem('kiosky.scheduleViewState'));if(saved&&/^\d{4}-\d{2}-\d{2}$/.test(saved.weekStart)&&dayKeys.includes(saved.day)&&['day','week'].includes(saved.view)){const date=new Date(saved.weekStart+'T12:00:00'),base=scheduleBaseWeekStart(),offset=(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())-Date.UTC(base.getFullYear(),base.getMonth(),base.getDate()))/(7*86400000);if(Number.isInteger(offset)&&Math.abs(offset)<520){state.weekOffset=offset;state.scheduleDay=saved.day;state.scheduleView=saved.view;}}}catch{}
+function rememberScheduleView(){try{localStorage.setItem('kiosky.scheduleViewState',JSON.stringify({weekStart:dateInputValue(scheduleWeekStart()),day:state.scheduleDay,view:state.scheduleView}));}catch{}}
+
 function scheduleWeekStart(){const date=new Date();const day=(date.getDay()+6)%7;date.setHours(0,0,0,0);date.setDate(date.getDate()-day+(state.weekOffset||0)*7);return date;}
 function scheduleDayDate(key){const date=scheduleWeekStart();date.setDate(date.getDate()+dayKeys.indexOf(key));return date;}
 function scheduleWeekRangeLabel(start) {
@@ -6468,7 +6495,7 @@ function scheduleWeekRangeLabel(start) {
   if(start.getMonth()!==end.getMonth())return`${start.toLocaleDateString('de-DE',{day:'numeric',month:'long'})}–${end.toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}`;
   return`${start.getDate()}.–${end.toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}`;
 }
-function updateWeekNavigation(){const start=scheduleWeekStart(),trigger=document.querySelector('#schedule-week-picker-trigger');trigger.querySelector('span').textContent=scheduleWeekRangeLabel(start);trigger.setAttribute('aria-label',`${scheduleWeekRangeLabel(start)}. Andere Woche auswählen`);document.querySelectorAll('[data-day]').forEach((button,index)=>{const date=new Date(start);date.setDate(date.getDate()+index);button.querySelector('strong').textContent=date.getDate();button.classList.toggle('is-active',button.dataset.day===state.scheduleDay);});const chosen=scheduleDayDate(state.scheduleDay);document.querySelector('.schedule-canvas-head h3').textContent=state.scheduleView==='week'?`Woche ${scheduleIsoWeekNumber(start)} · ${scheduleWeekRangeLabel(start)}`:chosen.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});if(document.querySelector('#schedule-week-picker')?.matches(':popover-open'))renderScheduleWeekPicker();}
+function updateWeekNavigation(){rememberScheduleView();const start=scheduleWeekStart(),trigger=document.querySelector('#schedule-week-picker-trigger');trigger.querySelector('span').textContent=scheduleWeekRangeLabel(start);trigger.setAttribute('aria-label',`${scheduleWeekRangeLabel(start)}. Andere Woche auswählen`);document.querySelectorAll('[data-day]').forEach((button,index)=>{const date=new Date(start);date.setDate(date.getDate()+index);button.querySelector('strong').textContent=date.getDate();button.classList.toggle('is-active',button.dataset.day===state.scheduleDay);});const chosen=scheduleDayDate(state.scheduleDay);document.querySelector('.schedule-canvas-head h3').textContent=state.scheduleView==='week'?`Woche ${scheduleIsoWeekNumber(start)} · ${scheduleWeekRangeLabel(start)}`:chosen.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});if(document.querySelector('#schedule-week-picker')?.matches(':popover-open'))renderScheduleWeekPicker();}
 
 let scheduleCalendarCursor=null;
 function scheduleLocalDayNumber(date){return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())/86400000;}
@@ -6514,7 +6541,7 @@ function positionScheduleWeekPicker(){
   const preferredTop=rect.bottom+gap,top=preferredTop+picker.offsetHeight<=window.innerHeight-12?preferredTop:Math.max(12,rect.top-picker.offsetHeight-gap);
   picker.style.left=`${left}px`;picker.style.top=`${top}px`;
 }
-async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);state.scheduleEntries=result.data||[];state.scheduleTargetOrder=order.data||[];renderScheduleContents();updateWeekNavigation();renderSchedule();await loadPresetTriggers();if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
+async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);if(!Array.isArray(result.data)||!Array.isArray(order.data))throw new Error('Zeitplan konnte nicht vollständig geladen werden. Bestehende Einträge bleiben erhalten.');state.scheduleEntries=result.data;state.scheduleTargetOrder=order.data;syncScheduleView();renderScheduleContents();updateWeekNavigation();renderSchedule();await loadPresetTriggers();if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
 function renderScheduleContents(){const list=document.querySelector('#schedule-content-list'),query=document.querySelector('#schedule-content-search').value.trim().toLowerCase(),showChannels=document.querySelector('#schedule-show-channels').checked,showSlides=document.querySelector('#schedule-show-slides').checked;const channels=showChannels?state.channels.filter(item=>!query||`${item.name} ${item.description||''}`.toLowerCase().includes(query)).map(channel=>`<button draggable="true" data-schedule-content="channel:${escapeHtml(channel.id)}" data-content-type="${channel.eventId?'event':'default'}"><i class="content-swatch ${channel.eventId?'coral':'blue'}"></i><span><strong>${escapeHtml(channel.name)}</strong><small>${channel.eventId?'Eventkanal':'Kanal'} · ${channel.items.length} Slides</small></span><b>⠿</b></button>`):[];const slides=showSlides?state.slides.filter(item=>!query||`${item.title} ${item.meta}`.toLowerCase().includes(query)).map(slide=>`<button draggable="true" data-schedule-content="slide:${escapeHtml(slide.id)}" data-content-type="slide"><i class="content-swatch green"></i><span><strong>${escapeHtml(slide.title)}</strong><small>Einzelne Slide · ${escapeHtml(slideTypeLabels[slide.type]||slide.type)}</small></span><b>⠿</b></button>`):[];list.innerHTML=[...channels,...slides].join('')||'<p class="property-note">Keine passenden Kanäle oder Slides gefunden.</p>';list.querySelectorAll('[data-schedule-content]').forEach(button=>{button.classList.toggle('is-selected',button.dataset.scheduleContent===state.selectedScheduleContent);button.addEventListener('click',()=>{state.selectedScheduleContent=button.dataset.scheduleContent;renderScheduleContents();document.querySelector('#schedule-drag-hint').textContent=`„${button.querySelector('strong').textContent}“ gewählt – jetzt ${state.scheduleView==='week'?'einen Tag':'eine Uhrzeit'} anklicken.`;});button.addEventListener('dragstart',event=>{state.selectedScheduleContent=button.dataset.scheduleContent;event.dataTransfer.setData('application/x-kiosky-schedule',button.dataset.scheduleContent);button.classList.add('dragging');});button.addEventListener('dragend',()=>button.classList.remove('dragging'));});}
 ['schedule-show-channels','schedule-show-slides'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',renderScheduleContents));document.querySelector('#schedule-content-search').addEventListener('input',renderScheduleContents);
 
@@ -6739,6 +6766,7 @@ async function deleteScheduleBlock(block,ask=false) {
 
 function openScheduleEntryDialog(block) {
   const catalog=scheduleTargetCatalog(),targets=new Set(block.entries.map(scheduleTargetValue).filter(Boolean));
+  for(const id of targets)if(!catalog[id])catalog[id]={label:'Bestehendes, derzeit nicht verfügbares Ziel',kind:'Zum Entfernen ausdrücklich abwählen',count:0};
   document.querySelector('#schedule-entry-ids').value=block.entries.map(entry=>entry.id).join(',');
   document.querySelector('#schedule-entry-title').textContent=block.contentName||block.channelName;
   document.querySelector('#schedule-entry-content').value=block.contentName||block.channelName;
@@ -6747,11 +6775,12 @@ function openScheduleEntryDialog(block) {
   document.querySelector('#schedule-entry-start-time').value=timeInputValue(start);
   document.querySelector('#schedule-entry-end-date').value=dateInputValue(end);
   document.querySelector('#schedule-entry-end-time').value=timeInputValue(end);
+  state.scheduleEntryOpeningTimes={startDate:document.querySelector('#schedule-entry-start-date').value,startTime:document.querySelector('#schedule-entry-start-time').value,endDate:document.querySelector('#schedule-entry-end-date').value,endTime:document.querySelector('#schedule-entry-end-time').value,startsAt:block.startsAt,endsAt:block.endsAt};
   document.querySelector('#schedule-entry-priority').value=block.priority;
   document.querySelector('#schedule-entry-recurrence').value=block.recurrence;
-  document.querySelector('#schedule-entry-targets').innerHTML=orderedScheduleTargets().map(id=>{const target=catalog[id];return`<label><input type="checkbox" value="${escapeHtml(id)}" ${targets.has(id)?'checked':''}><span><strong>${escapeHtml(target.label)}</strong><small>${escapeHtml(target.kind)} · ${target.count} Display${target.count===1?'':'s'}</small></span></label>`;}).join('')||'<p class="property-note">Noch keine Displays oder Gruppen vorhanden.</p>';
+  document.querySelector('#schedule-entry-targets').innerHTML=[...new Set([...orderedScheduleTargets(),...targets])].map(id=>{const target=catalog[id];return`<label><input type="checkbox" value="${escapeHtml(id)}" ${targets.has(id)?'checked':''}><span><strong>${escapeHtml(target.label)}</strong><small>${escapeHtml(target.kind)} · ${target.count} Display${target.count===1?'':'s'}</small></span></label>`;}).join('')||'<p class="property-note">Noch keine Displays oder Gruppen vorhanden.</p>';
   setScheduleSaveStatus('saved');
-  state.scheduleEntrySnapshot=scheduleEntryFormSnapshot();state.scheduleEntryOriginals=structuredClone(block.entries);
+  state.scheduleEntrySnapshot=scheduleEntryFormSnapshot();state.scheduleEntryOriginals=structuredClone(block.entries);state.scheduleEntryRemovedTargets=new Set();
   document.querySelector('#schedule-entry-dialog').showModal();
 }
 
@@ -6916,9 +6945,10 @@ async function persistScheduleEntryDialog() {
   const targets=[...document.querySelectorAll('#schedule-entry-targets input:checked')].map(input=>input.value);
   if(!targets.length){setScheduleSaveStatus('error');showToast('Ein Zeitplaneintrag benötigt mindestens ein Ziel.');return false;}
   const priority=document.querySelector('#schedule-entry-priority').value,recurrence=document.querySelector('#schedule-entry-recurrence').value;
+  const original=state.scheduleEntryOpeningTimes||{},startsAt=original.startDate===document.querySelector('#schedule-entry-start-date').value&&original.startTime===document.querySelector('#schedule-entry-start-time').value?original.startsAt:start.toISOString(),endsAt=original.endDate===document.querySelector('#schedule-entry-end-date').value&&original.endTime===document.querySelector('#schedule-entry-end-time').value?original.endsAt:end.toISOString();
   setScheduleSaveStatus('saving');
   try {
-    const result=await apiRequest('/api/schedules/block',{method:'PUT',body:JSON.stringify({entries:state.scheduleEntryOriginals,targets:targets.map(scheduleTargetPayload),changes:{startsAt:start.toISOString(),endsAt:end.toISOString(),priority,recurrence}})});
+    const result=await apiRequest('/api/schedules/block',{method:'PUT',body:JSON.stringify({entries:state.scheduleEntryOriginals,removedIds:state.scheduleEntryOriginals.filter(entry=>state.scheduleEntryRemovedTargets?.has(scheduleTargetValue(entry))&&!targets.includes(scheduleTargetValue(entry))).map(entry=>entry.id),targets:targets.map(scheduleTargetPayload),changes:{startsAt,endsAt,priority,recurrence}})});
     state.scheduleEntries=state.scheduleEntries.filter(entry=>!ids.includes(entry.id)).concat(result.entries);
     document.querySelector('#schedule-entry-ids').value=result.entries.map(entry=>entry.id).join(',');
     state.scheduleEntryOriginals=structuredClone(result.entries);
@@ -6948,6 +6978,8 @@ document.querySelector('#schedule-entry-form').addEventListener('submit',event=>
 document.querySelector('#schedule-entry-targets').addEventListener('change',event=>{
   if(!event.target.matches('input[type="checkbox"]'))return;
   if(!document.querySelectorAll('#schedule-entry-targets input:checked').length){event.target.checked=true;showToast('Mindestens ein Ziel muss ausgewählt bleiben.');return;}
+  if(!state.scheduleEntryRemovedTargets)state.scheduleEntryRemovedTargets=new Set();
+  event.target.checked?state.scheduleEntryRemovedTargets.delete(event.target.value):state.scheduleEntryRemovedTargets.add(event.target.value);
   markScheduleEntryDraft();
 });
 document.querySelector('#schedule-entry-dialog').addEventListener('cancel',event=>{

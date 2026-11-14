@@ -8,6 +8,7 @@ use RuntimeException;
 use Throwable;
 
 require_once __DIR__.'/LicenseClient.php';
+require_once __DIR__.'/TicketLinks.php';
 require_once __DIR__.'/SlideEventSelection.php';
 require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
@@ -461,6 +462,7 @@ final class Api
                     )));
                     $body['lockedFields'] = $locked;
                 }
+                if(array_key_exists('ticketLinks',$body)&&!empty($current['sourceId'])){$body['lockedFields']=array_values(array_unique([...($body['lockedFields']??$current['lockedFields']??[]),'ticketUrl','ticketLinks']));$body['syncStatus']='manually_modified';}
                 return $this->ok(['event' => $this->saveRecord($state, 'events', $body, $id)], true);
             }
             if ($method === 'DELETE') {if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Löschen ist Administratoren vorbehalten.',403);$this->purgeEvent($state,$id);return $this->ok(['ok'=>true],true);}
@@ -1253,7 +1255,7 @@ final class Api
 
     private function eventEditorBody(array $body):array
     {
-        return array_intersect_key($body,array_flip(['title','subtitle','description','organizer','eventType','date','setupStart','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room','status','publicNotes','internalNotes','imageUrl','imageEdit','ticketUrl','remainingTickets','boxOfficeAvailable','boxOfficeOpenAt']));
+        return array_intersect_key($body,array_flip(['title','subtitle','description','organizer','eventType','date','setupStart','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room','status','publicNotes','internalNotes','imageUrl','imageEdit','ticketUrl','ticketLinks','remainingTickets','boxOfficeAvailable','boxOfficeOpenAt']));
     }
 
     /**
@@ -2491,6 +2493,7 @@ final class Api
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
         if($collection==='events'){
+            $body=TicketLinks::apply($body,$current);
             if($current&&EventLifecycle::effective($current)==='removed')throw new RuntimeException('Veranstaltung wurde gelöscht, weitere Daten sind nicht mehr verfügbar.',409);
             $status=$current?EventLifecycle::status($body['status'] ?? $current['status'] ?? 'draft'):'draft';
             if($status==='removed'){if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Löschen ist Administratoren vorbehalten.',403);$this->purgeEvent($state,(string)$id);return $this->required($state['events'],(string)$id,'Veranstaltung');}

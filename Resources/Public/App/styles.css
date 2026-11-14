@@ -1900,3 +1900,10 @@ body[data-license-missing~="media"] :is(#event-image-select,#event-bulk-image-se
 
 .toolbar:has(.event-status-filter){align-items:flex-start;}
 @media(max-width:900px){.toolbar:has(.event-status-filter){align-items:stretch;}}
+
+.event-ticket-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;padding:10px 0;}
+.event-ticket-row label{display:grid;gap:6px;min-width:0;}
+.event-ticket-row input{min-width:0;width:100%;}
+.event-ticket-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;}
+.event-ticket-fields>.button,.event-ticket-actions .button{min-height:44px;}
+@media(max-width:600px){.event-ticket-row{grid-template-columns:minmax(0,1fr);}}

@@ -139,3 +139,7 @@
 
 /* Separate surface/text pairs keep custom light and dark combinations readable. */
 .kiosky-event-calendar :is(.kiosky-calendar__event,.kiosky-calendar__upcoming,.kiosky-calendar__dialog,.kiosky-calendar__week-scroll) { --kiosky-text:var(--kiosky-card-text,#0f172a); --kiosky-muted:var(--kiosky-card-muted,#475569); color:var(--kiosky-text); }
+
+.kiosky-calendar__detail-actions{display:flex;flex-wrap:wrap;gap:10px;}
+
+.kiosky-calendar__ticket{max-width:100%;overflow-wrap:anywhere;white-space:normal;}

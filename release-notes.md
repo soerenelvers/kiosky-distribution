@@ -1,5 +1,5 @@
-## [3.40.5]
+## [3.40.6]
 
-- In der Programmverwaltung lassen sich ausgewählte manuelle und importierte Entwürfe gemeinsam veröffentlichen, ohne jede Veranstaltung erneut zu öffnen. Andere Status und sämtliche Veranstaltungsdaten bleiben erhalten.
-- Der Statusfilter erlaubt Mehrfachauswahl. Standardmäßig werden Entwürfe, veröffentlichte und abgesagte Veranstaltungen gezeigt; Archiv und gelöschte Datensätze bleiben ausgeblendet. Die Auswahl wird im Browser gespeichert.
-- Touchgeeignete Filter, sichtbare Auswahlhinweise, Fehlerwiederholung und unveränderte Bearbeitungsrechte sind für Standalone, WordPress und TYPO3 geprüft.
+- Veranstaltungen unterstützen bis zu zehn benannte Ticketanbieter mit Plus-Schaltfläche, Entfernen und Auswahl des Hauptlinks. Kalender und Detailfenster zeigen alle freigegebenen Ticketanbieter; bestehende QR-Codes verwenden weiterhin den Hauptlink. Kopien, Vorlagen und Umzüge erhalten die Links.
+- Zeitplanwoche und Ansicht bleiben nach Neuladen erhalten. Gemeinsame Zuweisungen benötigen zum Entfernen ausdrückliche Kennungen; unvollständige Zielkataloge und doppelte Altzuweisungen führen nicht mehr zu stillschweigender Löschung.
+- Zusätzliche Regressionen prüfen den Erhalt fester und wiederkehrender Zuweisungen über Datenbankmigration, Neustart und WordPress-Update. Die Recherche zu öffentlichen Ticketbeständen ist in docs/ticket-links-and-availability.md dokumentiert. Ein automatischer Restkartenabruf ist nicht Bestandteil dieses Updates.

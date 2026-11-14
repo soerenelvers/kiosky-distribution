@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "dffcbdfda2abdb9f8986d9083c4751007973bd6a",
+  "source_commit": "09042e3d7ba86f235b70c599b3f6c022c9039c08",
   "product": "kiosky",
-  "version": "3.40.5",
-  "released_at": "2026-11-14T17:10:51.093Z",
+  "version": "3.40.6",
+  "released_at": "2026-11-14T19:05:18.749Z",
   "channel": "stable",
-  "release_notes": "## [3.40.5]\n\n- In der Programmverwaltung lassen sich ausgewählte manuelle und importierte Entwürfe gemeinsam veröffentlichen, ohne jede Veranstaltung erneut zu öffnen. Andere Status und sämtliche Veranstaltungsdaten bleiben erhalten.\n- Der Statusfilter erlaubt Mehrfachauswahl. Standardmäßig werden Entwürfe, veröffentlichte und abgesagte Veranstaltungen gezeigt; Archiv und gelöschte Datensätze bleiben ausgeblendet. Die Auswahl wird im Browser gespeichert.\n- Touchgeeignete Filter, sichtbare Auswahlhinweise, Fehlerwiederholung und unveränderte Bearbeitungsrechte sind für Standalone, WordPress und TYPO3 geprüft.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.5",
+  "release_notes": "## [3.40.6]\n\n- Veranstaltungen unterstützen bis zu zehn benannte Ticketanbieter mit Plus-Schaltfläche, Entfernen und Auswahl des Hauptlinks. Kalender und Detailfenster zeigen alle freigegebenen Ticketanbieter; bestehende QR-Codes verwenden weiterhin den Hauptlink. Kopien, Vorlagen und Umzüge erhalten die Links.\n- Zeitplanwoche und Ansicht bleiben nach Neuladen erhalten. Gemeinsame Zuweisungen benötigen zum Entfernen ausdrückliche Kennungen; unvollständige Zielkataloge und doppelte Altzuweisungen führen nicht mehr zu stillschweigender Löschung.\n- Zusätzliche Regressionen prüfen den Erhalt fester und wiederkehrender Zuweisungen über Datenbankmigration, Neustart und WordPress-Update. Die Recherche zu öffentlichen Ticketbeständen ist in docs/ticket-links-and-availability.md dokumentiert. Ein automatischer Restkartenabruf ist nicht Bestandteil dieses Updates.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.40.6",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.40.5",
+    "core_version": "3.40.6",
     "api_version": "1",
-    "wordpress_plugin_version": "3.40.5",
-    "typo3_extension_version": "3.40.5"
+    "wordpress_plugin_version": "3.40.6",
+    "typo3_extension_version": "3.40.6"
   },
   "components": {
     "core": {
-      "version": "3.40.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.5.zip?ref=v3.40.5",
-      "sha256": "0deb7ce60bc012f84c528d78796f8b7a23978921eac5ba577f06fac12da96bfa"
+      "version": "3.40.6",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.6.zip?ref=v3.40.6",
+      "sha256": "2d4615ad0b3299c1015c21da634b520a6269a2a129e5bbe4709b8face2f5994a"
     },
     "standalone": {
-      "version": "3.40.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.5.zip?ref=v3.40.5",
-      "sha256": "0deb7ce60bc012f84c528d78796f8b7a23978921eac5ba577f06fac12da96bfa"
+      "version": "3.40.6",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.40.6.zip?ref=v3.40.6",
+      "sha256": "2d4615ad0b3299c1015c21da634b520a6269a2a129e5bbe4709b8face2f5994a"
     },
     "wordpress": {
-      "version": "3.40.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.5.zip?ref=v3.40.5",
-      "sha256": "954abf5d6466d3ce6f5dddfc7f8835d976c040b96fab36802c232ca005b8b191",
+      "version": "3.40.6",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.40.6.zip?ref=v3.40.6",
+      "sha256": "0664f18c8b32efc8c0f0542b9e767171d6f970189c42493a0d7280b0beb4fa4b",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.40.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.5.zip?ref=v3.40.5",
-      "sha256": "7f27d291e0e9e5dbad511e3dc8f1f99e36ea462af957e3d0ea8a07102a414b9a",
+      "version": "3.40.6",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.40.6.zip?ref=v3.40.6",
+      "sha256": "8d00c3d058299a54f1cf44ced40200fcb518b4322e32a9a195c190975b098b88",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

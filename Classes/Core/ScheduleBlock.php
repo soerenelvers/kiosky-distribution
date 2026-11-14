@@ -22,6 +22,7 @@ final class ScheduleBlock
     }
     public static function plan(array $body, array $current, array $available): array
     {
+        if(isset($body['removedIds'])&&(!is_array($body['removedIds'])||!array_is_list($body['removedIds'])||count($body['removedIds'])>1000||array_filter($body['removedIds'],static fn(mixed $id):bool=>!is_string($id))))throw new \RuntimeException('Ungültige ausdrücklich entfernte Zeitzuweisungen.',422);
         $expected=$body['entries']??null; $targets=$body['targets']??null;
         if (!is_array($expected)||!array_is_list($expected)||!count($expected)||count($expected)>1000||!is_array($targets)||!array_is_list($targets)||!count($targets)||count($targets)>1000) throw new \RuntimeException('Bitte einen Zeitplaneintrag und 1 bis 1000 Ziele auswählen.',422);
         $ids=[];$entries=[];$byId=array_column($current,null,'id');
@@ -42,13 +43,22 @@ final class ScheduleBlock
             $type=is_array($target)?($target['targetType']??''):'';$id=is_array($target)?($target['targetId']??null):null;
             if(!in_array($type,['display','group','matrix'],true)||!is_string($id)||$id===''||!in_array($id,$available[$type]??[],true))throw new \RuntimeException('Ein ausgewähltes Ziel ist nicht mehr verfügbar.',422);
             $key=$type.':'.$id;if(isset($keys[$key]))throw new \RuntimeException('Ein Ziel darf nur einmal ausgewählt werden.',422);$keys[$key]=true;
-            $previous=null;foreach($entries as $item)if(($item['targetType']??'')===$type&&($item['targetId']??'')===$id){$previous=$item;break;}
+            $previous=null;foreach($entries as $item)if(($item['targetType']??'')===$type&&($item['targetId']??'')===$id&&!in_array($item['id'],$body['removedIds']??[],true)){$previous=$item;break;}
             if($previous)$used[$previous['id']]=true;
             $n=self::signature($previous??$base);
             $input=array_replace($previous??$base,array_intersect_key($changes,array_flip(['startsAt','endsAt','priority','recurrence'])),['targetType'=>$type,'targetId'=>$id,'contentType'=>$n['contentType'],'contentId'=>$n['contentId'],'channelId'=>$n['contentType']==='channel'?$n['contentId']:null,'slideId'=>$n['contentType']==='slide'?$n['contentId']:null,'status'=>'published','active'=>true]);
             if(!$previous)unset($input['id'],$input['createdAt'],$input['updatedAt']);
             $saves[]=['id'=>$previous['id']??null,'input'=>$input];
         }
-        return ['saves'=>$saves,'removeIds'=>array_values(array_filter(array_map('strval',array_keys($ids)),static fn(string $id):bool=>!isset($used[$id])))];
+        foreach($entries as $entry){
+            if(isset($used[$entry['id']])||in_array($entry['id'],$body['removedIds']??[],true))continue;
+            if(!isset($keys[($entry['targetType']??'').':'.($entry['targetId']??'')]))continue;
+            $n=self::signature($entry);$used[$entry['id']]=true;
+            $input=array_replace($entry,array_intersect_key($changes,array_flip(['startsAt','endsAt','priority','recurrence'])),['contentType'=>$n['contentType'],'contentId'=>$n['contentId'],'channelId'=>$n['contentType']==='channel'?$n['contentId']:null,'slideId'=>$n['contentType']==='slide'?$n['contentId']:null,'status'=>'published','active'=>true]);
+            $saves[]=['id'=>$entry['id'],'input'=>$input];
+        }
+        $removeIds=array_values(array_filter(array_map('strval',array_keys($ids)),static fn(string $id):bool=>!isset($used[$id])));
+        if($removeIds&&(!is_array($body['removedIds']??null)||count($body['removedIds'])!==count($removeIds)||array_diff($removeIds,$body['removedIds'])))throw new \RuntimeException('Zuweisungen werden nur nach ausdrücklichem Entfernen gespeichert. Bitte den Eintrag neu öffnen und die betreffenden Ziele abwählen.',409);
+        return ['saves'=>$saves,'removeIds'=>$removeIds];
     }
 }
