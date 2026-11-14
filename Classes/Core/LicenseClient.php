@@ -40,6 +40,8 @@ final class LicenseClient
     }
     public function allows(array $state,string ...$modules): bool{return !array_diff($modules,$this->grants($state));}
     public static function required(string $path): array {
+        if(preg_match('#^/api/history/(slide|channel|event|schedule)(?:/|$)#',$path,$h))return [match($h[1]){'slide','channel'=>'channels','event'=>'events','schedule'=>'schedule'}];
+        if(str_starts_with($path,'/api/reports/'))return ['advertising'];
         if(preg_match('#^/api/(auth|health|settings/licensing|settings/features|users|audit-logs|content-transfer)(/|$)#',$path)||str_starts_with($path,'/api/player/'))return [];
         if($path==='/api/v1'||str_starts_with($path,'/api/v1/'))return array_merge(['api'],self::required(preg_replace('#^/api/v1#','/api',$path)));
         foreach(['easyjob','crewbrain'] as $p)if(preg_match('#/'.$p.'(/|$)#',$path))return ['integrations',$p];

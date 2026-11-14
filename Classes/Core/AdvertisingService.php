@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 require_once __DIR__.'/EventLifecycle.php';
 
 use RuntimeException;
@@ -104,7 +105,7 @@ final class AdvertisingService
             $state['advertisingSettings']=$settings;
         }
         // Keep legacy rows for existing references. New event advertising is never stored as slides.
-        foreach ($state['slides'] as &$slide) if (empty($slide['deletedAt']) && self::formats($slide) && empty($slide['endsAt'])) $slide['endsAt'] = gmdate('c',max(time(),strtotime((string)($slide['startsAt'] ?? '')) ?: 0)+7*86400);
+        foreach ($state['slides'] as &$slide) if (empty($slide['deletedAt']) && self::formats($slide) && empty($slide['endsAt'])) $slide['endsAt'] = gmdate('c',max(QualityClock::now(),strtotime((string)($slide['startsAt'] ?? '')) ?: 0)+7*86400);
         unset($slide);
         foreach (['landscape','portrait'] as $orientation) {
             $key=$orientation==='landscape'?'advertising:channel':'advertising:channel:portrait';$channel=null;
@@ -115,17 +116,17 @@ final class AdvertisingService
                 if(!$channel)$saveChannel($body,null);else{$body['items']=$items;$body['status']=$channel['status'];$body['description']=$channel['description'] ?? $body['description'];$body['tags']=$channel['tags'] ?? $body['tags'];$body['defaultTransition']=$channel['defaultTransition'];$body['repeatEnabled']=$channel['repeatEnabled'];$state['channels'][$channelIndex]=array_replace($channel,$body);}
             }elseif($channel)$state['channels'][$channelIndex]['status']='paused';
         }
-        $state['advertisingLastSynchronizedAt'] = gmdate('c');
+        $state['advertisingLastSynchronizedAt'] = gmdate('c',QualityClock::now());
         return self::status($state);
     }
 
     public static function playlist(array $state,string $orientation): array
     {
         $settings=self::settings($state);if(!$settings['enabled'])return [];
-        $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=time())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>time())));
+        $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now())));
         usort($manual,static fn(array $a,array $b):int=>[$a['endsAt'] ?? '',$a['id']]<=>[$b['endsAt'] ?? '',$b['id']]);
         $events=self::virtualSlides($state,$orientation);$byId=array_column(array_merge($manual,$events),null,'id');
-        $active=static fn(array $s):bool=>empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=time())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>time());
+        $active=static fn(array $s):bool=>empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now());
         $selected=[];$seen=[];
         foreach($settings['channelSequences'][$orientation] ?? [] as $item){
             $slide=$byId[$item['slideId']] ?? (!str_starts_with($item['slideId'],'advertising-event:')?self::find($state['slides'],$item['slideId']):null);
@@ -189,7 +190,7 @@ final class AdvertisingService
     /** One lazy, bounded selection per playback request, reused by every overview on it. */
     public static function overviewProjector(array $events,?int $now=null):callable
     {
-        $now??=time();$selected=null;
+        $now??=QualityClock::now();$selected=null;
         $select=static function()use($events,$now):array{
             $today=(new \DateTimeImmutable('@'.$now))->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('Ymd');$rows=[];
             foreach($events as $event){
@@ -252,11 +253,11 @@ final class AdvertisingService
     private static function eligible(array $state,array $settings): array
     {
         $types = array_flip(array_map([self::class,'normalizeType'],$settings['eventTypes']));
-        $today = (new \DateTimeImmutable('now',new \DateTimeZone('Europe/Berlin')))->format('Ymd');
+        $today = (new \DateTimeImmutable('@'.QualityClock::now()))->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('Ymd');
         $events = array_values(array_filter($state['events'],static function(array $event) use ($types,$today): bool {
             if (!EventLifecycle::visible($event) || (!empty($event['sourceId'])&&!isset($types[self::normalizeType((string)($event['eventType'] ?? ''))]))) return false;
             $date=self::overviewDay($event['date'] ?? '');$boundary=self::overviewInstant($event['eventEnd'] ?? '',$date) ?? self::overviewInstant($event['eventStart'] ?? '',$date);
-            return $boundary !== null ? $boundary >= time() : $date >= $today;
+            return $boundary !== null ? $boundary >= QualityClock::now() : $date >= $today;
         }));
         usort($events,static fn(array $a,array $b): int => [($a['eventStart'] ?? $a['date'] ?? ''),$a['title']] <=> [($b['eventStart'] ?? $b['date'] ?? ''),$b['title']]);
         return $events;

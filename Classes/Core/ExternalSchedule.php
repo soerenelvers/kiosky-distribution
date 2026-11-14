@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -56,7 +57,7 @@ final class ExternalSchedule
         if (!is_array($weekdays) || !array_is_list($weekdays) || count(array_unique($weekdays,SORT_REGULAR)) !== count($weekdays)) self::fail('Ungültige Wochentage.');
         foreach ($weekdays as $day) if (!is_int($day) || $day < 0 || $day > 6) self::fail('Wochentage müssen zwischen 0 und 6 liegen.');
         if (($timing['mode'] ?? '') === 'time') {
-            $date = ($timing['date'] ?? '') !== '' ? self::text($timing['date']) : gmdate('Y-m-d',self::wall($now ?? time(),$zone));
+            $date = ($timing['date'] ?? '') !== '' ? self::text($timing['date']) : gmdate('Y-m-d',self::wall($now ?? QualityClock::now(),$zone));
             if (!preg_match('/^\d{4}-\d\d-\d\d$/D',$date)) self::fail('date muss YYYY-MM-DD sein.');
             $clock = static function(mixed $v): string { $s=self::text($v); if(!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/D',$s))self::fail('Ungültige Uhrzeit.');return strlen($s)===5?$s.':00':$s; };
             $a=$clock($timing['startTime'] ?? null);$b=$clock($timing['endTime'] ?? null);

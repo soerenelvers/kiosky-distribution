@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 final class EventLifecycle
 {
     public static function status(mixed $value):string
@@ -12,7 +13,7 @@ final class EventLifecycle
     }
     public static function ended(array $event,?int $now=null):bool
     {
-        $now??=time();$zone=new \DateTimeZone('Europe/Berlin');$end=trim((string)($event['eventEnd'] ?? ''));
+        $now??=QualityClock::now();$zone=new \DateTimeZone('Europe/Berlin');$end=trim((string)($event['eventEnd'] ?? ''));
         if($end!=='' && preg_match('/^\d{4}-\d\d-\d\dT/',$end))try{if((new \DateTimeImmutable($end,$zone))->getTimestamp()<=$now)return true;else return false;}catch(\Throwable){}
         $date=preg_replace('/\D/','',(string)($event['date'] ?? $event['eventStart'] ?? ''));$date=substr($date,0,8);
         $day=\DateTimeImmutable::createFromFormat('!Ymd',$date,$zone);if(!$day||$day->format('Ymd')!==$date)return false;

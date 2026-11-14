@@ -1,5 +1,7 @@
-## [3.40.7]
+## [3.41.0]
 
-- Ticket-QR-Codes öffnen bei mehreren Anbietern automatisch eine mobile Auswahlseite, bei einem Anbieter weiterhin direkt den Ticketshop. Eventdaten, Event-Tabellen und Veranstaltungsübersichten verwenden dieselbe Logik.
-- Die Auswahl lädt aktuelle Anbieter ohne Anmeldung; Entwürfe, abgesagte, archivierte und gelöschte Veranstaltungen sowie ausgeblendete Tickets bleiben gesperrt. QR-Codes enthalten keine Player-Schlüssel oder CMS-Zugangsdaten.
-- Regressionen prüfen anonyme CMS-Routen, Unterverzeichnisse, direkte Einzellinks, Änderungen der Anbieter und mobile Auswahlseiten.
+- Änderungsverlauf für Slides, Kanäle, Veranstaltungen und Zeitzuweisungen mit Personenangabe, geänderten Feldern und konfliktgeschützter Wiederherstellung. Bestehende Daten und Zeitzuweisungen bleiben erhalten.
+- Zeitplansimulation für ein Display zu Datum und Uhrzeit mit Vorschau, Auswahlgrund und bis zu 24 Stunden Zeitleiste. Die Simulation berücksichtigt Prioritäten und Preset-Termine, ohne den laufenden Betrieb zu verändern.
+- Player melden bestätigte sichtbare Werbeintervalle. Ausspielnachweise lassen sich nach Zeitraum und Display auswerten und als CSV exportieren; Vorschauen zählen nicht.
+- Veröffentlichungsprüfung im Slide-Editor für fehlende Medien, ungültige Quellen, kleine Texte und QR-Codes sowie mögliche Überläufe in beiden Layouts. Mobile Dialoge und native CMS-Rechte werden berücksichtigt.
+- Bedienung, Grenzen, Aufbewahrung und Prüfverfahren: docs/operations-quality.md.

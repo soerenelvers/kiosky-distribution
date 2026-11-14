@@ -26,6 +26,7 @@ final readonly class ApiFactory
     public function create(array $identity, bool $external = false): Api
     {
         $secret = (string)($GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] ?? '');
+        if(!$external){$permission=new \Kiosky\Kiosky\Security\PermissionService();$identity['qualityPermissions']=[];foreach(['history:slide'=>['GET','/api/history/slide'],'history:channel'=>['GET','/api/history/channel'],'history:event'=>['GET','/api/history/event'],'history:schedule'=>['GET','/api/history/schedule'],'simulation'=>['POST','/api/displays/preview/simulate'],'report'=>['GET','/api/reports/advertising'],'check'=>['POST','/api/slides/publication-check']] as $key=>[$method,$path])$identity['qualityPermissions'][$key]=$permission->isApiGranted($method,$path);}
         $crypto = new Crypto($secret);
         $backendUsers = $external ? [] : $this->connectionPool->getConnectionForTable('be_users')->fetchAllAssociative(
             'SELECT uid, username, realName, email, admin, disable, tx_kiosky_role FROM be_users WHERE deleted = 0 ORDER BY username'
@@ -49,14 +50,16 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.40.7',
+            '3.41.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
             $portableUsers,
             'typo3',
             null,
-            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.40.7'),
+            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.41.0'),
+            proofStore: new \Kiosky\Kiosky\Persistence\Typo3ProofStore($this->connectionPool),
+            proofSecret: $secret,
             fontStorage: new \Kiosky\Core\FontStorage($this->fontDirectory()),
             canReadFonts: !$external && ($identity['id']??'')==='typo3:'.($GLOBALS['BE_USER']->user['uid']??'') && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::VIEW),
             canManageFonts: !$external && ($identity['role']??'viewer')==='admin' && (new \Kiosky\Kiosky\Security\PermissionService())->isGranted(\Kiosky\Kiosky\Security\PermissionService::MANAGE_SETTINGS),

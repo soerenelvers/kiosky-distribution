@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 
 /** Per-display retirement of preset runs; warnings and group memberships are retained. */
 final class PresetHandoff
@@ -43,17 +44,17 @@ final class PresetHandoff
     public static function releaseTargets(array &$state,array $targets): void
     {
         foreach($state['displays'] as $display){if(!empty($display['deletedAt']))continue;$d=self::context($state,$display);
-            foreach($targets as $t)if(self::matches($d,$t)){foreach(self::candidates($state,$d,microtime(true)) as $p)$state['presetHandoffs'][$d['id']][$p['key']]=true;break;}
+            foreach($targets as $t)if(self::matches($d,$t)){foreach(self::candidates($state,$d,QualityClock::micro()) as $p)$state['presetHandoffs'][$d['id']][$p['key']]=true;break;}
         }
     }
     public static function released(array &$state,array $display,bool $scheduled=true): array
     {
-        $d=self::context($state,$display);$at=microtime(true);$result=$state['presetHandoffs'][$d['id']] ?? [];
+        $d=self::context($state,$display);$at=QualityClock::micro();$result=$state['presetHandoffs'][$d['id']] ?? [];
         $presets=array_values(array_filter(self::candidates($state,$d,$at),static fn(array $p):bool=>empty($result[$p['key']])));
         if(!$presets)return $result;
         $latest=-INF;
         foreach($scheduled?$state['schedules']:[] as $s)if(($s['status'] ?? '')==='published'&&empty($s['deletedAt'])&&self::matches($d,['type'=>$s['targetType'] ?? '', 'id'=>$s['targetId'] ?? ''])){
-            $latest=max($latest,ExternalSchedule::latestStart($s,$at) ?? -INF,ExternalSchedule::active($s,gmdate('c'))?self::stamp($s['updatedAt'] ?? ''):-INF);
+            $latest=max($latest,ExternalSchedule::latestStart($s,$at) ?? -INF,ExternalSchedule::active($s,gmdate('c',QualityClock::now()))?self::stamp($s['updatedAt'] ?? ''):-INF);
         }
         foreach(self::assignments($state) as $a)if(!$a['preset']&&self::matches($d,$a['target'])&&(empty($a['startsAt'])||self::stamp($a['startsAt'])<=$at))$latest=max($latest,self::stamp($a['updatedAt']),empty($a['startsAt'])?0:self::stamp($a['startsAt']));
         foreach($presets as $p)if($latest>$p['activation'])$result[$p['key']]=true;

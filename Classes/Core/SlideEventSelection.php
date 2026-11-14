@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 require_once __DIR__.'/EventLifecycle.php';
 
 final class SlideEventSelection
@@ -9,7 +10,7 @@ final class SlideEventSelection
     {
         $mode=$selection['mode'] ?? 'linked';
         if(!in_array($mode,['current','today','next'],true))return $linked;
-        $now??=time();$zone=new \DateTimeZone('Europe/Berlin');
+        $now??=QualityClock::now();$zone=new \DateTimeZone('Europe/Berlin');
         $day=static fn(int $time):string=>(new \DateTimeImmutable('@'.$time))->setTimezone($zone)->format('Y-m-d');
         $lower=static fn(string $value):string=>function_exists('mb_strtolower')?mb_strtolower(trim($value),'UTF-8'):strtr(strtolower(trim($value)),['Ä'=>'ä','Ö'=>'ö','Ü'=>'ü']);$room=is_string($selection['room'] ?? null)?$lower($selection['room']):'';
         $candidates=array_values(array_filter($events,static fn(array $event):bool=>EventLifecycle::visible($event,$now)&&empty($event['deletedAt'])&&empty($event['archivedAt'])&&preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/',(string)($event['eventStart'] ?? ''))===1&&strtotime((string)($event['eventStart'] ?? ''))!==false&&($room===''||$lower((string)($event['room'] ?? ''))===$room)));

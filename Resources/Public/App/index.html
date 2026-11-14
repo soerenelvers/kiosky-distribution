@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.40.7-20261114195241%2Bb40f7705" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.40.7-20261114195241%2Bb40f7705">
+  <link href="player/fonts/builtins.css?v=3.41.0-20261114215242%2B593d2baa" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.41.0-20261114215242%2B593d2baa">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -200,7 +200,7 @@
       <section class="view" data-view-panel="events">
         <div class="section-heading">
           <div><p class="eyebrow">Programmverwaltung</p><h2>Veranstaltungen</h2><p>Importierte Stammdaten prüfen und für Website sowie Displays ergänzen.</p></div>
-          <div class="section-actions"><button class="button button-secondary" type="button" id="open-event-templates">Veranstaltungsvorlagen</button><button class="button button-secondary" type="button" id="bulk-publish-events" disabled>Gewählte Entwürfe veröffentlichen</button><button class="button button-secondary" type="button" id="bulk-edit-events" disabled>⚙ Massenaktion …</button><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="history:event" data-license-modules="events">Änderungsverlauf</button><button class="button button-secondary" type="button" id="open-event-templates">Veranstaltungsvorlagen</button><button class="button button-secondary" type="button" id="bulk-publish-events" disabled>Gewählte Entwürfe veröffentlichen</button><button class="button button-secondary" type="button" id="bulk-edit-events" disabled>⚙ Massenaktion …</button><button class="button button-secondary" type="button" id="bulk-archive-events" disabled>Gewählte archivieren</button><button class="button danger-action" type="button" id="bulk-delete-events" disabled>Gewählte löschen</button><button class="button button-primary" type="button" data-action="new-event">＋ Veranstaltung</button></div>
         </div>
         <article class="panel table-panel">
           <div class="toolbar">
@@ -220,7 +220,7 @@
       <section class="view" data-view-panel="displays">
         <div class="section-heading">
           <div><p class="eyebrow">Digital Signage</p><h2>Displayverwaltung</h2><p>Displays, Gruppen, Matrix-Flächen und Standorte zentral verwalten.</p></div>
-          <div class="section-actions"><button class="button button-primary" type="button" data-action="new-display">＋ Display hinzufügen</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="simulation" data-quality-operator data-license-modules="schedule displays">Zeitplansimulation</button><button class="button button-primary" type="button" data-action="new-display">＋ Display hinzufügen</button></div>
         </div>
         <div class="display-management-summary"><div><strong id="display-total">0</strong><span>Displays angelegt</span></div><div><strong id="display-online">0</strong><span>aktuell online</span></div><div><strong id="display-group-total">0</strong><span>Display-Gruppen</span></div><p>Die Player-URL bleibt am Endgerät unverändert. Kanal und Zeitplan werden zentral aktualisiert.</p></div>
         <div class="management-tabs" role="tablist" aria-label="Displaybereiche">
@@ -271,7 +271,7 @@
       <section class="view" data-view-panel="channels">
         <div class="section-heading">
           <div><p class="eyebrow" id="content-module-eyebrow">Content-Baukasten</p><h2 id="content-module-title">Slides & Kanäle</h2><p id="content-module-description">Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.</p></div>
-          <div class="section-actions"><button class="button button-secondary" type="button" id="content-access-button" hidden>Kanalfreigaben</button><button class="button button-secondary" type="button" data-action="new-channel">＋ Kanal anlegen</button><button class="button button-secondary" type="button" data-action="duplicate-channel">⧉ Kanal duplizieren</button><button class="button button-primary" type="button" data-action="new-slide">＋ Slide erstellen</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="history:slide" data-license-modules="channels">Slide-Verlauf</button><button class="button button-secondary" type="button" data-quality-tool="history:channel" data-quality-operator data-license-modules="channels">Kanal-Verlauf</button><button class="button button-secondary" type="button" data-quality-tool="report" data-quality-operator data-license-modules="advertising">Ausspielnachweise</button><button class="button button-secondary" type="button" id="content-access-button" hidden>Kanalfreigaben</button><button class="button button-secondary" type="button" data-action="new-channel">＋ Kanal anlegen</button><button class="button button-secondary" type="button" data-action="duplicate-channel">⧉ Kanal duplizieren</button><button class="button button-primary" type="button" data-action="new-slide">＋ Slide erstellen</button></div>
         </div>
 
         <div class="workflow-line" aria-label="Ablauf der Content-Ausspielung"><span class="is-current">1 · Slides</span><i>→</i><span class="is-current">2 · Kanal</span><i>→</i><button type="button" data-view-link="schedule">3 · Zeitplan</button><i>→</i><button type="button" data-view-link="displays">4 · Displays</button></div>
@@ -366,7 +366,7 @@
       <section class="view" data-view-panel="schedule">
         <div class="section-heading">
           <div><p class="eyebrow">Drag-and-drop-Planung</p><h2>Display-Zeitplan</h2><p>Inhalte direkt auf Displays, Displaygruppen und Matrix-Displays rund um die Uhr verteilen.</p></div>
-          <div class="section-actions"><button class="button button-primary" type="button" data-action="new-preset-trigger">＋ Preset-Termin</button><button class="button button-secondary" type="button" data-action="manage-groups">Display-Gruppen</button></div>
+          <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="history:schedule" data-quality-operator data-license-modules="schedule">Änderungsverlauf</button><button class="button button-secondary" type="button" data-quality-tool="simulation" data-quality-operator data-license-modules="schedule displays">Zeitplansimulation</button><button class="button button-primary" type="button" data-action="new-preset-trigger">＋ Preset-Termin</button><button class="button button-secondary" type="button" data-action="manage-groups">Display-Gruppen</button></div>
         </div>
 
         <article class="panel scheduler-panel">
@@ -809,7 +809,7 @@
         </div>
         <div class="settings-detail" data-settings-detail="advertising" hidden>
           <div class="settings-level-heading"><button class="settings-back" type="button" data-settings-home>←</button><div><p class="eyebrow">Einstellungen / Werbung</p><h2>Automatische Werbung</h2><p>Berechnet Veranstaltungswerbung direkt in zwei Werbekanälen, ohne zusätzliche Bibliotheks-Slides. Getaggte Werbung bleibt erhalten.</p></div></div>
-          <form class="panel feature-settings-panel" id="advertising-settings-form">
+          <button class="button button-secondary" type="button" data-quality-tool="report" data-quality-operator data-license-modules="advertising">Ausspielnachweise öffnen</button><form class="panel feature-settings-panel" id="advertising-settings-form">
             <div class="panel-header"><div><p class="eyebrow">Werbekanal</p><h2>Generator konfigurieren</h2><p>Veröffentlichte Slides mit Werbe-Tags werden bis zu ihrem Ablauf automatisch zugeordnet. Ohne Ablaufdatum werden beim Taggen sieben Tage gesetzt.</p></div><span class="tag blue" id="advertising-status-tag">Deaktiviert</span></div>
             <div class="config-form-grid">
               <label class="toggle-label span-two"><input id="advertising-enabled" type="checkbox"> Automatische Werbung aktivieren</label>
@@ -1444,7 +1444,7 @@
         <button class="button danger-action" type="button" id="delete-slide-button" hidden>Endgültig löschen</button>
         <span class="autosave-status" id="slide-autosave-status" data-state="idle" aria-live="polite">Autosave aktiv</span>
         <span class="history-actions" aria-label="Bearbeitungsverlauf"><button class="history-button" id="slide-undo-button" type="button" title="Schritt zurück" aria-label="Schritt zurück" disabled>↶</button><button class="history-button" id="slide-redo-button" type="button" title="Schritt vorwärts" aria-label="Schritt vorwärts" disabled>↷</button></span>
-        <button class="button button-primary" type="button" id="create-slide-button">Jetzt speichern</button>
+        <button class="button button-secondary" type="button" data-quality-tool="check" data-license-modules="channels">Prüfen</button><button class="button button-secondary" type="button" data-quality-tool="history:slide" data-quality-current="slide" data-license-modules="channels">Verlauf</button><button class="button button-primary" type="button" id="create-slide-button">Jetzt speichern</button>
         <button class="dialog-close editor-close" type="button" data-close-dialog="slide-dialog" aria-label="Editor schließen">×</button>
       </header>
 
@@ -1826,13 +1826,36 @@
     </aside>
   </div>
 <dialog class="content-access-dialog" id="content-access-dialog" aria-labelledby="content-access-title"><form id="content-access-form"><div class="dialog-heading"><h2 id="content-access-title">Kanalfreigaben</h2><button class="dialog-close" type="button" data-content-access-close aria-label="Schließen">×</button></div><p>Mediengestalter dürfen eigene Slides den freigegebenen Kanälen hinzufügen. Benutzer und Rollen werden durch Administratoren verwaltet.</p><label class="form-field">Mediengestalter<select id="content-access-user" required></select></label><fieldset id="content-access-channels"><legend>Freigegebene Kanäle</legend><div></div></fieldset><p id="content-access-message" role="status"></p><div class="dialog-actions"><button class="button button-secondary" type="button" data-content-access-close>Abbrechen</button><button class="button button-primary" type="submit">Freigaben speichern</button></div></form></dialog>
-  <script src="runtime-config.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="player/fullscreen-control.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="player/media-placement.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="player/editor-alignment.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="player/event-image.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="player/font-library.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
-  <script src="app.js?v=3.40.7-20261114195241%2Bb40f7705"></script>
+<dialog id="quality-dialog" class="quality-dialog wide-dialog" aria-labelledby="quality-title">
+ <div class="dialog-content"><header class="quality-heading"><h2 id="quality-title">Betriebswerkzeuge</h2><button type="button" class="dialog-close" data-quality-close aria-label="Schließen">×</button></header>
+ <p id="quality-status" role="status" aria-live="polite"></p>
+ <section id="quality-history" hidden>
+  <p>Gespeicherte Stände ab diesem Update. Bis zu 20 je Inhalt, insgesamt 1.000; maximal 8 MiB komprimiert. Endgültig entfernte Inhalte bleiben gelöscht.</p>
+  <div class="quality-controls"><label>Bereich<select id="quality-history-type"><option value="slide">Slides</option><option value="channel">Kanäle</option><option value="event">Veranstaltungen</option><option value="schedule">Zeitzuweisungen</option></select></label><label>Suchen<input id="quality-history-search" type="search" placeholder="Name, Person oder Datum"></label><button class="button button-secondary" id="quality-history-all" type="button">Alle Inhalte</button><button class="button button-secondary" id="quality-history-reload" type="button">Neu laden</button></div>
+  <div id="quality-history-list" class="quality-record-list"></div>
+ </section>
+ <section id="quality-simulation" hidden>
+  <p>Berechnet die Ausgabe mit der aktuellen Konfiguration. Laufende Displays werden nicht verändert. Zukünftige manuelle Warnungen oder Änderungen sind nicht vorhersagbar.</p>
+  <form id="quality-simulation-form" class="quality-controls"><label>Display suchen<input id="quality-display-search" type="search" placeholder="Displayname"></label><label>Display<select id="quality-display" required></select></label><label>Zeitpunkt (Europe/Berlin)<input id="quality-at" type="datetime-local" step="1" required></label><label>Zeitleiste<select id="quality-hours"><option value="0">Nur dieser Zeitpunkt</option><option value="3">3 Stunden</option><option value="12" selected>12 Stunden</option><option value="24">24 Stunden</option></select></label><label>Optionales Testszenario<select id="quality-preset"><option value="">Kein zusätzliches Preset</option></select></label><button class="button button-primary" type="submit">Simulation starten</button></form>
+  <div id="quality-simulation-result" hidden><p id="quality-simulation-reason"></p><div class="display-player channel-preview-stage quality-simulation-screen"><div class="player-matrix-canvas"><section id="quality-preview-slide" class="player-layout-slide is-visible"></section></div></div><p id="quality-simulation-note"></p><ol id="quality-timeline"></ol></div>
+ </section>
+ <section id="quality-report" hidden>
+  <p>Vom Player bestätigte sichtbare Werbewiedergabe, keine Soll-Zuweisung. Vorschauen und Simulationen zählen nicht. Meldungen werden bis zu 90 Tage aufbewahrt. Offline werden höchstens 500 Intervalle gepuffert; Lücken werden nicht geschätzt. Der physische Fernseher wird dadurch nicht geprüft.</p>
+  <form id="quality-report-form" class="quality-controls"><label>Von (Europe/Berlin)<input id="quality-report-from" type="date" required></label><label>Bis einschließlich<input id="quality-report-until" type="date" required></label><label>Display<select id="quality-report-display"><option value="">Alle freigegebenen Displays</option></select></label><button class="button button-primary" type="submit">Bericht laden</button><button class="button button-secondary" type="button" id="quality-report-csv" disabled>CSV herunterladen</button></form>
+  <p id="quality-report-summary"></p><div id="quality-report-list" class="quality-record-list"></div>
+ </section>
+ <section id="quality-publication" hidden><p>Prüft beide gespeicherten Formate. Textüberläufe sind zusätzlich in der Vorschau zu kontrollieren; externe Seiten werden nicht vom Server abgerufen.</p><div id="quality-publication-list" class="quality-record-list"></div><div class="dialog-actions"><button class="button button-secondary" id="quality-publication-draft" type="button" hidden>Als Entwurf behalten</button><button class="button button-primary" id="quality-publication-publish" type="button" hidden>Trotz Hinweisen veröffentlichen</button><button class="button button-secondary" type="button" data-quality-close>Schließen</button></div></section>
+ </div>
+</dialog>
+
+  <script src="runtime-config.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/fullscreen-control.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/media-placement.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/editor-alignment.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/event-image.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/font-library.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="player/playback-proof.js?v=3.41.0-20261114215242%2B593d2baa"></script>
+  <script src="app.js?v=3.41.0-20261114215242%2B593d2baa"></script>
 
 </body>
 </html>

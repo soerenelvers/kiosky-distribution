@@ -445,3 +445,21 @@ CREATE TABLE tx_kiosky_domain_model_externaldatasource (
 CREATE TABLE sys_file_metadata (
     tx_kiosky_data text
 );
+
+CREATE TABLE tx_kiosky_playback_receipts (
+ display_id varchar(100) NOT NULL DEFAULT '',
+ receipt_id varchar(100) NOT NULL DEFAULT '',
+ play_id varchar(100) NOT NULL DEFAULT '',
+ slide_id varchar(200) NOT NULL DEFAULT '',
+ channel_id varchar(100) NOT NULL DEFAULT '',
+ slide_name varchar(300) NOT NULL DEFAULT '',
+ channel_name varchar(300) NOT NULL DEFAULT '',
+ started_at varchar(30) NOT NULL DEFAULT '',
+ ended_at varchar(30) NOT NULL DEFAULT '',
+ seconds decimal(12,3) NOT NULL DEFAULT '0',
+ received_at varchar(30) NOT NULL DEFAULT '',
+ PRIMARY KEY (display_id,receipt_id),
+ UNIQUE KEY proof_interval (display_id,started_at,ended_at),
+ KEY period (ended_at,display_id),
+ KEY retention (received_at)
+);

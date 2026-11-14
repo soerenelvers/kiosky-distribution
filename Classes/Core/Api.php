@@ -3,12 +3,17 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 
 use RuntimeException;
 use Throwable;
 
 require_once __DIR__.'/LicenseClient.php';
 require_once __DIR__.'/TicketLinks.php';
+require_once __DIR__.'/ContentHistory.php';
+require_once __DIR__.'/PlaybackProof.php';
+require_once __DIR__.'/DisplaySimulation.php';
+require_once __DIR__.'/PublicationCheck.php';
 require_once __DIR__.'/SlideEventSelection.php';
 require_once __DIR__.'/MediaSlides.php';
 require_once __DIR__.'/ScheduleBlock.php';
@@ -43,6 +48,8 @@ final class Api
         private readonly ?FontStorage $fontStorage = null,
         private readonly bool $canReadFonts = false,
         private readonly bool $canManageFonts = false,
+        private readonly ?PlaybackProofStore $proofStore = null,
+        private readonly string $proofSecret = '',
     ) {
     }
 
@@ -66,10 +73,12 @@ final class Api
                 $display=$this->first($state['displays'],static fn(array $item):bool=>($item['slug'] ?? '')===rawurldecode($licensePlayer[1])&&empty($item['deletedAt'])&&($item['status'] ?? '')!=='archived');
                 if($display&&$playerKey!==''&&hash_equals((string)($display['playerKey'] ?? ''),$playerKey))$this->refreshLicenseState($state);
             }
-            $lifecycleChanged=!str_starts_with($path,'/api/content-transfer/migration/')&&EventLifecycle::synchronize($state);
+            $lifecycleChanged=!str_starts_with($path,'/api/content-transfer/migration/')&&!preg_match('#^/api/displays/[^/]+/simulate$#',$path)&&EventLifecycle::synchronize($state);
+            $historyBefore=$state;
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/player/[^/]+/state$#',$path)&&$method==='GET')$result[1]=$this->license()->playback($state,$result[1]);
             if ($result[2] && preg_match('#^/api/(events|slides|templates|trash|integrations/(easyjob|crewbrain)/import)(?:/|$)#',$path) && !empty($state['advertisingSettings']['enabled'])) $this->synchronizeAdvertising($state);
+            if($result[2]&&$method!=='GET'&&!str_starts_with($path,'/api/player/')&&!str_starts_with($path,'/api/content-transfer/'))ContentHistory::capture($state,$historyBefore,(string)($this->identity['name']??$this->identity['id']));
             if ($result[2] || $lifecycleChanged) {
                 $state['updatedAt'] = $this->now();
                 $migrationSaving=!empty($state['_migrationSaving']);unset($state['_migrationSaving']);
@@ -123,7 +132,7 @@ final class Api
         $summary = ($state['activeEventSource'] ?? null) === 'easyjob'
             ? $this->runAutomaticEasyJobImport($state)
             : $this->runAutomaticCrewBrainImport($state);
-        if ($this->license()->allows($state,'advertising') && !empty($state['advertisingSettings']['enabled']) && ($summary['ran'] || strtotime((string)($state['advertisingLastSynchronizedAt'] ?? '')) < time() - 300)) {
+        if ($this->license()->allows($state,'advertising') && !empty($state['advertisingSettings']['enabled']) && ($summary['ran'] || strtotime((string)($state['advertisingLastSynchronizedAt'] ?? '')) < QualityClock::now() - 300)) {
             $this->synchronizeAdvertising($state);
             $summary['ran'] = true;
             $summary['advertisingSynchronized'] = true;
@@ -217,11 +226,11 @@ final class Api
             do {
                 $code = '';
                 for ($i = 0; $i < 6; $i++) $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
-            } while ($this->first($state['playerPairings'], fn(array $item): bool => ($item['code'] ?? '') === $code && strtotime((string)($item['expiresAt'] ?? '')) > time()));
+            } while ($this->first($state['playerPairings'], fn(array $item): bool => ($item['code'] ?? '') === $code && strtotime((string)($item['expiresAt'] ?? '')) > QualityClock::now()));
             $pairing = $this->record([
                 'code' => $code, 'secret' => bin2hex(random_bytes(24)), 'status' => 'pending',
                 'platform' => (string)($body['platform'] ?? 'Universal Player'),
-                'playerBaseUrl' => (string)($body['playerBaseUrl'] ?? ''), 'expiresAt' => gmdate('c', time() + 900),
+                'playerBaseUrl' => (string)($body['playerBaseUrl'] ?? ''), 'expiresAt' => gmdate('c', QualityClock::now() + 900),
             ]);
             $state['playerPairings'][] = $pairing;
             return $this->created(['id' => $pairing['id'], 'code' => $code, 'secret' => $pairing['secret'], 'status' => 'pending', 'expiresAt' => $pairing['expiresAt']]);
@@ -229,7 +238,7 @@ final class Api
         if (preg_match('#^/api/player-pairings/([^/]+)$#', $path, $match) && $method === 'GET') {
             $pairing = $this->required($state['playerPairings'], rawurldecode($match[1]), 'Kopplung');
             if (!hash_equals((string)$pairing['secret'], $playerKey)) throw new RuntimeException('Kopplung wurde nicht gefunden.', 404);
-            if (strtotime((string)$pairing['expiresAt']) <= time()) return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'expired']);
+            if (strtotime((string)$pairing['expiresAt']) <= QualityClock::now()) return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'expired']);
             if (($pairing['status'] ?? '') !== 'paired') return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'pending']);
             $display = $this->required($state['displays'], (string)$pairing['displayId'], 'Display');
             $base = rtrim((string)($pairing['playerBaseUrl'] ?? ''), '/') . '/';
@@ -242,6 +251,59 @@ final class Api
 
         $this->assertRolePermission($method, $path);
         $designer=($this->identity['role'] ?? '')==='designer';$actorId=(string)$this->identity['id'];
+        if($path==='/api/slides/publication-check'&&$method==='POST'){
+            if(!is_array($body['slide']??null))throw new RuntimeException('Bitte eine Slide zur Prüfung übergeben.',422);$slide=$body['slide'];
+            if($designer&&!empty($slide['id']))ContentAccess::own($state,$actorId,(string)$slide['id']);
+            $linked=!empty($slide['eventId'])?$this->first($state['events'],static fn(array $e):bool=>$e['id']===$slide['eventId']):null;
+            $event=SlideEventSelection::select($state['events'],$slide['document']['eventSelection']??[],$linked);
+            $stored=!empty($slide['id'])?$this->first($state['slides'],static fn(array $r):bool=>$r['id']===$slide['id']):null;$doc=array_replace($stored['document']??[],$slide['document']??[]);if(isset($doc['responsiveLayouts'])){$layouts=$doc['responsiveLayouts'];$layouts[($doc['designOrientation']??'')==='portrait'?'portrait':'landscape']=$doc['elements']??[];$doc['responsiveLayouts']=$layouts;}$slide['document']=$doc;
+            return $this->ok(PublicationCheck::check($slide,$state['mediaAssets'],$event));
+        }
+        if(preg_match('#^/api/displays/([^/]+)/simulate$#',$path,$simulationMatch)&&$method==='POST'){
+            if(!in_array($this->identity['role']??'',['admin','editor'],true))throw new RuntimeException('Für die Simulation fehlen die erforderlichen Rechte.',403);
+            $this->license()->assertPath($state,'/api/schedules');[$at,$until]=DisplaySimulation::arguments($body);$id=rawurldecode($simulationMatch[1]);$display=$this->required($state['displays'],$id,'Display');
+            $copy=$state;$timeline=[];$simulatedPresets=[];$lastIdentity='';$executions=0;$realNow=time();
+            $runDue=function(float $point)use(&$copy,&$executions,&$simulatedPresets,$realNow):void{
+                if($point<$realNow||!$this->license()->allows($copy,'schedule','operations'))return;
+                while(true){$due=array_values(array_filter($copy['presetTriggers']??[],static fn(array $t):bool=>!empty($t['enabled'])&&empty($t['deletedAt'])&&!empty($t['nextRunAt'])&&strtotime($t['nextRunAt'])<=$point));usort($due,static fn(array $a,array $b):int=>strcmp($a['nextRunAt'],$b['nextRunAt']));if(!$due)break;if(++$executions>100)throw new RuntimeException('Die Simulation umfasst mehr als 100 Preset-Auslösungen. Bitte einen näheren Zeitpunkt wählen.',422);
+                    $when=max($realNow,strtotime($due[0]['nextRunAt']));QualityClock::run($when,function()use(&$copy):void{$this->runDuePresetTriggers($copy);});$simulatedPresets[]=['presetId'=>$due[0]['presetId'],'at'=>gmdate('c',$when)];
+                }
+            };
+            $runDue((float)$at);if(!empty($body['presetId']))$this->license()->assertPath($state,'/api/presets');if(!empty($body['presetId']))QualityClock::run((float)$at,function()use(&$copy,$body):void{$this->executeStoredPreset($copy,(string)$body['presetId']);});
+            $cursor=(float)$at;$output=[];$points=0;
+            while($cursor<=$until){if(++$points>128)throw new RuntimeException('Zu viele Wechsel für eine Simulation. Bitte den Zeitraum verkürzen.',422);$runDue($cursor);
+                $resolved=QualityClock::run($cursor,function()use(&$copy,$display):array{return $this->player($copy,'GET',$display['slug'],'state',['preview'=>'1'],(string)$display['playerKey'])[1];});unset($resolved['display']['playerKey'],$resolved['display']['deviceToken']);if($cursor===$at||!$output)$output=$resolved;
+                $reason=$resolved['selectionReason'];$identity=json_encode([$reason,$resolved['warning']['id']??null,$resolved['assignment']['id']??null,$resolved['channel']['id']??null,$resolved['directSlide']['id']??null,array_column(array_column($resolved['slides'],'slide'),'id')]);
+                if($identity!==$lastIdentity){$timeline[]=['at'=>gmdate('c',(int)$cursor),'kind'=>$reason['kind'],'name'=>$resolved['warning']['title']??$resolved['channel']['name']??$resolved['directSlide']['name']??'Kein gültiger Inhalt','reason'=>$reason,'slideCount'=>count($resolved['slides'])];$lastIdentity=$identity;}
+                if($cursor===$until)break;$times=[];foreach(['warnings','assignments','slides'] as $collection)foreach($copy[$collection]??[] as $row){$times[]=$row['startsAt']??null;$times[]=$row['endsAt']??$row['expiresAt']??null;}foreach($copy['events']??[] as $row){$times[]=$row['eventStart']??null;$times[]=$row['eventEnd']??null;}if($this->license()->allows($copy,'operations'))foreach($copy['presetTriggers']??[] as $row)if(!empty($row['enabled']))$times[]=$row['nextRunAt']??null;
+                $cursor=DisplaySimulation::boundary($cursor,(float)$until,$copy['schedules'],$times);
+            }
+            return $this->ok(['output'=>$output,'timeline'=>$timeline,'simulatedPresets'=>$simulatedPresets,'at'=>gmdate('c',$at),'until'=>gmdate('c',(int)$until),'readOnly'=>true,'note'=>'Berechnung mit der aktuellen Konfiguration. Künftige manuelle Warnungen und Änderungen sind nicht vorhersagbar.']);
+        }
+        if($path==='/api/reports/advertising'&&$method==='GET'){
+            $this->assertRolePermission($method,$path);[$from,$until]=PlaybackProof::period($body['from']??null,$body['until']??null);
+            $displays=$state['displays'];if(!empty($body['displayId']))$displays=array_values(array_filter($displays,static fn(array $d):bool=>$d['id']===$body['displayId']));
+            $names=array_column($displays,'name','id');$rows=$this->proofStore?->report($from,$until,array_keys($names))??[];
+            foreach($rows as &$row){$row['displayName']=$names[$row['displayId']]??$row['displayId'];$row['seconds']=(float)$row['seconds'];$row['plays']=(int)$row['plays'];$row['intervals']=(int)$row['intervals'];}unset($row);
+            return $this->ok(['data'=>$rows,'retentionDays'=>90,'basis'=>'player_confirmed']);
+        }
+        if(preg_match('#^/api/history/(slide|channel|event|schedule)(?:/([^/]+))?(?:/([^/]+)/restore)?$#',$path,$historyMatch)){
+            $type=$historyMatch[1];$collection=ContentHistory::COLLECTIONS[$type];$id=isset($historyMatch[2])?rawurldecode($historyMatch[2]):null;
+            $permitted=function(string $target)use($state,$type,$collection,$actorId,$designer):void{$reference=$this->first($state[$collection],static fn(array $r):bool=>$r['id']===$target);if($type!=='schedule'&&(!$reference||$type==='event'&&(($reference['status']??'')==='removed'||!empty($reference['deletedAt']))))throw new RuntimeException('Dieser Inhalt ist nicht mehr verfügbar.',404);if($designer){if($type==='slide')ContentAccess::own($state,$actorId,$target);elseif($type!=='event')ContentAccess::fail();}};
+            if($method==='GET'&&empty($historyMatch[3])){if($id)$permitted($id);$rows=array_values(array_filter(ContentHistory::listing($state,$type,$id),static function(array $r)use($permitted):bool{try{$permitted($r['entityId']);return true;}catch(\Throwable){return false;}}));return $this->ok(['data'=>$rows,'currentToken'=>$id?ContentHistory::token($this->first($state[$collection],static fn(array $r):bool=>$r['id']===$id)):null,'retention'=>['perEntity'=>20,'total'=>1000,'maxBytes'=>8388608]]);}
+            if($method==='POST'&&$id&&!empty($historyMatch[3])){
+                $permitted($id);$current=$this->first($state[$collection],static fn(array $r):bool=>$r['id']===$id);
+                if(($body['expectedToken']??'')!==ContentHistory::token($current))throw new RuntimeException('Der Inhalt wurde inzwischen geändert. Bitte den Verlauf neu laden.',409);
+                $snapshot=ContentHistory::revision($state,$type,$id,rawurldecode($historyMatch[3]));
+                if(!$current&&$type!=='schedule')throw new RuntimeException('Endgültig gelöschter Inhalt kann nicht wiederhergestellt werden.',404);
+                unset($snapshot['id'],$snapshot['ownerId'],$snapshot['createdAt'],$snapshot['updatedAt'],$snapshot['deletedAt'],$snapshot['archivedAt'],$snapshot['sourceId'],$snapshot['automationKey']);
+                if($current&&!empty($current['deletedAt'])&&in_array($type,['slide','channel'],true)){$idx=$this->index($state[$collection],$id);unset($state[$collection][$idx]['deletedAt'],$state[$collection][$idx]['archivedAt']);}
+                if($type==='schedule'&&!$current){$result=$this->collectionRoute($state,'POST','schedules','entry',$snapshot);$createdId=$result[1]['entry']['id'];$idx=$this->index($state['schedules'],$createdId);$state['schedules'][$idx]['id']=$id;}
+                else{$result=$this->route($state,'PUT','/api/'.$collection.'/'.$id,$snapshot,'');if($result[0]>=400)throw new RuntimeException('Der Stand konnte nicht wiederhergestellt werden.',422);}
+                $this->audit($state,'history.restored',$id);return $this->ok(['ok'=>true],true);
+            }
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
         if($designer)ContentAccess::check($state,$actorId,$path,$body,$method);
         if(str_starts_with($path,'/api/content-access'))$this->license()->assertPath($state,'/api/channels');
         if($path==='/api/content-access'&&$method==='GET'){
@@ -306,7 +368,7 @@ final class Api
             $query=trim((string)($body['q'] ?? ''));
             if(strlen($query)<2)return $this->ok(['data'=>[],'source'=>'Deutscher Wetterdienst','sourceUrl'=>DwdService::WARNCELL_INFO_URL]);
             $cached=$state['dwdWarncellCache'] ?? null;$changed=false;
-            if(!$cached || strtotime($cached['loadedAt'])<time()-86400){try{$cached=$this->dwd->warncells();$state['dwdWarncellCache']=$cached;$changed=true;}catch(\Throwable $error){if(!$cached)throw $error;}}
+            if(!$cached || strtotime($cached['loadedAt'])<QualityClock::now()-86400){try{$cached=$this->dwd->warncells();$state['dwdWarncellCache']=$cached;$changed=true;}catch(\Throwable $error){if(!$cached)throw $error;}}
             return $this->ok(['data'=>DwdService::searchWarncells($cached['data'],$query),'loadedAt'=>$cached['loadedAt'],'source'=>'Deutscher Wetterdienst','sourceUrl'=>DwdService::WARNCELL_INFO_URL],$changed);
         }
 
@@ -589,7 +651,7 @@ final class Api
         if (preg_match('#^/api/displays/([^/]+)/pair$#', $path, $match) && $method === 'POST') {
             $display = $this->required($state['displays'], rawurldecode($match[1]), 'Display');
             $code = strtoupper(trim((string)($body['code'] ?? '')));
-            $pairing = $this->first($state['playerPairings'], fn(array $item): bool => ($item['code'] ?? '') === $code && ($item['status'] ?? '') === 'pending' && strtotime((string)($item['expiresAt'] ?? '')) > time());
+            $pairing = $this->first($state['playerPairings'], fn(array $item): bool => ($item['code'] ?? '') === $code && ($item['status'] ?? '') === 'pending' && strtotime((string)($item['expiresAt'] ?? '')) > QualityClock::now());
             if (!$pairing) throw new RuntimeException('Der Kopplungscode ist ungültig oder abgelaufen.', 404);
             $index = $this->index($state['playerPairings'], (string)$pairing['id']);
             $state['playerPairings'][$index]['status'] = 'paired';
@@ -1158,6 +1220,8 @@ final class Api
     {
         $role = (string)($this->identity['role'] ?? 'viewer');
         if ($role === 'admin') return;
+        if(str_starts_with($path,'/api/history/')){if($role==='editor'||$role==='designer'&&preg_match('#^/api/history/(slide|event)(?:/|$)#',$path))return;throw new RuntimeException('Für diesen Verlauf fehlen die erforderlichen Rechte.',403);}
+        if(str_starts_with($path,'/api/reports/')){if($role==='editor')return;throw new RuntimeException('Für Berichte fehlen die erforderlichen Rechte.',403);}
         if ($path === '/api/settings/features' && $method === 'GET') return;
 
         $adminOnly = ['/api/users', '/api/api-users', '/api/audit-logs', '/api/content-transfer', '/api/integrations', '/api/settings', '/api/updates', '/api/v1'];
@@ -1705,7 +1769,7 @@ final class Api
                     'document'=>is_array($value['document'] ?? null)?$value['document']:[],
                     'returnBehavior'=>in_array($value['returnBehavior'] ?? '',['resume_previous','standard_content'],true)?$value['returnBehavior']:'resume_current_schedule',
                     'targets'=>array_map(static fn(array $target):string=>$target['type']==='global'?'global':$target['type'].':'.$target['id'],$targets),
-                    'startsAt'=>$this->now(),'endsAt'=>$duration>0?gmdate('c',time()+(int)($duration*60)):null,
+                    'startsAt'=>$this->now(),'endsAt'=>$duration>0?gmdate('c',QualityClock::now()+(int)($duration*60)):null,
                     'status'=>'active','publishedAt'=>$this->now()
                 ]);
                 $result=['action'=>'emergency_activated','alert'=>$warning];
@@ -1750,13 +1814,13 @@ final class Api
         $startsAt = $this->externalDate($input['startsAt'] ?? null, 'startsAt');
         $expiresAt = $this->externalDate($input['expiresAt'] ?? null, 'expiresAt');
         if ($startsAt && $expiresAt && strtotime($expiresAt) <= strtotime($startsAt)) throw new RuntimeException('expiresAt muss nach startsAt liegen.');
-        if($presetSource===null&&(!$startsAt||strtotime($startsAt)<=time()))PresetHandoff::releaseTargets($state,[$target]);
+        if($presetSource===null&&(!$startsAt||strtotime($startsAt)<=QualityClock::now()))PresetHandoff::releaseTargets($state,[$target]);
         $current = $this->first($state['assignments'], static fn(array $item): bool => ($item['target'] ?? null) === $target);
         $assignment = $this->record([
             'target' => $target, 'content' => ['type' => $contentType, 'id' => $contentId], 'priority' => $priority,
             'startsAt' => $startsAt, 'expiresAt' => $expiresAt, 'source' => $presetSource ?? 'external_api', 'createdBy' => $this->identity['id'],
         ], $current['id'] ?? null);
-        $assignment['updatedAt']=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
+        $assignment['updatedAt']=(new \DateTimeImmutable('@'.QualityClock::now(),new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
         if ($current) $assignment['createdAt'] = $current['createdAt'];
         $index = $current ? $this->index($state['assignments'], (string)$current['id']) : null;
         if ($index === null) $state['assignments'][] = $assignment; else $state['assignments'][$index] = $assignment;
@@ -1787,7 +1851,7 @@ final class Api
     {
         if (!array_key_exists('schedules',$config)) return [];
         if (!is_array($config['schedules']) || !array_is_list($config['schedules']) || count($config['schedules'])>500) throw new RuntimeException('Ein Preset darf höchstens 500 Zeitzuweisungen enthalten.',422);
-        $at??=time();
+        $at??=QualityClock::now();
         return array_map(static function(mixed $input) use($at): array {
             if (!is_array($input)) throw new RuntimeException('Ungültige Zeitzuweisung im Preset.',422);
             return ExternalSchedule::input($input,$at);
@@ -1815,7 +1879,7 @@ final class Api
             if (!$targets) throw new RuntimeException('Das Preset enthält keine Zielbereiche.');
             $warning = $this->saveRecord($state, 'warnings', [
                 'source' => 'preset:'.$preset['id'], 'warningType' => $config['warningType'] ?? 'info',
-                'startsAt'=>$this->now(),'endsAt'=>(float)($config['durationMinutes'] ?? 0)>0?gmdate('c',time()+(int)((float)$config['durationMinutes']*60)):null,
+                'startsAt'=>$this->now(),'endsAt'=>(float)($config['durationMinutes'] ?? 0)>0?gmdate('c',QualityClock::now()+(int)((float)$config['durationMinutes']*60)):null,
                 'severity' => (int)($config['severity'] ?? 3), 'title' => $config['title'] ?? $preset['name'],
                 'description' => $config['description'] ?? '', 'instructions' => $config['instructions'] ?? '',
                 'priority' => (int)($config['priority'] ?? 900), 'targets' => $targets,
@@ -1832,12 +1896,12 @@ final class Api
             $preset=$this->required($target['presets'],$id,'Preset');
             if(($preset['status'] ?? '')!=='active')throw new RuntimeException('Aktives Preset wurde nicht gefunden.',422);
             return $this->executeStoredPreset($target,$id)[1];
-        });
+        },QualityClock::micro());
     }
 
     private function executeStatePreset(array &$state,array $preset): array
     {
-        $executionAt=microtime(true);
+        $executionAt=QualityClock::micro();
         $config=is_array($preset['config'] ?? null)?$preset['config']:[];
         $channelUpdates = is_array($config['channelUpdates'] ?? null) ? $config['channelUpdates'] : [];
         $assignmentInputs = is_array($config['assignments'] ?? null) ? $config['assignments'] : [];
@@ -1901,7 +1965,7 @@ final class Api
     /** @param array<string,mixed> $state @return array<int,array<string,mixed>> */
     private function activeAssignments(array $state): array
     {
-        $now = time();
+        $now = QualityClock::now();
         return array_values(array_filter($state['assignments'], static function (array $item) use ($now): bool {
             $start = !empty($item['startsAt']) ? strtotime((string)$item['startsAt']) : false;
             $end = !empty($item['expiresAt']) ? strtotime((string)$item['expiresAt']) : false;
@@ -1948,7 +2012,7 @@ final class Api
     /** @param array<string,mixed> $state @return array<string,mixed>|null */
     private function activeEmergency(array $state): ?array
     {
-        $alerts=array_values(array_filter(array_reverse($state['warnings']),static fn(array $item):bool=>($item['status'] ?? '')==='active'&&(in_array($item['source'] ?? '',['external_api','external_preset'],true)||self::presetWarning($item))&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())));
+        $alerts=array_values(array_filter(array_reverse($state['warnings']),static fn(array $item):bool=>($item['status'] ?? '')==='active'&&(in_array($item['source'] ?? '',['external_api','external_preset'],true)||self::presetWarning($item))&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=QualityClock::now())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>QualityClock::now())));
         usort($alerts,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));return $alerts[0] ?? null;
     }
 
@@ -1979,6 +2043,8 @@ final class Api
             if ($action==='commands') return $this->ok(['commands'=>$pending],$deliveryChanged);
         }
         if ($action === 'heartbeat' && $method === 'POST') {
+            $proofAccepted=[];$receipts=[];
+            if($this->proofStore&&$this->license()->allows($state,'advertising')&&is_array($body['proofReceipts']??null)&&count($body['proofReceipts'])<=20){foreach($body['proofReceipts'] as $receipt){if(!is_array($receipt))continue;$row=PlaybackProof::receipt((string)$display['id'],$receipt,$this->proofSecret);if($row)$receipts[]=$row;if(is_string($receipt['id']??null))$proofAccepted[]=$receipt['id'];}try{if($receipts)$this->proofStore->insert($receipts);}catch(\Throwable){$proofAccepted=[];error_log('Kiosky: Ausspielnachweise vorübergehend nicht gespeichert; Player wird weiter bedient.');}}
             $body['lastSeenAt'] = $this->now();
             $body['online'] = true;
             $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
@@ -1987,7 +2053,7 @@ final class Api
             // Persist status into the raw record: $display contains read-only projections.
             $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($state['displays'][$index],$fields);
             $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));
-            return $this->ok(['ok' => true], true);
+            return $this->ok(['ok' => true,'proofAccepted'=>$proofAccepted], true);
         }
         if ($action === 'proof' && $method === 'POST') {
             return $this->ok(['disabled' => true]);
@@ -2012,10 +2078,10 @@ final class Api
         $available=$selection['available'] ?? [];
         $slides = [];
         $playableSlidesById=array_column($this->active($state['slides']),null,'id');
-        $projectOverview=AdvertisingService::overviewProjector($this->license()->allows($state,'events')?$this->active($state['events']):[]);
+        $projectOverview=AdvertisingService::overviewProjector($this->license()->allows($state,'events')?$this->active($state['events']):[],QualityClock::now());
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
             $slide = $item['slide'] ?? $playableSlidesById[$item['slideId'] ?? ''] ?? null;
-            if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>time()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=time())) continue;
+            if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>QualityClock::now()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=QualityClock::now())) continue;
             $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
             if($event&&!EventLifecycle::visible($event))$event=null;
@@ -2033,7 +2099,7 @@ final class Api
         foreach ($display['groupIds'] ?? [] as $groupId){$targets[]='group:'.$groupId;$targets[]=$groupId;}
         if (!empty($display['locationId'])) $targets[] = 'location:' . $display['locationId'];
         if ($matrixLayout) $targets[] = 'matrix:' . $matrixLayout['id'];
-        $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=time())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>time())&&count(array_intersect($targets,$item['targets'] ?? []))>0&&empty($releasedPresets[PresetHandoff::key('warning',$item)])));
+        $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=QualityClock::now())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>QualityClock::now())&&count(array_intersect($targets,$item['targets'] ?? []))>0&&empty($releasedPresets[PresetHandoff::key('warning',$item)])));
         usort($warningCandidates,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));
         $warning=$warningCandidates[0] ?? null;
         $emergency = $warning ? [
@@ -2068,6 +2134,8 @@ final class Api
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
+            'selectionReason'=>['kind'=>$emergency?'warning':($assignment?'assignment':(str_starts_with($selection['sourceKey'],'schedule:')?'schedule':'default')),'scheduleId'=>str_starts_with($selection['sourceKey'],'schedule:')?substr($selection['sourceKey'],9):null,'targetType'=>$assignment['target']['type']??null,'candidates'=>[]],
+            'playbackProof'=>['grants'=>!$preview&&$this->proofStore&&$this->license()->allows($state,'advertising')?PlaybackProof::grants((string)$display['id'],$channel,$slides,$this->proofSecret):new \stdClass()],
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $preview?[]:$commands, 'serverTime' => $serverTime,
         ],$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
     }
@@ -2075,7 +2143,7 @@ final class Api
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */
     private function resolveAssignment(array $state, array $display, ?array $matrix, array $released=[]): ?array
     {
-        $now = time();
+        $now = QualityClock::now();
         $candidates = array_values(array_filter($state['assignments'], function (array $item) use ($display, $matrix, $now,$released): bool {
             if(!empty($released[PresetHandoff::key('assignment',$item)]))return false;
             $startsAt = !empty($item['startsAt']) ? strtotime((string)$item['startsAt']) : false;
@@ -2234,7 +2302,7 @@ final class Api
     {
         $timestamp = strtotime($value);
         if ($timestamp === false) $timestamp = strtotime($fallback);
-        return (int)($timestamp !== false ? $timestamp * 1000 : time() * 1000);
+        return (int)($timestamp !== false ? $timestamp * 1000 : QualityClock::now() * 1000);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
@@ -2273,7 +2341,7 @@ final class Api
                         && ($schedule['targetId'] ?? '') === ($body['targetId'] ?? '')
                             ? (int)($schedule['stackOrder'] ?? 0)
                             : 0, $state['schedules'])]);
-                    $body['stackOrder'] = max((int)floor(microtime(true) * 1000), $highest + 1);
+                    $body['stackOrder'] = max((int)floor(QualityClock::micro() * 1000), $highest + 1);
                 }
             }
             if ($collection === 'matrices') $this->validateMatrix($state, $body);
@@ -2364,7 +2432,7 @@ final class Api
         foreach ($this->active($state['matrices']) as $matrix) {
             foreach ($matrix['members'] ?? [] as $member) $memberships[$member['displayId']] ??= [$matrix, $member];
         }
-        $now = time();
+        $now = QualityClock::now();
         $eventNames=array_column($state['events'],'title','id');
         return array_map(function (array $item) use ($channels, $locations, $slides, $memberships, $now,$eventNames): array {
             $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
@@ -2474,7 +2542,7 @@ final class Api
         $body['ownerId']=$current['ownerId'] ?? ($current?null:(string)$this->identity['id']);
         if (isset($current['document']['menuPdf']) && !isset($body['document']['menuPdf'])) $body['document']['menuPdf']=$current['document']['menuPdf'];
         if (isset($current['document']['menu']) && !isset($body['document']['menu'])) $body['document']['menu'] = $current['document']['menu'];
-        if(AdvertisingService::formats(array_replace($current ?? [],$body)) && empty($body['endsAt'])) $body['endsAt']=$current['endsAt'] ?? gmdate('c',max(time(),strtotime((string)($body['startsAt'] ?? '')) ?: 0)+7*86400);
+        if(AdvertisingService::formats(array_replace($current ?? [],$body)) && empty($body['endsAt'])) $body['endsAt']=$current['endsAt'] ?? gmdate('c',max(QualityClock::now(),strtotime((string)($body['startsAt'] ?? '')) ?: 0)+7*86400);
         $version = (int)($current['currentVersion'] ?? 0) + 1;
         $orientation = (string)($body['orientation'] ?? 'landscape');
         $body += ['width' => $orientation === 'portrait' ? 1080 : 1920, 'height' => $orientation === 'portrait' ? 1920 : 1080, 'status' => 'draft'];
@@ -2525,7 +2593,7 @@ final class Api
             $contentId=$body['contentId'] ?? $body[$type.'Id'] ?? $merged['contentId'] ?? $merged[$type.'Id'] ?? '';
             $body=array_replace($body,['contentType'=>$type,'contentId'=>$contentId,'channelId'=>$type==='channel'?$contentId:null,'slideId'=>$type==='slide'?$contentId:null]);
         }
-        if($collection==='warnings'&&PresetHandoff::source($body['source'] ?? $current['source'] ?? '')&&($body['status'] ?? '')==='active'&&!$current)$body['publishedAt']=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
+        if($collection==='warnings'&&PresetHandoff::source($body['source'] ?? $current['source'] ?? '')&&($body['status'] ?? '')==='active'&&!$current)$body['publishedAt']=(new \DateTimeImmutable('@'.QualityClock::now(),new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.u\Z');
         $record = $this->record(array_replace($current, $body), $id);
         if($collection==='displays'&&$current&&array_intersect_key($current,array_flip(['defaultContentType','defaultChannelId','defaultSlideId']))!==array_intersect_key($record,array_flip(['defaultContentType','defaultChannelId','defaultSlideId'])))PresetHandoff::releaseTargets($state,[['type'=>'display','id'=>$record['id']]]);
         if($collection==='schedules'&&($record['status'] ?? '')==='published'&&$this->scheduleActive($record,$this->now()))PresetHandoff::releaseTargets($state,[['type'=>$record['targetType'] ?? '', 'id'=>$record['targetId'] ?? '']]);
@@ -2688,6 +2756,7 @@ final class Api
             'role' => in_array($this->identity['role'], ['admin', 'editor', 'viewer'], true) ? $this->identity['role'] : 'viewer',
             'status' => 'active',
             'mustChangePassword' => false,
+            'qualityPermissions'=>$this->identity['qualityPermissions']??['history:slide'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:channel'=>in_array($this->identity['role'],['admin','editor'],true),'history:event'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:schedule'=>in_array($this->identity['role'],['admin','editor'],true),'simulation'=>in_array($this->identity['role'],['admin','editor'],true),'report'=>in_array($this->identity['role'],['admin','editor'],true),'check'=>in_array($this->identity['role'],['admin','editor','designer'],true)],
             'canManageSettings' => ($this->identity['canManageSettings'] ?? ($this->identity['role'] === 'admin')) === true,
         ];
     }
@@ -2808,7 +2877,7 @@ final class Api
     private function ok(array $body, bool $changed = false): array { return [200, $body, $changed]; }
     /** @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>,2:bool} */
     private function created(array $body): array { return [201, $body, true]; }
-    private function now(): string { return gmdate('c'); }
+    private function now(): string { return gmdate('c',QualityClock::now()); }
     private function uuid(): string
     {
         $bytes = random_bytes(16);

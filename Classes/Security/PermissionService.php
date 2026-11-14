@@ -54,6 +54,9 @@ final class PermissionService
         $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
         $read = in_array(strtoupper($method), ['GET', 'HEAD'], true);
         $matches = static fn(string $prefix): bool => $path === $prefix || str_starts_with($path, $prefix . '/');
+        if(preg_match('#^/api/displays/[^/]+/simulate$#',$path))return $this->isGranted(self::CONTROL_DISPLAYS,$user);
+        if(preg_match('#^/api/history/(slide|channel|event|schedule)(?:/|$)#',$path,$h))return $this->isGranted(match($h[1]){'slide','channel'=>self::MANAGE_CONTENT,'event'=>self::MANAGE_EVENTS,'schedule'=>self::CONTROL_DISPLAYS},$user);
+        if(str_starts_with($path,'/api/reports/'))return $this->isGranted(self::VIEW_LOGS,$user)&&$this->isGranted(self::MANAGE_CONTENT,$user);
         if ($path === '/api/settings/features' && $read) return true;
         if($matches('/api/menus/access'))return $this->isGranted(self::MANAGE_SETTINGS,$user);
         if($matches('/api/menus'))return true; // The shared menu API checks explicit kitchen/card grants.

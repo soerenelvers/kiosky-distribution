@@ -11,6 +11,8 @@ final class ContentAccess
     public static function ids(array $state,string $userId):array { return $state['contentChannelAccess'][$userId] ?? []; }
     public static function allowed(string $method,string $path):bool
     {
+        if($path==='/api/slides/publication-check'&&$method==='POST')return true;
+
         if($path==='/api/settings/features'&&$method==='GET')return true;
         if($path==='/api/trash'&&$method==='GET')return true;
         if(preg_match('#^/api/trash/slide/[^/]+$#',$path)&&$method==='POST')return true;

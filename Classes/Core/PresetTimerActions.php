@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
@@ -11,7 +12,7 @@ final class PresetTimerActions
     {
         if(!array_key_exists('presetTimers',$config))return [];
         if(!is_array($config['presetTimers'])||!array_is_list($config['presetTimers'])||count($config['presetTimers'])>100)throw new RuntimeException('Ein Preset darf höchstens 100 Folge-Preset-Timer enthalten.',422);
-        $at??=microtime(true);$result=[];
+        $at??=QualityClock::micro();$result=[];
         foreach($config['presetTimers'] as $action){
             if(!is_array($action)||!is_array($action['timing'] ?? null))throw new RuntimeException('Ungültiger Folge-Preset-Timer.',422);
             $timing=$action['timing'];$zone=$timing['timezone'] ?? 'Europe/Berlin';
@@ -31,7 +32,7 @@ final class PresetTimerActions
     }
     public static function assertGraph(array $presets,string $rootId,array $config,?float $at=null): void
     {
-        $at??=microtime(true);if(!self::inputs($config,$at,false))return;
+        $at??=QualityClock::micro();if(!self::inputs($config,$at,false))return;
         $nodes=array_column($presets,null,'id');$nodes[$rootId]=array_replace($nodes[$rootId] ?? [],['id'=>$rootId,'status'=>'active','config'=>$config]);$visiting=[];$heights=[];
         $visit=function(string $id)use(&$visit,&$visiting,&$heights,$nodes,$at):int{
             if(isset($visiting[$id]))throw new RuntimeException('Folge-Preset-Timer dürfen keine Schleife bilden oder sich selbst aufrufen.',422);
@@ -47,7 +48,7 @@ final class PresetTimerActions
     }
     public static function queue(array &$state,string $presetId,array $config,?float $at=null): array
     {
-        $at??=microtime(true);$inputs=self::inputs($config,$at);if(!$inputs)return [];
+        $at??=QualityClock::micro();$inputs=self::inputs($config,$at);if(!$inputs)return [];
         self::assertGraph($state['presets'],$presetId,$config,$at);$nodes=array_column($state['presets'],null,'id');$result=[];
         foreach($inputs as $input){
             $name=($nodes[$presetId]['name'] ?? 'Preset').' → '.($input['name']==='Folge-Preset'?$nodes[$input['presetId']]['name']:$input['name']);

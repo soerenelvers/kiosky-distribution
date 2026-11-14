@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/QualityClock.php';
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
@@ -36,7 +37,7 @@ final class PresetTriggers
         foreach($rows as &$r){$r['triggerName']=$triggers[$r['triggerId']]['name'] ?? ''; $r['timezone']=$triggers[$r['triggerId']]['timezone'] ?? 'Europe/Berlin'; $r['presetName']=$presets[$r['presetId']]['name'] ?? '';}unset($r);return $rows;
     }
     public static function save(array &$state,array $body,?string $id=null,?float $at=null,?string $originPresetId=null): array {
-        $at??=microtime(true);$input=self::validate($body);$rows=$state['presetTriggers'] ?? [];$index=$id===null?false:array_search($id,array_column($rows,'id'),true);$current=$index===false?null:$rows[$index];
+        $at??=QualityClock::micro();$input=self::validate($body);$rows=$state['presetTriggers'] ?? [];$index=$id===null?false:array_search($id,array_column($rows,'id'),true);$current=$index===false?null:$rows[$index];
         if($id!==null&&(!$current||!empty($current['deletedAt'])))throw new RuntimeException('Preset-Termin wurde nicht gefunden.',404);
         $preset=array_column($state['presets'] ?? [],null,'id')[$input['presetId']] ?? null;
         if((!$preset||($preset['status'] ?? '')!=='active')&&($input['enabled']||!$current||$current['presetId']!==$input['presetId']))throw new RuntimeException('Bitte ein aktives Preset auswählen.',422);
@@ -51,7 +52,7 @@ final class PresetTriggers
         throw new RuntimeException('Preset-Termin konnte nicht gespeichert werden.',500);
     }
     public static function delete(array &$state,string $id): void {
-        foreach($state['presetTriggers'] ?? [] as $index=>$row)if($row['id']===$id&&empty($row['deletedAt'])){$state['presetTriggers'][$index]=array_replace($row,['enabled'=>false,'nextRunAt'=>null,'deletedAt'=>self::stamp(microtime(true))]);self::prune($state);return;}
+        foreach($state['presetTriggers'] ?? [] as $index=>$row)if($row['id']===$id&&empty($row['deletedAt'])){$state['presetTriggers'][$index]=array_replace($row,['enabled'=>false,'nextRunAt'=>null,'deletedAt'=>self::stamp(QualityClock::micro())]);self::prune($state);return;}
         throw new RuntimeException('Preset-Termin wurde nicht gefunden.',404);
     }
     private static function prune(array &$state): void {
@@ -63,7 +64,7 @@ final class PresetTriggers
         return ['warningId'=>$value['warning']['id'] ?? null,'assignments'=>count($result['assignments'] ?? []),'channelUpdates'=>count($result['channelUpdates'] ?? []),'schedules'=>count($result['schedules'] ?? []),'presetTimers'=>count($value['presetTimers'] ?? $result['presetTimers'] ?? [])];
     }
     public static function runDue(array &$state,callable $execute,?float $at=null): int {
-        $at??=microtime(true);$due=array_values(array_filter($state['presetTriggers'] ?? [],static fn(array $r):bool=>!empty($r['enabled'])&&empty($r['deletedAt'])&&!empty($r['nextRunAt'])&&self::timestamp($r['nextRunAt'])<=$at));
+        $at??=QualityClock::micro();$due=array_values(array_filter($state['presetTriggers'] ?? [],static fn(array $r):bool=>!empty($r['enabled'])&&empty($r['deletedAt'])&&!empty($r['nextRunAt'])&&self::timestamp($r['nextRunAt'])<=$at));
         usort($due,static fn(array $a,array $b):int=>strcmp($a['nextRunAt'],$b['nextRunAt'])?:strcmp($a['id'],$b['id']));$count=0;
         foreach(array_slice($due,0,50) as $row){
             $dueAt=self::timestamp($row['nextRunAt']);$recent=ExternalSchedule::nextStart(self::timing($row),max($dueAt,$at-300));
