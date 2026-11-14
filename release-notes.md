@@ -1,5 +1,5 @@
-## [3.40.4]
+## [3.40.5]
 
-- Der Website-Kalender in WordPress und TYPO3 löst Typ-Standardbilder direkt aus der nativen Mediathek auf, auch wenn kein Kiosky-Medienkatalog gespeichert ist. Eigene Veranstaltungsbilder bleiben vorrangig.
-- Detailfenster laden ihre Bilder sofort. Ausgeblendete Bilder bleiben auch im öffentlichen Datensatz ausgeblendet.
-- Gezielte, deduplizierte Bildabfragen vermeiden einen vollständigen Medienscan; private, gelöschte oder nicht öffentlich lesbare native Standardbilder werden nicht veröffentlicht. Neue Regressionen prüfen die echten CMS-Ausgaben und geladene Bilder im Browser.
+- In der Programmverwaltung lassen sich ausgewählte manuelle und importierte Entwürfe gemeinsam veröffentlichen, ohne jede Veranstaltung erneut zu öffnen. Andere Status und sämtliche Veranstaltungsdaten bleiben erhalten.
+- Der Statusfilter erlaubt Mehrfachauswahl. Standardmäßig werden Entwürfe, veröffentlichte und abgesagte Veranstaltungen gezeigt; Archiv und gelöschte Datensätze bleiben ausgeblendet. Die Auswahl wird im Browser gespeichert.
+- Touchgeeignete Filter, sichtbare Auswahlhinweise, Fehlerwiederholung und unveränderte Bearbeitungsrechte sind für Standalone, WordPress und TYPO3 geprüft.

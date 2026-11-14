@@ -399,11 +399,24 @@ final class Api
             }
         }
         if ($path === '/api/events/bulk' && $method === 'POST') {
-            $ids = array_values(array_unique(array_map('strval', is_array($body['ids'] ?? null) ? $body['ids'] : [])));
             $action = (string)($body['action'] ?? '');
+            if($action==='publish'&&(!is_array($body['ids'] ?? null)||count($body['ids'])>1000||array_filter($body['ids'],static fn(mixed $id):bool=>!is_string($id)||trim($id)==='')))throw new RuntimeException('Bitte höchstens 1000 gültige Veranstaltungskennungen auswählen.',422);
+            $ids = array_values(array_unique(array_map('strval', is_array($body['ids'] ?? null) ? $body['ids'] : [])));
             if (!$ids) throw new RuntimeException('Bitte mindestens eine Veranstaltung auswählen.', 422);
             if ($action === 'delete' && ($this->identity['role'] ?? '') !== 'admin') {
                 throw new RuntimeException('Endgültiges Löschen ist Administratoren vorbehalten.', 403);
+            }
+            if ($action === 'publish') {
+                $result=['count'=>0,'skipped'=>0,'missing'=>0];
+                foreach($ids as $id){
+                    $index=$this->index($state['events'],$id);
+                    if($index===null){$result['missing']++;continue;}
+                    $event=$state['events'][$index];
+                    if(($event['status'] ?? '')!=='draft'||EventLifecycle::effective($event)!=='draft'){$result['skipped']++;continue;}
+                    $this->saveRecord($state,'events',['status'=>'published','lockedFields'=>array_values(array_unique([...($event['lockedFields'] ?? []),'status'])),'syncStatus'=>empty($event['sourceId'])?'manual':'manually_modified'],$id);
+                    $result['count']++;
+                }
+                return $this->ok(['ok'=>true]+$result,$result['count']>0);
             }
             if ($action === 'update') {
                 $field = (string)($body['field'] ?? '');

@@ -10,7 +10,7 @@
 
 Neue manuelle Veranstaltungen, Importe, Kopien und Vorlagenverwendungen beginnen
 immer als Entwurf. Erst ein anschließendes Speichern als veröffentlicht oder
-abgesagt gibt sie frei. Wiederholte Importe behalten die lokale Veröffentlichung;
+abgesagt oder die Sammelaktion „Gewählte Entwürfe veröffentlichen“ gibt sie frei. Wiederholte Importe behalten die lokale Veröffentlichung;
 ein gelöschter Datensatz wird nicht erneut befüllt. Die kleine Herkunftskennung
 verhindert das erneute Anlegen derselben externen Veranstaltung.
 
@@ -38,3 +38,21 @@ gespeicherte Veranstaltungsvorlagen werden nicht pauschal gelöscht. SQLite gibt
 gelöschte Seiten zur Wiederverwendung frei; eine Dateiverkleinerung per VACUUM
 läuft nicht während einer Benutzeranfrage. Backups behalten ihren eigenen
 Aufbewahrungszeitraum; die Reduktion ist keine sichere Löschung aller Backups.
+
+## Sammelfreigabe und Ansichten ab 3.40.5
+
+In der Programmverwaltung mehrere Veranstaltungen über ihre Checkboxen oder
+„Alle sichtbaren Veranstaltungen auswählen“ markieren und **Gewählte Entwürfe
+veröffentlichen** anklicken. Nach Bestätigung werden manuelle und importierte
+Entwürfe gemeinsam freigegeben. Bestehende Veröffentlichungen, Absagen, archivierte,
+abgelaufene oder gelöschte Veranstaltungen werden dabei nicht umgestellt. Die
+Veranstaltungsdaten und gesperrten Importfelder bleiben erhalten. Es gelten die
+normalen Veranstaltungs-Bearbeitungsrechte, keine neuen Benutzerrechte.
+
+Der aufklappbare **Statusfilter** erlaubt mehrere Status gleichzeitig. Standardmäßig
+sind Entwurf, Veröffentlicht und Abgesagt ausgewählt; Archiviert und Gelöscht bleiben
+ausgeblendet. Für ausschließlich Entwürfe und Veröffentlichte „Abgesagt“ abwählen.
+„Aktuelle“, „Alle“ und „Keine“ vereinfachen die Auswahl. Der Browser merkt sich die
+gewählten Status. Ohne Auswahl ist die Ergebnisliste leer. Suche, Herkunftsfilter
+und Sortierung gelten weiterhin zusätzlich. Auch außerhalb des Filters ausgewählte
+Veranstaltungen werden im Auswahlhinweis kenntlich gemacht.

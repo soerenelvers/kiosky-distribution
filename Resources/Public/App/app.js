@@ -1521,14 +1521,14 @@ function setEventListSort(key,toggle=false){
 }
 function visibleEventRows(){
   const query = document.querySelector('#event-search').value.trim().toLowerCase();
-  const status = document.querySelector('#event-status-filter').value;
+  const statuses = new Set([...document.querySelectorAll('#event-status-filter input:checked')].map(input=>input.value));
   const objectType = document.querySelector('#event-object-filter').value;
-  return sortEventRows(state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber,item.organizer,item.eventType].some(value => String(value || '').toLowerCase().includes(query))) && (!status || item.status === status)&&(!objectType||item.externalObjectType===objectType)));
+  return sortEventRows(state.events.filter(item => (!query || [item.title, item.venue, item.externalNumber,item.organizer,item.eventType].some(value => String(value || '').toLowerCase().includes(query))) && statuses.has(item.status)&&(!objectType||item.externalObjectType===objectType)));
 }
 function renderEvents() {
-  const rows = visibleEventRows();
+  const rows = visibleEventRows(),selectable=rows.filter(item=>item.status!=='removed');
   const sort=state.eventSort||{key:'date',direction:'asc'};document.querySelector('#event-sort-column').value=sort.key;document.querySelector('#event-sort-direction').value=sort.direction;
-  document.querySelector('#event-table').innerHTML = `<div class="table-row table-head" role="row">${eventSortHeader('title','Veranstaltung',`<label class="table-check"><input type="checkbox" id="event-select-all" aria-label="Alle sichtbaren Veranstaltungen auswählen" ${rows.length&&rows.every(item=>state.selectedEvents.has(item.id))?'checked':''}></label>`)}${eventSortHeader('date','Termin')}${eventSortHeader('venue','Ort')}${eventSortHeader('source','Quelle')}${eventSortHeader('status','Status')}<span role="columnheader" aria-label="Aktionen"></span></div>${rows.map(item => {
+  document.querySelector('#event-table').innerHTML = `<div class="table-row table-head" role="row">${eventSortHeader('title','Veranstaltung',`<label class="table-check"><input type="checkbox" id="event-select-all" aria-label="Alle sichtbaren Veranstaltungen auswählen" ${selectable.length&&selectable.every(item=>state.selectedEvents.has(item.id))?'checked':''} ${selectable.length?'':'disabled'}></label>`)}${eventSortHeader('date','Termin')}${eventSortHeader('venue','Ort')}${eventSortHeader('source','Quelle')}${eventSortHeader('status','Status')}<span role="columnheader" aria-label="Aktionen"></span></div>${rows.map(item => {
     const date = eventDateInput(item.date);
     const formattedDate = date ? new Date(`${date}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Termin offen';
     const time = eventTimeInput(item.eventStart);
@@ -1537,6 +1537,11 @@ function renderEvents() {
     const objectLabel=item.externalObjectType==='PROJECT'?'Projekt':item.externalObjectType==='JOB'?'Job':'';
     return `<div class="table-row" role="row" data-event-row="${escapeHtml(item.id)}"><span><label class="table-check"><input type="checkbox" data-event-select="${escapeHtml(item.id)}" ${state.selectedEvents.has(item.id)?'checked':''} ${item.status==='removed'?'disabled':''}><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.externalNumber || 'Eigene Veranstaltung')} · ${escapeHtml([objectLabel,item.eventType,item.organizer,syncLabel].filter(Boolean).join(' · '))}</small></span></label></span><span>${escapeHtml(formattedDate)}${time ? ` · ${escapeHtml(time)}` : ''}</span><span>${escapeHtml(item.venue || item.room || '–')}</span><span class="source-label">${escapeHtml(source)}</span><span><i class="tag ${eventStatusTones[item.status] || 'muted'}">${escapeHtml(eventStatusLabels[item.status] || item.status)}</i></span><button class="row-menu" type="button" data-edit-event="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.title)} bearbeiten">${item.status==='removed'?'Ansehen':'Bearbeiten'}</button></div>`;
   }).join('') || '<div class="event-table-empty">Keine passenden Veranstaltungen vorhanden. Importiere Termine aus CrewBrain oder easyjob oder lege eine Veranstaltung manuell an.</div>'}`;
+  const checked=selectable.filter(item=>state.selectedEvents.has(item.id)).length;
+  document.querySelector('#event-select-all').indeterminate=checked>0&&checked<selectable.length;
+  const visibleIds=new Set(rows.map(item=>item.id)),drafts=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.status==='draft').length,hidden=[...state.selectedEvents].filter(id=>!visibleIds.has(id)).length;
+  const publishButton=document.querySelector('#bulk-publish-events');publishButton.disabled=!drafts||Boolean(state.eventPublicationBusy);publishButton.textContent=drafts?`${drafts} ${drafts===1?'gewählten Entwurf':'gewählte Entwürfe'} veröffentlichen`:'Gewählte Entwürfe veröffentlichen';
+  document.querySelector('#event-selection-count').textContent=state.selectedEvents.size?`${state.selectedEvents.size} ausgewählt${hidden?` · ${hidden} außerhalb des aktuellen Filters`:''}`:'';
   const selected=state.selectedEvents.size,selectedImported=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.sourceId).length;document.querySelector('#bulk-edit-events').disabled=!selectedImported;document.querySelector('#bulk-edit-events').title=selected&&!selectedImported?'Massenänderungen gelten nur für importierte Veranstaltungen':'';document.querySelector('#bulk-archive-events').disabled=!selected;document.querySelector('#bulk-delete-events').disabled=!selected||state.currentUser?.role!=='admin';
 }
 
@@ -1721,7 +1726,19 @@ function collectEventEditor() {
 document.querySelector('#event-sort-column').addEventListener('change',event=>setEventListSort(event.target.value));
 document.querySelector('#event-sort-direction').addEventListener('change',event=>{state.eventSort={key:document.querySelector('#event-sort-column').value,direction:event.target.value};renderEvents();});
 document.querySelector('#event-search').addEventListener('input', renderEvents);
-document.querySelector('#event-status-filter').addEventListener('change', renderEvents);
+function updateEventStatusFilter(save=false){
+  const inputs=[...document.querySelectorAll('#event-status-filter input')],selected=inputs.filter(input=>input.checked),labels=selected.map(input=>eventStatusLabels[input.value]);
+  document.querySelector('#event-status-filter summary').textContent=selected.length===inputs.length?'Status: Alle':!selected.length?'Status: Keine':selected.length<=2?`Status: ${labels.join(' + ')}`:`Status: ${selected.length} ausgewählt`;
+  if(save)try{localStorage.setItem('kiosky-event-status-filter',JSON.stringify(selected.map(input=>input.value)));}catch{}
+}
+try{const saved=JSON.parse(localStorage.getItem('kiosky-event-status-filter'));if(Array.isArray(saved)&&saved.every(value=>['draft','published','cancelled','archived','removed'].includes(value)))document.querySelectorAll('#event-status-filter input').forEach(input=>{input.checked=saved.includes(input.value);});}catch{}
+updateEventStatusFilter();
+document.querySelector('#event-status-filter').addEventListener('change',()=>{updateEventStatusFilter(true);renderEvents();});
+document.querySelector('#event-status-filter').addEventListener('click',event=>{
+  const button=event.target.closest('[data-event-status-preset]');if(!button)return;
+  const preset=button.dataset.eventStatusPreset;
+  document.querySelectorAll('#event-status-filter input').forEach(input=>{input.checked=preset==='all'||preset==='current'&&['draft','published','cancelled'].includes(input.value);});updateEventStatusFilter(true);renderEvents();
+});
 document.querySelector('#event-object-filter').addEventListener('change', renderEvents);
 document.querySelector('#event-table').addEventListener('click', event => {
   const sort=event.target.closest('[data-event-sort]');if(sort){const key=sort.dataset.eventSort;setEventListSort(key,true);document.querySelector(`[data-event-sort="${key}"]`).focus({preventScroll:true});return;}
@@ -1800,6 +1817,18 @@ document.querySelector('#event-bulk-form').addEventListener('submit',async event
   try{const result=await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify(payload)});document.querySelector('#event-bulk-dialog').close();state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);const skipped=Number(result.skippedManual||0)+Number(result.skippedWithoutDate||0);showToast(`${result.count} importierte Veranstaltung${result.count===1?'':'en'} aktualisiert${skipped?` · ${skipped} übersprungen`:''}.`);}catch(error){showToast(error.message);}finally{button.disabled=false;}
 });
 async function bulkEvents(action){const ids=[...state.selectedEvents];if(!ids.length)return;const label=action==='archive'?'archivieren':'löschen und auf Name, Datum und Herkunft reduzieren (nicht wiederherstellbar)';if(!confirm(`${ids.length} gewählte Veranstaltung${ids.length===1?'':'en'} ${label}?`))return;try{await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify({ids,action})});state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);showToast(`${ids.length} Veranstaltung${ids.length===1?'':'en'} wurde${ids.length===1?'':'n'} verarbeitet.`);}catch(error){showToast(error.message);}}
+document.querySelector('#bulk-publish-events').addEventListener('click',async()=>{
+  if(state.eventPublicationBusy)return;
+  const ids=state.events.filter(item=>state.selectedEvents.has(item.id)&&item.status==='draft').map(item=>item.id);
+  if(!ids.length)return;if(ids.length>1000){showToast('Bitte höchstens 1000 Entwürfe gleichzeitig veröffentlichen.');return;}
+  if(!confirm(`${ids.length} ${ids.length===1?'gewählten Entwurf':'gewählte Entwürfe'} veröffentlichen? Sie werden entsprechend den Freigaben in Werbung und Veranstaltungskalender sichtbar.`))return;
+  state.eventPublicationBusy=true;renderEvents();
+  try{
+    const result=await apiRequest('/api/events/bulk',{method:'POST',body:JSON.stringify({ids,action:'publish'})});
+    state.selectedEvents.clear();await Promise.all([loadEvents(),loadContent()]);
+    showToast(`${result.count} Veranstaltung${result.count===1?'':'en'} veröffentlicht${result.skipped||result.missing?` · ${result.skipped+result.missing} übersprungen`:''}.`);
+  }catch(error){showToast(error.message);}finally{state.eventPublicationBusy=false;renderEvents();}
+});
 document.querySelector('#bulk-archive-events').addEventListener('click',()=>bulkEvents('archive'));
 document.querySelector('#bulk-delete-events').addEventListener('click',()=>bulkEvents('delete'));
 document.querySelector('#event-form').addEventListener('submit', async event => {
