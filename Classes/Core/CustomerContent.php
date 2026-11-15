@@ -60,7 +60,7 @@ final class CustomerContent {
         return $i;
     }
     private function find(string $collection,string $id):array{
-        foreach($this->data[$collection] as $r)if($r['id']===$id)return $r;
+        foreach($this->data[$collection] as $r)if($r['id']===$id&&($collection!=='invitations'||empty($r['deletedAt'])))return $r;
         throw new RuntimeException('Eintrag nicht gefunden.',404);
     }
     private function update(string $collection,array $value):void{
@@ -79,7 +79,7 @@ final class CustomerContent {
         throw new RuntimeException('Die Veranstaltung ist nicht mehr verfügbar.',409);
     }
     private function active(array $i,bool $customer=true):void{
-        if(!empty($i['revokedAt'])||$customer&&strtotime($i['editUntil'])<=time()||strtotime($i['endsAt'])<=time())throw new RuntimeException('Dieser Kundenlink ist abgelaufen oder widerrufen.',410);
+        if(!empty($i['deletedAt'])||!empty($i['revokedAt'])||$customer&&strtotime($i['editUntil'])<=time()||strtotime($i['endsAt'])<=time())throw new RuntimeException('Dieser Kundenlink ist abgelaufen oder widerrufen.',410);
         $this->event($i['eventId']);
         foreach($i['displayIds'] as $id){
             $d=$this->display($id);
@@ -137,7 +137,11 @@ final class CustomerContent {
         throw new RuntimeException('Inhalt nicht mehr verfügbar.',409);
     }
     public function staff(string $method,?string $id,?string $action,array $input):array{
-        if($method==='GET'&&!$id)return ['invitations'=>array_map(self::inviteDto(...),$this->data['invitations']),'uploads'=>array_map(self::fileDto(...),$this->data['uploads']),'proposals'=>$this->data['proposals']];
+        if($method==='GET'&&!$id){
+            $invitations=array_values(array_filter($this->data['invitations'],static fn($i)=>empty($i['deletedAt'])));
+            $ids=array_column($invitations,'id');
+            return ['invitations'=>array_map(self::inviteDto(...),$invitations),'uploads'=>array_map(self::fileDto(...),array_values(array_filter($this->data['uploads'],static fn($f)=>in_array($f['invitationId'],$ids,true)))),'proposals'=>array_values(array_filter($this->data['proposals'],static fn($p)=>in_array($p['invitationId'],$ids,true)))];
+        }
         if($method==='POST'&&!$id){
             if(count(array_filter($this->data['invitations'],static fn($i)=>empty($i['revokedAt'])&&strtotime($i['endsAt'])>time()))>=200)throw new RuntimeException('Es sind bereits 200 Kundenfreigaben vorhanden.',409);
             $displayIds=self::ids($input['displayIds']??null);
@@ -147,7 +151,11 @@ final class CustomerContent {
             $start=self::date($input['startsAt']??null);
             $end=self::date($input['endsAt']??null);
             $edit=self::date($input['editUntil']??null);
-            if($end<=$start||strtotime($end)<=time()||$edit>$end||strtotime($edit)<=time()||strtotime($end)-strtotime($start)>366*86400)throw new RuntimeException('Bitte einen gültigen Freigabezeitraum von höchstens einem Jahr wählen.',422);
+            if($end<=$start)throw new RuntimeException('Das Ausspielende muss nach dem Ausspielbeginn liegen.',422);
+            if(strtotime($end)<=time())throw new RuntimeException('Das Ausspielende muss in der Zukunft liegen.',422);
+            if(strtotime($end)-strtotime($start)>366*86400)throw new RuntimeException('Der Ausspielzeitraum darf höchstens ein Jahr betragen.',422);
+            if($edit>$end)throw new RuntimeException('„Kundenlink gültig bis“ darf nicht nach dem Ausspielende liegen.',422);
+            if(strtotime($edit)<=time())throw new RuntimeException('„Kundenlink gültig bis“ muss in der Zukunft liegen.',422);
             $token=bin2hex(random_bytes(32));
             $i=['id'=>self::uuid(),'customerName'=>self::text($input['customerName']??null,'Kundenname'),'tag'=>'Kunde: '.self::text($input['tag']??($input['customerName']??''),'Tag',90),'eventId'=>$eventId,'displayIds'=>$displayIds,'displayLocations'=>array_combine($displayIds,array_map(fn($id)=>(string)($this->display($id)['locationId']??''),$displayIds)),'startsAt'=>$start,'endsAt'=>$end,'editUntil'=>$edit,'createdAt'=>self::now(),'createdBy'=>$this->actor,'tokenHash'=>hash('sha256',$token)];
             $this->data['invitations'][]=$i;
@@ -155,12 +163,14 @@ final class CustomerContent {
         }
         if($action==='file'&&$method==='GET'){
             $f=$this->find('uploads',(string)$id);
+            $this->find('invitations',$f['invitationId']);
             return $this->fileData($f);
         }
-        if($action==='revoke'&&$method==='POST'){
+        if($action==='revoke'&&$method==='POST'||$id!==null&&$action===null&&$method==='DELETE'){
             $i=$this->find('invitations',(string)$id);
             $i['revokedAt']=self::now();
             $i['tokenHash']='';
+            if($method==='DELETE')$i['deletedAt']=$i['revokedAt'];
             $this->update('invitations',$i);
             foreach($this->data['proposals'] as $p)if($p['invitationId']===$i['id']&&$p['status']==='pending'){
                 $p['status']='rejected';

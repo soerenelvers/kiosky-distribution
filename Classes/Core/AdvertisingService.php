@@ -14,7 +14,7 @@ require_once __DIR__.'/TicketLinks.php';
 /** CMS counterpart of the standalone advertising generator; works only on the current state snapshot. */
 final class AdvertisingService
 {
-    private const DEFAULTS = ['interstitialSlideIds'=>[],'channelSequences'=>[],'enabled'=>false,'maximumSlides'=>15,'maximumEvents'=>15,'eventTypes'=>[],'eventTypeDefaultMedia'=>[],
+    private const DEFAULTS = ['interstitialIntervals'=>[],'interstitialSlideIds'=>[],'channelSequences'=>[],'enabled'=>false,'maximumSlides'=>15,'maximumEvents'=>15,'eventTypes'=>[],'eventTypeDefaultMedia'=>[],
         'durationSeconds'=>12,'showDate'=>false,'showTime'=>true,'showSeconds'=>false,'hour12'=>false,
         'channelName'=>'Werbung','locationIds'=>[],'templateLandscapeId'=>null,'templatePortraitId'=>null];
 
@@ -58,10 +58,16 @@ final class AdvertisingService
         foreach(['templateLandscapeId','templatePortraitId'] as $field)if(!empty($settings[$field])){ $t=self::find($state['templates'],(string)$settings[$field]);if(!$t||!empty($t['deletedAt'])||($t['status'] ?? '')==='archived')throw new RuntimeException('Die ausgewählte Werbevorlage wurde nicht gefunden.',422); }
         $settings['channelSequences']=$previous['channelSequences'];
         $settings['interstitialSlideIds']=$input['interstitialSlideIds'] ?? $previous['interstitialSlideIds'];
+        $settings['interstitialIntervals']=$input['interstitialIntervals'] ?? (isset($input['interstitialSlideIds'])?[]:$previous['interstitialIntervals']);
+        if(!is_array($settings['interstitialIntervals']))throw new RuntimeException('Ungültige Abstände für Zwischenslides.',422);
         if(!is_array($settings['interstitialSlideIds']))throw new RuntimeException('Ungültige Zwischenslides.',422);
         foreach(['landscape','portrait'] as $orientation){
             $ids=$settings['interstitialSlideIds'][$orientation] ?? [];
             if(!is_array($ids)||count($ids)>10)throw new RuntimeException('Höchstens zehn Zwischenslides je Format.',422);
+            $values=$settings['interstitialIntervals'][$orientation] ?? array_fill(0,count($ids),1);
+            if(!is_array($values)||!array_is_list($values)||count($values)!==count($ids))throw new RuntimeException('Ungültige Abstände für Zwischenslides.',422);
+            foreach($values as $n)if(!is_int($n)||$n<1||$n>500)throw new RuntimeException('Zwischenslides: Der Abstand muss eine ganze Zahl von 1 bis 500 sein.',422);
+            $settings['interstitialIntervals'][$orientation]=$values;
             foreach($ids as $id){$slide=is_string($id)?self::find($state['slides'],$id):null;if(!$slide||!empty($slide['deletedAt'])||!empty($slide['archivedAt']))throw new RuntimeException('Eine ausgewählte Zwischenslide wurde nicht gefunden.',422);}
         }
         $state['advertisingSettings'] = $settings;
@@ -123,18 +129,20 @@ final class AdvertisingService
     public static function playlist(array $state,string $orientation): array
     {
         $settings=self::settings($state);if(!$settings['enabled'])return [];
-        $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now())));
+        $extraIds=$settings['interstitialSlideIds'][$orientation] ?? [];
+        $manual=array_values(array_filter($state['slides'],static fn(array $s):bool=>!in_array($s['id'],$extraIds,true)&&!str_starts_with($s['automationKey'] ?? '','advertising:event:')&&empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&in_array($orientation,self::formats($s),true)&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now())));
         usort($manual,static fn(array $a,array $b):int=>[$a['endsAt'] ?? '',$a['id']]<=>[$b['endsAt'] ?? '',$b['id']]);
         $events=self::virtualSlides($state,$orientation);$byId=array_column(array_merge($manual,$events),null,'id');
         $active=static fn(array $s):bool=>empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now());
         $selected=[];$seen=[];
         foreach($settings['channelSequences'][$orientation] ?? [] as $item){
+            if(in_array($item['slideId'],$extraIds,true))continue;
             $slide=$byId[$item['slideId']] ?? (!str_starts_with($item['slideId'],'advertising-event:')?self::find($state['slides'],$item['slideId']):null);
             if($slide&&$active($slide)){$selected[]=$item+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
         }
         foreach(array_merge(array_slice($manual,0,$settings['maximumSlides']),$events) as $slide)if(!isset($seen[$slide['id']])){$selected[]=['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit']+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
-        $extras=[];foreach($settings['interstitialSlideIds'][$orientation] ?? [] as $id){$slide=self::find($state['slides'],$id);if($slide&&$active($slide))$extras[]=$slide;}
-        $result=[];$index=0;foreach($selected as $item){$result[]=$item;if(!empty($item['slide']['virtual'])&&++$index<count($events))foreach($extras as $slide)$result[]=['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit','advertisingInterstitial'=>true];}
+        $extras=[];foreach($extraIds as $position=>$id){$slide=self::find($state['slides'],$id);if($slide&&$active($slide)){$every=$settings['interstitialIntervals'][$orientation][$position] ?? 1;$extras[]=['slide'=>$slide,'every'=>is_int($every)&&$every>=1&&$every<=500?$every:1];}}
+        $result=[];$index=0;foreach($selected as $item){$result[]=$item;$index++;foreach($extras as $rule)if($index%$rule['every']===0)$result[]=['slideId'=>$rule['slide']['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit','advertisingInterstitial'=>true];}
         return $result;
     }
 

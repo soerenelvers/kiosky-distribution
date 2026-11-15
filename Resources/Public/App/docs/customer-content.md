@@ -18,6 +18,8 @@ Displays, Zeitplanung und Medien müssen freigeschaltet und aktiviert sein.
    festlegen. Die Eingaben gelten für **Europe/Berlin**, unabhängig von der
    Zeitzone des Kundenrechners. Zeiten in der ausgelassenen Stunde bei der
    Sommerzeitumstellung werden abgewiesen.
+   Wird das Ausspielende verkürzt, passt das Formular eine später liegende
+   Linkfrist daran an. Eine bewusst frühere Linkfrist bleibt erhalten.
 4. Den erzeugten Link kopieren und vertraulich weitergeben. Der vollständige Link
    wird nur bei seiner Erstellung angezeigt. Verlorene Links widerrufen und neu
    erstellen; das System speichert keinen wieder auslesbaren Zugangsschlüssel.
@@ -76,6 +78,12 @@ angezeigt: Die Freigabe kann dann sofort auf dem Display wirksam werden.
 Vorschläge, archiviert ungeprüfte Entwürfe und entfernt deren private Dateikopien.
 Bereits freigegebene Slides, Kanäle und Zeitzuweisungen bleiben erhalten und werden
 weiterhin über die gewöhnliche Verwaltung bearbeitet.
+
+**Link löschen** sperrt den Zugang ebenfalls und entfernt den Eintrag samt
+zugehörigen Vorschlägen aus der Freigabeübersicht. Offene Entwürfe werden archiviert
+und ihre privaten Dateien entfernt. Bereits freigegebene Slides, Kanäle und
+Zeitzuweisungen bleiben erhalten. Ein interner Lösch-/Sperrvermerk bleibt bestehen;
+ein gelöschter Link kann nicht reaktiviert werden.
 
 ## Sicherheit, Speicher und Betrieb
 
