@@ -12,6 +12,7 @@ require_once __DIR__.'/LicenseClient.php';
 require_once __DIR__.'/TicketLinks.php';
 require_once __DIR__.'/ContentHistory.php';
 require_once __DIR__.'/PlaybackProof.php';
+require_once __DIR__.'/PlayerHealth.php';
 require_once __DIR__.'/DisplaySimulation.php';
 require_once __DIR__.'/PublicationCheck.php';
 require_once __DIR__.'/SlideEventSelection.php';
@@ -85,6 +86,7 @@ final class Api
                 if($this->store instanceof CmsMediaStateStore&&$migrationSaving)$this->store->saveMigration($state);else $this->store->save($state);
                 if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
             }
+            if(!$this->canReadPlayerKeys()&&!str_starts_with($path,'/api/player/')&&!str_starts_with($path,'/api/player-pairings'))$result[1]=$this->withoutPlayerKeys($result[1]);
             return [$result[0], $result[1]];
         } catch (Throwable $error) {
             if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer|content-packages)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
@@ -251,6 +253,18 @@ final class Api
 
         $this->assertRolePermission($method, $path);
         $designer=($this->identity['role'] ?? '')==='designer';$actorId=(string)$this->identity['id'];
+        if($path==='/api/settings/player-health'){
+            $this->license()->assertPath($state,'/api/displays');if(!$this->user()['canManageSettings'])throw new RuntimeException('Keine Einstellungsrechte.',403);
+            if($method==='GET')return $this->ok(['settings'=>PlayerHealth::settings($state['playerHealthSettings']??[])]);
+            if($method==='PUT'){$previous=PlayerHealth::settings($state['playerHealthSettings']??[]);$state['playerHealthSettings']=array_replace(PlayerHealth::settings($body,true),['displays'=>$previous['displays'],'updatedAt'=>$this->now()]);$this->audit($state,'player-health.settings.updated','player_health');return $this->ok(['settings'=>$state['playerHealthSettings']],true);}
+        }
+        if($path==='/api/displays/health'&&$method==='GET')return $this->ok(PlayerHealth::report($this->listCollection($state,'displays'),$state['playerHealthSettings']??[],$this->version)+['canManageSettings'=>$this->user()['canManageSettings'],'canControl'=>$this->canControlPlayers()]);
+        if(preg_match('#^/api/displays/([^/]+)/(monitoring|output)$#',$path,$healthMatch)){
+            $display=$this->required($this->active($state['displays']),rawurldecode($healthMatch[1]),'Display');
+            if($healthMatch[2]==='monitoring'&&$method==='POST'){if(!$this->canControlPlayers())throw new RuntimeException('Keine Steuerungsrechte.',403);if(!is_bool($body['paused']??null))throw new RuntimeException('Bitte einen gültigen Überwachungsstatus angeben.',422);$cfg=PlayerHealth::settings($state['playerHealthSettings']??[]);$cfg['displays'][$display['id']]=['paused'=>$body['paused'],'changedAt'=>$this->now()];$state['playerHealthSettings']=$cfg;return $this->ok(['ok'=>true],true);}
+            if($healthMatch[2]==='output'&&$method==='GET'){$copy=$state;$result=$this->player($copy,'GET',$display['slug'],'state',['preview'=>1],$display['playerKey']);$result[1]=$this->license()->playback($copy,$result[1]);$result[1]=$this->withoutPlayerKeys($result[1]);return $this->ok($result[1]);}
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
         if($path==='/api/slides/publication-check'&&$method==='POST'){
             if(!is_array($body['slide']??null))throw new RuntimeException('Bitte eine Slide zur Prüfung übergeben.',422);$slide=$body['slide'];
             if($designer&&!empty($slide['id']))ContentAccess::own($state,$actorId,(string)$slide['id']);
@@ -1216,10 +1230,15 @@ final class Api
         $file['font']=array_diff_key($file['font'],['assetId'=>true]);return $file;
     }
 
+    private function canReadPlayerKeys():bool{return ($this->identity['canManageDisplays']??in_array($this->identity['role']??'',['admin','editor'],true))===true;}
+    private function canControlPlayers():bool{return ($this->identity['canControlDisplays']??in_array($this->identity['role']??'',['admin','editor'],true))===true;}
+    private function withoutPlayerKeys(array $value):array{foreach($value as $key=>$entry){if($key==='playerKey')unset($value[$key]);elseif(is_array($entry))$value[$key]=$this->withoutPlayerKeys($entry);}return $value;}
+
     private function assertRolePermission(string $method, string $path): void
     {
         $role = (string)($this->identity['role'] ?? 'viewer');
         if ($role === 'admin') return;
+        if($method==='POST'&&preg_match('#^/api/displays/[^/]+/monitoring$#',$path)&&$this->canControlPlayers())return;
         if(str_starts_with($path,'/api/history/')){if($role==='editor'||$role==='designer'&&preg_match('#^/api/history/(slide|event)(?:/|$)#',$path))return;throw new RuntimeException('Für diesen Verlauf fehlen die erforderlichen Rechte.',403);}
         if(str_starts_with($path,'/api/reports/')){if($role==='editor')return;throw new RuntimeException('Für Berichte fehlen die erforderlichen Rechte.',403);}
         if ($path === '/api/settings/features' && $method === 'GET') return;
@@ -2049,7 +2068,7 @@ final class Api
             $body['online'] = true;
             $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
             // Heartbeat metadata may never overwrite credentials, routing or display configuration.
-            $fields=array_intersect_key($body,array_flip(['channelId','slideId','version','cached','viewportWidth','viewportHeight','devicePixelRatio','lastSeenAt','online']));
+            $fields=PlayerHealth::metadata($body);$fields['lastSeenAt']=$this->now();$fields['playerHealth']=PlayerHealth::normalize($body['diagnostics']??null,is_array($rawDisplay['playerHealth']??null)?$rawDisplay['playerHealth']:null);
             // Persist status into the raw record: $display contains read-only projections.
             $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($state['displays'][$index],$fields);
             $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));
@@ -2753,10 +2772,11 @@ final class Api
             'username' => $this->identity['email'],
             'email' => $this->identity['email'],
             'displayName' => $this->identity['name'],
-            'role' => in_array($this->identity['role'], ['admin', 'editor', 'viewer'], true) ? $this->identity['role'] : 'viewer',
+            'role' => in_array($this->identity['role'], ['admin', 'editor', 'designer', 'viewer'], true) ? $this->identity['role'] : 'viewer',
             'status' => 'active',
             'mustChangePassword' => false,
             'qualityPermissions'=>$this->identity['qualityPermissions']??['history:slide'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:channel'=>in_array($this->identity['role'],['admin','editor'],true),'history:event'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:schedule'=>in_array($this->identity['role'],['admin','editor'],true),'simulation'=>in_array($this->identity['role'],['admin','editor'],true),'report'=>in_array($this->identity['role'],['admin','editor'],true),'check'=>in_array($this->identity['role'],['admin','editor','designer'],true)],
+            'canControlDisplays'=>$this->canControlPlayers(),'canManageDisplays'=>$this->canReadPlayerKeys(),
             'canManageSettings' => ($this->identity['canManageSettings'] ?? ($this->identity['role'] === 'admin')) === true,
         ];
     }

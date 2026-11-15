@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "df5e282b2adeea45a53e1cdb2c4d6a8c52dc4c8e",
+  "source_commit": "d9acfececada871dc149eb34bd2575a45ee97e3a",
   "product": "kiosky",
-  "version": "3.42.0",
-  "released_at": "2026-11-15T13:29:54.700Z",
+  "version": "3.43.0",
+  "released_at": "2026-11-15T16:57:03.282Z",
   "channel": "stable",
-  "release_notes": "## [3.42.0]\n\n- Samsung-Tizen-TV-App-Projekt unter /player für Tizen 6.0+ mit dauerhafter Kopplung, Vollbild, Fernbedienungsmenü, Bildschirmschonersteuerung und Renderer-Überwachung. Für die Installation sind Samsung-Zertifikat und Entwicklermodus nötig; Vorabversion ohne Hardwareabnahme.\n- Gemeinsame Wiedergabe wird für die ältere 2021er TV-Webengine kompatibel bereitgestellt. Separate Player-Dokumente enthalten keine Administration; normale Backend-Schutzmechanismen bleiben erhalten.\n- Standalone, WordPress und TYPO3 liefern servergebundene TV-Pakete und unterstützen die öffentliche Kopplung aus der TV-App. Anleitung und Grenzen: docs/samsung-tizen-player.md.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.42.0",
+  "release_notes": "## [3.43.0]\n\n- Player-Gesundheit unter Displays mit Verbindung, Version, letztem erfolgreichen Inhaltsabruf und Medienfehlern; verzögerte Warnungen für Offline-Geräte, Abruffehler und leere Ausgabe. Konfigurierbare Wartezeiten und Wartungspause, mobil bedienbar in allen drei Ausgaben.\n- Player-Schlüssel werden Leseberechtigten nicht mehr offengelegt; authentifizierte Ausgabevorschau ersetzt den Schlüsselzugriff. Native CMS-Steuerungsrechte und WordPress-Statuskonflikte werden berücksichtigt.\n- Öffentliche Player-Anfragen sind größenbegrenzt, PHP-Metadaten werden gefiltert und Standalone prüft widerrufene Geräteschlüssel vor dem Schreiben erneut. Standortfreigaben gelten auch für operative Ziele und Zeitzuweisungen.\n- Bedienung und Prüfgrenzen: docs/player-health.md; Sicherheitsbefunde und offener Abhängigkeitsreview des separaten Update-Diensts: docs/reviews/security-resilience-2026-11-15.md.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.43.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.42.0",
+    "core_version": "3.43.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.42.0",
-    "typo3_extension_version": "3.42.0"
+    "wordpress_plugin_version": "3.43.0",
+    "typo3_extension_version": "3.43.0"
   },
   "components": {
     "core": {
-      "version": "3.42.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.42.0.zip?ref=v3.42.0",
-      "sha256": "e1212b2b141c91c14440199ce2f794838d63311efd43158d41130195cf030a94"
+      "version": "3.43.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.43.0.zip?ref=v3.43.0",
+      "sha256": "96233c2826382e6db4c91d2e1ae157f75e2659163490e2fe37fb1b2f706e7896"
     },
     "standalone": {
-      "version": "3.42.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.42.0.zip?ref=v3.42.0",
-      "sha256": "e1212b2b141c91c14440199ce2f794838d63311efd43158d41130195cf030a94"
+      "version": "3.43.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.43.0.zip?ref=v3.43.0",
+      "sha256": "96233c2826382e6db4c91d2e1ae157f75e2659163490e2fe37fb1b2f706e7896"
     },
     "wordpress": {
-      "version": "3.42.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.42.0.zip?ref=v3.42.0",
-      "sha256": "06caa57dd55ea91f729a8aa6180c2fc9c478e90aebe12623943fa996a2563e16",
+      "version": "3.43.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.43.0.zip?ref=v3.43.0",
+      "sha256": "b19a9c7886ddc5ebb91fe60b88b3afd92bef33155d334c8346770fe32316e331",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.42.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.42.0.zip?ref=v3.42.0",
-      "sha256": "6dfc72eb0d473866b9c0595bdb668286706ce1aaf5ed74441f17c4f64f63c6f3",
+      "version": "3.43.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.43.0.zip?ref=v3.43.0",
+      "sha256": "2a1cae7e72e51e6a7b449b9b6acb8edb837cddf01bdf545261d005a52e98aba1",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

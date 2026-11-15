@@ -1,5 +1,6 @@
-## [3.42.0]
+## [3.43.0]
 
-- Samsung-Tizen-TV-App-Projekt unter /player für Tizen 6.0+ mit dauerhafter Kopplung, Vollbild, Fernbedienungsmenü, Bildschirmschonersteuerung und Renderer-Überwachung. Für die Installation sind Samsung-Zertifikat und Entwicklermodus nötig; Vorabversion ohne Hardwareabnahme.
-- Gemeinsame Wiedergabe wird für die ältere 2021er TV-Webengine kompatibel bereitgestellt. Separate Player-Dokumente enthalten keine Administration; normale Backend-Schutzmechanismen bleiben erhalten.
-- Standalone, WordPress und TYPO3 liefern servergebundene TV-Pakete und unterstützen die öffentliche Kopplung aus der TV-App. Anleitung und Grenzen: docs/samsung-tizen-player.md.
+- Player-Gesundheit unter Displays mit Verbindung, Version, letztem erfolgreichen Inhaltsabruf und Medienfehlern; verzögerte Warnungen für Offline-Geräte, Abruffehler und leere Ausgabe. Konfigurierbare Wartezeiten und Wartungspause, mobil bedienbar in allen drei Ausgaben.
+- Player-Schlüssel werden Leseberechtigten nicht mehr offengelegt; authentifizierte Ausgabevorschau ersetzt den Schlüsselzugriff. Native CMS-Steuerungsrechte und WordPress-Statuskonflikte werden berücksichtigt.
+- Öffentliche Player-Anfragen sind größenbegrenzt, PHP-Metadaten werden gefiltert und Standalone prüft widerrufene Geräteschlüssel vor dem Schreiben erneut. Standortfreigaben gelten auch für operative Ziele und Zeitzuweisungen.
+- Bedienung und Prüfgrenzen: docs/player-health.md; Sicherheitsbefunde und offener Abhängigkeitsreview des separaten Update-Diensts: docs/reviews/security-resilience-2026-11-15.md.

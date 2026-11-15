@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.42.0-20261115132952%2Bdf5e282b" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.42.0-20261115132952%2Bdf5e282b">
+  <link href="player/fonts/builtins.css?v=3.43.0-20261115165701%2Bd9acfece" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.43.0-20261115165701%2Bd9acfece">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -102,6 +102,7 @@
     <button class="nav-backdrop" type="button" aria-label="Navigation schließen" tabindex="-1"></button>
 
     <main class="main-content">
+    <aside id="player-health-banner" class="player-health-banner" data-license-modules="displays" hidden role="status"><span id="player-health-banner-text"></span><button type="button" id="player-health-open">Player prüfen</button></aside>
       <header class="topbar">
         <button class="mobile-menu" type="button" aria-label="Navigation ausblenden" aria-controls="main-navigation" aria-expanded="true">☰</button>
         <div>
@@ -222,6 +223,14 @@
           <div><p class="eyebrow">Digital Signage</p><h2>Displayverwaltung</h2><p>Displays, Gruppen, Matrix-Flächen und Standorte zentral verwalten.</p></div>
           <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="simulation" data-quality-operator data-license-modules="schedule displays">Zeitplansimulation</button><button class="button button-primary" type="button" data-action="new-display">＋ Display hinzufügen</button></div>
         </div>
+        <details class="panel player-health-panel" id="player-health-panel" data-license-modules="displays">
+          <summary><strong>Player-Gesundheit und Warnungen</strong><span id="player-health-summary" role="status">Noch nicht geprüft</span></summary>
+          <p>Player-Meldungen zu Verbindung, Inhaltsabruf und Medien. Das physische TV-Signal wird nicht geprüft. Kurze Ausfälle lösen erst nach der eingestellten Wartezeit eine Warnung aus.</p>
+          <div class="health-toolbar"><label>Player suchen<input id="player-health-search" type="search" placeholder="Name oder Standort"></label><label>Ansicht<select id="player-health-filter"><option value="">Alle Player</option><option value="error">Mit Warnung</option><option value="pending">Wartezeit läuft</option><option value="offline">Nicht erreichbar</option><option value="unknown">Ohne Diagnose</option></select></label><button id="player-health-reload" class="button button-secondary" type="button">Neu laden</button></div>
+          <p id="player-health-status" role="status"></p><div id="player-health-list" class="health-list"></div>
+          <div class="health-pagination"><button id="player-health-prev" type="button">Zurück</button><span id="player-health-page"></span><button id="player-health-next" type="button">Weiter</button></div>
+          <details id="player-health-settings" hidden><summary>Wartezeiten und Überwachung einstellen</summary><form id="player-health-settings-form"><label><input id="health-enabled" type="checkbox"> Überwachung aktiv</label><div class="health-settings-grid"><label>Offline-Warnung nach Sekunden<input id="health-offlineDelay" type="number" min="30" max="86400" required></label><label>Medienfehler nach Sekunden<input id="health-mediaDelay" type="number" min="30" max="86400" required></label><label>Abruffehler nach Sekunden<input id="health-staleDelay" type="number" min="30" max="86400" required></label><label>Leere Ausgabe nach Sekunden<input id="health-emptyDelay" type="number" min="30" max="86400" required></label></div><button type="submit" class="button button-primary">Überwachung speichern</button></form></details>
+        </details>
         <div class="display-management-summary"><div><strong id="display-total">0</strong><span>Displays angelegt</span></div><div><strong id="display-online">0</strong><span>aktuell online</span></div><div><strong id="display-group-total">0</strong><span>Display-Gruppen</span></div><p>Die Player-URL bleibt am Endgerät unverändert. Kanal und Zeitplan werden zentral aktualisiert.</p></div>
         <div class="management-tabs" role="tablist" aria-label="Displaybereiche">
           <button class="is-active" type="button" data-display-tab="displays">Displays</button>
@@ -1848,14 +1857,15 @@
  </div>
 </dialog>
 
-  <script src="runtime-config.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/fullscreen-control.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/media-placement.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/editor-alignment.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/event-image.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/font-library.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="player/playback-proof.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
-  <script src="app.js?v=3.42.0-20261115132952%2Bdf5e282b"></script>
+  <script src="runtime-config.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/fullscreen-control.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/media-placement.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/editor-alignment.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/event-image.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/font-library.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/health-telemetry.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="player/playback-proof.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <script src="app.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
 
 </body>
 </html>

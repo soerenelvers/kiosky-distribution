@@ -12,7 +12,7 @@ final class SystemMigration
     public const FORMAT='kiosky-system-migration';
     public const LIMIT=128000000;
     public const COLLECTIONS=['events','eventSchedules','slides','slideVersions','templates','channels','locations','groups','displays','matrices','schedules','assignments','presets','warningTemplates','warnings','presetTriggers','presetTriggerRuns','mediaFolders','mediaAssets'];
-    public const SETTINGS=['featureSettings','scheduleTargetOrder','eventEditorSettings','eventTemplates','publicCalendarSettings','advertisingSettings','menuSettings','menuShare','navigationOrder','titleExclusions','fonts'];
+    public const SETTINGS=['featureSettings','scheduleTargetOrder','eventEditorSettings','eventTemplates','publicCalendarSettings','advertisingSettings','menuSettings','menuShare','navigationOrder','titleExclusions','fonts','playerHealthSettings'];
     public const EXTRA=['users','apiUsers','menuAccess','contentChannelAccess','menuSubscriptions','dwd','presetHandoffs','crewbrain','easyjob','activeEventSource','externalSources','trash'];
     private const AAD='kiosky-system-migration:1';
     private static function password(mixed $value):string{if(!is_string($value)||strlen($value)<12||strlen($value)>256)throw new RuntimeException('Das Paketpasswort muss 12 bis 256 UTF-8-Bytes lang sein.',422);return $value;}
@@ -82,6 +82,7 @@ final class SystemMigration
         $references=[];$collect=static function(mixed $value)use(&$collect,&$references):void{if(is_array($value)){foreach($value as $entry)$collect($entry);}elseif(is_string($value))$references[$value]=true;};$collect(array_diff_key($state,array_flip(['mediaAssets','mediaFolders','fonts'])));
         $fontAssets=array_flip(array_filter(array_column($state['fonts'],'assetId')));
         $state['mediaAssets']=array_values(array_filter($state['mediaAssets'],static fn(array $asset):bool=>!isset($fontAssets[$asset['id']])&&(!preg_match('/^(wp:|fal:)/',$asset['id'])||isset($references[$asset['id']])||isset($references[$asset['src'] ?? ''])||!empty($asset['metadata']['kioskyManaged'])||!empty($asset['metadata']['legacyId']))));
+        foreach($state['displays'] as &$healthDisplay)unset($healthDisplay['playerHealth']);unset($healthDisplay);
         $size=0;foreach($state['mediaAssets'] as &$asset){$src=$asset['src'] ?? '';if(!str_starts_with($src,'data:')&&preg_match('/^(wp:|fal:)/',$asset['id'])){if(!$assetData)throw new RuntimeException('Die native Mediendatei kann nicht exportiert werden: '.($asset['name'] ?? $asset['id']),503);$asset['sourceUrl']=$src;$asset['sourceUrls']=[$src];$asset['src']=$assetData($asset);}
             if(str_starts_with($asset['src'],'data:')){$data=base64_decode(substr($asset['src'],strpos($asset['src'],',')+1),true);if($data===false)throw new RuntimeException('Eine Mediendatei ist ungültig.',422);$asset['sha256']=hash('sha256',$data);}
             $size+=strlen($asset['src']);if($size>self::LIMIT)throw new RuntimeException('Die Medien überschreiten die Paketgrenze von 128 MB. Es wurde keine unvollständige Datei erzeugt.',413);self::memory($size);
@@ -114,7 +115,7 @@ final class SystemMigration
         foreach($state['slides'] as &$slide)if(isset($slide['ownerId']))$slide['ownerId']=$owner($slide['ownerId']);unset($slide);
         $grants=[];foreach($state['contentChannelAccess'] ?? [] as $id=>$channels)$grants[$owner((string)$id)]=array_values(array_unique([...($grants[$owner((string)$id)] ?? []),...$channels]));$state['contentChannelAccess']=$grants;
         $grants=[];foreach($state['menuAccess'] ?? [] as $id=>$access){$key=$owner((string)$id);$grants[$key]=['enabled'=>!empty($access['enabled']),'slideIds'=>array_values(array_unique([...($grants[$key]['slideIds'] ?? []),...($access['slideIds'] ?? [])]))];}$state['menuAccess']=$grants;
-        foreach($state['displays'] as &$display){$display['playerKey']??=bin2hex(random_bytes(24));foreach(['online','lastSeenAt','currentChannelId','currentSlideId','currentChannelName','currentSlideName','cached','version','playerVersion'] as $key)unset($display[$key]);}unset($display);
+        foreach($state['displays'] as &$display){$display['playerKey']??=bin2hex(random_bytes(24));foreach(['online','lastSeenAt','currentChannelId','currentSlideId','currentChannelName','currentSlideName','cached','version','playerVersion','playerHealth'] as $key)unset($display[$key]);}unset($display);
         $revoked=[];foreach($target['apiUsers'] ?? [] as $previous)if(($previous['status'] ?? '')==='revoked')$revoked[$previous['tokenHash'] ?? '']=true;
         foreach($state['apiUsers'] as &$user)if(isset($revoked[$user['tokenHash'] ?? '']))$user['status']='revoked';unset($user);
         $sourceApiIds=array_flip(array_column($state['apiUsers'],'id'));foreach($target['apiUsers'] ?? [] as $previous)if(!isset($sourceApiIds[$previous['id']])){$previous['status']='revoked';$previous['revokedAt']=gmdate('c');$state['apiUsers'][]=$previous;}

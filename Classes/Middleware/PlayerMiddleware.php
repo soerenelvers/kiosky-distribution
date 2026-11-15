@@ -111,7 +111,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             }
             return new JsonResponse($payload,$status,ExternalRequest::headers($requestId,$status));
         }
-        $body = json_decode((string)$request->getBody(), true);
+        try{$body=\Kiosky\Core\PlayerRequest::decode((string)$request->getBody(),$apiPath);}catch(\RuntimeException $e){return new JsonResponse(['error'=>['code'=>'INVALID_PLAYER_REQUEST','message'=>$e->getMessage()]],$e->getCode(),$pairingCors);}
         $query = $request->getQueryParams();
         unset($query['path']);
         $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat)$#',$apiPath)===1);
