@@ -863,10 +863,10 @@ function createPlayerCacheWriter(write,now=()=>performance.now()) {
   };
 }
 
-function createPlayerWakeLock(navigatorObject,documentObject) {
+function createPlayerWakeLock(navigatorObject,documentObject,nativeAwake=false) {
   let lock=null,pending=false,stopped=false;
   const acquire=async()=>{
-    if(stopped||!navigatorObject.wakeLock||documentObject.visibilityState==='hidden'||pending||(lock&&!lock.released))return;
+    if(nativeAwake||stopped||!navigatorObject.wakeLock||documentObject.visibilityState==='hidden'||pending||(lock&&!lock.released))return;
     pending=true;
     try{
       const acquired=await navigatorObject.wakeLock.request('screen');
@@ -886,10 +886,10 @@ async function renderDisplayPlayer(slug) {
   updateBase.pathname=updateBase.pathname.replace(/\/kiosky-player\/?$/,'/').replace(/\/?$/,'/kiosky-player-update/');updateBase.search='';updateBase.hash='';
   window.KioskyAutomaticUpdates?.start({endpoint:updateBase.toString(),currentVersion:appAssetVersion.match(/^\d+\.\d+\.\d+/)?.[0]||''});
   window.KioskyFullscreen?.start();
-  const keepDisplayAwake=createPlayerWakeLock(navigator,document);
+  const keepDisplayAwake=createPlayerWakeLock(navigator,document,Boolean(kioskyRuntime.nativeScreenAwake));
   keepDisplayAwake();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')keepDisplayAwake();});
-  const playerDevice=()=>'Web Player';
+  const playerDevice=()=>kioskyRuntime.nativeScreenAwake?'Samsung Tizen TV':'Web Player';
   const key=new URLSearchParams(window.location.search).get('key')||''; const cacheKey=`kiosky-player-cache-${slug}`; let playerState=null,index=0,timer=null,currentItem=null,currentMatrixIndex=-1,renderedOrientation=null,resizeTimer=null,identificationTimer=null,commandPollRunning=false,statePollRunning=false,pendingForcedRefresh=false,serverClockOffsetMs=0,playbackSyncKey='',contentIdentity='',playbackEpochMs=null;
   globalThis.KioskyFonts?.configure({offline:true,fetchFile:async id=>{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/state?fontId=${id}`),{headers:{...kioskyRuntime.requestHeaders,'X-Player-Key':key},cache:'no-store'},true);if(!response.ok)throw new Error('Schriftzugriff verweigert.');return response.value;}});
   const cachePlayerState=createPlayerCacheWriter(value=>localStorage.setItem(cacheKey,value));
@@ -930,7 +930,7 @@ async function renderDisplayPlayer(slug) {
   window.addEventListener('resize',()=>scheduleAutomaticTextFit(document));
   const renderShell=state=>{const display=state.display;releasePlaybackMedia(document.querySelector('#player-slide'));document.body.innerHTML=`<main class="display-player display-player-${display.orientation}"><div class="player-brand">KIOSKY</div><div class="player-matrix-canvas" id="player-matrix-canvas"><section id="player-slide" class="player-layout-slide"></section></div><div class="player-status"><span>${display.name}</span><span id="player-clock"></span></div></main><div class="player-offline-indicator" id="player-offline-indicator" hidden>Offline · gespeicherte Inhalte werden weiter abgespielt</div><aside class="emergency-takeover" id="player-emergency" hidden><div class="emergency-symbol">!</div><small id="player-emergency-type"></small><strong id="player-emergency-title"></strong><p id="player-emergency-message"></p><span>Bitte beachten Sie die Anweisungen des Personals.</span><div class="emergency-ticker" id="player-emergency-ticker" role="status" aria-label="Lauftext" hidden><span id="player-emergency-ticker-text"></span></div></aside>`;applyPlayerBackground(display);applyMatrixViewport();};
   let proofStorage;try{proofStorage=localStorage;}catch{proofStorage={getItem:()=>null,setItem:()=>{}};}
-  const playbackProof=globalThis.KioskyPlaybackProof?.create({storage:proofStorage,key:'kiosky.proof.'+slug,now:()=>Date.now()+serverClockOffsetMs,root:()=>document.querySelector('#player-slide'),visible:()=>document.visibilityState==='visible'&&!playerState?.warning&&!playerState?.emergency,grant:item=>playerState?.playbackProof?.grants?.[item?.slide?.id]||''});
+  const playbackProof=globalThis.KioskyPlaybackProof?.create({storage:proofStorage,key:'kiosky.proof.'+slug,now:()=>Date.now()+serverClockOffsetMs,root:()=>document.querySelector('#player-slide'),visible:()=>document.visibilityState==='visible'&&window.KioskyTvPresentationVisible!==false&&!playerState?.warning&&!playerState?.emergency,grant:item=>playerState?.playbackProof?.grants?.[item?.slide?.id]||''});
   const heartbeat=async(item,acknowledgedCommandIds=[])=>{
     try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({proofReceipts:playbackProof?.batch()||[],channelId:playerState?.channel?.id||null,slideId:item?.slide?.id||null,version:`${playerDevice()} · Player 1.3`,cached:true,acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});if(response.ok){const result=await response.json();playbackProof?.acknowledge(result.proofAccepted);}return response.ok;}catch{return false;}
   };

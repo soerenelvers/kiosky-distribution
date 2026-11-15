@@ -1,7 +1,5 @@
-## [3.41.0]
+## [3.42.0]
 
-- Änderungsverlauf für Slides, Kanäle, Veranstaltungen und Zeitzuweisungen mit Personenangabe, geänderten Feldern und konfliktgeschützter Wiederherstellung. Bestehende Daten und Zeitzuweisungen bleiben erhalten.
-- Zeitplansimulation für ein Display zu Datum und Uhrzeit mit Vorschau, Auswahlgrund und bis zu 24 Stunden Zeitleiste. Die Simulation berücksichtigt Prioritäten und Preset-Termine, ohne den laufenden Betrieb zu verändern.
-- Player melden bestätigte sichtbare Werbeintervalle. Ausspielnachweise lassen sich nach Zeitraum und Display auswerten und als CSV exportieren; Vorschauen zählen nicht.
-- Veröffentlichungsprüfung im Slide-Editor für fehlende Medien, ungültige Quellen, kleine Texte und QR-Codes sowie mögliche Überläufe in beiden Layouts. Mobile Dialoge und native CMS-Rechte werden berücksichtigt.
-- Bedienung, Grenzen, Aufbewahrung und Prüfverfahren: docs/operations-quality.md.
+- Samsung-Tizen-TV-App-Projekt unter /player für Tizen 6.0+ mit dauerhafter Kopplung, Vollbild, Fernbedienungsmenü, Bildschirmschonersteuerung und Renderer-Überwachung. Für die Installation sind Samsung-Zertifikat und Entwicklermodus nötig; Vorabversion ohne Hardwareabnahme.
+- Gemeinsame Wiedergabe wird für die ältere 2021er TV-Webengine kompatibel bereitgestellt. Separate Player-Dokumente enthalten keine Administration; normale Backend-Schutzmechanismen bleiben erhalten.
+- Standalone, WordPress und TYPO3 liefern servergebundene TV-Pakete und unterstützen die öffentliche Kopplung aus der TV-App. Anleitung und Grenzen: docs/samsung-tizen-player.md.

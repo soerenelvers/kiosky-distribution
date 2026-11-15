@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Kiosky\Core;
 
 use RuntimeException;
+require_once __DIR__.'/TizenPlayer.php';
 
 /** Server-bound player downloads. Native executables are templates, never downloads. */
 final class PlayerLauncher
@@ -17,8 +18,9 @@ final class PlayerLauncher
     ];
 
     /** @return array{body:string,filename:string,contentType:string} */
-    public static function download(string $platform, string $playerUrl, string $templateRoot): array
+    public static function download(string $platform, string $playerUrl, string $templateRoot, array $tizenRuntime = []): array
     {
+        if($platform==='samsung-tizen')return ['body'=>self::zip(TizenPlayer::entries($playerUrl,rtrim($templateRoot,'/\\').'/../player/tizen',$tizenRuntime)),'filename'=>'Kiosky-Samsung-Tizen.zip','contentType'=>'application/zip'];
         if (!isset(self::PLATFORMS[$platform])) throw new RuntimeException('Diese Player-Variante ist nicht verfügbar.', 404);
         $url = parse_url($playerUrl);
         if (!$url || !in_array($url['scheme'] ?? '', ['https', 'http'], true) || empty($url['host'])

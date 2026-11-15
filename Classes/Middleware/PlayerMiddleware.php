@@ -44,7 +44,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         if (preg_match('#^/kiosky-player-download/([^/]+)/$#', $path, $match)) {
             if (!in_array(strtoupper($request->getMethod()), ['GET','HEAD'], true)) return new Response('php://temp',405,['Allow'=>'GET, HEAD']);
             try {
-                $download = PlayerLauncher::download(rawurldecode($match[1]), $base.'/kiosky-player-browser/', (string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'));
+                $download = PlayerLauncher::download(rawurldecode($match[1]), $base.'/kiosky-player-browser/', (string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'),['apiEndpoint'=>$base.'/kiosky-api/','playerBaseUrl'=>$base.'/kiosky-player/']);
             } catch (\RuntimeException $error) { return new JsonResponse(['error'=>['message'=>$error->getMessage()]],$error->getCode() ?: 503,['Cache-Control'=>'no-store']); }
             $response = new Response('php://temp',200,['Content-Type'=>$download['contentType'],'Content-Disposition'=>'attachment; filename="'.$download['filename'].'"','Content-Length'=>(string)strlen($download['body']),'Cache-Control'=>'no-store','X-Content-Type-Options'=>'nosniff']);
             if (strtoupper($request->getMethod()) === 'GET') $response->getBody()->write($download['body']);
@@ -56,7 +56,9 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             return new \TYPO3\CMS\Core\Http\RedirectResponse((string)$uriBuilder->buildUriFromRoute('web_kiosky',['menus'=>'1']),303,['Cache-Control'=>'no-store']);
         }
         if ($path === '/kiosky-player/') {
-            return new HtmlResponse($this->renderer->render('typo3', $base . '/kiosky-api/', $base . '/kiosky-player/', $request), 200, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
+            $html=$this->renderer->render('typo3', $base . '/kiosky-api/', $base . '/kiosky-player/', $request);$headers=['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer'];
+            if(($request->getQueryParams()['tizen']??'')==='1'){try{$html=\Kiosky\Core\TizenPlayer::document($html,$base.'/kiosky-assets/',$request->getQueryParams()['display']??null,$request->getQueryParams()['key']??null);}catch(\RuntimeException $e){return new JsonResponse(['error'=>['message'=>$e->getMessage()]],400);}$headers['Content-Security-Policy']="default-src 'self' https: data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'";}
+            return new HtmlResponse($html,200,$headers);
         }
         if ($path === '/kiosky-player-center/' || $path === '/player/') {
             return new HtmlResponse($this->renderer->renderPlayerPortal('index', $base . '/kiosky-api/', $base . '/kiosky-player/', $base . '/kiosky-player-browser/', $request), 200, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
@@ -83,6 +85,8 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer','X-Content-Type-Options'=>'nosniff']);
         }
         $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof|commands)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
+        $pairingCors=preg_match('#^/api/player-pairings(?:/[^/]+)?$#',$apiPath)?\Kiosky\Core\TizenPlayer::pairingHeaders():[];
+        if($pairingCors&&strtoupper($request->getMethod())==='OPTIONS')return new Response('php://temp',204,$pairingCors);
         $isExternal = $apiPath === '/api/v1' || str_starts_with($apiPath, '/api/v1/');
         if (!$isPlayer && !$isExternal) {
             return new JsonResponse(['error' => ['code' => 'FORBIDDEN', 'message' => 'Öffentlich ist nur die Player-API verfügbar.']], 403);
@@ -112,6 +116,6 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         unset($query['path']);
         $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat)$#',$apiPath)===1);
         [$status, $payload] = $api->handle($request->getMethod(), $apiPath, array_merge($query, is_array($body) ? $body : []), $request->getHeaderLine('X-Player-Key'));
-        return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']);
+        return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']+$pairingCors);
     }
 }
