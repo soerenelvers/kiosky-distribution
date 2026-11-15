@@ -13,6 +13,7 @@ require_once __DIR__.'/TicketLinks.php';
 require_once __DIR__.'/ContentHistory.php';
 require_once __DIR__.'/PlaybackProof.php';
 require_once __DIR__.'/PlayerHealth.php';
+require_once __DIR__.'/CustomerContent.php';
 require_once __DIR__.'/DisplaySimulation.php';
 require_once __DIR__.'/PublicationCheck.php';
 require_once __DIR__.'/SlideEventSelection.php';
@@ -51,13 +52,14 @@ final class Api
         private readonly bool $canManageFonts = false,
         private readonly ?PlaybackProofStore $proofStore = null,
         private readonly string $proofSecret = '',
+        private readonly ?CustomerVault $customerVault = null,
     ) {
     }
 
     /** @param array<string,mixed> $body @return array{0:int,1:array<string,mixed>} */
     public function handle(string $method, string $path, array $body = [], string $playerKey = '', int $attempt = 0): array
     {
-        $migrationLock=null;
+        $migrationLock=null;$customerLock=null;
         try {
             $method = strtoupper($method);
             $query = [];
@@ -65,6 +67,7 @@ final class Api
             $body = array_merge($query, $body);
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             if($path==='/api/content-transfer/migration/import'&&$method==='POST'&&($this->identity['role'] ?? '')==='admin')$migrationLock=SystemMigration::lock();
+            if(preg_match('#^/api/customer-(portal|content)(/|$)#',$path)){if(str_starts_with($path,'/api/customer-content')&&!$this->canManageCustomerContent())throw new RuntimeException('Für Kundenfreigaben fehlen Verwaltungsrechte.',403);if(!$this->customerVault)throw new RuntimeException('Privater Kundenupload-Speicher ist nicht eingerichtet.',503);$customerLock=$this->customerVault->lock();if(str_starts_with($path,'/api/customer-portal'))$this->customerVault->rate((string)($this->identity['ipAddress']??'unknown'));}
             $state = $this->state(str_starts_with($path,'/api/content-transfer/migration/'));
             // Active installations also renew due grants when Cron/Scheduler is unavailable.
             // Authenticate before allowing an incoming request to cause outbound work.
@@ -83,19 +86,20 @@ final class Api
             if ($result[2] || $lifecycleChanged) {
                 $state['updatedAt'] = $this->now();
                 $migrationSaving=!empty($state['_migrationSaving']);unset($state['_migrationSaving']);
-                if($this->store instanceof CmsMediaStateStore&&$migrationSaving)$this->store->saveMigration($state);else $this->store->save($state);
+                if($this->store instanceof CmsMediaStateStore&&($migrationSaving||($method==='POST'&&preg_match('#^/api/customer-content/[^/]+/approve$#',$path))))$this->store->saveMigration($state);else $this->store->save($state);
+                if(isset($state['customerContent'])&&preg_match('#^/api/customer-(portal|content)(/|$)#',$path))try{$this->customerVault?->clean($state['customerContent']['uploads']);}catch(\Throwable){}
                 if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
             }
             if(!$this->canReadPlayerKeys()&&!str_starts_with($path,'/api/player/')&&!str_starts_with($path,'/api/player-pairings'))$result[1]=$this->withoutPlayerKeys($result[1]);
             return [$result[0], $result[1]];
         } catch (Throwable $error) {
-            if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer|content-packages)(?:/|$)#',$path)) return $this->handle($method,$path,$body,$playerKey,$attempt+1);
+            if ($error instanceof StateConflict && $attempt < 2 && ($this->identity['actorType'] ?? '') !== 'api_key' && !preg_match('#^/api/(media|integrations|content-transfer|content-packages)(?:/|$)#',$path)){if(is_resource($customerLock)){flock($customerLock,LOCK_UN);fclose($customerLock);$customerLock=null;}return $this->handle($method,$path,$body,$playerKey,$attempt+1);}
             $status = $error instanceof RuntimeException ? max(400, min(599, $error->getCode() ?: 422)) : 500;
             return [$status, ['error' => [
                 'code' => $status === 409 && $path === '/api/schedules/block' ? 'SCHEDULE_CONFLICT' : ($status === 404 ? 'NOT_FOUND' : ($status === 403 ? 'FORBIDDEN' : ($error instanceof StateConflict ? 'STATE_CONFLICT' : 'INVALID_REQUEST'))),
                 'message' => SensitiveData::text($error->getMessage() ?: 'Die Anfrage konnte nicht verarbeitet werden.'),
             ]]];
-        } finally {if(is_resource($migrationLock)){flock($migrationLock,LOCK_UN);fclose($migrationLock);}}
+        } finally {if(is_resource($customerLock??null)){flock($customerLock,LOCK_UN);fclose($customerLock);}if(is_resource($migrationLock)){flock($migrationLock,LOCK_UN);fclose($migrationLock);}}
     }
 
     /** Only the External Control API is exposed to machine credentials. */
@@ -188,6 +192,14 @@ final class Api
                 $status=$this->license()->synchronize($state,$body);$this->audit($state,'licensing.synchronized','licensing');return $this->ok($status,true);
             }
             throw new RuntimeException('Die zentrale Lizenzverwaltung steht ausschließlich in Standalone bereit.',404);
+        }
+
+        if(preg_match('#^/api/customer-(portal|content)(?:/([^/]+)(?:/([^/]+))?)?$#',$path,$m)){
+            $public=$m[1]==='portal';if(!$public&&!$this->canManageCustomerContent())throw new RuntimeException('Für Kundenfreigaben fehlen Verwaltungsrechte.',403);
+            if(!$this->customerVault)throw new RuntimeException('Privater Uploadspeicher ist nicht eingerichtet.',503);
+            $service=new CustomerContent($state,$this->customerVault,function(string $collection,array $body,?string $id=null)use(&$state):array{return $collection==='slides'?$this->saveSlide($state,$body,$id):$this->saveRecord($state,$collection,$body,$id);},(string)$this->identity['id'],$this->store instanceof CmsMediaStateStore?fn(array $file):string=>$this->store->customerUploadData($file):null);
+            $result=$public?$service->guest($method,$m[2]??null,$m[3]??null,$body,$playerKey):$service->staff($method,$m[2]??null,$m[3]??null,$body);
+            return $this->ok($result,!in_array($method,['GET','HEAD'],true));
         }
 
         if ($path === '/api/menu-share/session' && $method === 'POST') return MenuShare::login($state,$body,(string)($this->identity['ipAddress'] ?? 'unknown'));
@@ -1230,6 +1242,7 @@ final class Api
         $file['font']=array_diff_key($file['font'],['assetId'=>true]);return $file;
     }
 
+    private function canManageCustomerContent():bool{return ($this->identity['canManageCustomerContent']??(in_array($this->identity['role']??'',['admin','editor'],true)&&$this->canControlPlayers()))===true;}
     private function canReadPlayerKeys():bool{return ($this->identity['canManageDisplays']??in_array($this->identity['role']??'',['admin','editor'],true))===true;}
     private function canControlPlayers():bool{return ($this->identity['canControlDisplays']??in_array($this->identity['role']??'',['admin','editor'],true))===true;}
     private function withoutPlayerKeys(array $value):array{foreach($value as $key=>$entry){if($key==='playerKey')unset($value[$key]);elseif(is_array($entry))$value[$key]=$this->withoutPlayerKeys($entry);}return $value;}
@@ -2776,7 +2789,7 @@ final class Api
             'status' => 'active',
             'mustChangePassword' => false,
             'qualityPermissions'=>$this->identity['qualityPermissions']??['history:slide'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:channel'=>in_array($this->identity['role'],['admin','editor'],true),'history:event'=>in_array($this->identity['role'],['admin','editor','designer'],true),'history:schedule'=>in_array($this->identity['role'],['admin','editor'],true),'simulation'=>in_array($this->identity['role'],['admin','editor'],true),'report'=>in_array($this->identity['role'],['admin','editor'],true),'check'=>in_array($this->identity['role'],['admin','editor','designer'],true)],
-            'canControlDisplays'=>$this->canControlPlayers(),'canManageDisplays'=>$this->canReadPlayerKeys(),
+            'canManageCustomerContent'=>$this->canManageCustomerContent(),'canControlDisplays'=>$this->canControlPlayers(),'canManageDisplays'=>$this->canReadPlayerKeys(),
             'canManageSettings' => ($this->identity['canManageSettings'] ?? ($this->identity['role'] === 'admin')) === true,
         ];
     }

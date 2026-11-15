@@ -86,6 +86,21 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         return 'data:'.$file->getMimeType().';base64,'.base64_encode($file->getContents());
     }
 
+    /** Read only an immutable upload owned by an already-authorized customer capability. */
+    public function customerUploadData(string $id,string $hash,int $size,string $mime):string
+    {
+        if(!preg_match('/^fal:([1-9][0-9]*)$/D',$id,$match)||!preg_match('/^[a-f0-9]{64}$/D',$hash)||$size<1||$size>20000000)throw new RuntimeException('Originaldatei nicht gefunden.',404);
+        try{
+            $file=$this->factory->getFileObject((int)$match[1]);$storage=$file->getStorage();
+            if(!$storage->isPublic()||$file->isMissing()||$file->getSize()!==$size)throw new RuntimeException();
+            // A customer capability grants only this already-published original, never backend file access.
+            $evaluate=$storage->getEvaluatePermissions();$storage->setEvaluatePermissions(false);
+            try{$bytes=$file->getContents();}finally{$storage->setEvaluatePermissions($evaluate);}
+        }catch(\Throwable){throw new RuntimeException('Die Originaldatei ist nicht mehr verfügbar.',404);}
+        if(strlen($bytes)!==$size||!hash_equals($hash,hash('sha256',$bytes)))throw new RuntimeException('Die Originaldatei wurde ersetzt.',404);
+        return 'data:'.$mime.';base64,'.base64_encode($bytes);
+    }
+
     public function saveFolder(array $folder): array
     {
         if (str_starts_with($folder['id'],'fal-folder:')) {

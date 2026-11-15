@@ -33,6 +33,14 @@ final class CmsMediaStateStore implements StateStore
         return $this->media->registeredFontData($id);
     }
 
+    /** CustomerContent has already verified capability, ownership, and the immutable upload digest. */
+    public function customerUploadData(array $file):string
+    {
+        CustomerVault::assertDelivery((int)$file['size']);
+        if(!method_exists($this->media,'customerUploadData'))throw new RuntimeException('Die Originaldatei ist nicht verfügbar.',404);
+        return $this->media->customerUploadData((string)$file['mediaAssetId'],(string)$file['hash'],(int)$file['size'],(string)$file['mime']);
+    }
+
     public function load(): array
     {
         $this->references = [];

@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.43.0-20261115165701%2Bd9acfece" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.43.0-20261115165701%2Bd9acfece">
+  <link href="player/fonts/builtins.css?v=3.44.0-20261115185310%2Be8b254dc" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.44.0-20261115185310%2Be8b254dc">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -282,6 +282,13 @@
           <div><p class="eyebrow" id="content-module-eyebrow">Content-Baukasten</p><h2 id="content-module-title">Slides & Kanäle</h2><p id="content-module-description">Slides einmal erstellen, in beliebig vielen Kanälen verwenden und pro Kanal individuell anordnen.</p></div>
           <div class="section-actions"><button class="button button-secondary" type="button" data-quality-tool="history:slide" data-license-modules="channels">Slide-Verlauf</button><button class="button button-secondary" type="button" data-quality-tool="history:channel" data-quality-operator data-license-modules="channels">Kanal-Verlauf</button><button class="button button-secondary" type="button" data-quality-tool="report" data-quality-operator data-license-modules="advertising">Ausspielnachweise</button><button class="button button-secondary" type="button" id="content-access-button" hidden>Kanalfreigaben</button><button class="button button-secondary" type="button" data-action="new-channel">＋ Kanal anlegen</button><button class="button button-secondary" type="button" data-action="duplicate-channel">⧉ Kanal duplizieren</button><button class="button button-primary" type="button" data-action="new-slide">＋ Slide erstellen</button></div>
         </div>
+
+        <details class="panel customer-content-panel" id="customer-content-panel" data-license-modules="channels events displays schedule media" hidden>
+          <summary><strong>Kundeninhalte und Freigaben</strong><span id="customer-content-count">Noch nicht geladen</span></summary>
+          <p>Kunden reichen eigene Slides, Kanäle und Ausspielzeiten ein. Erst die Mitarbeiterfreigabe aktiviert den Kanal und seine Zeitzuweisungen.</p>
+          <div class="customer-toolbar"><label class="form-field"><span>Kunde, Veranstaltung oder Kanal suchen</span><input id="customer-content-search" type="search"></label><label class="form-field"><span>Vorschläge</span><select id="customer-content-filter"><option value="pending">Wartet auf Freigabe</option><option value="">Alle</option><option value="approved">Freigegeben</option><option value="rejected">Abgelehnt</option></select></label><button id="customer-content-reload" type="button" class="button button-secondary">Neu laden</button><button id="customer-content-create" type="button" class="button button-primary">Kundenlink erstellen</button></div>
+          <p id="customer-content-status" role="status"></p><div id="customer-content-proposals" class="customer-card-grid"></div><details><summary>Erstellte Kundenfreigaben</summary><div id="customer-content-invitations" class="customer-card-grid"></div></details>
+        </details>
 
         <div class="workflow-line" aria-label="Ablauf der Content-Ausspielung"><span class="is-current">1 · Slides</span><i>→</i><span class="is-current">2 · Kanal</span><i>→</i><button type="button" data-view-link="schedule">3 · Zeitplan</button><i>→</i><button type="button" data-view-link="displays">4 · Displays</button></div>
         <div class="channel-studio">
@@ -1857,15 +1864,19 @@
  </div>
 </dialog>
 
-  <script src="runtime-config.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/fullscreen-control.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/media-placement.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/editor-alignment.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/event-image.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/font-library.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/health-telemetry.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="player/playback-proof.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
-  <script src="app.js?v=3.43.0-20261115165701%2Bd9acfece"></script>
+  <dialog id="customer-invitation-dialog" class="customer-dialog"><form id="customer-invitation-form"><header class="customer-dialog-header"><h2>Kundenlink erstellen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog" aria-label="Kundenlink-Dialog schließen">×</button></header><div class="customer-form-grid"><label class="form-field"><span>Kunde</span><input id="customer-invitation-name" maxlength="180" required></label><label class="form-field"><span>Kunden-Tag (mit Präfix „Kunde:“)</span><input id="customer-invitation-tag" maxlength="90" placeholder="Leer: Kundenname"></label></div><label class="form-field"><span>Veranstaltung suchen</span><input id="customer-invitation-event-search" type="search"></label><label class="form-field"><span>Veranstaltung</span><select id="customer-invitation-event" required></select></label><fieldset><legend>Für diesen Kunden erlaubte Displays</legend><label class="form-field"><span>Displays suchen</span><input id="customer-invitation-display-search" type="search"></label><div id="customer-invitation-displays" class="customer-target-list"></div></fieldset><div class="customer-form-grid"><label class="form-field"><span>Ausspielung frühestens</span><input id="customer-window-start" type="datetime-local" required></label><label class="form-field"><span>Ausspielung spätestens</span><input id="customer-window-end" type="datetime-local" required></label><label class="form-field"><span>Kundenlink gültig bis</span><input id="customer-edit-until" type="datetime-local" required></label></div><p>Zeiten gelten für Europe/Berlin. Der Link erlaubt höchstens 20 Dateien, je 20 MB und insgesamt 100 MB. Er erteilt keine CMS- oder direkten Ausspielrechte.</p><p id="customer-invitation-message" role="status"></p><label class="form-field" id="customer-link-result" hidden><span>Kundenlink – nur jetzt vollständig angezeigt, bitte kopieren</span><input id="customer-invitation-url" readonly></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="customer-link-copy" hidden>Link kopieren</button><button type="submit" class="button button-primary" id="customer-link-submit">Link erstellen</button><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog">Schließen</button></div></form></dialog>
+  <dialog id="customer-review-dialog" class="customer-dialog"><header class="customer-dialog-header"><h2>Ausspielvorschlag prüfen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog" aria-label="Vorschlagsprüfung schließen">×</button></header><div id="customer-review-summary"></div><div id="customer-review-preview"></div><label class="form-field"><span>Begründung bei Ablehnung (optional)</span><textarea id="customer-review-note" maxlength="1000" rows="3"></textarea></label><p id="customer-review-status" role="status"></p><div class="dialog-actions"><button type="button" class="button button-primary" id="customer-review-approve">Freigeben und Zeitzuweisungen anlegen</button><button type="button" class="button button-secondary" id="customer-review-reject">Ablehnen</button><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog">Schließen</button></div></dialog>
+
+  <script src="runtime-config.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/fullscreen-control.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/media-placement.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/editor-alignment.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/event-image.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/font-library.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/touch-layout.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/health-telemetry.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="player/playback-proof.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
+  <script src="app.js?v=3.44.0-20261115185310%2Be8b254dc"></script>
 
 </body>
 </html>

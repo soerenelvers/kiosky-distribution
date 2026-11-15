@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "d9acfececada871dc149eb34bd2575a45ee97e3a",
+  "source_commit": "e8b254dc43fa08818529352eeaacb523fae913ff",
   "product": "kiosky",
-  "version": "3.43.0",
-  "released_at": "2026-11-15T16:57:03.282Z",
+  "version": "3.44.0",
+  "released_at": "2026-11-15T18:53:12.427Z",
   "channel": "stable",
-  "release_notes": "## [3.43.0]\n\n- Player-Gesundheit unter Displays mit Verbindung, Version, letztem erfolgreichen Inhaltsabruf und Medienfehlern; verzögerte Warnungen für Offline-Geräte, Abruffehler und leere Ausgabe. Konfigurierbare Wartezeiten und Wartungspause, mobil bedienbar in allen drei Ausgaben.\n- Player-Schlüssel werden Leseberechtigten nicht mehr offengelegt; authentifizierte Ausgabevorschau ersetzt den Schlüsselzugriff. Native CMS-Steuerungsrechte und WordPress-Statuskonflikte werden berücksichtigt.\n- Öffentliche Player-Anfragen sind größenbegrenzt, PHP-Metadaten werden gefiltert und Standalone prüft widerrufene Geräteschlüssel vor dem Schreiben erneut. Standortfreigaben gelten auch für operative Ziele und Zeitzuweisungen.\n- Bedienung und Prüfgrenzen: docs/player-health.md; Sicherheitsbefunde und offener Abhängigkeitsreview des separaten Update-Diensts: docs/reviews/security-resilience-2026-11-15.md.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.43.0",
+  "release_notes": "## [3.44.0]\n\n- Kundenlinks für eine Veranstaltung, ausgewählte Displays und eine begrenzte Zeitspanne. Bilder und Videos erzeugen getaggte Slide-Entwürfe; Kunden reichen Kanäle mit Reihenfolge, Dauer und Ausspielzeit zur Mitarbeiterfreigabe ein.\n- Freigabe veröffentlicht Slides und Kanal und legt Zeitzuweisungen gemeinsam an; veraltete Prüfstände, Fremdzugriffe und doppelte Freigaben werden abgefangen. Widerruf sperrt den Link und verwirft ungeprüfte Entwürfe.\n- Private, begrenzte Uploadablage und eigener Zugriff auf unveränderte freigegebene Originale; CMS- und Standortrechte bleiben erhalten. Anleitung und Grenzen: docs/customer-content.md.\n- Smartphone-/Tablet-Bedienung mit größeren Formular- und Navigationsflächen, tastaturabhängigen Dialoghöhen und Pfeiltasten für die Kanalreihenfolge. WordPress entfernt die feste App-Frame-Mindesthöhe und passt den Frame an den sichtbaren Bereich an.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.44.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.43.0",
+    "core_version": "3.44.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.43.0",
-    "typo3_extension_version": "3.43.0"
+    "wordpress_plugin_version": "3.44.0",
+    "typo3_extension_version": "3.44.0"
   },
   "components": {
     "core": {
-      "version": "3.43.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.43.0.zip?ref=v3.43.0",
-      "sha256": "96233c2826382e6db4c91d2e1ae157f75e2659163490e2fe37fb1b2f706e7896"
+      "version": "3.44.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.44.0.zip?ref=v3.44.0",
+      "sha256": "1f0bfcd22f6398a3047e9a8cf8ae04ca8af105099ec091369c28981243ec737a"
     },
     "standalone": {
-      "version": "3.43.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.43.0.zip?ref=v3.43.0",
-      "sha256": "96233c2826382e6db4c91d2e1ae157f75e2659163490e2fe37fb1b2f706e7896"
+      "version": "3.44.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.44.0.zip?ref=v3.44.0",
+      "sha256": "1f0bfcd22f6398a3047e9a8cf8ae04ca8af105099ec091369c28981243ec737a"
     },
     "wordpress": {
-      "version": "3.43.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.43.0.zip?ref=v3.43.0",
-      "sha256": "b19a9c7886ddc5ebb91fe60b88b3afd92bef33155d334c8346770fe32316e331",
+      "version": "3.44.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.44.0.zip?ref=v3.44.0",
+      "sha256": "1ca41614418baf1a737d7786122b52dbc2863962cc6e1ad88ba5fadeba7e9cc0",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.43.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.43.0.zip?ref=v3.43.0",
-      "sha256": "2a1cae7e72e51e6a7b449b9b6acb8edb837cddf01bdf545261d005a52e98aba1",
+      "version": "3.44.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.44.0.zip?ref=v3.44.0",
+      "sha256": "f68c8468a5b2fed63523de37a224d11965533bb99428f19a000919ddcda3602a",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

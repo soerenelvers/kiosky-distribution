@@ -54,6 +54,7 @@ final class PermissionService
         $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
         $read = in_array(strtoupper($method), ['GET', 'HEAD'], true);
         $matches = static fn(string $prefix): bool => $path === $prefix || str_starts_with($path, $prefix . '/');
+        if($matches('/api/customer-content'))return $this->isGranted(self::MANAGE_CONTENT,$user)&&$this->isGranted(self::CONTROL_DISPLAYS,$user)&&$this->isGranted(self::MANAGE_EVENTS,$user);
         if(preg_match('#^/api/displays/[^/]+/monitoring$#',$path))return $this->isGranted(self::CONTROL_DISPLAYS,$user);
         if(preg_match('#^/api/displays/[^/]+/simulate$#',$path))return $this->isGranted(self::CONTROL_DISPLAYS,$user);
         if(preg_match('#^/api/history/(slide|channel|event|schedule)(?:/|$)#',$path,$h))return $this->isGranted(match($h[1]){'slide','channel'=>self::MANAGE_CONTENT,'event'=>self::MANAGE_EVENTS,'schedule'=>self::CONTROL_DISPLAYS},$user);

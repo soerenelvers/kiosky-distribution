@@ -1,6 +1,6 @@
-## [3.43.0]
+## [3.44.0]
 
-- Player-Gesundheit unter Displays mit Verbindung, Version, letztem erfolgreichen Inhaltsabruf und Medienfehlern; verzögerte Warnungen für Offline-Geräte, Abruffehler und leere Ausgabe. Konfigurierbare Wartezeiten und Wartungspause, mobil bedienbar in allen drei Ausgaben.
-- Player-Schlüssel werden Leseberechtigten nicht mehr offengelegt; authentifizierte Ausgabevorschau ersetzt den Schlüsselzugriff. Native CMS-Steuerungsrechte und WordPress-Statuskonflikte werden berücksichtigt.
-- Öffentliche Player-Anfragen sind größenbegrenzt, PHP-Metadaten werden gefiltert und Standalone prüft widerrufene Geräteschlüssel vor dem Schreiben erneut. Standortfreigaben gelten auch für operative Ziele und Zeitzuweisungen.
-- Bedienung und Prüfgrenzen: docs/player-health.md; Sicherheitsbefunde und offener Abhängigkeitsreview des separaten Update-Diensts: docs/reviews/security-resilience-2026-11-15.md.
+- Kundenlinks für eine Veranstaltung, ausgewählte Displays und eine begrenzte Zeitspanne. Bilder und Videos erzeugen getaggte Slide-Entwürfe; Kunden reichen Kanäle mit Reihenfolge, Dauer und Ausspielzeit zur Mitarbeiterfreigabe ein.
+- Freigabe veröffentlicht Slides und Kanal und legt Zeitzuweisungen gemeinsam an; veraltete Prüfstände, Fremdzugriffe und doppelte Freigaben werden abgefangen. Widerruf sperrt den Link und verwirft ungeprüfte Entwürfe.
+- Private, begrenzte Uploadablage und eigener Zugriff auf unveränderte freigegebene Originale; CMS- und Standortrechte bleiben erhalten. Anleitung und Grenzen: docs/customer-content.md.
+- Smartphone-/Tablet-Bedienung mit größeren Formular- und Navigationsflächen, tastaturabhängigen Dialoghöhen und Pfeiltasten für die Kanalreihenfolge. WordPress entfernt die feste App-Frame-Mindesthöhe und passt den Frame an den sichtbaren Bereich an.

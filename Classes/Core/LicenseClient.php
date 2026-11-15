@@ -40,6 +40,7 @@ final class LicenseClient
     }
     public function allows(array $state,string ...$modules): bool{return !array_diff($modules,$this->grants($state));}
     public static function required(string $path): array {
+        if(preg_match('#^/api/customer-(content|portal)(/|$)#',$path))return ['channels','events','displays','schedule','media'];
         if(preg_match('#^/api/history/(slide|channel|event|schedule)(?:/|$)#',$path,$h))return [match($h[1]){'slide','channel'=>'channels','event'=>'events','schedule'=>'schedule'}];
         if(str_starts_with($path,'/api/reports/'))return ['advertising'];
         if(preg_match('#^/api/(auth|health|settings/licensing|settings/features|users|audit-logs|content-transfer)(/|$)#',$path)||str_starts_with($path,'/api/player/'))return [];

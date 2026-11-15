@@ -69,6 +69,18 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         $directExternal = preg_match('#^/kiosky-api/v1(?:/|$)#', $path) === 1;
         if ($path !== '/kiosky-api/' && !$directExternal) return $handler->handle($request);
         $apiPath = $directExternal ? '/api/v1' . rtrim(substr($path,strlen('/kiosky-api/v1')),'/') : (string)($request->getQueryParams()['path'] ?? '');
+        if(preg_match('#^/api/customer-portal(?:/(uploads|proposals|files)(?:/[^/]+)?)?$#',$apiPath)){
+            $limit=$apiPath==='/api/customer-portal/uploads'?28000000:50000;$stream=$request->getBody();$declared=$request->getHeaderLine('Content-Length');
+            if(is_numeric($declared)&&(float)$declared>$limit||($stream->getSize()??0)>$limit)return new JsonResponse(['error'=>['message'=>'Anfrage zu groß.']],413);
+            if($stream->isSeekable())$stream->rewind();$raw='';
+            try{while(!$stream->eof()){$chunk=$stream->read(65536);if($chunk==='')break;if(strlen($raw)+strlen($chunk)>$limit)throw new \RuntimeException('Anfrage zu groß.',413);\Kiosky\Core\CustomerVault::assertRequest(strlen($raw)+strlen($chunk));$raw.=$chunk;}}catch(\RuntimeException $e){return new JsonResponse(['error'=>['message'=>$e->getMessage()]],$e->getCode()?:413);}
+            $customerToken=$request->getHeaderLine('X-Customer-Token');if(!preg_match('/^[a-f0-9]{64}$/D',$customerToken))return new JsonResponse(['error'=>['message'=>'Der Kundenlink ist ungültig.']],401);
+            try{\Kiosky\Core\CustomerVault::assertRequest(strlen($raw));}catch(\RuntimeException $e){return new JsonResponse(['error'=>['message'=>$e->getMessage()]],$e->getCode());}
+            if(in_array($request->getMethod(),['POST','PUT'],true)){$check=$this->apiFactory->create(['id'=>'customer','name'=>'Kundenportal','email'=>'','role'=>'viewer','ipAddress'=>(string)($request->getServerParams()['REMOTE_ADDR']??'')],true);[$status,$payload]=$check->handle('GET','/api/customer-portal',[],$customerToken);if($status>=400)return new JsonResponse($payload,$status,['Cache-Control'=>'no-store']);}
+            try{$body=$raw===''?[]:json_decode($raw,true,32,JSON_THROW_ON_ERROR);if(!is_array($body)||($raw!==''&&!str_starts_with(ltrim($raw),'{')))throw new \RuntimeException();}catch(\Throwable){return new JsonResponse(['error'=>['message'=>'Ungültiges JSON.']],400);}
+            $api=$this->apiFactory->create(['id'=>'customer','name'=>'Kundenportal','email'=>'','role'=>'viewer','ipAddress'=>(string)($request->getServerParams()['REMOTE_ADDR']??'')],true);
+            [$status,$payload]=$api->handle($request->getMethod(),$apiPath,$body,$request->getHeaderLine('X-Customer-Token'));return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer','X-Content-Type-Options'=>'nosniff']);
+        }
         if (preg_match('#^/api/menu-share/(session|menus(?:/[^/]+)?)$#',$apiPath)) {
             $raw=(string)$request->getBody();
             if (strlen($raw)>3000000) return new JsonResponse(['error'=>['message'=>'Anfrage zu groß.']],413);
