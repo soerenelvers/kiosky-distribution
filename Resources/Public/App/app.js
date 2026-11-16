@@ -4631,10 +4631,12 @@ function applyEditorOrientation(ratio, designOrientation) {
   state.editorAutoDesignOrientation = designOrientation === 'portrait' ? 'portrait' : 'landscape';
   canvas.dataset.orientationMode = ratio;
   canvas.dataset.ratio = ratio === 'auto' ? state.editorAutoDesignOrientation : ratio;
+  fitEditorPreview();
   syncEditorGeometryFields(selectedEditorElement());
 }
 
 function openSlideEditor(slide = null, options = {}) {
+  setEditorPreview(false);
   clearTimeout(state.slideAutosaveTimer);
   state.slideDirty = false;
   state.slideLastScheduledSnapshot = '';
@@ -5476,11 +5478,29 @@ document.querySelectorAll('[data-command]').forEach(button => button.addEventLis
   if (editable) { editable.contentEditable='true';editable.focus(); document.execCommand(button.dataset.command); }
 }));
 document.querySelectorAll('[data-align]').forEach(button => button.addEventListener('click', () => updateSelectedElement('align', button.dataset.align)));
-document.addEventListener('keydown',event=>{if(!slideDialog.open||document.querySelector('#slide-tags-dialog').open||document.querySelector('#content-package-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
+document.addEventListener('keydown',event=>{if(!slideDialog.open||slideDialog.classList.contains('is-previewing')||document.querySelector('#slide-tags-dialog').open||document.querySelector('#content-package-dialog').open)return;const target=event.target,typing=target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName);if(typing)return;const command=event.metaKey||event.ctrlKey;if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redoEditor():undoEditor();return;}if(command&&event.key.toLowerCase()==='d'){event.preventDefault();const selected=state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id));if(!selected.length)return;pushEditorHistory();const copies=selected.map(item=>({...item,id:`element-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,x:Math.min(100-item.width,item.x+3),y:Math.min(100-item.height,item.y+3)}));state.editorElements.push(...copies);state.selectedEditorElementIds=new Set(copies.map(item=>item.id));state.selectedEditorElementId=copies[0].id;renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Elemente wurden dupliziert und gespeichert.'});return;}if(['Delete','Backspace'].includes(event.key)){event.preventDefault();pushEditorHistory();deleteSelectedEditorElements();return;}if(event.key==='Escape'){state.selectedEditorElementIds=new Set();state.selectedEditorElementId=null;renderEditorCanvas();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();pushEditorHistory();const amount=event.shiftKey?2:0.25;state.editorElements.filter(item=>state.selectedEditorElementIds?.has(item.id)&&!item.locked).forEach(item=>{if(event.key==='ArrowLeft')item.x=Math.max(0,item.x-amount);if(event.key==='ArrowRight')item.x=Math.min(100-item.width,item.x+amount);if(event.key==='ArrowUp')item.y=Math.max(0,item.y-amount);if(event.key==='ArrowDown')item.y=Math.min(100-item.height,item.y+amount);});renderEditorCanvas();scheduleSlideAutosave();}});
+function fitEditorPreview(){
+  if(!slideDialog.open||!slideDialog.classList.contains('is-previewing'))return;
+  const stage=slideDialog.querySelector('.editor-stage-wrap'),canvas=document.querySelector('#slide-editor-canvas'),style=getComputedStyle(stage);
+  const width=stage.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),height=stage.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom),ratio=canvas.dataset.ratio==='portrait'?9/16:16/9;
+  if(width<=0||height<=0)return;
+  const nativeWidth=ratio<1?1080:1920,nativeHeight=ratio<1?1920:1080,scale=Math.min(width/nativeWidth,height/nativeHeight);
+  canvas.style.width=nativeWidth+'px';canvas.style.height=nativeHeight+'px';canvas.style.transform='scale('+scale+')';
+}
+function setEditorPreview(active){
+  state.editorGestureCancel?.();slideDialog.classList.toggle('is-previewing',active);
+  const button=slideDialog.querySelector('[data-editor-action="preview"]'),canvas=document.querySelector('#slide-editor-canvas');
+  button.textContent=active?'Editor anzeigen':'▶ Vorschau';button.setAttribute('aria-pressed',String(active));
+  if(active)fitEditorPreview();else{canvas.style.removeProperty('width');canvas.style.removeProperty('height');canvas.style.removeProperty('transform');}
+}
+const editorPreviewResizeObserver=new ResizeObserver(fitEditorPreview);
+editorPreviewResizeObserver.observe(slideDialog.querySelector('.editor-stage-wrap'));
+window.addEventListener('resize',fitEditorPreview);
+slideDialog.addEventListener('close',()=>setEditorPreview(false));
 document.querySelectorAll('[data-editor-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.editorAction;
   const element = selectedEditorElement();
-  if (action === 'preview') { slideDialog.classList.toggle('is-previewing'); button.textContent = slideDialog.classList.contains('is-previewing') ? 'Editor anzeigen' : '▶ Vorschau'; return; }
+  if (action === 'preview') { setEditorPreview(!slideDialog.classList.contains('is-previewing')); return; }
   if (action === 'slide-settings') { state.selectedEditorElementId = null; state.showSlideSettings = true; renderEditorCanvas(); return; }
   if (!element) return;
   const index = state.editorElements.indexOf(element);
