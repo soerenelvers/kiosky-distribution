@@ -22,10 +22,12 @@ require_once __DIR__.'/ScheduleBlock.php';
 require_once __DIR__.'/ExternalSchedule.php';
 require_once __DIR__.'/PresetHandoff.php';
 require_once __DIR__.'/PresetTriggers.php';
+require_once __DIR__.'/EventAutomation.php';
 require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
 require_once __DIR__.'/EventImageEdit.php';
+require_once __DIR__.'/AdvertisingVideo.php';
 require_once __DIR__.'/EventLifecycle.php';
 require_once __DIR__.'/ContentAccess.php';
 require_once __DIR__.'/FontStorage.php';
@@ -285,6 +287,11 @@ final class Api
             $stored=!empty($slide['id'])?$this->first($state['slides'],static fn(array $r):bool=>$r['id']===$slide['id']):null;$doc=array_replace($stored['document']??[],$slide['document']??[]);if(isset($doc['responsiveLayouts'])){$layouts=$doc['responsiveLayouts'];$layouts[($doc['designOrientation']??'')==='portrait'?'portrait':'landscape']=$doc['elements']??[];$doc['responsiveLayouts']=$layouts;}$slide['document']=$doc;
             return $this->ok(PublicationCheck::check($slide,$state['mediaAssets'],$event));
         }
+        if($path==='/api/event-automation'||str_starts_with($path,'/api/event-automation/')){
+            if(!in_array($this->identity['role']??'',['admin','editor'],true)||!$this->canControlPlayers()||($this->identity['allLocations']??true)===false)throw new RuntimeException('Für globale Veranstaltungsabläufe sind Verwaltungsrechte für alle Standorte erforderlich.',403);
+            $config=$state['eventAutomation']??EventAutomation::empty();$result=EventAutomation::request($config,$method,$path,$body,$state['events'],['slides'=>$state['slides'],'channels'=>$state['channels'],'displays'=>$state['displays'],'groups'=>$state['groups'],'matrices'=>$state['matrices']],QualityClock::micro());
+            if($method!=='GET'){$state['eventAutomation']=$config;$this->audit($state,'event.automation.changed','event_automation');}return $this->ok($result,$method!=='GET');
+        }
         if(preg_match('#^/api/displays/([^/]+)/simulate$#',$path,$simulationMatch)&&$method==='POST'){
             if(!in_array($this->identity['role']??'',['admin','editor'],true))throw new RuntimeException('Für die Simulation fehlen die erforderlichen Rechte.',403);
             $this->license()->assertPath($state,'/api/schedules');[$at,$until]=DisplaySimulation::arguments($body);$id=rawurldecode($simulationMatch[1]);$display=$this->required($state['displays'],$id,'Display');
@@ -302,7 +309,8 @@ final class Api
                 $reason=$resolved['selectionReason'];$identity=json_encode([$reason,$resolved['warning']['id']??null,$resolved['assignment']['id']??null,$resolved['channel']['id']??null,$resolved['directSlide']['id']??null,array_column(array_column($resolved['slides'],'slide'),'id')]);
                 if($identity!==$lastIdentity){$timeline[]=['at'=>gmdate('c',(int)$cursor),'kind'=>$reason['kind'],'name'=>$resolved['warning']['title']??$resolved['channel']['name']??$resolved['directSlide']['name']??'Kein gültiger Inhalt','reason'=>$reason,'slideCount'=>count($resolved['slides'])];$lastIdentity=$identity;}
                 if($cursor===$until)break;$times=[];foreach(['warnings','assignments','slides'] as $collection)foreach($copy[$collection]??[] as $row){$times[]=$row['startsAt']??null;$times[]=$row['endsAt']??$row['expiresAt']??null;}foreach($copy['events']??[] as $row){$times[]=$row['eventStart']??null;$times[]=$row['eventEnd']??null;}if($this->license()->allows($copy,'operations'))foreach($copy['presetTriggers']??[] as $row)if(!empty($row['enabled']))$times[]=$row['nextRunAt']??null;
-                $cursor=DisplaySimulation::boundary($cursor,(float)$until,$copy['schedules'],$times);
+                $flowSchedules=$this->license()->allows($copy,'events','schedule','operations','channels','displays')?EventAutomation::plans($copy['eventAutomation']??[],$copy['events'])['schedules']:[];
+                $cursor=DisplaySimulation::boundary($cursor,(float)$until,[...$copy['schedules'],...$flowSchedules],$times);
             }
             return $this->ok(['output'=>$output,'timeline'=>$timeline,'simulatedPresets'=>$simulatedPresets,'at'=>gmdate('c',$at),'until'=>gmdate('c',(int)$until),'readOnly'=>true,'note'=>'Berechnung mit der aktuellen Konfiguration. Künftige manuelle Warnungen und Änderungen sind nicht vorhersagbar.']);
         }
@@ -572,7 +580,7 @@ final class Api
 
         if ($path === '/api/slides/from-media' && $method === 'POST') {
             $this->license()->assertPath($state,'/api/media');
-            $inputs=MediaSlides::inputs($body['mediaAssetIds']??null,$state['mediaAssets']??[]);
+            $inputs=MediaSlides::inputs($body['mediaAssetIds']??null,$state['mediaAssets']??[],is_array($body['videoDurations']??null)?$body['videoDurations']:[]);
             $tags=$body['tags'] ?? [];
             if(!is_array($tags) || count($tags)>30)throw new RuntimeException('Bitte höchstens 30 Tags auswählen.',422);
             foreach($tags as $tag)if(!is_string($tag) || strlen($tag)>320 || preg_match('//u',$tag)!==1 || preg_match_all('/./us',$tag)>80)throw new RuntimeException('Ungültiger Slide-Tag.',422);
@@ -1250,6 +1258,7 @@ final class Api
     private function assertRolePermission(string $method, string $path): void
     {
         $role = (string)($this->identity['role'] ?? 'viewer');
+        if($path==='/api/event-automation'||str_starts_with($path,'/api/event-automation/')){if(in_array($role,['admin','editor'],true)&&$this->canControlPlayers())return;throw new RuntimeException('Für Veranstaltungsabläufe fehlen Verwaltungsrechte.',403);}
         if ($role === 'admin') return;
         if($method==='POST'&&preg_match('#^/api/displays/[^/]+/monitoring$#',$path)&&$this->canControlPlayers())return;
         if(str_starts_with($path,'/api/history/')){if($role==='editor'||$role==='designer'&&preg_match('#^/api/history/(slide|event)(?:/|$)#',$path))return;throw new RuntimeException('Für diesen Verlauf fehlen die erforderlichen Rechte.',403);}
@@ -1357,7 +1366,7 @@ final class Api
 
     private function eventEditorBody(array $body):array
     {
-        return array_intersect_key($body,array_flip(['title','subtitle','description','organizer','eventType','date','setupStart','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room','status','publicNotes','internalNotes','imageUrl','imageEdit','ticketUrl','ticketLinks','remainingTickets','boxOfficeAvailable','boxOfficeOpenAt']));
+        return array_intersect_key($body,array_flip(['title','subtitle','description','organizer','eventType','date','setupStart','admissionStart','eventStart','breakStart','breakEnd','eventEnd','venue','room','status','publicNotes','internalNotes','imageUrl','imageEdit','advertisingVideo','ticketUrl','ticketLinks','remainingTickets','boxOfficeAvailable','boxOfficeOpenAt']));
     }
 
     /**
@@ -2094,11 +2103,13 @@ final class Api
 
         $presetTriggerChanged=$this->runDuePresetTriggers($state)>0;
         $matrixLayout = $this->matrixLayout($state, (string)$display['id']);
+        $flowSchedules=$this->license()->allows($state,'events','schedule','operations','channels','displays')?EventAutomation::plans($state['eventAutomation']??[], $state['events'])['schedules']:[];
+        $selectionState=$state;$selectionState['schedules']=[...$state['schedules'],...$flowSchedules];
         $beforeHandoffs=$state['presetHandoffs'] ?? [];
-        $releasedPresets=PresetHandoff::released($state,$display,$this->license()->allows($state,'schedule'));
+        $releasedPresets=PresetHandoff::released($selectionState,$display,$this->license()->allows($state,'schedule'));$state['presetHandoffs']=$selectionState['presetHandoffs']??[];
         $handoffChanged=$beforeHandoffs!==($state['presetHandoffs'] ?? []);
         $assignment = $this->license()->allows($state,'schedule') ? $this->resolveAssignment($state, $display, $matrixLayout,$releasedPresets) : null;
-        $selection = $this->resolvedChannelSelection($state, $display, $matrixLayout);
+        $selection = $this->resolvedChannelSelection($selectionState, $display, $matrixLayout);
         $channel = $selection['channel'];
         $directSlide = $selection['directSlide'] ?? null;
         if ($assignment) {
@@ -2114,9 +2125,9 @@ final class Api
         foreach ($directSlide ? [['slideId' => $directSlide['id'], 'durationSeconds' => 12, 'transition' => 'none']] : $available as $item) {
             $slide = $item['slide'] ?? $playableSlidesById[$item['slideId'] ?? ''] ?? null;
             if (!$slide || (!empty($slide['startsAt']) && strtotime($slide['startsAt'])>QualityClock::now()) || (!empty($slide['endsAt']) && strtotime($slide['endsAt'])<=QualityClock::now())) continue;
-            $eventId=$slide['eventId'] ?? $channel['eventId'] ?? null;
+            $eventId=$slide['eventId'] ?? $channel['eventId'] ?? (!$assignment?($selection['eventContextId']??null):null);
             $event = $eventId ? $this->first($state['events'], fn(array $candidate): bool => $candidate['id'] === $eventId) : null;
-            if($event&&!EventLifecycle::visible($event))$event=null;
+            if($event&&!EventLifecycle::visible($event)&&!(!$assignment&&$event['id']===($selection['eventContextId']??null)&&!empty($event['autoArchived'])))$event=null;
             $event=SlideEventSelection::select($this->license()->allows($state,'events')?$this->active($state['events']):[],is_array($slide['document']['eventSelection'] ?? null)?$slide['document']['eventSelection']:[],$event);
             if($event){
                 unset($event['internalNotes'],$event['lockedFields']);
@@ -2162,14 +2173,16 @@ final class Api
             if(!in_array($id,array_column($fonts,'id'),true))throw new RuntimeException('Diese Schrift ist dem Display nicht zugewiesen.',404);
             return $this->ok($this->fontFile($state,$id),$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
         }
-        return $this->ok([
+        $output=[
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
-            'selectionReason'=>['kind'=>$emergency?'warning':($assignment?'assignment':(str_starts_with($selection['sourceKey'],'schedule:')?'schedule':'default')),'scheduleId'=>str_starts_with($selection['sourceKey'],'schedule:')?substr($selection['sourceKey'],9):null,'targetType'=>$assignment['target']['type']??null,'candidates'=>[]],
+            'selectionReason'=>['kind'=>$emergency?'warning':($assignment?'assignment':(str_starts_with($selection['sourceKey'],'schedule:')?'schedule':'default')),'scheduleId'=>str_starts_with($selection['sourceKey'],'schedule:')?substr($selection['sourceKey'],9):null,'targetType'=>$assignment['target']['type']??null,'candidates'=>$selection['candidateSchedules']??[],'emptyFallback'=>!$assignment&&!str_starts_with($selection['sourceKey'],'schedule:')&&!empty($selection['candidateSchedules'])],
             'playbackProof'=>['grants'=>!$preview&&$this->proofStore&&$this->license()->allows($state,'advertising')?PlaybackProof::grants((string)$display['id'],$channel,$slides,$this->proofSecret):new \stdClass()],
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $preview?[]:$commands, 'serverTime' => $serverTime,
-        ],$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
+        ];
+        $flowChanged=false;if(!$preview&&($flowSchedules||!empty($state['eventAutomation']['observations'][$display['id']]))&&$this->license()->allows($state,'events','schedule','operations','channels','displays')){$state['eventAutomation']??=EventAutomation::empty();$flowChanged=EventAutomation::observe($state['eventAutomation'],$flowSchedules,array_replace($display,['matrixId'=>$matrixLayout['id']??null]),$output,QualityClock::micro());}
+        return $this->ok($output,$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged||$flowChanged);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */
@@ -2242,8 +2255,9 @@ final class Api
             return (($ranks[$b['priority'] ?? 'normal'] ?? 0) <=> ($ranks[$a['priority'] ?? 'normal'] ?? 0)) ?: (['display'=>3,'matrix'=>2,'group'=>1][$b['targetType'] ?? ''] ?? 0) <=> (['display'=>3,'matrix'=>2,'group'=>1][$a['targetType'] ?? ''] ?? 0);
         });
         $schedule = $schedules[0] ?? null;
+        $candidateSchedules=array_map(static fn(array $s):array=>array_intersect_key($s,array_flip(['id','contentId','targetType','targetId','ruleName','contentName'])),$schedules);
         $candidates=[];
-        if($schedule){$type=$schedule['contentType'] ?? (!empty($schedule['slideId'])?'slide':'channel');$id=$schedule['contentId'] ?? $schedule[$type.'Id'] ?? ''; $candidates[]=['type'=>$type,'id'=>$id,'sourceKey'=>'schedule:'.$schedule['id'],'epoch'=>$schedule['startsAt'],'matrixMode'=>$matrix&&($schedule['targetType'] ?? '')==='matrix'];}
+        if($schedule){$type=$schedule['contentType'] ?? (!empty($schedule['slideId'])?'slide':'channel');$id=$schedule['contentId'] ?? $schedule[$type.'Id'] ?? ''; $candidates[]=['type'=>$type,'id'=>$id,'sourceKey'=>'schedule:'.$schedule['id'],'eventContextId'=>$schedule['eventId']??null,'epoch'=>$schedule['startsAt'],'matrixMode'=>$matrix&&($schedule['targetType'] ?? '')==='matrix'];}
         if(!empty($matrix['defaultChannelId']))$candidates[]=['type'=>'channel','id'=>$matrix['defaultChannelId'],'matrixMode'=>true];
         $type=($display['defaultContentType'] ?? 'channel')==='slide'?'slide':'channel';
         $id=$display[$type==='slide'?'defaultSlideId':'defaultChannelId'] ?? '';
@@ -2252,9 +2266,9 @@ final class Api
             $selected=$this->playbackContent($state,$display,(string)$candidate['type'],(string)$candidate['id'],$now);
             if(!$selected)continue;
             $record=$selected['directSlide'] ?? $selected['channel'];
-            return $selected+['sourceKey'=>$candidate['sourceKey'] ?? 'default:'.$candidate['id'].':'.($record['updatedAt'] ?? ''),'epoch'=>$candidate['epoch'] ?? $record['updatedAt'] ?? $now,'matrixMode'=>(bool)$candidate['matrixMode']];
+            return $selected+['eventContextId'=>$candidate['eventContextId']??null,'candidateSchedules'=>$candidateSchedules,'sourceKey'=>$candidate['sourceKey'] ?? 'default:'.$candidate['id'].':'.($record['updatedAt'] ?? ''),'epoch'=>$candidate['epoch'] ?? $record['updatedAt'] ?? $now,'matrixMode'=>(bool)$candidate['matrixMode']];
         }
-        return ['channel'=>null,'directSlide'=>null,'available'=>[],'sourceKey'=>'default:empty','epoch'=>$now,'matrixMode'=>false];
+        return ['channel'=>null,'directSlide'=>null,'available'=>[],'candidateSchedules'=>$candidateSchedules,'sourceKey'=>'default:empty','epoch'=>$now,'matrixMode'=>false];
     }
 
     private function playbackContent(array $state,array $display,string $type,string $id,string $at): ?array
@@ -2603,7 +2617,8 @@ final class Api
             if($current&&EventLifecycle::effective($current)==='removed')throw new RuntimeException('Veranstaltung wurde gelöscht, weitere Daten sind nicht mehr verfügbar.',409);
             $status=$current?EventLifecycle::status($body['status'] ?? $current['status'] ?? 'draft'):'draft';
             if($status==='removed'){if(($this->identity['role'] ?? '')!=='admin')throw new RuntimeException('Löschen ist Administratoren vorbehalten.',403);$this->purgeEvent($state,(string)$id);return $this->required($state['events'],(string)$id,'Veranstaltung');}
-            $body['status']=$status;$body['archivedAt']=$status==='archived'?($current['archivedAt'] ?? $this->now()):null;
+            $body['status']=$status;$body['autoArchived']=false;$body['archivedAt']=$status==='archived'?($current['archivedAt'] ?? $this->now()):null;
+            if(array_key_exists('advertisingVideo',$body))$body['advertisingVideo']=AdvertisingVideo::input($body['advertisingVideo']);
             if(array_key_exists('imageEdit',$body))$body['imageEdit']=EventImageEdit::normalize($body['imageEdit']);elseif(array_key_exists('imageUrl',$body)&&($body['imageUrl'] ?? '')!==($current['imageUrl'] ?? ''))$body['imageEdit']=null;}
         if(in_array($collection,['slides','templates'],true)&&isset($body['document']))$body['document']=AdvertisingService::stripOverviewRuntime($body['document']);
         if($collection==='locations'){

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Kiosky\Core;
 use RuntimeException;
 require_once __DIR__.'/TicketLinks.php';
+require_once __DIR__.'/EventAutomation.php';
 require_once __DIR__.'/FontStorage.php';
 require_once __DIR__.'/MediaUpload.php';
 
@@ -12,7 +13,7 @@ final class SystemMigration
     public const FORMAT='kiosky-system-migration';
     public const LIMIT=128000000;
     public const COLLECTIONS=['events','eventSchedules','slides','slideVersions','templates','channels','locations','groups','displays','matrices','schedules','assignments','presets','warningTemplates','warnings','presetTriggers','presetTriggerRuns','mediaFolders','mediaAssets'];
-    public const SETTINGS=['featureSettings','scheduleTargetOrder','eventEditorSettings','eventTemplates','publicCalendarSettings','advertisingSettings','menuSettings','menuShare','navigationOrder','titleExclusions','fonts','playerHealthSettings'];
+    public const SETTINGS=['featureSettings','scheduleTargetOrder','eventEditorSettings','eventTemplates','publicCalendarSettings','advertisingSettings','menuSettings','menuShare','navigationOrder','titleExclusions','fonts','playerHealthSettings','eventAutomation'];
     public const EXTRA=['users','apiUsers','menuAccess','contentChannelAccess','menuSubscriptions','dwd','presetHandoffs','crewbrain','easyjob','activeEventSource','externalSources','trash'];
     private const AAD='kiosky-system-migration:1';
     private static function password(mixed $value):string{if(!is_string($value)||strlen($value)<12||strlen($value)>256)throw new RuntimeException('Das Paketpasswort muss 12 bis 256 UTF-8-Bytes lang sein.',422);return $value;}
@@ -59,6 +60,7 @@ final class SystemMigration
         $nodes=0;$visit=static function(mixed $value,int $depth=0)use(&$visit,&$nodes):void{if(++$nodes>1000000||$depth>64)throw new RuntimeException('Das Umzugspaket ist zu komplex.',422);if(is_array($value))foreach($value as $key=>$entry){if(in_array($key,['__proto__','constructor','prototype'],true))throw new RuntimeException('Ungültiger Eigenschaftsname im Umzugspaket.',422);$visit($entry,$depth+1);}};$visit($payload);
         $state=$payload['state'];$ids=[];
         foreach([...self::COLLECTIONS,'users','apiUsers'] as $name){$records=$state[$name] ?? null;if(!is_array($records)||!array_is_list($records)||count($records)>10000)throw new RuntimeException('Ungültige Sammlung: '.$name,422);$ids[$name]=[];foreach($records as $record){$id=$record['id'] ?? null;if(!is_string($id)||$id===''||strlen($id)>200||preg_match('/[\x00-\x1f]/',$id)||isset($ids[$name][$id]))throw new RuntimeException('Ungültige oder doppelte Kennung: '.$name,422);$ids[$name][$id]=true;}}
+        if(!empty($state['eventAutomation']))EventAutomation::validateStorage($state['eventAutomation'],$state['events']);
         foreach($state['events'] as $event)if(array_key_exists('ticketLinks',$event))TicketLinks::normalize($event['ticketLinks']);
         foreach([['slides','eventId','events'],['channels','eventId','events'],['eventSchedules','eventId','events'],['slideVersions','slideId','slides'],['displays','defaultSlideId','slides'],['displays','defaultChannelId','channels'],['displays','locationId','locations'],['matrices','defaultChannelId','channels'],['mediaAssets','folderId','mediaFolders'],['mediaFolders','parentId','mediaFolders'],['presetTriggers','presetId','presets']] as [$collection,$key,$target])foreach($state[$collection] as $row)if(!empty($row[$key])&&!isset($ids[$target][$row[$key]]))throw new RuntimeException('Fehlende Verknüpfung: '.$collection.'.'.$key,422);
         foreach($state['channels'] as $channel)foreach($channel['items'] ?? [] as $item)if(!empty($item['slideId'])&&!isset($ids['slides'][$item['slideId']]))throw new RuntimeException('Ein Kanal enthält eine fehlende Slide.',422);
@@ -95,7 +97,7 @@ final class SystemMigration
     }
     public static function digest(array $state):string
     {
-        $data=array_intersect_key($state,array_flip([...self::COLLECTIONS,...self::SETTINGS,...self::EXTRA]));$clean=static function(mixed $value)use(&$clean):mixed{if(!is_array($value))return $value;$result=[];foreach($value as $key=>$entry)if(!in_array($key,['createdAt','updatedAt','lastSeenAt','lastUsedAt','online','cached','playerVersion'],true))$result[$key]=$clean($entry);return $result;};$data=$clean($data);
+        $data=array_intersect_key($state,array_flip([...self::COLLECTIONS,...self::SETTINGS,...self::EXTRA]));if(isset($data['eventAutomation']))unset($data['eventAutomation']['runs'],$data['eventAutomation']['observations']);$clean=static function(mixed $value)use(&$clean):mixed{if(!is_array($value))return $value;$result=[];foreach($value as $key=>$entry)if(!in_array($key,['createdAt','updatedAt','lastSeenAt','lastUsedAt','online','cached','playerVersion'],true))$result[$key]=$clean($entry);return $result;};$data=$clean($data);
         $data['apiUsers']=array_map(static function(array $row):array{unset($row['lastUsedAt'],$row['updatedAt']);return $row;},$state['apiUsers'] ?? []);unset($data['users']);return hash('sha256',json_encode($data,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
     }
     public static function sourceDigest(array $payload):string{return hash('sha256',json_encode($payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));}

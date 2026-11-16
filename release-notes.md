@@ -1,5 +1,8 @@
-## [3.45.0]
+## [3.46.0]
 
-- Geführter erster Start für mehrere Bildschirme unter Windows und Linux mit reserviertem Hauptmonitor, freien Monitorzuordnungen und gemeinsamem Abschluss der Einrichtung. Vorhandene Profile bleiben erhalten.
-- macOS erhält unabhängige Player-Instanzen mit eigenen Profilen, Monitor-UUIDs, LaunchAgents und Update-Routinen sowie einer Verwaltungs-App. Fehlende Monitore pausieren ihre Ausgabe; Rückkehr startet dieselbe Kopplung wieder.
-- Player-Center und Anleitung beschreiben Einrichtung, erweiterten Desktop und Prüfgrenzen in allen drei Plattformausgaben.
+- Videowerbung: Video-Link oder native Mediathek im Veranstaltungseditor, Wiedergabe im bestehenden Bildplatzhalter und getrenntes Kalenderbild. Eigene Video-Werbeslides und Zwischenslides verwenden ebenfalls automatisch die tatsächliche Video-/Trim-Länge, einschließlich kurzer Clips und Sekundenbruchteilen.
+
+- Veranstaltungsabläufe mit wiederverwendbaren/kopierbaren Vorlagen, Zeitbezügen und Sekundenversätzen, endlichen Slide-/Kanalaktionen und Zuordnung an Displays, Gruppen und Matrizen. Manuelle Zeitpläne bleiben unverändert.
+- Gemeinsamer Editor, schreibfreie Ausspielsimulation und begrenztes, idempotentes Entscheidungsprotokoll in Standalone, WordPress und TYPO3; responsive Bedienung für Smartphone und Tablet.
+- Native CMS-Rechte und Modul-Lizenzen schützen die Automationen; unveröffentlichte, entfernte und manuell archivierte Veranstaltungen bleiben gesperrt. Automatische Archivierung erhält ausdrücklich konfigurierte Endschritte.
+- Vollständige Systemumzüge erhalten Ablaufkonfiguration und Protokoll; normale Inhaltsimporte ordnen Referenzen neu zu und pausieren importierte Abläufe.

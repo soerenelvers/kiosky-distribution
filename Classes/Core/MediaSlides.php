@@ -7,7 +7,7 @@ namespace Kiosky\Core;
 final class MediaSlides
 {
     /** Validate the entire selection before any drafts are written. */
-    public static function inputs(mixed $ids, array $assets): array
+    public static function inputs(mixed $ids, array $assets, array $durations=[]): array
     {
         if (!is_array($ids) || !array_is_list($ids) || count($ids) < 1 || count($ids) > 100) {
             throw new \RuntimeException('Bitte 1 bis 100 Bilder oder Videos auswählen.', 422);
@@ -33,6 +33,7 @@ final class MediaSlides
             $portrait = (float)($metadata['height'] ?? 0) > (float)($metadata['width'] ?? 0);
             $element = ['id'=>'media-content', 'type'=>$type, 'mediaAssetId'=>$id, 'src'=>$asset['src'], 'x'=>0, 'y'=>0, 'width'=>100, 'height'=>100, 'mediaFit'=>'contain', 'background'=>'transparent', 'opacity'=>100, 'rotation'=>0, 'padding'=>0];
             if ($type === 'video') {
+                $duration=$durations[$id]??$metadata['duration']??$metadata['length']??null;if(is_numeric($duration)&&is_finite((float)$duration)&&(float)$duration>0&&(float)$duration<=86400)$element['durationSeconds']=(float)$duration;
                 $element['muted'] = true;
                 $element['trimStart'] = (float)($metadata['trimStart'] ?? 0);
                 if (isset($metadata['trimEnd'])) $element['trimEnd'] = (float)$metadata['trimEnd'];

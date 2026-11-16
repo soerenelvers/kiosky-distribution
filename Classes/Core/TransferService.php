@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kiosky\Core;
 require_once __DIR__.'/PresetTriggers.php';
+require_once __DIR__.'/EventAutomation.php';
 require_once __DIR__.'/PresetTimerActions.php';
 require_once __DIR__.'/EventEditorSettings.php';
 require_once __DIR__.'/EventReuse.php';
@@ -61,6 +62,7 @@ final class TransferService
         }
         if (in_array('operations', $included, true)) {
             $sections['operations'] = [
+                'eventAutomation'=>array_intersect_key($state['eventAutomation']??EventAutomation::empty(),array_flip(['templates','bindings'])),
                 'presets' => $this->active($state['presets'] ?? []),
                 'presetTriggers' => array_values(array_filter(PresetTriggers::listing($state),static fn(array $row):bool=>$row['presetStatus']==='active')),
                 'warningTemplates' => $this->active($state['warningTemplates'] ?? []),
@@ -188,6 +190,14 @@ final class TransferService
             PresetTriggers::save($state,array_replace($source,['presetId'=>$presetId,'enabled'=>false]));
         }
         $counts['presetTriggers']=count($presetTriggers);
+        if(isset($sections['operations']['eventAutomation'])){
+            $source=$sections['operations']['eventAutomation'];if(!is_array($source['templates']??null)||!is_array($source['bindings']??null)||count($source['templates'])>100||count($source['bindings'])>200)throw new RuntimeException('Ungültige Veranstaltungsabläufe im Transferpaket.',422);
+            $config=$state['eventAutomation']??EventAutomation::empty();$templateMap=[];$catalog=array_intersect_key($state,array_flip(['slides','channels','displays','groups','matrices']));
+            foreach($source['templates'] as $t){$rewritten=$this->rewriteRecords([$t],$maps,'eventFlowTemplates')[0];EventAutomation::request($config,'POST','/api/event-automation/templates',array_replace($rewritten,['revision'=>$config['revision']]),$state['events'],$catalog,microtime(true));$templateMap[$t['id']]=$config['templates'][array_key_last($config['templates'])]['id'];}
+            foreach($source['bindings'] as $b){if(!isset($templateMap[$b['templateId']]))throw new RuntimeException('Ablaufvorlage fehlt im Transferpaket.',422);$rewritten=$this->rewriteRecords([$b],$maps,'eventFlowBindings')[0];$rewritten['targets']=array_map(static fn(array $t):array=>array_replace($t,['id'=>$maps[['display'=>'displays','group'=>'groups','matrix'=>'matrices'][$t['type']]][$t['id']]??$t['id']]),$b['targets']??[]);EventAutomation::request($config,'POST','/api/event-automation/bindings',array_replace($rewritten,['templateId'=>$templateMap[$b['templateId']],'enabled'=>false,'revision'=>$config['revision']]),$state['events'],$catalog,microtime(true));}
+            $state['eventAutomation']=$config;$counts['eventAutomation']=count($source['bindings']);
+        }
+
         $dwd = $this->rewriteRecords($sections['operations']['dwd'] ?? [], $maps, 'dwd');
         foreach ($dwd as $configuration) {
             $locationId = (string)($configuration['locationId'] ?? '');

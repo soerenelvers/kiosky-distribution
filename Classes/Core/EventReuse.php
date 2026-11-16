@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Kiosky\Core;
+require_once __DIR__.'/AdvertisingVideo.php';
 require_once __DIR__.'/EventImageEdit.php';
 require_once __DIR__.'/TicketLinks.php';
 use DateTimeImmutable;
@@ -33,7 +34,7 @@ final class EventReuse
     public static function input(mixed $raw):array
     {
         if(!is_array($raw))throw new RuntimeException('Die Veranstaltungsangaben sind ungültig.',422);
-        $result=['status'=>'draft','boxOfficeAvailable'=>($raw['boxOfficeAvailable'] ?? false)===true];if(isset($raw['imageEdit']))$result['imageEdit']=EventImageEdit::normalize($raw['imageEdit']);if(array_key_exists('ticketLinks',$raw))$result['ticketLinks']=TicketLinks::normalize($raw['ticketLinks']);
+        $result=['status'=>'draft','boxOfficeAvailable'=>($raw['boxOfficeAvailable'] ?? false)===true];if(array_key_exists('advertisingVideo',$raw))$result['advertisingVideo']=AdvertisingVideo::input($raw['advertisingVideo']);if(isset($raw['imageEdit']))$result['imageEdit']=EventImageEdit::normalize($raw['imageEdit']);if(array_key_exists('ticketLinks',$raw))$result['ticketLinks']=TicketLinks::normalize($raw['ticketLinks']);
         foreach(self::LENGTHS as $key=>$max){$value=self::text($raw[$key] ?? null,$max,$key==='title');if($value!==null)$result[$key]=$value;}
         foreach(self::TIMES as $key){$value=self::timestamp($raw[$key] ?? null);if($value!==null)$result[$key]=$value;}
         $anchor=$result['eventStart'] ?? null;if(!$anchor)foreach(self::TIMES as $key)if(isset($result[$key])){$anchor=$result[$key];break;}$date=self::date($raw['date'] ?? null) ?? ($anchor?substr(self::local($anchor),0,10):null);if($date)$result['date']=str_replace('-','',$date);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/AdvertisingVideo.php';
 require_once __DIR__.'/QualityClock.php';
 require_once __DIR__.'/EventLifecycle.php';
 
@@ -118,7 +119,7 @@ final class AdvertisingService
             foreach($state['channels'] as $index=>$item)if(($item['automationKey'] ?? '')===$key){$channel=$item;$channelIndex=$index;break;}
             if($settings['enabled']){
                 $items=array_values(array_filter(self::playlist($state,$orientation),static fn(array $item):bool=>empty($item['slide'])&&empty($item['advertisingInterstitial'])));
-                $body=['name'=>$settings['channelName'].($orientation==='landscape'?' quer':' Hochkant'),'description'=>'Automatisch: Werbe-Tags und virtuelle Veranstaltungswerbung','status'=>'published','orientation'=>$orientation,'defaultTransition'=>'fade','repeatEnabled'=>true,'items'=>$items,'totalDurationSeconds'=>count($items)*$settings['durationSeconds'],'tags'=>['Werbung','Automatisch',$orientation==='landscape'?'Werbung quer':'Werbung Hochkant'],'locationIds'=>$settings['locationIds'],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
+                $body=['name'=>$settings['channelName'].($orientation==='landscape'?' quer':' Hochkant'),'description'=>'Automatisch: Werbe-Tags und virtuelle Veranstaltungswerbung','status'=>'published','orientation'=>$orientation,'defaultTransition'=>'fade','repeatEnabled'=>true,'items'=>$items,'totalDurationSeconds'=>array_sum(array_column($items,'durationSeconds')),'tags'=>['Werbung','Automatisch',$orientation==='landscape'?'Werbung quer':'Werbung Hochkant'],'locationIds'=>$settings['locationIds'],'automationKey'=>$key,'deletedAt'=>null,'archivedAt'=>null];
                 if(!$channel)$saveChannel($body,null);else{$body['items']=$items;$body['status']=$channel['status'];$body['description']=$channel['description'] ?? $body['description'];$body['tags']=$channel['tags'] ?? $body['tags'];$body['defaultTransition']=$channel['defaultTransition'];$body['repeatEnabled']=$channel['repeatEnabled'];$state['channels'][$channelIndex]=array_replace($channel,$body);}
             }elseif($channel)$state['channels'][$channelIndex]['status']='paused';
         }
@@ -134,15 +135,15 @@ final class AdvertisingService
         usort($manual,static fn(array $a,array $b):int=>[$a['endsAt'] ?? '',$a['id']]<=>[$b['endsAt'] ?? '',$b['id']]);
         $events=self::virtualSlides($state,$orientation);$byId=array_column(array_merge($manual,$events),null,'id');
         $active=static fn(array $s):bool=>empty($s['deletedAt'])&&empty($s['archivedAt'])&&($s['status'] ?? '')==='published'&&(empty($s['startsAt'])||strtotime($s['startsAt'])<=QualityClock::now())&&(empty($s['endsAt'])||strtotime($s['endsAt'])>QualityClock::now());
-        $selected=[];$seen=[];
+        $selected=[];$seen=[];$assets=array_column($state['mediaAssets']??[],null,'id');
         foreach($settings['channelSequences'][$orientation] ?? [] as $item){
             if(in_array($item['slideId'],$extraIds,true))continue;
             $slide=$byId[$item['slideId']] ?? (!str_starts_with($item['slideId'],'advertising-event:')?self::find($state['slides'],$item['slideId']):null);
-            if($slide&&$active($slide)){$selected[]=$item+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
+            if($slide&&$active($slide)){$selected[]=array_replace($item,['durationSeconds'=>AdvertisingVideo::duration($slide,$assets,$orientation)??$item['durationSeconds']])+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
         }
-        foreach(array_merge(array_slice($manual,0,$settings['maximumSlides']),$events) as $slide)if(!isset($seen[$slide['id']])){$selected[]=['slideId'=>$slide['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit']+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
+        foreach(array_merge(array_slice($manual,0,$settings['maximumSlides']),$events) as $slide)if(!isset($seen[$slide['id']])){$selected[]=['slideId'=>$slide['id'],'durationSeconds'=>AdvertisingVideo::duration($slide,$assets,$orientation)??$settings['durationSeconds'],'transition'=>'inherit']+(!empty($slide['virtual'])?['slide'=>$slide]:[]);$seen[$slide['id']]=true;}
         $extras=[];foreach($extraIds as $position=>$id){$slide=self::find($state['slides'],$id);if($slide&&$active($slide)){$every=$settings['interstitialIntervals'][$orientation][$position] ?? 1;$extras[]=['slide'=>$slide,'every'=>is_int($every)&&$every>=1&&$every<=500?$every:1];}}
-        $result=[];$index=0;foreach($selected as $item){$result[]=$item;$index++;foreach($extras as $rule)if($index%$rule['every']===0)$result[]=['slideId'=>$rule['slide']['id'],'durationSeconds'=>$settings['durationSeconds'],'transition'=>'inherit','advertisingInterstitial'=>true];}
+        $result=[];$index=0;foreach($selected as $item){$result[]=$item;$index++;foreach($extras as $rule)if($index%$rule['every']===0)$result[]=['slideId'=>$rule['slide']['id'],'durationSeconds'=>AdvertisingVideo::duration($rule['slide'],$assets,$orientation)??$settings['durationSeconds'],'transition'=>'inherit','advertisingInterstitial'=>true];}
         return $result;
     }
 
@@ -156,8 +157,9 @@ final class AdvertisingService
         foreach($settings['eventTypeDefaultMedia'] as $type=>$assetId)if(isset($assets[$assetId])&&empty($assets[$assetId]['deletedAt']))$fallbacks[self::normalizeType($type)]=$assets[$assetId];
         $result=[];
         foreach(array_slice(self::eligible($state,$settings),0,min($settings['maximumEvents'],$limit ?? $settings['maximumEvents'])) as $event){
-            $document=$base;$fallback=$fallbacks[self::normalizeType($event['eventType'] ?? '')] ?? null;
-            $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl']));
+            $document=$base;$video=$event['advertisingVideo']??null;$fallback=$fallbacks[self::normalizeType($event['eventType'] ?? '')] ?? null;
+            $elements=self::elements($document['responsiveLayouts'][$orientation] ?? $document['elements'] ?? [],$settings,$fallback,!empty($event['imageUrl'])||!empty($video));
+            $elements=AdvertisingVideo::elements($elements,$video,$event['imageUrl']??null);
             if(($event['status'] ?? '')==='cancelled'&&!array_filter($elements,static fn(array $e):bool=>($e['type'] ?? '')==='event-stamp'&&($e['stampCondition'] ?? '')==='cancelled'))$elements[]=['id'=>'advertising-cancelled','type'=>'event-stamp','text'=>'ABGESAGT','stampCondition'=>'cancelled','x'=>10,'y'=>12,'width'=>80,'height'=>14,'fontSize'=>64,'color'=>'#c52828','background'=>'transparent','rotation'=>-8,'fontWeight'=>800,'align'=>'center'];
             $document=array_replace($document,['elements'=>$elements,'responsiveLayouts'=>[$orientation=>$elements],'designOrientation'=>$orientation,'orientation'=>$orientation,'type'=>'event','width'=>$orientation==='portrait'?1080:1920,'height'=>$orientation==='portrait'?1920:1080]);
             $document['advertisingConfigHash']=hash('sha256',json_encode($document,JSON_THROW_ON_ERROR));
@@ -246,8 +248,8 @@ final class AdvertisingService
     {
         $dynamic = false;
         foreach ($elements as &$element) {
-            if (($element['type'] ?? '') === 'image' && empty($element['src'])) {
-                $dynamic = true; $element['src'] = $hasImage ? '' : ($fallback['src'] ?? '');
+            if (in_array($element['type'] ?? '',['image','video'],true) && empty($element['src'])) {
+                $dynamic = true;$element['type']='image'; $element['src'] = $hasImage ? '' : ($fallback['src'] ?? '');
                 unset($element['mediaAssetId']);
                 if (!$hasImage && $fallback) $element['mediaAssetId'] = $fallback['id'];
             }

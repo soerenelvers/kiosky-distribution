@@ -35,7 +35,7 @@ final class EventLifecycle
         foreach($state['events'] as &$event){$status=self::effective($event);$old=$event;
             if(($event['status'] ?? '')==='sold_out'&&empty($event['remainingTickets']))$event['remainingTickets']='Ausverkauft';
             if($status==='removed'){$event=self::tombstone($event,$now);$removed[$event['id']]=true;}
-            else {if(($event['status'] ?? '')!==$status){$event['status']=$status;$event['updatedAt']=$now;}if($status==='archived')$event['archivedAt']??=$now;}
+            else {if(($event['status'] ?? '')!==$status){$event['autoArchivedFrom']=self::status($event['status']??'draft');$event['autoArchived']=$status==='archived'&&empty($event['archivedAt']);$event['status']=$status;$event['updatedAt']=$now;}if($status==='archived')$event['archivedAt']??=$now;}
             if($event!==$old)$changed=true;
         }unset($event);
         if($removed){foreach(['eventSchedules','easyjobScheduleImportLogs'] as $key)if(isset($state[$key])){$rows=array_values(array_filter($state[$key],static fn(array $r):bool=>!isset($removed[$r['eventId'] ?? ''])));if($rows!==$state[$key]){$state[$key]=$rows;$changed=true;}}

@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.45.0-20261116114355%2Be767d87a" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.45.0-20261116114355%2Be767d87a">
+  <link href="player/fonts/builtins.css?v=3.46.0-20261116214025%2Bd366cafd" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.46.0-20261116214025%2Bd366cafd">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -450,6 +450,16 @@
               <div class="schedule-entry-list" id="schedule-entry-list"></div>
             </div>
           </div>
+        </article>
+        <article class="panel event-flow-panel" id="event-flow-panel" data-license-modules="events schedule operations channels displays" hidden aria-labelledby="event-flow-heading">
+          <div class="section-heading"><div><p class="eyebrow">Veranstaltungen automatisieren</p><h3 id="event-flow-heading">Veranstaltungsabläufe</h3><p>Ablaufvorlagen mit Zeitbezug zu Einlass, Beginn, Pause und Ende. Manuelle Zeitplanung und Warnungen behalten Vorrang.</p></div><div class="section-actions"><button type="button" class="button button-primary" data-flow-action="new-template">＋ Ablaufvorlage</button><button type="button" class="button button-secondary" data-flow-action="new-binding">＋ Veranstaltung zuordnen</button><button type="button" class="button button-secondary" data-flow-action="refresh">↻ Aktualisieren</button></div></div>
+          <p id="event-flow-status" role="status" aria-live="polite"></p>
+          <h4>Ablaufvorlagen</h4><div id="event-flow-templates" class="event-flow-list"></div>
+          <h4>Zugeordnete Veranstaltungen</h4><div id="event-flow-bindings" class="event-flow-list"></div>
+          <details><summary>Zeitfenster und fehlende Angaben</summary><div id="event-flow-plans" class="event-flow-list"></div></details>
+          <h4>Simulation</h4><form id="event-flow-simulation" class="event-flow-fields"><label>Display<select id="event-flow-display" required></select></label><label>Zeitpunkt (Europe/Berlin)<input id="event-flow-at" type="datetime-local" required step="1"></label><label>Zeitraum in Stunden<input id="event-flow-hours" type="number" min="0" max="24" value="12" required></label><button class="button button-secondary" type="submit">Simulation starten</button></form>
+          <div id="event-flow-simulation-result" class="event-flow-list" role="status" aria-live="polite"></div>
+          <details><summary>Ausführungsprotokoll öffnen</summary><p>Protokollierte Serverauswahl bei Player-Abrufen: welcher Schritt aktiv war, welcher Inhalt ausgewählt und wodurch er gegebenenfalls überlagert wurde. Kein Nachweis der tatsächlichen Darstellung auf dem Fernseher. Die letzten 500 Einträge werden aufbewahrt.</p><div id="event-flow-history" class="event-flow-list"></div></details>
         </article>
         <article class="panel preset-trigger-panel" id="preset-trigger-panel" aria-labelledby="preset-trigger-heading">
           <div class="section-heading"><div><p class="eyebrow">Zeitgesteuerte Aktionen</p><h3 id="preset-trigger-heading">Preset-Termine</h3><p>Ein vollständiges Preset einmalig oder wiederkehrend auslösen. Ziele und Aktionen stammen aus dem gespeicherten Preset.</p></div><button class="button button-secondary" type="button" data-action="refresh-preset-triggers">↻ Aktualisieren</button></div>
@@ -1333,6 +1343,7 @@
         </div>
         <label class="form-field"><span>Ticketstatus / Restkarten</span><input id="event-remaining-tickets" type="text" list="event-ticket-states"><datalist id="event-ticket-states"><option value="Ausverkauft"><option value="Karten verfügbar"><option value="Nicht ausverkauft"><option value="Wenige Restkarten"><option value="Kein Vorverkauf"><option value="Freier Eintritt"></datalist></label>
         <div class="form-field span-two"><label for="event-image-url">Bild-Link oder Mediathek</label><input id="event-image-url" type="url" placeholder="https://…"><div class="event-image-actions"><button type="button" class="button button-secondary" id="event-image-select">Bild auswählen / hochladen</button><button type="button" class="button button-secondary" id="event-image-edit">Bild bearbeiten</button><button type="button" class="button button-secondary" id="event-image-clear">Bild entfernen</button></div><div class="event-image-preview" id="event-image-preview" aria-live="polite"></div><small>Externen Bild-Link eingeben oder ein Bild aus der Mediathek wählen. Mit der Veranstaltung speichern.</small></div>
+        <div class="form-field span-two"><label for="event-advertising-video-url">Werbevideo · Link oder Mediathek (optional)</label><input id="event-advertising-video-url" type="url" maxlength="2000" placeholder="https://…/werbung.mp4"><div class="event-image-actions"><button type="button" class="button button-secondary" id="event-advertising-video-select">Video auswählen / hochladen</button><button type="button" class="button button-secondary" id="event-advertising-video-clear">Video entfernen</button></div><label for="event-advertising-video-duration">Quelldauer in Sekunden · wird automatisch ermittelt</label><input id="event-advertising-video-duration" type="number" min="0.001" max="86400" step="0.001" placeholder="Videolänge"><small id="event-advertising-video-status" role="status" aria-live="polite">Das Video ersetzt das Bild im Medienplatzhalter der Werbevorlage. Das Kalenderbild bleibt separat erhalten.</small><video id="event-advertising-video-preview" controls muted playsinline preload="metadata" hidden style="width:100%;max-height:280px"></video></div>
         <label class="toggle-label"><input id="event-box-office" type="checkbox"> Abendkasse verfügbar</label>
         <label class="form-field"><span>Abendkasse öffnet</span><input id="event-box-office-open" type="time"></label>
       </div>
@@ -1867,16 +1878,32 @@
   <dialog id="customer-invitation-dialog" class="customer-dialog"><form id="customer-invitation-form"><header class="customer-dialog-header"><h2>Kundenlink erstellen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog" aria-label="Kundenlink-Dialog schließen">×</button></header><div class="customer-form-grid"><label class="form-field"><span>Kunde</span><input id="customer-invitation-name" maxlength="180" required></label><label class="form-field"><span>Kunden-Tag (mit Präfix „Kunde:“)</span><input id="customer-invitation-tag" maxlength="90" placeholder="Leer: Kundenname"></label></div><label class="form-field"><span>Veranstaltung suchen</span><input id="customer-invitation-event-search" type="search"></label><label class="form-field"><span>Veranstaltung</span><select id="customer-invitation-event" required></select></label><fieldset><legend>Für diesen Kunden erlaubte Displays</legend><label class="form-field"><span>Displays suchen</span><input id="customer-invitation-display-search" type="search"></label><div id="customer-invitation-displays" class="customer-target-list"></div></fieldset><div class="customer-form-grid"><label class="form-field"><span>Ausspielung frühestens</span><input id="customer-window-start" type="datetime-local" required></label><label class="form-field"><span>Ausspielung spätestens</span><input id="customer-window-end" type="datetime-local" required></label><label class="form-field"><span>Kundenlink gültig bis</span><input id="customer-edit-until" type="datetime-local" required></label></div><p>Zeiten gelten für Europe/Berlin. Der Link erlaubt höchstens 20 Dateien, je 20 MB und insgesamt 100 MB. Er erteilt keine CMS- oder direkten Ausspielrechte.</p><p id="customer-invitation-message" role="status"></p><label class="form-field" id="customer-link-result" hidden><span>Kundenlink – nur jetzt vollständig angezeigt, bitte kopieren</span><input id="customer-invitation-url" readonly></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="customer-link-copy" hidden>Link kopieren</button><button type="submit" class="button button-primary" id="customer-link-submit">Link erstellen</button><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog">Schließen</button></div></form></dialog>
   <dialog id="customer-review-dialog" class="customer-dialog"><header class="customer-dialog-header"><h2>Ausspielvorschlag prüfen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog" aria-label="Vorschlagsprüfung schließen">×</button></header><div id="customer-review-summary"></div><div id="customer-review-preview"></div><label class="form-field"><span>Begründung bei Ablehnung (optional)</span><textarea id="customer-review-note" maxlength="1000" rows="3"></textarea></label><p id="customer-review-status" role="status"></p><div class="dialog-actions"><button type="button" class="button button-primary" id="customer-review-approve">Freigeben und Zeitzuweisungen anlegen</button><button type="button" class="button button-secondary" id="customer-review-reject">Ablehnen</button><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog">Schließen</button></div></dialog>
 
-  <script src="runtime-config.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/fullscreen-control.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/media-placement.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/editor-alignment.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/event-image.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/font-library.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/touch-layout.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/health-telemetry.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="player/playback-proof.js?v=3.45.0-20261116114355%2Be767d87a"></script>
-  <script src="app.js?v=3.45.0-20261116114355%2Be767d87a"></script>
+  <script src="runtime-config.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/fullscreen-control.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/media-placement.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/editor-alignment.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/event-image.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/font-library.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/touch-layout.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/health-telemetry.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <script src="player/playback-proof.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
+  <dialog id="event-flow-template-dialog" data-license-modules="events schedule operations channels displays" class="event-flow-dialog" aria-labelledby="event-flow-template-title"><form id="event-flow-template-form">
+    <div class="section-heading"><h2 id="event-flow-template-title">Ablaufvorlage</h2><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
+    <label>Vorlagenname<input id="event-flow-template-name" required maxlength="200"></label>
+    <p>Beispiel: zehn Minuten vor Einlass starten (Versatz −600 Sekunden), bis zum Beginn anzeigen. Ohne Endbezug gilt die eingestellte Dauer. Überlappende Schritte bitte simulieren.</p>
+    <div id="event-flow-steps" class="event-flow-list"></div><button type="button" class="button button-secondary" data-flow-action="add-step">＋ Schritt hinzufügen</button>
+    <p class="event-flow-error" role="alert"></p><div class="section-actions"><button type="submit" class="button button-primary">Vorlage speichern</button><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
+  </form></dialog>
+  <dialog id="event-flow-binding-dialog" data-license-modules="events schedule operations channels displays" class="event-flow-dialog" aria-labelledby="event-flow-binding-title"><form id="event-flow-binding-form">
+    <div class="section-heading"><h2 id="event-flow-binding-title">Veranstaltungsablauf zuordnen</h2><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
+    <div class="event-flow-fields"><label>Veranstaltung<select id="event-flow-event" required></select></label><label>Ablaufvorlage<select id="event-flow-template" required></select></label></div>
+    <p>Die Vorlage wird gemeinsam verwendet: Änderungen daran gelten für alle zugeordneten Veranstaltungen. Für abweichende Abläufe zuerst eine Kopie der Vorlage anlegen.</p>
+    <label><input id="event-flow-enabled" type="checkbox" checked> Ablauf aktivieren</label><label><input id="event-flow-cancelled" type="checkbox"> Auch für abgesagte Veranstaltungen ausführen</label>
+    <p>Entwürfe und manuell archivierte Veranstaltungen werden nicht ausgespielt. Bei automatisch abgelaufenen Veranstaltungen können ausdrücklich konfigurierte Schritte am Veranstaltungsende noch laufen.</p>
+    <fieldset><legend>Ziel-Displays, Gruppen und Matrizen</legend><input type="search" id="event-flow-target-search" placeholder="Ziele suchen" aria-label="Ausspielziele suchen"><div id="event-flow-targets" class="event-flow-targets"></div></fieldset>
+    <p class="event-flow-error" role="alert"></p><div class="section-actions"><button type="submit" class="button button-primary">Zuordnung speichern</button><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
+  </form></dialog>
+  <script src="app.js?v=3.46.0-20261116214025%2Bd366cafd"></script>
 
 </body>
 </html>
