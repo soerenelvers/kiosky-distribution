@@ -3693,7 +3693,22 @@ function slideThumb(slide,eventOverride=undefined) {
   return `<span class="slide-thumb slide-thumb-designed type-${escapeHtml(slide.type)} ${slide.ratio === 'auto' ? 'is-auto' : ''}"><span class="slide-thumb-surface ${slide.ratio === 'portrait' ? 'is-portrait' : ''}">${slideDecorationsMarkup(settings)}${elements || `<span class="slide-thumb-empty">${escapeHtml(slideTypeLabels[slide.type] || 'Slide')}</span>`}</span>${slide.ratio === 'auto' ? '<i class="slide-thumb-auto-badge">AUTO</i>' : ''}</span>`;
 }
 
+function youtubeVideoId(value){
+  try{const u=new URL(String(value).trim());if(!['https:','http:'].includes(u.protocol)||u.username||u.password)return null;
+    const host=u.hostname.toLowerCase();let id=null;
+    if(host==='youtu.be')id=u.pathname.slice(1);
+    else if(['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'].includes(host))id=u.pathname==='/watch'?u.searchParams.get('v'):u.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)\/?$/)?.[1];
+    return /^[a-zA-Z0-9_-]{11}$/.test(id||'')?id:null;
+  }catch{return null;}
+}
+function youtubeVideoMarkup(element,src,autoplay=false){
+  const id=youtubeVideoId(src);if(!id)return '';
+  const url=new URL('https://www.youtube-nocookie.com/embed/'+id);for(const [key,value] of Object.entries({autoplay:autoplay?'1':'0',mute:'1',loop:'1',playlist:id,playsinline:'1',controls:autoplay?'0':'1',rel:'0',disablekb:'1'}))url.searchParams.set(key,value);
+  const start=Math.max(0,Math.floor(Number(element.trimStart)||0)),end=Math.floor(Number(element.trimEnd)||0);if(start)url.searchParams.set('start',String(start));if(end>start)url.searchParams.set('end',String(end));
+  return `<span class="media-placement"><iframe src="${escapeHtml(url.href)}" title="YouTube-Werbevideo" ${KioskyMediaPlacement.attributes(element)} allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></span>`;
+}
 function mediaContentMarkup(element,src,video=false,extra=''){
+  if(video&&youtubeVideoId(src)){if(/\bautoplay\b/.test(extra))return youtubeVideoMarkup(element,src,true);return `<span class="media-placement"><img src="https://i.ytimg.com/vi/${youtubeVideoId(src)}/hqdefault.jpg" alt="YouTube-Video" loading="lazy" ${KioskyMediaPlacement.attributes(element)}></span>`;}
   if(!video&&element.eventImageEdit&&globalThis.KioskyEventImage)return `<span class="media-placement">${KioskyEventImage.markup({imageUrl:src,imageEdit:element.eventImageEdit},element.mediaFit,'placed-media event-image-crop',element)}</span>`;
   return `<span class="media-placement">${video?`<video src="${escapeHtml(src)}" ${element.posterSrc?`poster="${escapeHtml(element.posterSrc)}"`:""} ${KioskyMediaPlacement.attributes(element)} playsinline ${extra}></video>`:`<img src="${escapeHtml(src)}" alt="" ${KioskyMediaPlacement.attributes(element)} ${extra}>`}</span>`;
 }
@@ -7710,10 +7725,12 @@ function setEventAdvertisingVideo(value){
  eventAdvertisingVideoGeneration++;eventAdvertisingVideoDraft=value?{...value}:null;document.querySelector('#event-advertising-video-url').value=value?.src||'';document.querySelector('#event-advertising-video-duration').value=value?.durationSeconds||'';renderEventAdvertisingVideo(false);
 }
 function collectEventAdvertisingVideo(){
- const src=document.querySelector('#event-advertising-video-url').value.trim();if(!src)return null;const durationSeconds=Number(document.querySelector('#event-advertising-video-duration').value);if(!Number.isFinite(durationSeconds)||durationSeconds<=0||durationSeconds>86400)throw new Error('Bitte die Ermittlung der Videolänge abwarten oder eine gültige Quelldauer eintragen.');return {...(eventAdvertisingVideoDraft||{}),src,durationSeconds};
+ const src=document.querySelector('#event-advertising-video-url').value.trim();if(!src)return null;if(/^(www\.|m\.)?youtube\.com$|^(www\.)?youtube-nocookie\.com$|^youtu\.be$/.test((()=>{try{return new URL(src).hostname;}catch{return '';}})())&&!youtubeVideoId(src))throw new Error('Bitte einen gültigen YouTube-Video-Link verwenden, keinen Kanal oder eine Playlist.');const durationSeconds=Number(document.querySelector('#event-advertising-video-duration').value);if(!Number.isFinite(durationSeconds)||durationSeconds<=0||durationSeconds>86400)throw new Error('Bitte die Ermittlung der Videolänge abwarten oder eine gültige Quelldauer eintragen.');return {...(eventAdvertisingVideoDraft||{}),src,durationSeconds};
 }
 function renderEventAdvertisingVideo(probe=true){
- const src=document.querySelector('#event-advertising-video-url').value.trim(),video=document.querySelector('#event-advertising-video-preview'),status=document.querySelector('#event-advertising-video-status');video.hidden=!src;
+ const src=document.querySelector('#event-advertising-video-url').value.trim(),video=document.querySelector('#event-advertising-video-preview'),status=document.querySelector('#event-advertising-video-status');video.hidden=!src||Boolean(youtubeVideoId(src));
+ const youtubePreview=document.querySelector('#event-advertising-youtube-preview');youtubePreview.hidden=!youtubeVideoId(src);youtubePreview.replaceChildren();
+ if(youtubeVideoId(src)){video.pause();video.removeAttribute('src');video.load();youtubePreview.innerHTML=youtubeVideoMarkup({mediaFit:'contain'},src);status.textContent='YouTube-Video: Bitte die Videolänge in Sekunden eintragen (z. B. 80). Die Länge kann ohne Anbieter-API nicht automatisch ermittelt werden. Nur zur Einbettung freigegebene Videos können abgespielt werden.';return;}
  if(!src){video.removeAttribute('src');video.load();status.textContent='Das Bild bleibt im Kalender erhalten. Ein Werbevideo ersetzt es nur im Medienplatzhalter der Werbung.';return;}
  if(video.getAttribute('src')!==src)video.src=src;
  if(!probe){status.textContent='Die Werbelaufzeit entspricht dem Video bzw. seinem ausgewählten Ausschnitt.';return;}
@@ -7722,5 +7739,5 @@ function renderEventAdvertisingVideo(probe=true){
 document.querySelector('#event-advertising-video-url').addEventListener('input',()=>{eventAdvertisingVideoGeneration++;eventAdvertisingVideoDraft=null;document.querySelector('#event-advertising-video-duration').value='';clearTimeout(eventAdvertisingVideoTimer);eventAdvertisingVideoTimer=setTimeout(()=>renderEventAdvertisingVideo(),350);});
 document.querySelector('#event-advertising-video-select').addEventListener('click',async()=>{try{if(kioskyRuntime.platform==='standalone')await refreshMedia();openMediaLibrary(asset=>{const metadata=asset.metadata||{},reference=String(asset.src||'').startsWith('data:')?runtimeUrl(kioskyRuntime.apiBaseUrl,'/media/library/'+encodeURIComponent(asset.id)):asset.src;setEventAdvertisingVideo({src:new URL(reference,window.location.href).href,mediaAssetId:asset.id,durationSeconds:Number(metadata.duration||metadata.length)||0,trimStart:Number(metadata.trimStart)||0,...(metadata.trimEnd!=null?{trimEnd:Number(metadata.trimEnd)}:{})});renderEventAdvertisingVideo();},'video','Werbevideo auswählen oder hochladen');}catch(error){showToast(error.message);}});
 document.querySelector('#event-advertising-video-clear').addEventListener('click',()=>{clearTimeout(eventAdvertisingVideoTimer);setEventAdvertisingVideo(null);});
-document.querySelector('#event-dialog').addEventListener('close',event=>{if(event.target.open)return;eventAdvertisingVideoGeneration++;clearTimeout(eventAdvertisingVideoTimer);const video=document.querySelector('#event-advertising-video-preview');video.pause();video.removeAttribute('src');video.load();});
+document.querySelector('#event-dialog').addEventListener('close',event=>{if(event.target.open)return;eventAdvertisingVideoGeneration++;clearTimeout(eventAdvertisingVideoTimer);const video=document.querySelector('#event-advertising-video-preview');video.pause();video.removeAttribute('src');video.load();document.querySelector('#event-advertising-youtube-preview').replaceChildren();});
 })();

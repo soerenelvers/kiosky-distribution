@@ -11,7 +11,7 @@ Die Quelldauer wird im Browser aus den Videometadaten gelesen und zusammen mit
 der Veranstaltung gespeichert. Sie kann bei nicht lesbaren Metadaten ersatzweise
 manuell eingetragen werden. Ohne gültige Dauer lässt sich ein neues Werbevideo
 nicht speichern. Zulässig sind endliche Videos bis 24 Stunden; Video-Buchungsseiten
-oder YouTube-Seiten sind keine direkten Videodateien. Für breite Player-Kompatibilität
+sind keine direkten Videodateien. YouTube wird seit 3.46.1 separat eingebettet. Für breite Player-Kompatibilität
 MP4 mit H.264 verwenden. Die Uploadgrenzen des jeweiligen Systems gelten weiter.
 
 Das Video ersetzt **denselben dynamischen Bildplatzhalter** der Werbevorlage:
@@ -26,6 +26,30 @@ als Poster beim Laden des Videos. **Video entfernen** stellt die bisherige
 bildbasierte Veranstaltungswerbung wieder her. Die Änderung mit der Veranstaltung
 speichern. Veranstaltungsduplikate, Veranstaltungsvorlagen und Systemumzüge
 übernehmen die Videoangaben.
+
+## YouTube (ab 3.46.1)
+
+Watch-, youtu.be-, Shorts-, Live- und Embed-Video-Links werden als YouTube-Video
+im selben Medienplatzhalter eingebettet, statt als MP4 geladen. Im Feld
+**Quelldauer in Sekunden** die tatsächliche Länge eintragen, beispielsweise `80`.
+Ohne API-Zugang kann Kiosky diese Länge nicht automatisch aus der YouTube-Webseite
+ermitteln. Vorhandene gespeicherte Links mit gültiger Dauer funktionieren nach dem
+Update ohne erneutes Anlegen. Veranstaltung und Werbeplatz bleiben veröffentlicht.
+
+Der Player verwendet `youtube-nocookie.com`, stummen Autostart und dieselbe
+Slide-Laufzeit. Geometrie und Zoom des Platzhalters bleiben erhalten; YouTube
+bestimmt die Darstellung innerhalb seines eingebetteten Players. Übersichten
+verwenden ein verzögert geladenes Vorschaubild statt vieler gleichzeitig laufender
+YouTube-Player. Der Veranstaltungseditor lädt eine einzelne eingebettete Vorschau
+und entfernt sie beim Schließen.
+
+Internet, erreichbare YouTube-Dienste und die Einbettungserlaubnis des Videos sind
+Voraussetzungen. Private, regional/alterseingeschränkte oder vom Rechteinhaber für
+Einbettung gesperrte Videos können nicht freigeschaltet werden. YouTube-Werbung
+kann Kiosky nicht unterdrücken. Für kontrollierte, offlinefähige Werbung die eigene
+MP4-Datei hochladen. Es erfolgt kein Download oder serverseitiger Abruf der Videos;
+Player-Schlüssel werden nicht an YouTube übergeben. Der iframe-Referrer enthält
+nur den Ursprung der Kiosky-Website, keine Player-URL oder Schlüssel.
 
 ## Selbst angelegte Werbeslides und Zwischenslides
 

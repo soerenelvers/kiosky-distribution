@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "d366cafd2aef2be2d50add6f7dd902ca52e208bb",
+  "source_commit": "2408ff7b93fa8aa6fc0488de546545209830cfd3",
   "product": "kiosky",
-  "version": "3.46.0",
-  "released_at": "2026-11-16T21:40:26.664Z",
+  "version": "3.46.1",
+  "released_at": "2026-11-16T22:40:15.238Z",
   "channel": "stable",
-  "release_notes": "## [3.46.0]\n\n- Videowerbung: Video-Link oder native Mediathek im Veranstaltungseditor, Wiedergabe im bestehenden Bildplatzhalter und getrenntes Kalenderbild. Eigene Video-Werbeslides und Zwischenslides verwenden ebenfalls automatisch die tatsächliche Video-/Trim-Länge, einschließlich kurzer Clips und Sekundenbruchteilen.\n\n- Veranstaltungsabläufe mit wiederverwendbaren/kopierbaren Vorlagen, Zeitbezügen und Sekundenversätzen, endlichen Slide-/Kanalaktionen und Zuordnung an Displays, Gruppen und Matrizen. Manuelle Zeitpläne bleiben unverändert.\n- Gemeinsamer Editor, schreibfreie Ausspielsimulation und begrenztes, idempotentes Entscheidungsprotokoll in Standalone, WordPress und TYPO3; responsive Bedienung für Smartphone und Tablet.\n- Native CMS-Rechte und Modul-Lizenzen schützen die Automationen; unveröffentlichte, entfernte und manuell archivierte Veranstaltungen bleiben gesperrt. Automatische Archivierung erhält ausdrücklich konfigurierte Endschritte.\n- Vollständige Systemumzüge erhalten Ablaufkonfiguration und Protokoll; normale Inhaltsimporte ordnen Referenzen neu zu und pausieren importierte Abläufe.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.0",
+  "release_notes": "## [3.46.1]\n\n- YouTube-Video-Links in Veranstaltungswerbung werden im bestehenden Medienplatzhalter als eingebetteter Player mit stummem Autostart wiedergegeben. Gespeicherte Laufzeiten und Veröffentlichung bleiben erhalten; MP4-Videos nutzen weiterhin die direkte Wiedergabe.\n- Der Editor erklärt die manuelle YouTube-Laufzeit, zeigt eine passende Vorschau und beendet sie beim Schließen. Vorschaubilder vermeiden viele gleichzeitig geladene YouTube-Player; Anbieterparameter werden nicht übernommen.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.46.0",
+    "core_version": "3.46.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.46.0",
-    "typo3_extension_version": "3.46.0"
+    "wordpress_plugin_version": "3.46.1",
+    "typo3_extension_version": "3.46.1"
   },
   "components": {
     "core": {
-      "version": "3.46.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.0.zip?ref=v3.46.0",
-      "sha256": "b6d4cffe9f61352ec03e53321056ca4138ce824794985846d5732d82814afcc5"
+      "version": "3.46.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.1.zip?ref=v3.46.1",
+      "sha256": "1d4b2d161107903db80f1a976c10a5ad6c5ae365efeebf50ba5e5f2c00304049"
     },
     "standalone": {
-      "version": "3.46.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.0.zip?ref=v3.46.0",
-      "sha256": "b6d4cffe9f61352ec03e53321056ca4138ce824794985846d5732d82814afcc5"
+      "version": "3.46.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.1.zip?ref=v3.46.1",
+      "sha256": "1d4b2d161107903db80f1a976c10a5ad6c5ae365efeebf50ba5e5f2c00304049"
     },
     "wordpress": {
-      "version": "3.46.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.0.zip?ref=v3.46.0",
-      "sha256": "852b96050f6e722bee369677f6e6c7a62dc8616bc42bc9c08ffe78c680af4a46",
+      "version": "3.46.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.1.zip?ref=v3.46.1",
+      "sha256": "8d23a297f7b510ae7aeb8b79552d275edc07ba3e6ffc3dd415190c5750a0d53d",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.46.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.0.zip?ref=v3.46.0",
-      "sha256": "c6e4361ac8095d88276aa3cbbf9b1ed45cfb324ba5000ee380506df9f3d4d207",
+      "version": "3.46.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.1.zip?ref=v3.46.1",
+      "sha256": "97555b465af93faa27f2a0c1d97be2c355da34736e5c230d8aff69112222379d",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
