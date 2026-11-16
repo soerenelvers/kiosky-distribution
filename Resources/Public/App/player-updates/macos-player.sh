@@ -1,6 +1,7 @@
 #!/bin/sh
 # Installed per user. Only the bound HTTPS Kiosky server may provide code.
 set -u
+umask 077
 extract(){ /usr/bin/plutil -extract "$1" raw -o - "$2" 2>/dev/null; }
 version_valid(){ printf '%s\n' "$1" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; }
 newer(){ version_valid "$1" && version_valid "$2" && awk -v a="$1" -v b="$2" 'BEGIN{split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){if(x[i]+0>y[i]+0)exit 0;if(x[i]+0<y[i]+0)exit 1}exit 1}'; }
@@ -36,6 +37,85 @@ check_update(){
     cp "$config" "$root/update.config" || return 1
     /usr/bin/plutil -replace version -string "$next" "$root/update.config" || return 1
     printf '%s' "$next" > "$root/update.pending"
+}
+# Native display discovery and setup; no Accessibility permission or local web server.
+mac_tools(){
+    cat > "$root/instances-helper.new" <<'KIOSKY_MAC_HELPER'
+ObjC.import('AppKit');
+ObjC.import('Foundation');
+ObjC.import('CoreGraphics');
+ObjC.import('CoreFoundation');
+var displayKeys={};
+function displays(){
+ var result=[],screens=$.NSScreen.screens,primary=screens.count? screens.objectAtIndex(0).frame:null,seen={};
+ for(var n=0;n<screens.count;n++){
+  var screen=screens.objectAtIndex(n),frame=screen.frame,id=Number(screen.deviceDescription.objectForKey('NSScreenNumber').unsignedIntValue);
+  var geometry=[Math.round(frame.origin.x),Math.round(primary.origin.y+primary.size.height-frame.origin.y-frame.size.height),Math.round(frame.size.width),Math.round(frame.size.height)];
+  if(seen[geometry.join(',')])continue;seen[geometry.join(',')]=true;
+  var key=displayKeys[id];if(!key){var uuid=$.CGDisplayCreateUUIDFromDisplayID(id);var uuidText=$.CFUUIDCreateString(null,uuid);key=ObjC.unwrap(ObjC.castRefToObject(uuidText));if(typeof key!=='string'||!key)throw Error('Die stabile Bildschirmkennung konnte nicht gelesen werden.');if(Object.keys(displayKeys).length>128)displayKeys={};displayKeys[id]=key;}
+  result.push({id:key,name:ObjC.unwrap(screen.localizedName)||('Bildschirm '+(n+1)),x:geometry[0],y:geometry[1],width:geometry[2],height:geometry[3],primary:n===0});
+ }
+ return result;
+}
+function read(path){var value=$.NSString.stringWithContentsOfFileEncodingError(path,$.NSUTF8StringEncoding,null);if(!value)throw Error('Konfiguration nicht lesbar.');return JSON.parse(ObjC.unwrap(value));}
+function exists(path){return $.NSFileManager.defaultManager.fileExistsAtPath(path);}
+function write(path,value){if(!$(JSON.stringify(value)).writeToFileAtomicallyEncodingError(path,true,$.NSUTF8StringEncoding,null))throw Error('Konfiguration konnte nicht gespeichert werden.');}
+function task(args,wait){var t=$.NSTask.alloc.init;t.launchPath=args[0];t.arguments=args.slice(1);t.standardOutput=$.NSFileHandle.fileHandleWithNullDevice;t.standardError=$.NSFileHandle.fileHandleWithNullDevice;t.launch;if(wait){t.waitUntilExit;if(t.terminationStatus!==0)throw Error('Player konnte nicht eingerichtet werden.');}return t;}
+function run(argv){
+ if(argv[0]==='monitors')return JSON.stringify(displays());
+ if(argv[0]==='watch'){
+  $.NSApplication.sharedApplication.setActivationPolicy(2);
+  while(true){var state={};displays().forEach(function(m){var value=[m.x,m.y,m.width,m.height].join(' ');state[m.id]=value;if(m.primary)state.primary=value;});write(argv[1],state);$.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(2));}
+ }
+ if(argv[0]==='monitor'){var available=displays(),m=argv[1]?available.filter(function(d){return d.id===argv[1]})[0]:available[0];return m?[m.x,m.y,m.width,m.height].join(' '):'';}
+ var base=argv[1],home=ObjC.unwrap($.NSProcessInfo.processInfo.environment.objectForKey('HOME'));
+ if(typeof base!=='string'||base.indexOf(home+'/Library/Application Support/Kiosky/players/')!==0||!/^[a-f0-9]{24}$/.test(base.split('/').pop()))throw Error('Ungültige Player-Installation.');
+ var settings=exists(base+'/instances.json')?read(base+'/instances.json'):{default:{name:'Display 1',monitor:''}},app=Application.currentApplication();app.includeStandardAdditions=true;app.activate();
+ function root(id){if(id!=='default'&&!/^[a-f0-9]{32}$/.test(id))throw Error('Ungültige Instanz.');return id==='default'?base:base+'/instances/'+id;}
+ function save(){write(base+'/instances.json',settings);}
+ function choose(labels,prompt){var answer=app.chooseFromList(labels,{withPrompt:prompt,okButtonName:'Auswählen',cancelButtonName:'Zurück'});return answer?labels.indexOf(answer[0]):-1;}
+ function selectInstance(){var keys=Object.keys(settings),index=choose(keys.map(function(id){return settings[id].name;}),'Player auswählen');return index<0?null:keys[index];}
+ function availableFor(id){var all=displays(),primary=all[0]?all[0].id:'';return all.filter(function(m){return !Object.keys(settings).some(function(key){return key!==id&&(settings[key].monitor||(key==='default'?primary:''))===m.id;});});}
+ function chooseMonitor(id){var free=availableFor(id);if(!free.length){app.displayAlert('Kein freier Bildschirm',{message:'Bildschirme als erweiterte Ausgaben einrichten. Gespiegelte Bildschirme sind ein gemeinsamer Ausspielweg.'});return null;}var n=choose(free.map(function(m){return m.name+' · '+m.width+' × '+m.height+(m.primary?' · primär':'');}),'Bildschirm für diesen Player auswählen');return n<0?null:free[n];}
+ function start(id){var r=root(id);if(!exists(r+'/start.sh')){
+   if(!$.NSFileManager.defaultManager.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(r,true,null,null))throw Error('Instanzordner konnte nicht angelegt werden.');
+   var config=read(base+'/config.json');config.instance_id=id;write(r+'/config.json',config);
+   task(['/bin/sh',base+'/player.sh',r+'/config.json','--install-only'],true);
+  }
+  task(['/usr/bin/nohup','/bin/sh',r+'/start.sh'],false);
+ }
+ if(argv[0]==='init'){var all=displays();if(all.length<2||exists(base+'/instances.json')||exists(base+'/profile'))return 'skip';settings.default.monitor=all[0].id;save();}
+ while(true){
+  var options=['Weiteren Bildschirm anlegen','Player starten','Monitorzuordnung ändern','Player beenden','Fertig'],action=choose(options,displays().length+' Bildschirme erkannt. Jeder Player hat einen eigenen Kopplungscode.');
+  if(action<0||action===4)return 'done';
+  try{
+   if(action===0){var m=chooseMonitor('');if(!m)continue;var name=app.displayDialog('Name des zusätzlichen Players',{defaultAnswer:'Display '+(Object.keys(settings).length+1),buttons:['Abbrechen','Anlegen'],defaultButton:'Anlegen',cancelButton:'Abbrechen'}).textReturned;
+    if(!name.trim()||name.length>80||/[\x00-\x1f]/.test(name))throw Error('Bitte einen Namen mit höchstens 80 Zeichen eingeben.');
+    var id=ObjC.unwrap($.NSUUID.UUID.UUIDString).replace(/-/g,'').toLowerCase();settings[id]={name:name.trim(),monitor:m.id};save();start(id);
+   }else{var id=selectInstance();if(!id)continue;if(action===1)start(id);if(action===2){var m=chooseMonitor(id);if(m){settings[id].monitor=m.id;save();}}if(action===3)task(['/bin/sh',base+'/player.sh',base+'/config.json','--stop-instance',id],true);}
+  }catch(error){if(String(error).indexOf('-128')<0)app.displayAlert('Kiosky',{message:String(error)});}
+ }
+}
+KIOSKY_MAC_HELPER
+    chmod 600 "$root/instances-helper.new" && mv "$root/instances-helper.new" "$root/instances-helper.js"
+}
+install_manager_app(){
+# Reopen setup without a Terminal command; this app always follows the active installation.
+application="$HOME/Applications/Kiosky Player-Instanzen.app"
+if [ ! -L "$application" ] && { [ ! -e "$application" ] || [ "$(extract CFBundleIdentifier "$application/Contents/Info.plist")" = de.kiosky.instances ]; };then
+    mkdir -p "$application/Contents/MacOS" || exit 3
+    cat > "$application/Contents/MacOS/manager" <<'KIOSKY_MANAGER_APP'
+#!/bin/sh
+players="$HOME/Library/Application Support/Kiosky/players"
+identity=$(cat "$players/primary") || exit 3
+printf '%s' "$identity" | grep -Eq '^[a-f0-9]{24}$' || exit 3
+exec /bin/sh "$players/$identity/player.sh" "$players/$identity/config.json" --instances
+KIOSKY_MANAGER_APP
+    chmod 700 "$application/Contents/MacOS/manager"
+    cat > "$application/Contents/Info.plist" <<'KIOSKY_MANAGER_INFO'
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>de.kiosky.instances</string><key>CFBundleExecutable</key><string>manager</string><key>CFBundleName</key><string>Kiosky Player-Instanzen</string><key>CFBundlePackageType</key><string>APPL</string><key>LSMinimumSystemVersion</key><string>11.0</string></dict></plist>
+KIOSKY_MANAGER_INFO
+fi
 }
 # Stop only controllers from this user's managed Kiosky installation tree.
 stop_installation(){
@@ -101,34 +181,72 @@ if [ "${1:-}" = --managed ];then
         [ -n "$browser" ] && printf '%s' "$browser" > "$root/browser.path"
     fi
     [ -x "$browser" ] || exit 3
-    "$browser" --kiosk --start-fullscreen --new-window --hide-scrollbars --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--user-data-dir=$root/profile" "$url" >/dev/null 2>&1 &
-    player=$!
-    trap 'kill "$player" 2>/dev/null || :; wait "$player" 2>/dev/null || :' EXIT
+    instance=$(extract instance_id "$config" || printf default)
+    base=$root
+    if [ "$instance" != default ];then base=$(dirname "$(dirname "$root")");fi
+    mac_tools || exit 3
+    if [ "$instance" = default ];then install_manager_app || exit 3;fi
+    player='';geometry='';watcher=''
+    stop_browser(){ if [ -n "$player" ];then kill "$player" 2>/dev/null || :;wait "$player" 2>/dev/null || :;player='';fi; }
+    trap 'stop_browser;[ -z "$watcher" ] || kill "$watcher" 2>/dev/null || :;[ -z "$watcher" ] || wait "$watcher" 2>/dev/null || :' EXIT
     trap 'exit 0' INT TERM
-    sleep 2
-    kill -0 "$player" 2>/dev/null || exit 3
-    printf '%s' "$$" > "$root/player.ready"
+    rm -f "$root/monitor-state.json"
+    /usr/bin/osascript -l JavaScript "$root/instances-helper.js" watch "$root/monitor-state.json" >/dev/null 2>&1 &
+    watcher=$!;attempt=0
+    while [ ! -f "$root/monitor-state.json" ];do
+        kill -0 "$watcher" 2>/dev/null || { printf '%s\n' 'Die macOS-Bildschirmabfrage ist fehlgeschlagen.' >&2;exit 3; }
+        [ "$attempt" -lt 15 ] || exit 3
+        sleep 1;attempt=$((attempt+1))
+    done
     next_check=$(( $(date +%s) + 120 ))
-    while kill -0 "$player" 2>/dev/null;do
+    while :;do
         now=$(date +%s)
         if [ "$now" -ge "$next_check" ] || [ -f "$root/update.request" ];then
-            rm -f "$root/update.request"
-            next_check=$((now+21600))
+            rm -f "$root/update.request";next_check=$((now+21600))
             if check_update;then exit 42;fi
         fi
-        sleep 5
+        monitor=$(extract "$instance.monitor" "$base/instances.json" || :)
+        kill -0 "$watcher" 2>/dev/null || { printf '%s\n' 'Die macOS-Bildschirmabfrage ist fehlgeschlagen.' >&2;exit 3; }
+        current=''
+        if [ -n "$monitor" ];then current=$(extract "$monitor" "$root/monitor-state.json" || :)
+        elif [ "$instance" = default ];then current=$(extract primary "$root/monitor-state.json" || :);fi
+        if [ -z "$current" ];then
+            stop_browser;geometry=''
+            printf '%s' "$$" > "$root/player.ready"
+            sleep 2;continue
+        fi
+        if [ "$current" != "$geometry" ];then stop_browser;geometry=$current;fi
+        if [ -n "$player" ] && ! kill -0 "$player" 2>/dev/null;then wait "$player";exit $?;fi
+        if [ -z "$player" ];then
+            set -- $geometry
+            [ "$#" = 4 ] || exit 3
+            "$browser" --kiosk --start-fullscreen --new-window --hide-scrollbars --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--window-position=$1,$2" "--window-size=$3,$4" "--user-data-dir=$root/profile" "$url" >/dev/null 2>&1 &
+            player=$!;sleep 2;kill -0 "$player" 2>/dev/null || exit 3
+            printf '%s' "$$" > "$root/player.ready"
+        fi
+        sleep 3
     done
-    wait "$player";exit $?
 fi
 config=${1:-}
 [ -f "$config" ] || exit 3
 url=$(extract player_url "$config") || exit 3
 identity=$(printf '%s' "$url" | /usr/bin/shasum -a 256);identity=$(printf '%s' "$identity" | cut -c 1-24)
 players="$HOME/Library/Application Support/Kiosky/players"
-root="$players/$identity"
+base="$players/$identity"
+instance=$(extract instance_id "$config" || printf default)
+[ "$instance" = default ] || printf '%s' "$instance" | grep -Eq '^[a-f0-9]{32}$' || exit 3
+root=$base
+[ "$instance" = default ] || root="$base/instances/$instance"
 installation_lock="$players/installing.lock"
 umask 077
 mkdir -p "$root" || exit 3
+if [ "${2:-}" = --instances ];then mac_tools || exit 3;exec /usr/bin/osascript -l JavaScript "$root/instances-helper.js" manage "$base";fi
+if [ "${2:-}" = --stop-instance ];then
+    target=${3:-default}
+    [ "$target" = default ] || printf '%s' "$target" | grep -Eq '^[a-f0-9]{32}$' || exit 3
+    wanted=$base;[ "$target" = default ] || wanted="$base/instances/$target"
+    stop_installation "$wanted";exit $?
+fi
 acquire_installation || exit 3
 trap 'release_installation' EXIT
 incoming=$(extract version "$config") || exit 3
@@ -137,6 +255,7 @@ if [ -f "$root/config.json" ] && [ -f "$root/start.sh" ];then
     current=$(extract version "$root/config.json") || exit 3
     if newer "$current" "$incoming";then release_installation;exec /bin/sh "$root/start.sh";fi
 fi
+mac_tools || exit 3
 # Validate and stage both files before closing the old working controller.
 # plutil -extract accepts our JSON config; -lint only accepts property lists on macOS.
 cp "$config" "$root/download.config" && [ "$(extract version "$root/download.config")" = "$incoming" ] && [ "$(extract player_url "$root/download.config")" = "$url" ] && cp "$0" "$root/download.player" && /bin/sh -n "$root/download.player" || exit 3
@@ -213,6 +332,7 @@ done
 CONTROLLER
 chmod 700 "$root/start.sh" "$root/player.sh"
 /bin/sh -n "$root/start.sh" || exit 3
+if [ "$instance" = default ];then
 retire_other_installations || exit 3
 primary="$players/primary"
 if [ -f "$primary" ];then
@@ -235,5 +355,20 @@ if [ ! -f "$root/autostart.disabled" ];then
 PLIST
     /usr/bin/plutil -lint "$agent.new" >/dev/null && mv "$agent.new" "$agent" || exit 3
 fi
+install_manager_app || exit 3
+else
+    mkdir -p "$HOME/Library/LaunchAgents" || exit 3
+    escaped=$(printf '%s' "$root/start.sh" | sed -e 's/\&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+    label="de.kiosky.player.$identity.$instance"
+    agent="$HOME/Library/LaunchAgents/$label.plist"
+    cat > "$agent.new" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>$label</string><key>ProgramArguments</key><array><string>/bin/sh</string><string>$escaped</string></array><key>RunAtLoad</key><true/></dict></plist>
+PLIST
+    /usr/bin/plutil -lint "$agent.new" >/dev/null && mv "$agent.new" "$agent" || exit 3
+fi
 release_installation
+[ "${2:-}" != --install-only ] || exit 0
+if [ "$instance" = default ];then
+    /usr/bin/osascript -l JavaScript "$root/instances-helper.js" init "$base" >/dev/null 2>&1 || :
+fi
 exec /bin/sh "$root/start.sh"

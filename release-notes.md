@@ -1,6 +1,5 @@
-## [3.44.1]
+## [3.45.0]
 
-- Werbung: Jeder Zwischenslide hat einen eigenen Abstand (nach jeder 1., 2., usw. Werbung). Die Reihenfolge zählt eigene und Veranstaltungswerbeslides, zählt Zwischenslides nicht auf die Werbeplätze an und berücksichtigt die Regeln auch am Ende des Durchlaufs. Bestehende Zwischenslides starten mit Abstand 1.
-
-- Kundenfreigaben: Beim Verkürzen des Ausspielendes wird eine zu spät vorbelegte Linkfrist angepasst; frühere individuelle Fristen bleiben erhalten. Datumsfehler nennen jetzt das tatsächlich betroffene Feld statt pauschal die Jahresgrenze.
-- Kundenlinks können auch gelöscht werden. Das sperrt den Zugang, verwirft offene Entwürfe und entfernt den Link aus der Übersicht; bereits freigegebene Inhalte und Zeitzuweisungen bleiben erhalten.
+- Geführter erster Start für mehrere Bildschirme unter Windows und Linux mit reserviertem Hauptmonitor, freien Monitorzuordnungen und gemeinsamem Abschluss der Einrichtung. Vorhandene Profile bleiben erhalten.
+- macOS erhält unabhängige Player-Instanzen mit eigenen Profilen, Monitor-UUIDs, LaunchAgents und Update-Routinen sowie einer Verwaltungs-App. Fehlende Monitore pausieren ihre Ausgabe; Rückkehr startet dieselbe Kopplung wieder.
+- Player-Center und Anleitung beschreiben Einrichtung, erweiterten Desktop und Prüfgrenzen in allen drei Plattformausgaben.
