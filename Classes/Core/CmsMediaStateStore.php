@@ -16,6 +16,33 @@ final class CmsMediaStateStore implements StateStore, StateSnapshotReader
     private array $migrationAssets = [];
     private array $migrationFolders = [];
     private bool $readingMigration = false;
+    private bool $lightweight = false;
+
+    /** Request-local scope; it must not change user permissions or CAS baselines. */
+    public function lightweight(bool $enabled): bool
+    {
+        $previous = $this->lightweight;
+        $this->lightweight = $enabled;
+        return $previous;
+    }
+
+    /** Resolve only media referenced by an already authorized player response. */
+    public function playbackMedia(array $output): array
+    {
+        $ids=[];
+        $collect=function(mixed $value)use(&$collect,&$ids):void{
+            if(!is_array($value))return;
+            if(is_string($value['mediaAssetId']??null))$ids[$value['mediaAssetId']]=true;
+            foreach($value as $child)if(is_array($child))$collect($child);
+        };
+        $collect($output);
+        if(!$ids)return $output;
+        $assets=array_column([...($this->legacyMedia['mediaAssets']??[]),...$this->linkedMedia],null,'id');
+        // Native adapters implement exact-ID lookups. Custom adapters retain compatibility.
+        $native=method_exists($this->media,'readAssets')?$this->media->readAssets(array_keys($ids)):$this->media->read()['assets'];
+        foreach($native as $asset)if(isset($ids[$asset['id']]))$assets[$asset['id']]=$asset;
+        return $this->hydrate($output,$assets);
+    }
 
     public function __construct(private readonly StateStore $store, private readonly MediaLibrary $media, private readonly bool $migrate = true, private readonly bool $hydrateMedia = true) {}
 
@@ -55,7 +82,7 @@ final class CmsMediaStateStore implements StateStore, StateSnapshotReader
         $this->linkedMedia=$state['externalMediaAssets'] ?? [];
         $this->legacyMedia = array_intersect_key($state, array_flip(['mediaFolders','mediaAssets']));
         // Machine control requests need stored content IDs, not a full CMS file inventory.
-        if (!$this->hydrateMedia) return $state;
+        if (!$this->hydrateMedia || $this->lightweight) return $state;
         $this->snapshot = $this->media->read();
         $legacyFolders = $state['mediaFolders'] ?? [];
         $legacyAssets = $state['mediaAssets'] ?? [];
@@ -100,7 +127,7 @@ final class CmsMediaStateStore implements StateStore, StateSnapshotReader
 
     public function save(array $state): void
     {
-        if (!$this->migrate) {
+        if (!$this->migrate || $this->lightweight) {
             // Player heartbeats and viewer actions must never initiate a migration.
             unset($state['mediaFolders'], $state['mediaAssets']);
             $this->store->save(array_replace($state, $this->legacyMedia));

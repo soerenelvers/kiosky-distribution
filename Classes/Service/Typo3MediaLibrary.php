@@ -34,6 +34,21 @@ final readonly class Typo3MediaLibrary implements MediaLibrary
         return $result;
     }
 
+    /** Called only for media in an authenticated, assigned player response. */
+    public function readAssets(array $ids): array
+    {
+        $assets=[];
+        foreach(array_unique($ids) as $id){
+            if(!is_string($id)||!preg_match('/^fal:([1-9][0-9]*)$/D',$id,$match))continue;
+            try{
+                $file=$this->factory->getFileObject((int)$match[1]);$storage=$file->getStorage();
+                if(!$storage->isOnline()||!$storage->isPublic()||$file->isMissing()||!$file->checkActionPermission('read')||!$file->getPublicUrl())continue;
+                $assets[]=$this->asset($file);
+            }catch(\TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException){continue;}
+        }
+        return $assets;
+    }
+
     /** Resolve only configured, readable images in public, online FAL storage. */
     public function calendarImage(string $id): ?array
     {

@@ -27,7 +27,7 @@ final readonly class ApiFactory
     {
         $secret = (string)($GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] ?? '');
         if(!$external){$permission=new \Kiosky\Kiosky\Security\PermissionService();$identity['qualityPermissions']=[];foreach(['history:slide'=>['GET','/api/history/slide'],'history:channel'=>['GET','/api/history/channel'],'history:event'=>['GET','/api/history/event'],'history:schedule'=>['GET','/api/history/schedule'],'simulation'=>['POST','/api/displays/preview/simulate'],'report'=>['GET','/api/reports/advertising'],'check'=>['POST','/api/slides/publication-check']] as $key=>[$method,$path])$identity['qualityPermissions'][$key]=$permission->isApiGranted($method,$path);}
-        if(!$external&&($GLOBALS['BE_USER']??null) instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication&&!empty($GLOBALS['BE_USER']->user['uid'])){$permission=new \Kiosky\Kiosky\Security\PermissionService();$identity['canManageCustomerContent']=$permission->isGranted($permission::MANAGE_CONTENT)&&$permission->isGranted($permission::CONTROL_DISPLAYS)&&$permission->isGranted($permission::MANAGE_EVENTS);$identity['canControlDisplays']=$permission->isGranted($permission::CONTROL_DISPLAYS);$identity['canManageDisplays']=$permission->isGranted($permission::MANAGE_DISPLAYS);$identity['canManageSettings']=$permission->isGranted($permission::MANAGE_SETTINGS);}
+        if(!$external&&($GLOBALS['BE_USER']??null) instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication&&!empty($GLOBALS['BE_USER']->user['uid'])){$permission=new \Kiosky\Kiosky\Security\PermissionService();$identity['canManageCustomerContent']=$permission->isGranted($permission::MANAGE_CONTENT)&&$permission->isGranted($permission::CONTROL_DISPLAYS)&&$permission->isGranted($permission::MANAGE_EVENTS);$identity['canControlDisplays']=$permission->isGranted($permission::CONTROL_DISPLAYS);$identity['canManageDisplays']=$permission->isGranted($permission::MANAGE_DISPLAYS);$identity['canManageSettings']=$permission->isGranted($permission::MANAGE_SETTINGS);$identity['canTriggerWarnings']=$permission->isGranted($permission::TRIGGER_EMERGENCY);}
         $crypto = new Crypto($secret);
         $backendUsers = $external ? [] : $this->connectionPool->getConnectionForTable('be_users')->fetchAllAssociative(
             'SELECT uid, username, realName, email, admin, disable, tx_kiosky_role FROM be_users WHERE deleted = 0 ORDER BY username'
@@ -51,14 +51,14 @@ final readonly class ApiFactory
         return new Api(
             new \Kiosky\Core\CmsMediaStateStore($this->store, $this->media, !$external && ($identity['role'] ?? 'viewer') !== 'viewer', !$external),
             $identity,
-            '3.47.0',
+            '3.48.0',
             new CrewBrainService($this->http, $crypto),
             new DwdService($this->http),
             new EasyJobService($this->http, $crypto),
             $portableUsers,
             'typo3',
             null,
-            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.47.0'),
+            new \Kiosky\Core\LicenseClient($crypto,'typo3','3.48.0'),
             proofStore: new \Kiosky\Kiosky\Persistence\Typo3ProofStore($this->connectionPool),
             proofSecret: $secret,
             fontStorage: new \Kiosky\Core\FontStorage($this->fontDirectory()),

@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.47.0-20261117211732%2B66cb28f6" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.47.0-20261117211732%2B66cb28f6">
+  <link href="player/fonts/builtins.css?v=3.48.0-20261117232609%2B2d39c81e" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.48.0-20261117232609%2B2d39c81e">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -120,6 +120,12 @@
       </div>
 
       <section class="view is-active" data-view-panel="dashboard">
+        <article class="panel dwd-overview" id="dwd-overview" data-license-modules="operations displays" hidden>
+          <header><div><small>Amtliche Warnungen am Standort</small><h2>DWD-Warnungen auslösen</h2></div><button type="button" class="button button-secondary" id="dwd-overview-refresh">Aktualisieren</button></header>
+          <label>Warngebiet des Standorts<select id="dwd-overview-location"><option value="">Standort wählen</option></select></label>
+          <p id="dwd-overview-status" class="property-note" role="status"></p><div id="dwd-overview-buttons" class="dwd-overview-buttons"></div>
+        </article>
+
         <div class="metric-grid">
           <article class="metric-card">
             <div class="metric-head"><span>Heute</span><span class="metric-icon lavender">◫</span></div>
@@ -1676,7 +1682,22 @@
     </form>
   </dialog>
 
-  <dialog id="preset-dialog" class="wide-dialog"><form class="dialog-content" id="preset-form"><button class="dialog-close" type="button" data-close-dialog="preset-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">⌑</span><p class="eyebrow">Betriebsablauf</p><h2 id="preset-dialog-title">Preset anlegen</h2><input id="preset-edit-id" type="hidden"><div class="form-grid"><label class="form-field"><span>Name</span><input id="preset-name" type="text" required></label><label class="form-field"><span>Typ</span><select id="preset-type"><option value="channel">Zustands-Preset</option><option value="emergency">Warnhinweis-Preset</option><option value="reset">Reset / Standard</option></select></label></div>
+  <dialog id="dwd-trigger-dialog" class="dwd-trigger-dialog" aria-labelledby="dwd-trigger-heading" data-license-modules="operations displays">
+  <form id="dwd-trigger-form">
+    <header><div><small>Amtliche DWD-Warnung</small><h2 id="dwd-trigger-heading">Warnung auslösen</h2></div><button type="button" class="button button-secondary" data-dwd-dismiss aria-label="Dialog schließen">Schließen</button></header>
+    <details class="dwd-official-text"><summary>Amtlichen Warntext anzeigen</summary><p id="dwd-trigger-description"></p></details><p id="dwd-trigger-official" class="property-note"></p>
+    <fieldset class="dwd-trigger-warning-choice"><legend>Welche Warnungen gemeinsam anzeigen?</legend><button type="button" class="button button-secondary" id="dwd-trigger-select-all">Alle Warnungen auswählen</button><div id="dwd-trigger-warning-options"></div><p class="property-note">Mehrere ausgewählte Warnungen erscheinen gemeinsam in einer Ausgabe. Angekündigte Warnungen erscheinen frühestens ab ihrem amtlichen Beginn.</p></fieldset>
+    <fieldset><legend>Wo soll die Warnung erscheinen?</legend><div id="dwd-trigger-targets"></div></fieldset>
+    <fieldset class="dwd-trigger-timing"><legend>Wie oft und wie lange?</legend>
+      <label>Anzeigemodus<select id="dwd-trigger-mode"><option value="once">Einmalig</option><option value="interval">Alle X Minuten</option><option value="continuous">Bis Ende oder Rücknahme der Warnung</option></select></label>
+      <fieldset id="dwd-trigger-duration"><legend>Anzeigedauer · Minuten : Sekunden</legend><div class="dwd-duration-inputs"><input id="dwd-trigger-minutes" type="number" min="0" max="1440" step="1" value="0" aria-label="Anzeigedauer Minuten"><span>:</span><input id="dwd-trigger-seconds" type="number" min="0" max="59" step="1" value="30" aria-label="Anzeigedauer Sekunden"></div></fieldset>
+      <label id="dwd-trigger-interval-field">Wiederholen alle (Minuten)<input id="dwd-trigger-interval" type="number" min="1" max="10080" step="1" value="10"></label>
+    </fieldset>
+    <p class="property-note">Nach jeder Einblendung läuft der reguläre Inhalt weiter. Das amtliche Warnungsende gilt immer. Erneutes Auslösen startet die Anzeigeregel für diese Warnung neu.</p>
+    <p id="dwd-trigger-status" role="status" aria-live="polite"></p><footer><button type="submit" class="button emergency-button">Auswahl bestätigen und Warnung auslösen</button></footer>
+  </form>
+</dialog>
+<dialog id="preset-dialog" class="wide-dialog"><form class="dialog-content" id="preset-form"><button class="dialog-close" type="button" data-close-dialog="preset-dialog" aria-label="Dialog schließen">×</button><span class="dialog-icon">⌑</span><p class="eyebrow">Betriebsablauf</p><h2 id="preset-dialog-title">Preset anlegen</h2><input id="preset-edit-id" type="hidden"><div class="form-grid"><label class="form-field"><span>Name</span><input id="preset-name" type="text" required></label><label class="form-field"><span>Typ</span><select id="preset-type"><option value="channel">Zustands-Preset</option><option value="emergency">Warnhinweis-Preset</option><option value="reset">Reset / Standard</option></select></label></div>
     <section id="preset-state-fields" class="preset-state-builder"><div class="preset-builder-head"><div><strong>Kanalinhalte setzen</strong><small>Beim Auslösen werden die gewählten Slides in dieser Reihenfolge in den Kanal geschrieben.</small></div><button class="button button-secondary" type="button" data-add-preset-channel>＋ Kanalzustand</button></div><div id="preset-channel-actions"></div><div class="preset-builder-head"><div><strong>Content ausspielen</strong><small>Kanäle oder einzelne Slides direkt Displays, Gruppen oder Matrix-Displays zuweisen.</small></div><button class="button button-secondary" type="button" data-add-preset-assignment>＋ Zuweisung</button></div><div id="preset-assignment-actions"></div><div class="preset-builder-head"><div><strong>Zeitzuweisungen vorbereiten</strong><small>Beim Aufrufen veröffentlicht das Preset diese Einträge im regulären Zeitplan. Nach dem Ende greift wieder der sonst gültige Inhalt.</small></div><button class="button button-secondary" type="button" data-add-preset-schedule>＋ Zeitzuweisung</button></div><div id="preset-schedule-actions"></div></section>
     <section class="preset-state-builder" id="preset-timer-fields"><div class="preset-builder-head"><div><strong>Weiteres Preset zeitgesteuert starten</strong><small>Beim Aufrufen dieses Presets werden einmalige Folge-Timer angelegt. Die übrigen Aktionen bleiben erhalten.</small></div><button class="button button-secondary" type="button" data-add-preset-timer>＋ Preset-Timer</button></div><div id="preset-timer-actions"></div><p class="property-note">Uhrzeit am Auslösetag oder festes Datum wählen. Der Zeitpunkt muss beim Aufrufen noch in der Zukunft liegen. Geplante Folge-Presets findest du anschließend auch in der Zeitplanung.</p></section>
     <section id="preset-warning-fields">
@@ -1878,15 +1899,15 @@
   <dialog id="customer-invitation-dialog" class="customer-dialog"><form id="customer-invitation-form"><header class="customer-dialog-header"><h2>Kundenlink erstellen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog" aria-label="Kundenlink-Dialog schließen">×</button></header><div class="customer-form-grid"><label class="form-field"><span>Kunde</span><input id="customer-invitation-name" maxlength="180" required></label><label class="form-field"><span>Kunden-Tag (mit Präfix „Kunde:“)</span><input id="customer-invitation-tag" maxlength="90" placeholder="Leer: Kundenname"></label></div><label class="form-field"><span>Veranstaltung suchen</span><input id="customer-invitation-event-search" type="search"></label><label class="form-field"><span>Veranstaltung</span><select id="customer-invitation-event" required></select></label><fieldset><legend>Für diesen Kunden erlaubte Displays</legend><label class="form-field"><span>Displays suchen</span><input id="customer-invitation-display-search" type="search"></label><div id="customer-invitation-displays" class="customer-target-list"></div></fieldset><div class="customer-form-grid"><label class="form-field"><span>Ausspielung frühestens</span><input id="customer-window-start" type="datetime-local" required></label><label class="form-field"><span>Ausspielung spätestens</span><input id="customer-window-end" type="datetime-local" required></label><label class="form-field"><span>Kundenlink gültig bis</span><input id="customer-edit-until" type="datetime-local" required></label></div><p>Zeiten gelten für Europe/Berlin. Der Link erlaubt höchstens 20 Dateien, je 20 MB und insgesamt 100 MB. Er erteilt keine CMS- oder direkten Ausspielrechte.</p><p id="customer-invitation-message" role="status"></p><label class="form-field" id="customer-link-result" hidden><span>Kundenlink – nur jetzt vollständig angezeigt, bitte kopieren</span><input id="customer-invitation-url" readonly></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="customer-link-copy" hidden>Link kopieren</button><button type="submit" class="button button-primary" id="customer-link-submit">Link erstellen</button><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog">Schließen</button></div></form></dialog>
   <dialog id="customer-review-dialog" class="customer-dialog"><header class="customer-dialog-header"><h2>Ausspielvorschlag prüfen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog" aria-label="Vorschlagsprüfung schließen">×</button></header><div id="customer-review-summary"></div><div id="customer-review-preview"></div><label class="form-field"><span>Begründung bei Ablehnung (optional)</span><textarea id="customer-review-note" maxlength="1000" rows="3"></textarea></label><p id="customer-review-status" role="status"></p><div class="dialog-actions"><button type="button" class="button button-primary" id="customer-review-approve">Freigeben und Zeitzuweisungen anlegen</button><button type="button" class="button button-secondary" id="customer-review-reject">Ablehnen</button><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog">Schließen</button></div></dialog>
 
-  <script src="runtime-config.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/fullscreen-control.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/media-placement.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/editor-alignment.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/event-image.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/font-library.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/touch-layout.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/health-telemetry.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
-  <script src="player/playback-proof.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
+  <script src="runtime-config.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/fullscreen-control.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/media-placement.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/editor-alignment.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/event-image.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/font-library.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/touch-layout.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/health-telemetry.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
+  <script src="player/playback-proof.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
   <dialog id="event-flow-template-dialog" data-license-modules="events schedule operations channels displays" class="event-flow-dialog" aria-labelledby="event-flow-template-title"><form id="event-flow-template-form">
     <div class="section-heading"><h2 id="event-flow-template-title">Ablaufvorlage</h2><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
     <label>Vorlagenname<input id="event-flow-template-name" required maxlength="200"></label>
@@ -1903,7 +1924,7 @@
     <fieldset><legend>Ziel-Displays, Gruppen und Matrizen</legend><input type="search" id="event-flow-target-search" placeholder="Ziele suchen" aria-label="Ausspielziele suchen"><div id="event-flow-targets" class="event-flow-targets"></div></fieldset>
     <p class="event-flow-error" role="alert"></p><div class="section-actions"><button type="submit" class="button button-primary">Zuordnung speichern</button><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
   </form></dialog>
-  <script src="app.js?v=3.47.0-20261117211732%2B66cb28f6"></script>
+  <script src="app.js?v=3.48.0-20261117232609%2B2d39c81e"></script>
 
 </body>
 </html>
