@@ -1166,7 +1166,7 @@ function setView(view) {
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
   if (['channels','advertising'].includes(view)){loadContent();void loadCustomerContent();}
-  if (view === 'media') refreshMedia();
+  if (view === 'media') void refreshMedia().catch(error=>showToast(error.message));
   if (view === 'displays') loadDisplays();
   if (view === 'schedule') loadScheduling();
   if (view === 'operations') loadOperations();
@@ -1238,9 +1238,10 @@ function renderDisplayStatus(displays) {
   label.parentElement.dataset.status = online > 0 ? 'active' : 'inactive';
 }
 
-async function loadDashboard(){try{const [eventsResult,displaysResult,channelsResult,schedulesResult]=await Promise.all([licensedRead('/api/events'),licensedRead('/api/displays'),licensedRead('/api/channels'),licensedRead('/api/schedules')]);const events=eventsResult.data||[],displays=displaysResult.data||[],channels=channelsResult.data||[],schedules=schedulesResult.data||[];renderDisplayStatus(displays);document.querySelector('#dashboard-event-count').textContent=events.length;const online=displays.filter(display=>display.online).length;document.querySelector('#dashboard-display-count').innerHTML=`${online} <small>/ ${displays.length}</small>`;document.querySelector('#dashboard-display-note').textContent=displays.length?`${online} Player aktuell online`:'Noch keine Displays angelegt';document.querySelector('#dashboard-channel-count').textContent=channels.filter(channel=>channel.status==='published').length;const future=schedules.filter(entry=>entry.status==='published'&&new Date(entry.startsAt)>new Date()).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)),next=future[0],soon=future.filter(entry=>new Date(entry.startsAt)-Date.now()<=2*3600000).length;document.querySelector('#dashboard-next-time').textContent=next?new Date(next.startsAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';document.querySelector('#dashboard-next-note').textContent=next?`${next.channelName} · ${next.targetType==='group'?'Display-Gruppe':next.targetType==='matrix'?'Matrix-Display':'Display'}`:'Noch kein Wechsel geplant';const landscapes=displays.filter(display=>display.orientation==='landscape'),portraits=displays.filter(display=>display.orientation==='portrait');document.querySelector('#dashboard-landscape-count').textContent=`${landscapes.length} Querformat`;document.querySelector('#dashboard-landscape-note').textContent=landscapes.length?`${landscapes.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-portrait-count').textContent=`${portraits.length} Hochformat`;document.querySelector('#dashboard-portrait-note').textContent=portraits.length?`${portraits.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-change-count').textContent=soon?`${soon} geplante Wechsel`:'Keine geplanten Wechsel';document.querySelector('#dashboard-event-list').innerHTML=events.slice(0,5).map(event=>`<div class="event-row"><time>${escapeHtml(eventTimeInput(event.eventStart)||'–')}</time><span class="event-line coral"></span><div><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.room||event.venue||'Ort offen')}${eventTimeInput(event.admissionStart)?` · Einlass ${escapeHtml(eventTimeInput(event.admissionStart))}`:''}</small></div><span class="tag ${eventStatusTones[event.status]||'muted'}">${escapeHtml(eventStatusLabels[event.status]||event.status)}</span></div>`).join('')||'<p class="property-note">Noch keine Veranstaltungen vorhanden.</p>';}catch(error){showToast(error.message);}}
+async function loadDashboard(){const isCurrent=beginCatalogLoad('dashboard');try{const [eventsResult,displaysResult,channelsResult,schedulesResult]=await Promise.all([licensedRead('/api/events'),licensedRead('/api/displays'),licensedRead('/api/channels'),licensedRead('/api/schedules')]);if(!isCurrent())return;const events=eventsResult.data||[],displays=displaysResult.data||[],channels=channelsResult.data||[],schedules=schedulesResult.data||[];renderDisplayStatus(displays);document.querySelector('#dashboard-event-count').textContent=events.length;const online=displays.filter(display=>display.online).length;document.querySelector('#dashboard-display-count').innerHTML=`${online} <small>/ ${displays.length}</small>`;document.querySelector('#dashboard-display-note').textContent=displays.length?`${online} Player aktuell online`:'Noch keine Displays angelegt';document.querySelector('#dashboard-channel-count').textContent=channels.filter(channel=>channel.status==='published').length;const future=schedules.filter(entry=>entry.status==='published'&&new Date(entry.startsAt)>new Date()).sort((a,b)=>new Date(a.startsAt)-new Date(b.startsAt)),next=future[0],soon=future.filter(entry=>new Date(entry.startsAt)-Date.now()<=2*3600000).length;document.querySelector('#dashboard-next-time').textContent=next?new Date(next.startsAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';document.querySelector('#dashboard-next-note').textContent=next?`${next.channelName} · ${next.targetType==='group'?'Display-Gruppe':next.targetType==='matrix'?'Matrix-Display':'Display'}`:'Noch kein Wechsel geplant';const landscapes=displays.filter(display=>display.orientation==='landscape'),portraits=displays.filter(display=>display.orientation==='portrait');document.querySelector('#dashboard-landscape-count').textContent=`${landscapes.length} Querformat`;document.querySelector('#dashboard-landscape-note').textContent=landscapes.length?`${landscapes.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-portrait-count').textContent=`${portraits.length} Hochformat`;document.querySelector('#dashboard-portrait-note').textContent=portraits.length?`${portraits.filter(display=>display.online).length} online`:'keine Displays';document.querySelector('#dashboard-change-count').textContent=soon?`${soon} geplante Wechsel`:'Keine geplanten Wechsel';document.querySelector('#dashboard-event-list').innerHTML=events.slice(0,5).map(event=>`<div class="event-row"><time>${escapeHtml(eventTimeInput(event.eventStart)||'–')}</time><span class="event-line coral"></span><div><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.room||event.venue||'Ort offen')}${eventTimeInput(event.admissionStart)?` · Einlass ${escapeHtml(eventTimeInput(event.admissionStart))}`:''}</small></div><span class="tag ${eventStatusTones[event.status]||'muted'}">${escapeHtml(eventStatusLabels[event.status]||event.status)}</span></div>`).join('')||'<p class="property-note">Noch keine Veranstaltungen vorhanden.</p>';}catch(error){if(!isCurrent())return;showToast(error.message);}}
 
 function showToast(message) {
+  if(!message)return;
   clearTimeout(toastTimer);
   toast.textContent = message;
   toast.classList.add('is-visible');
@@ -1445,24 +1446,53 @@ document.querySelector('#font-upload-form').addEventListener('submit',async even
 });
 document.querySelector('#font-settings-list').addEventListener('click',async event=>{const button=event.target.closest('[data-delete-font]');if(!button)return;button.disabled=true;try{const result=await apiRequest('/api/settings/fonts/'+button.dataset.deleteFont,{method:'DELETE'});globalThis.KioskyFonts?.setCatalog(result.fonts);renderFontSettings();}catch(error){document.querySelector('#font-settings-message').textContent=error.message;button.disabled=false;}});
 
-async function apiRequest(path, options = {}) {
-  const response = await fetch(apiUrl(path), {
-    ...options,
-    credentials: 'same-origin',
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...kioskyRuntime.requestHeaders, ...(options.headers || {}) }
-  });
-  if(response.ok && options.responseType === 'blob') return response.blob();
-  let result = null;
-  try { result = await response.json(); } catch (error) { /* handled below */ }
-  if (!response.ok) {
-    if (response.status === 401 && !cmsManagedServices && state.currentUser && !path.startsWith('/api/auth/')) await showLogin();
-    const requestError = new Error(result?.error?.message || `Serveranfrage fehlgeschlagen (HTTP ${response.status}).`);
-    requestError.code = result?.error?.code;
-    requestError.status = response.status;
-    throw requestError;
-  }
-  return result;
+const apiPendingReads=new Map();let apiMutationEpoch=0;
+function obsoleteApiRequest(){const error=new Error('');error.name='AbortError';error.code='OBSOLETE_REQUEST';return error;}
+function apiRequestCurrent(identity,epoch,protectSnapshot){return state.currentUser===identity&&(!protectSnapshot||apiMutationEpoch===epoch);}
+function protectedCatalogueRead(path,options,read){return read&&options.responseType!=='blob'&&/^\/api\/(?:slides|channels|templates|events|displays|locations|display-groups|matrix-displays|schedules|schedule-target-order|operations|presets|warnings|warning-templates|trash|media|settings)(?:[/?]|$)/.test(path);}
+async function performApiRequest(path,options,identity,epoch,read){
+  const protectSnapshot=protectedCatalogueRead(path,options,read);
+  const method=String(options.method||'GET').toUpperCase(),controller=new AbortController(),callerSignal=options.signal;
+  const defaultTimeout=read&&options.responseType!=='blob'?(path.startsWith('/api/integrations/')||path.startsWith('/api/updates')?120000:30000):0;
+  const timeoutMs=Number.isFinite(options.timeoutMs)&&options.timeoutMs>=0?Math.min(options.timeoutMs,300000):defaultTimeout;
+  let timedOut=false;const abort=()=>controller.abort(callerSignal.reason);
+  if(callerSignal?.aborted)abort();else callerSignal?.addEventListener('abort',abort,{once:true});
+  const timer=timeoutMs>0?setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs):null;
+  try{
+    const {responseType,timeoutMs:ignoredTimeout,...requestOptions}=options;
+    const response=await fetch(apiUrl(path),{...requestOptions,signal:controller.signal,credentials:'same-origin',headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...kioskyRuntime.requestHeaders,...(options.headers||{})}});
+    if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();
+    if(response.ok&&responseType==='blob'){const result=await response.blob();if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();return result;}
+    if(response.ok&&(response.status===204||method==='HEAD'))return null;
+    let result=null;try{result=await response.json();}catch(error){if(controller.signal.aborted)throw error;}
+    if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();
+    if(!response.ok){
+      if(response.status===401&&!cmsManagedServices&&state.currentUser&&!path.startsWith('/api/auth/'))await showLogin();
+      const error=new Error(result?.error?.message||`Serveranfrage fehlgeschlagen (HTTP ${response.status}).`);error.code=result?.error?.code;error.status=response.status;throw error;
+    }
+    if(!result||typeof result!=='object'){const error=new Error('Der Server hat keine gültigen Kiosky-Daten geliefert. Der bisherige Stand bleibt erhalten. Bitte Anmeldung und Verbindung prüfen.');error.code='INVALID_RESPONSE';throw error;}
+    return result;
+  }catch(error){
+    if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();
+    if(timedOut){const failure=new Error(read?'Die Serverantwort dauert zu lange. Der bisherige Stand bleibt erhalten. Bitte Verbindung prüfen und erneut laden.':'Die Bestätigung dauert zu lange. Ob die Anfrage verarbeitet wurde, ist unklar. Bitte zuerst neu laden und prüfen, bevor du sie wiederholst.');failure.code='REQUEST_TIMEOUT';throw failure;}
+    if(callerSignal?.aborted)throw callerSignal.reason||new DOMException('Anfrage abgebrochen.','AbortError');
+    if(error instanceof TypeError){const failure=new Error(read?'Der Server ist nicht erreichbar. Der bisherige Stand bleibt erhalten. Bitte Verbindung prüfen.':'Die Verbindung wurde unterbrochen. Ob die Anfrage verarbeitet wurde, ist unklar. Bitte zuerst neu laden und prüfen, bevor du sie wiederholst.');failure.code='NETWORK_ERROR';throw failure;}
+    throw error;
+  }finally{if(timer!==null)clearTimeout(timer);callerSignal?.removeEventListener('abort',abort);}
 }
+async function apiRequest(path,options={}){
+  const method=String(options.method||'GET').toUpperCase(),read=method==='GET'||method==='HEAD';
+  if(!read){apiMutationEpoch++;apiPendingReads.clear();}
+  const protectSnapshot=protectedCatalogueRead(path,options,read);
+  const identity=state.currentUser,epoch=apiMutationEpoch,share=method==='GET'&&Object.keys(options).every(key=>key==='method'),existing=share?apiPendingReads.get(path):null;
+  if(existing&&existing.identity===identity&&existing.epoch===epoch){const value=await existing.promise;if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();return structuredClone(value);}
+  const entry={identity,epoch,promise:performApiRequest(path,options,identity,epoch,read)},stored=share&&apiPendingReads.size<100;
+  if(stored)apiPendingReads.set(path,entry);
+  try{const value=await entry.promise;if(!apiRequestCurrent(identity,epoch,protectSnapshot))throw obsoleteApiRequest();return share?structuredClone(value):value;}finally{if(stored&&apiPendingReads.get(path)===entry)apiPendingReads.delete(path);}
+}
+const catalogLoadSequences=new Map();
+function beginCatalogLoad(key){const sequence=(catalogLoadSequences.get(key)||0)+1,identity=state.currentUser;catalogLoadSequences.set(key,sequence);return()=>catalogLoadSequences.get(key)===sequence&&state.currentUser===identity;}
+function retainContentSelection(selected,records){const ids=new Set(records.map(record=>record.id));return new Set([...selected].filter(id=>ids.has(id)));}
 
 const eventStatusLabels = {review:'Entwurf',ready:'Bereit',draft:'Entwurf',published:'Veröffentlicht',cancelled:'Abgesagt',archived:'Archiviert',removed:'Gelöscht'};
 const eventStatusTones = { review: 'blue', draft: 'muted', ready: 'coral', published: 'green', cancelled: 'coral', archived: 'muted', removed:'muted' };
@@ -1575,14 +1605,17 @@ document.querySelector('#event-field-settings-all').addEventListener('click',()=
 document.querySelector('#event-field-settings-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;const fields=Object.fromEntries([...document.querySelectorAll('[data-event-field-setting]')].map(input=>[input.dataset.eventFieldSetting,input.checked]));try{const result=await apiRequest('/api/settings/events',{method:'PUT',body:JSON.stringify({fields})});renderEventFieldSettings(result.settings);if(document.querySelector('#event-dialog').open)applyEventEditorFields();showToast('Veranstaltungseinstellungen wurden gespeichert.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
 
 async function loadEvents() {
+  const isCurrent=beginCatalogLoad('events');
   try {
     const result = await licensedRead('/api/events');
+    if(!isCurrent())return null;
+    if(!Array.isArray(result?.data))throw new Error('Veranstaltungen konnten nicht vollständig geladen werden. Der bisherige Stand bleibt erhalten.');
     state.events = licenseAllows('events')?(result.data || []):[];
-    state.selectedEvents=new Set([...state.selectedEvents].filter(id=>state.events.some(event=>event.id===id&&event.status!=='removed')));
+    state.selectedEvents=retainContentSelection(state.selectedEvents,state.events.filter(event=>event.status!=='removed'));
     rememberOverviewClock(result);state.overviewLoadedAt=performance.now();
     state.eventFieldSettings=result.fieldSettings||{};
     renderEvents();return result;
-  } catch (error) { showToast(error.message);return null; }
+  } catch (error) { if(!isCurrent())return;showToast(error.message);return null; }
 }
 
 let eventTypeDrafts=[];
@@ -1923,6 +1956,7 @@ async function applyCurrentUser(user) {
   state.currentUser = user;
   document.querySelector('#content-access-button').hidden=!['admin','editor'].includes(user.role);
   await loadFeatureSettings();
+  if(state.currentUser!==user)return;
   if (!cmsManagedServices && !user.mustChangePassword && sessionStorage.getItem('kiosky-menu-return') === '1') { sessionStorage.removeItem('kiosky-menu-return'); location.assign('/speisekarten'); return; }
   const federated = !cmsManagedServices && user.authenticationProvider === 'zugangswerk';
   document.querySelector('#change-password-form').hidden = federated;
@@ -1978,7 +2012,9 @@ async function showInvitation(token) {
 }
 
 async function showLogin() {
+  const previousUser=state.currentUser;
   state.currentUser = null;
+  if(previousUser&&!cmsManagedServices){document.querySelector('#app-shell').hidden=true;document.querySelector('#auth-screen').hidden=false;setAuthView('status');document.querySelectorAll('dialog[open]').forEach(dialog=>{dialog.style.visibility='hidden';});window.location.reload();return;}
   document.querySelector('#app-shell').hidden = true;
   document.querySelector('#auth-screen').hidden = false;
   setAuthView('status');
@@ -2449,7 +2485,7 @@ function moduleEnabled(view,settings=state.featureSettings||{}){
 
 function licenseAllows(module){if(['settings','users'].includes(module))return true;if(!Array.isArray(state.licensedModules))return false;return state.licensedModules.includes(module)&&(!['crewbrain','easyjob'].includes(module)||state.licensedModules.includes('integrations'));}
 function licenseModuleForFeature(key){return key==='content'||key.startsWith('editor_')?'channels':key==='presets_warnings'?'operations':key;}
-async function licensedRead(path,empty={data:[]}){const match=path.match(/^\/api\/(slides|templates|channels|media|locations|displays|events|schedules|presets|warning-templates)/);const module=match?({slides:'channels',templates:'channels',locations:'displays',schedules:'schedule',presets:'operations','warning-templates':'operations'}[match[1]]||match[1]):null;return module&&!licenseAllows(module)?empty:apiRequest(path);}
+async function licensedRead(path,empty={data:[]}){const match=path.match(/^\/api\/(slides|templates|channels|media|locations|displays|events|schedules|presets|warning-templates)/);const module=match?({slides:'channels',templates:'channels',locations:'displays',schedules:'schedule',presets:'operations','warning-templates':'operations'}[match[1]]||match[1]):null;if(module&&!licenseAllows(module))return empty;const result=await apiRequest(path);return module&&!licenseAllows(module)?empty:result;}
 
 function navigationViewAvailable(view){
   if(!pageMeta[view])return false;
@@ -3730,7 +3766,7 @@ function thumbnailElementMarkup(element, settings,event=null) {
   if (element.type === 'qr-code') content = eventQrMarkup(element,event);
   if (element.type === 'countdown') content = `<span class="slide-thumb-countdown" ${hiddenEventValueAttributes(!countdownHidden(element))}>${escapeHtml(element.prefix || '')}${countdownText(element)}${escapeHtml(element.suffix || '')}</span>`;
   if (element.type === 'image') content = element.src||event?.imageUrl ? mediaContentMarkup(!element.src&&event?.imageEdit?{...element,eventImageEdit:event.imageEdit}:element,element.src||event?.imageUrl) : '<span class="slide-thumb-symbol">▧</span>';
-  if (element.type === 'video') content = element.src ? mediaContentMarkup(element,element.src,true,'muted preload="metadata"') : '<span class="slide-thumb-symbol">▶</span>';
+  if (element.type === 'video') content = element.src ? mediaContentMarkup(element,element.src,true,'muted preload="none"')+'<span class="slide-thumb-video-mark" aria-hidden="true">▶</span>' : '<span class="slide-thumb-symbol">▶</span>';
   if (element.type === 'web') content = '<span class="slide-thumb-symbol">↗</span>';
   if (element.type === 'event') content = `<span class="slide-thumb-event">${eventWelcomeBlockMarkup(event,element.event||element.text||'Veranstaltung',element)}</span>`;
   if (element.type === 'event-stamp') content=eventStampMarkup(element,event,!event);
@@ -3928,17 +3964,20 @@ function applyActiveChannel() {
 }
 
 async function loadContent(preferredChannelId = state.activeChannelId) {
+  const isCurrent=beginCatalogLoad('content');
   try {
     const mediaRequest = state.currentUser?.role === 'viewer' ? Promise.resolve({ folders: [], assets: [] }) : licensedRead('/api/media',{folders:[],assets:[]});
     const [slidesResult, channelsResult, templatesResult, mediaResult, locationResult] = await Promise.all([licensedRead('/api/slides'), licensedRead('/api/channels'), licensedRead('/api/templates'), mediaRequest, licensedRead('/api/locations'), state.events.length ? Promise.resolve() : loadEvents(),globalThis.KioskyFonts?loadFontCatalog():Promise.resolve()]);
+    if(!isCurrent())return;
+    if(![slidesResult?.data,channelsResult?.data,templatesResult?.data,mediaResult?.folders,mediaResult?.assets,locationResult?.data].every(Array.isArray))throw new Error('Inhalte konnten nicht vollständig geladen werden. Der bisherige Stand bleibt erhalten.');
     state.mediaFolders = mediaResult.folders || [];
     state.mediaAssets = mediaResult.assets || [];
     state.locations = locationResult.data || [];
     state.slides = (slidesResult.data || []).map(slideForUi);
-    state.selectedSlides = new Set([...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)));
+    state.selectedSlides = retainContentSelection(state.selectedSlides,scopedSlides());
     state.channels = channelsResult.data || [];
     state.virtualAdvertisingSlides=new Map(state.channels.flatMap(channel=>channel.items.filter(item=>item.slide?.virtual).map(item=>[item.slideId,slideForUi(item.slide)])));
-    state.selectedChannels = new Set([...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)));
+    state.selectedChannels = retainContentSelection(state.selectedChannels,scopedChannels());
     state.templates = (templatesResult.data || []).map(template => ({ ...template, document: hydrateMediaReferences(structuredClone(template.document || {})) }));
     const availableChannels=scopedChannels();
     state.activeChannelId = availableChannels.some(channel => channel.id === preferredChannelId) ? preferredChannelId : availableChannels[0]?.id || null;
@@ -3950,7 +3989,7 @@ async function loadContent(preferredChannelId = state.activeChannelId) {
     renderChannelOverview();
     renderTemplates();
     applyActiveChannel();
-  } catch (error) { showToast(error.message); }
+  } catch (error) { if(!isCurrent())return;showToast(error.message); }
 }
 
 function formatDuration(seconds){const value=Math.max(0,Number(seconds||0));if(!value)return'0 Sek.';const hours=Math.floor(value/3600),minutes=Math.floor(value%3600/60),rest=value%60;return[hours?`${hours} Std.`:'',minutes?`${minutes} Min.`:'',rest?`${rest} Sek.`:''].filter(Boolean).join(' ');}
@@ -4000,7 +4039,7 @@ function channelUpdatePayload(channel,changes={}){
 }
 async function bulkChannels(action){
   if(state.channelBulkBusy||state.currentUser?.role==='viewer'||(action==='delete'&&state.currentUser?.role!=='admin'))return;
-  const ids=[...state.selectedChannels].filter(id=>scopedChannels().some(channel=>channel.id===id));
+  const ids=[...retainContentSelection(state.selectedChannels,scopedChannels())];
   if(!ids.length)return;
   state.channelBulkBusy=true;renderChannelOverview();
   let completed=0;
@@ -4092,7 +4131,7 @@ function renderSlideLibrary() {
       ${canEditContent ? `<label class="slide-library-check"><input type="checkbox" data-slide-select="${escapeHtml(slide.id)}" aria-label="${escapeHtml(slide.title)} auswählen" ${state.selectedSlides.has(slide.id) ? 'checked' : ''}></label>` : '<span></span>'}
       ${slideThumb(slide)}
       <span class="slide-card-info"><strong>${escapeHtml(slide.title)}</strong><small>${escapeHtml(slideTypeLabels[slide.type])} · ${escapeHtml(slide.meta)}</small>${contentTagMarkup(slide.tags)}${slide.document?.customerUpload?.status==='pending'?'<b class="customer-pending-badge">Wartet auf Freigabe</b>':''}</span>
-      <span class="slide-card-actions">${canEditContent ? `<button type="button" data-add-library-slide="${escapeHtml(slide.id)}" title="Zum Kanal hinzufügen">＋</button>` : ''}<button type="button" data-version-library-slide="${escapeHtml(slide.id)}" title="Versionen anzeigen">Versionen</button>${canEditContent ? `<button type="button" data-edit-library-slide="${escapeHtml(slide.id)}" title="Slide bearbeiten">Bearbeiten</button>` : ''}</span>
+      <span class="slide-card-actions">${canEditContent ? `<button type="button" data-add-library-slide="${escapeHtml(slide.id)}" title="Zum Kanal hinzufügen" aria-label="${escapeHtml(slide.title)} zum Kanal hinzufügen">＋</button>` : ''}<button type="button" data-version-library-slide="${escapeHtml(slide.id)}" title="Versionen anzeigen">Versionen</button>${canEditContent ? `<button type="button" data-edit-library-slide="${escapeHtml(slide.id)}" title="Slide bearbeiten">Bearbeiten</button>` : ''}</span>
     </div>`).join('') || '<p class="property-note">Noch keine passende Slide vorhanden.</p>';
 
   KioskyMediaPlacement.hydrate(library);
@@ -4238,7 +4277,7 @@ function renderSlideTagOptions() {
 
 function openSlideTagPicker(mode) {
   if (state.currentUser?.role === 'viewer') return;
-  const ids = mode === 'channels' ? [...state.selectedChannels].filter(id => scopedChannels().some(channel => channel.id === id)) : mode === 'bulk' ? [...state.selectedSlides].filter(id => scopedSlides().some(slide => slide.id === id)) : [];
+  const ids = mode === 'channels' ? [...retainContentSelection(state.selectedChannels,scopedChannels())] : mode === 'bulk' ? [...retainContentSelection(state.selectedSlides,scopedSlides())] : [];
   if (!['editor','import'].includes(mode) && !ids.length) return;
   const selected = mode === 'import' ? scopedTags([]) : mode === 'editor' ? uniqueSlideTags(scopedTags(tagInput(document.querySelector('#slide-tags').value))) : [];
   const available = uniqueSlideTags([...(state.currentUser?.role==='designer'?[]:['Werbung','Werbung quer','Werbung Hochkant']),...selected, ...scopedTags([...state.slides, ...state.channels].flatMap(item => item.tags || []))]).sort((a, b) => a.localeCompare(b, 'de'));
@@ -5873,7 +5912,9 @@ function renderMediaBrowser(prefix, selectionMode = false) {
 }
 function renderMediaLibrary() { renderMediaBrowser('media', true); renderMediaBrowser('media-page'); }
 async function refreshMedia() {
+  const isCurrent=beginCatalogLoad('media');
   const result = await licensedRead('/api/media',{folders:[],assets:[]});
+  if(!isCurrent())return;
   state.mediaFolders = result.folders || [];
   state.mediaAssets = result.assets || [];
   state.editorElements = hydrateMediaReferences(state.editorElements);
@@ -6263,7 +6304,7 @@ function playerUrl(displayOrSlug) {
 }
 
 state.locations=[];state.matrices=[];state.trash=[];state.displayPage=1;
-async function loadDisplays(){try{if(!state.channels.length)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${[...state.channels].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#display-default-slide').innerHTML=`<option value="">Keine Standardslide</option>${[...state.slides].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name)}</option>`).join('')}`;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();void loadPlayerHealth();}catch(error){showToast(error.message);}}
+async function loadDisplays(){const isCurrent=beginCatalogLoad('displays');try{if(!state.contentLoaded)await loadContent();const trashRequest=state.currentUser?.role==='viewer'?Promise.resolve({data:[]}):apiRequest('/api/trash');const [displayResult,groupResult,locationResult,matrixResult,trashResult]=await Promise.all([licensedRead('/api/displays'),apiRequest('/api/display-groups'),licensedRead('/api/locations'),apiRequest('/api/matrix-displays'),trashRequest]);if(!isCurrent())return;if(![displayResult?.data,groupResult?.data,locationResult?.data,matrixResult?.data,trashResult?.data].every(Array.isArray))throw new Error('Displays konnten nicht vollständig geladen werden. Der bisherige Stand bleibt erhalten.');state.displays=displayResult.data||[];state.groups=groupResult.data||[];state.locations=locationResult.data||[];state.matrices=matrixResult.data||[];state.trash=trashResult.data||[];state.displaysLoaded=true;renderDisplayStatus(state.displays);const channelOptions=`<option value="">Kein Standardkanal</option>${[...state.channels].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(channel=>`<option value="${escapeHtml(channel.id)}">${escapeHtml(channel.name)}</option>`).join('')}`;document.querySelector('#display-channel').innerHTML=channelOptions;document.querySelector('#display-default-slide').innerHTML=`<option value="">Keine Standardslide</option>${[...state.slides].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true,sensitivity:'base'})).map(slide=>`<option value="${escapeHtml(slide.id)}">${escapeHtml(slide.name)}</option>`).join('')}`;document.querySelector('#matrix-channel').innerHTML=channelOptions;document.querySelector('#display-location').innerHTML=`<option value="">Kein Standort</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-location-filter').innerHTML=`<option value="">Alle Standorte</option>${state.locations.map(location=>`<option value="${escapeHtml(location.id)}">${escapeHtml(location.name)}</option>`).join('')}`;document.querySelector('#display-group-filter').innerHTML=`<option value="">Alle Gruppen</option>${state.groups.map(group=>`<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}`;renderDisplays();renderGroupManager();renderManagementTables();void loadPlayerHealth();}catch(error){if(!isCurrent())return;showToast(error.message);}}
 
 function displayTheme(channel) {
   if (channel === 'Restaurant') return 'restaurant';
@@ -6605,7 +6646,7 @@ function positionScheduleWeekPicker(){
   const preferredTop=rect.bottom+gap,top=preferredTop+picker.offsetHeight<=window.innerHeight-12?preferredTop:Math.max(12,rect.top-picker.offsetHeight-gap);
   picker.style.left=`${left}px`;picker.style.top=`${top}px`;
 }
-async function loadScheduling(){try{if(!state.displays.length)await loadDisplays();if(!state.channels.length)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);if(!Array.isArray(result.data)||!Array.isArray(order.data))throw new Error('Zeitplan konnte nicht vollständig geladen werden. Bestehende Einträge bleiben erhalten.');state.scheduleEntries=result.data;state.scheduleTargetOrder=order.data;syncScheduleView();renderScheduleContents();updateWeekNavigation();renderSchedule();await loadPresetTriggers();await loadEventAutomation();if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus();}catch(error){setScheduleSaveStatus('error');showToast(error.message);}}
+async function loadScheduling(){const isCurrent=beginCatalogLoad('scheduling');try{if(!state.displaysLoaded)await loadDisplays();if(!state.contentLoaded)await loadContent();const [result,order]=await Promise.all([licensedRead('/api/schedules'),apiRequest('/api/schedule-target-order')]);if(!isCurrent())return;if(!Array.isArray(result.data)||!Array.isArray(order.data))throw new Error('Zeitplan konnte nicht vollständig geladen werden. Bestehende Einträge bleiben erhalten.');state.scheduleEntries=result.data;state.scheduleTargetOrder=order.data;syncScheduleView();renderScheduleContents();updateWeekNavigation();renderSchedule();await loadPresetTriggers();await loadEventAutomation();if(state.scheduleOnlineOnly)void refreshScheduleOnlineStatus();}catch(error){if(!isCurrent())return;setScheduleSaveStatus('error');showToast(error.message);}}
 function renderScheduleContents(){const list=document.querySelector('#schedule-content-list'),query=document.querySelector('#schedule-content-search').value.trim().toLowerCase(),showChannels=document.querySelector('#schedule-show-channels').checked,showSlides=document.querySelector('#schedule-show-slides').checked;const channels=showChannels?state.channels.filter(item=>!query||`${item.name} ${item.description||''}`.toLowerCase().includes(query)).map(channel=>`<button draggable="true" data-schedule-content="channel:${escapeHtml(channel.id)}" data-content-type="${channel.eventId?'event':'default'}"><i class="content-swatch ${channel.eventId?'coral':'blue'}"></i><span><strong>${escapeHtml(channel.name)}</strong><small>${channel.eventId?'Eventkanal':'Kanal'} · ${channel.items.length} Slides</small></span><b>⠿</b></button>`):[];const slides=showSlides?state.slides.filter(item=>!query||`${item.title} ${item.meta}`.toLowerCase().includes(query)).map(slide=>`<button draggable="true" data-schedule-content="slide:${escapeHtml(slide.id)}" data-content-type="slide"><i class="content-swatch green"></i><span><strong>${escapeHtml(slide.title)}</strong><small>Einzelne Slide · ${escapeHtml(slideTypeLabels[slide.type]||slide.type)}</small></span><b>⠿</b></button>`):[];list.innerHTML=[...channels,...slides].join('')||'<p class="property-note">Keine passenden Kanäle oder Slides gefunden.</p>';list.querySelectorAll('[data-schedule-content]').forEach(button=>{button.classList.toggle('is-selected',button.dataset.scheduleContent===state.selectedScheduleContent);button.addEventListener('click',()=>{state.selectedScheduleContent=button.dataset.scheduleContent;renderScheduleContents();document.querySelector('#schedule-drag-hint').textContent=`„${button.querySelector('strong').textContent}“ gewählt – jetzt ${state.scheduleView==='week'?'einen Tag':'eine Uhrzeit'} anklicken.`;});button.addEventListener('dragstart',event=>{state.selectedScheduleContent=button.dataset.scheduleContent;event.dataTransfer.setData('application/x-kiosky-schedule',button.dataset.scheduleContent);button.classList.add('dragging');});button.addEventListener('dragend',()=>button.classList.remove('dragging'));});}
 ['schedule-show-channels','schedule-show-slides'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',renderScheduleContents));document.querySelector('#schedule-content-search').addEventListener('input',renderScheduleContents);
 
@@ -7107,7 +7148,7 @@ const emergencyTypeLabels = { evacuation:'EVAKUIERUNG',weather:'UNWETTERWARNUNG'
 
 state.activeEmergency=null;state.activeWarning=null;state.presets=[];state.warningTemplates=[];state.warnings=[];
 function warningTargetMarkup(selectedValues=[]){const selected=new Set(selectedValues);return`<label><input type="checkbox" value="global" ${selected.has('global')?'checked':''}><span><strong>Alle Displays</strong><small>Globaler Warnhinweis</small></span></label><details open><summary>Standorte</summary>${state.locations.map(location=>`<label><input type="checkbox" value="location:${escapeHtml(location.id)}" ${selected.has(`location:${location.id}`)?'checked':''}><span><strong>${escapeHtml(location.name)}</strong><small>${location.displayCount} Displays · ${escapeHtml(location.warningAreaCode||'keine DWD-Kennung')}</small></span></label>`).join('')||'<p class="property-note">Keine Standorte vorhanden.</p>'}</details><details><summary>Display-Gruppen</summary>${state.groups.map(group=>`<label><input type="checkbox" value="group:${escapeHtml(group.id)}" ${selected.has(`group:${group.id}`)||selected.has(group.id)?'checked':''}><span><strong>${escapeHtml(group.name)}</strong><small>${group.displayIds.length} Displays</small></span></label>`).join('')}</details><details><summary>Matrix-Displays</summary>${state.matrices.map(matrix=>`<label><input type="checkbox" value="matrix:${escapeHtml(matrix.id)}" ${selected.has(`matrix:${matrix.id}`)?'checked':''}><span><strong>${escapeHtml(matrix.name)}</strong><small>${matrix.members.length} Displays</small></span></label>`).join('')}</details><details><summary>Einzelne Displays</summary>${state.displays.map(display=>`<label><input type="checkbox" value="display:${escapeHtml(display.id)}" ${selected.has(`display:${display.id}`)?'checked':''}><span><strong>${escapeHtml(display.name)}</strong><small>${display.orientation==='portrait'?'Hochformat':'Querformat'}</small></span></label>`).join('')}</details>`;}
-async function loadOperations(){try{if(!state.locations.length||!state.matrices.length)await loadDisplays();const [result,presets,templates]=await Promise.all([apiRequest('/api/operations'),licensedRead('/api/presets'),licensedRead('/api/warning-templates')]);state.displays=result.displays||[];state.activeEmergency=result.emergency||null;state.warnings=result.warnings||[];state.activeWarning=state.warnings.find(item=>item.status==='active')||null;state.presets=presets.data||[];state.warningTemplates=templates.data||[];if(!state.channels.length)await loadContent();renderOperations();renderPresets();renderWarningTemplates();renderDwdLocationOptions();}catch(error){showToast(error.message);}}
+async function loadOperations(){const isCurrent=beginCatalogLoad('operations');try{if(!state.displaysLoaded)await loadDisplays();const [result,presets,templates]=await Promise.all([apiRequest('/api/operations'),licensedRead('/api/presets'),licensedRead('/api/warning-templates')]);if(!isCurrent())return;state.displays=result.displays||[];state.activeEmergency=result.emergency||null;state.warnings=result.warnings||[];state.activeWarning=state.warnings.find(item=>item.status==='active')||null;state.presets=presets.data||[];state.warningTemplates=templates.data||[];if(!state.contentLoaded)await loadContent();if(!isCurrent())return;renderOperations();renderPresets();renderWarningTemplates();renderDwdLocationOptions();}catch(error){if(!isCurrent())return;showToast(error.message);}}
 let presetTriggersLoading=null,presetTriggersRendered='',presetTriggersRevision=0;
 async function loadPresetTriggers(silent=false){
   const panel=document.querySelector('#preset-trigger-panel'),allowed=Boolean(state.currentUser)&&state.currentUser.role!=='viewer'&&licenseAllows('schedule')&&licenseAllows('operations');

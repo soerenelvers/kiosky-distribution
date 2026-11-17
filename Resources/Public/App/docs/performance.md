@@ -72,3 +72,12 @@ und mobiler Standort-Farbwahl. Node/PHP-Prüfungen sichern Speicherung, Alt-Clie
 Standortwechsel, Validierung und Export/Import. Migration 043 ergänzt ausschließlich
 die Standalone-Spalte `locations.player_background_color`; CMS-Daten bleiben im
 vorhandenen Zustandsspeicher. Älterer Code ignoriert diese zusätzliche Spalte.
+
+## Verwaltungsoberfläche und mobile Bibliothek (3.46.3)
+
+Parallele identische Leseabrufe teilen nur den laufenden Request; abgeschlossene
+Antworten werden nicht dauerhaft gecacht. Veraltete Sitzung-/Katalogantworten
+werden verworfen. Große Auswahlen verwenden lineare ID-Sets, Videominiaturen
+starten keine Videometadatenabrufe. Touch-Auswahl und Bibliotheksaktionen erhalten
+mindestens 44-Pixel-Flächen. Details, Prüfumfang und offene Punkte:
+[Stabilitäts- und Bedienungsprüfung](reviews/stability-usability-2026-11-17.md).

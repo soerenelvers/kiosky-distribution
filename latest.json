@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "9c3b7f9f42507c4a7735ede30bf0d06017b896b3",
+  "source_commit": "2034aa9ef0f306841988f787572a139f05c298d6",
   "product": "kiosky",
-  "version": "3.46.2",
-  "released_at": "2026-11-16T23:32:51.828Z",
+  "version": "3.46.3",
+  "released_at": "2026-11-17T00:52:36.963Z",
   "channel": "stable",
-  "release_notes": "## [3.46.2]\n\n- Die Slide-Editor-Vorschau nutzt die vollständige Arbeitsfläche statt einer schmalen Werkzeugspalte. Quer- und Hochformat werden proportional in die verfügbare Breite und Höhe eingepasst, auch beim Ändern der Fenstergröße.\n- Vorschau ist auf Smartphones erreichbar; Bearbeitungsleisten werden ausgeblendet und beim Zurückwechseln beziehungsweise Wiederöffnen korrekt wiederhergestellt. Slide-Inhalte bleiben unverändert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.2",
+  "release_notes": "## [3.46.3]\n\n- Verwaltungsantworten sind an die aktuelle Sitzung gebunden. Überholte Katalogantworten nach Schreibzugriffen oder Ansichtswechseln werden verworfen; Standalone-Abmeldung und Sitzungsablauf erneuern den privaten Oberflächenzustand.\n- Parallele identische Leseabrufe werden zusammengefasst; abgeschlossene Antworten werden nicht dauerhaft zwischengespeichert. Lesefristen, klare Fehler bei ungültigen Antworten und Erhalt des bisherigen Datenstands verbessern langsame/gestörte Verbindungen. Schreibzugriffe werden nicht automatisch wiederholt.\n- Video-Miniaturen laden keine Videometadaten mehr auf Vorrat. Die echte Video-Vorschau und Metadatenermittlung bleiben im Editor erhalten. Große Mehrfachauswahlen benötigen nur noch lineare Katalogarbeit.\n- Größere Auswahlflächen, lesbarere Aktionsbuttons und mindestens 44-Pixel-Touch-Ziele in der Slide-/Kanalbibliothek für Smartphones und Tablets.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.3",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.46.2",
+    "core_version": "3.46.3",
     "api_version": "1",
-    "wordpress_plugin_version": "3.46.2",
-    "typo3_extension_version": "3.46.2"
+    "wordpress_plugin_version": "3.46.3",
+    "typo3_extension_version": "3.46.3"
   },
   "components": {
     "core": {
-      "version": "3.46.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.2.zip?ref=v3.46.2",
-      "sha256": "24692250e0ca221310c0e68c07c9ec54a6b19beed679b6965ab01a5fc9cd1600"
+      "version": "3.46.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.3.zip?ref=v3.46.3",
+      "sha256": "9ffd5e5e11ba160636edbc26fc74dd22aa202f5f744be73757665ffaf19bb8a6"
     },
     "standalone": {
-      "version": "3.46.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.2.zip?ref=v3.46.2",
-      "sha256": "24692250e0ca221310c0e68c07c9ec54a6b19beed679b6965ab01a5fc9cd1600"
+      "version": "3.46.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.3.zip?ref=v3.46.3",
+      "sha256": "9ffd5e5e11ba160636edbc26fc74dd22aa202f5f744be73757665ffaf19bb8a6"
     },
     "wordpress": {
-      "version": "3.46.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.2.zip?ref=v3.46.2",
-      "sha256": "d9afa7ab626ce3e2bf6f893aab97f78890210b5da1a72c725e4a5d1032ca4e9e",
+      "version": "3.46.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.3.zip?ref=v3.46.3",
+      "sha256": "fff359ae59a9df6cf4e60fe526d3894f5ea9705187b28dd84d33ef441cf49327",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.46.2",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.2.zip?ref=v3.46.2",
-      "sha256": "40c4f260132c54ec3cb6b147771bd6a8788ceedf49e95b8552316061bb01990f",
+      "version": "3.46.3",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.3.zip?ref=v3.46.3",
+      "sha256": "e1bbf261832e0b6d5e6c396c2995ddca1424c9e5720e6c91cd8f005f65664e80",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

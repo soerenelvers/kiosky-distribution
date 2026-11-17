@@ -1,4 +1,6 @@
-## [3.46.2]
+## [3.46.3]
 
-- Die Slide-Editor-Vorschau nutzt die vollständige Arbeitsfläche statt einer schmalen Werkzeugspalte. Quer- und Hochformat werden proportional in die verfügbare Breite und Höhe eingepasst, auch beim Ändern der Fenstergröße.
-- Vorschau ist auf Smartphones erreichbar; Bearbeitungsleisten werden ausgeblendet und beim Zurückwechseln beziehungsweise Wiederöffnen korrekt wiederhergestellt. Slide-Inhalte bleiben unverändert.
+- Verwaltungsantworten sind an die aktuelle Sitzung gebunden. Überholte Katalogantworten nach Schreibzugriffen oder Ansichtswechseln werden verworfen; Standalone-Abmeldung und Sitzungsablauf erneuern den privaten Oberflächenzustand.
+- Parallele identische Leseabrufe werden zusammengefasst; abgeschlossene Antworten werden nicht dauerhaft zwischengespeichert. Lesefristen, klare Fehler bei ungültigen Antworten und Erhalt des bisherigen Datenstands verbessern langsame/gestörte Verbindungen. Schreibzugriffe werden nicht automatisch wiederholt.
+- Video-Miniaturen laden keine Videometadaten mehr auf Vorrat. Die echte Video-Vorschau und Metadatenermittlung bleiben im Editor erhalten. Große Mehrfachauswahlen benötigen nur noch lineare Katalogarbeit.
+- Größere Auswahlflächen, lesbarere Aktionsbuttons und mindestens 44-Pixel-Touch-Ziele in der Slide-/Kanalbibliothek für Smartphones und Tablets.
