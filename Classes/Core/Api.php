@@ -2500,6 +2500,10 @@ final class Api
             $item['playerBackgroundColor'] = preg_match('/^#[0-9a-f]{6}$/i',(string)($location['playerBackgroundColor'] ?? ''))?strtolower($location['playerBackgroundColor']):'#000000';
             $item['clockTimezone'] = $location['timezone'] ?? $item['timezone'] ?? 'Europe/Berlin';
             $item['resolution'] = ['width' => (int)($item['width'] ?? 1920), 'height' => (int)($item['height'] ?? 1080)];
+            $item['resolutionMode'] = ($item['resolutionMode'] ?? '') === 'native' ? 'native' : 'fixed';
+            unset($item['detectedResolution']);
+            $viewportWidth=$item['viewportWidth'] ?? null;$viewportHeight=$item['viewportHeight'] ?? null;
+            if(is_numeric($viewportWidth)&&is_numeric($viewportHeight)&&$viewportWidth>=100&&$viewportWidth<=50000&&$viewportHeight>=100&&$viewportHeight<=50000)$item['detectedResolution']=['width'=>(int)$viewportWidth,'height'=>(int)$viewportHeight];
             $item['matrix'] = $matrix && $member ? ['id' => $matrix['id'], 'name' => $matrix['name'], 'row' => (int)($member['row'] ?? 0), 'column' => (int)($member['column'] ?? 0)] : null;
             return $item;
         }, $items);

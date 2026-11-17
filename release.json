@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "2034aa9ef0f306841988f787572a139f05c298d6",
+  "source_commit": "4a410f2d775977b92b66d045e568c3bd58f69a14",
   "product": "kiosky",
-  "version": "3.46.3",
-  "released_at": "2026-11-17T00:52:36.963Z",
+  "version": "3.46.4",
+  "released_at": "2026-11-17T11:54:48.414Z",
   "channel": "stable",
-  "release_notes": "## [3.46.3]\n\n- Verwaltungsantworten sind an die aktuelle Sitzung gebunden. Überholte Katalogantworten nach Schreibzugriffen oder Ansichtswechseln werden verworfen; Standalone-Abmeldung und Sitzungsablauf erneuern den privaten Oberflächenzustand.\n- Parallele identische Leseabrufe werden zusammengefasst; abgeschlossene Antworten werden nicht dauerhaft zwischengespeichert. Lesefristen, klare Fehler bei ungültigen Antworten und Erhalt des bisherigen Datenstands verbessern langsame/gestörte Verbindungen. Schreibzugriffe werden nicht automatisch wiederholt.\n- Video-Miniaturen laden keine Videometadaten mehr auf Vorrat. Die echte Video-Vorschau und Metadatenermittlung bleiben im Editor erhalten. Große Mehrfachauswahlen benötigen nur noch lineare Katalogarbeit.\n- Größere Auswahlflächen, lesbarere Aktionsbuttons und mindestens 44-Pixel-Touch-Ziele in der Slide-/Kanalbibliothek für Smartphones und Tablets.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.3",
+  "release_notes": "## [3.46.4]\n\n- UHD-/4K-Auflösungsvorlagen für Displays mit Quer-/Hochformat und benutzerdefinierten Maßen; vorhandene Konfigurationen bleiben erhalten.\n- WordPress/TYPO3 geben die gemeldete Browsergröße jetzt wie Standalone als erkannte Auflösung aus, ohne feste Maße zu überschreiben.\n- Displayübersicht und Identifikation unterscheiden CSS-Fenstergröße und aus Pixeldichte berechnetes Raster, auch bei 150-/200-Prozent-Skalierung.\n- Windows-Player verwendet Per-Monitor-V2-DPI-Awareness und passt Vollbild/WebView2 bei DPI-Wechseln an den zugeordneten Monitor an.\n- UHD-Raster, responsive Texte, Live-Ausrichtungswechsel und echte UHD-Videos in den gemeinsamen Ausgaben geprüft; Hardware-/Tizen-Grenzen dokumentiert.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.4",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.46.3",
+    "core_version": "3.46.4",
     "api_version": "1",
-    "wordpress_plugin_version": "3.46.3",
-    "typo3_extension_version": "3.46.3"
+    "wordpress_plugin_version": "3.46.4",
+    "typo3_extension_version": "3.46.4"
   },
   "components": {
     "core": {
-      "version": "3.46.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.3.zip?ref=v3.46.3",
-      "sha256": "9ffd5e5e11ba160636edbc26fc74dd22aa202f5f744be73757665ffaf19bb8a6"
+      "version": "3.46.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.4.zip?ref=v3.46.4",
+      "sha256": "b1042c0dadba81162887c3ed82277b644b13e5d880ea67c83bba67afbffad5c3"
     },
     "standalone": {
-      "version": "3.46.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.3.zip?ref=v3.46.3",
-      "sha256": "9ffd5e5e11ba160636edbc26fc74dd22aa202f5f744be73757665ffaf19bb8a6"
+      "version": "3.46.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.4.zip?ref=v3.46.4",
+      "sha256": "b1042c0dadba81162887c3ed82277b644b13e5d880ea67c83bba67afbffad5c3"
     },
     "wordpress": {
-      "version": "3.46.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.3.zip?ref=v3.46.3",
-      "sha256": "fff359ae59a9df6cf4e60fe526d3894f5ea9705187b28dd84d33ef441cf49327",
+      "version": "3.46.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.4.zip?ref=v3.46.4",
+      "sha256": "93719b56f9233aba4e570cc704e2c3908bd9b42e7ef132bd8c29ddeaa3127718",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.46.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.3.zip?ref=v3.46.3",
-      "sha256": "e1bbf261832e0b6d5e6c396c2995ddca1424c9e5720e6c91cd8f005f65664e80",
+      "version": "3.46.4",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.4.zip?ref=v3.46.4",
+      "sha256": "e582e2fe63c0a94cc7cf5b3637ba5e9d8cc5d4edb27c21b2dcf4e85ff75930dc",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

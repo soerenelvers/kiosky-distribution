@@ -936,7 +936,7 @@ async function renderDisplayPlayer(slug) {
     try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({diagnostics:healthTelemetry?.snapshot(),proofReceipts:playbackProof?.batch()||[],channelId:playerState?.channel?.id||null,slideId:item?.slide?.id||null,version:`${playerDevice()} · Player 1.3`,cached:true,acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});if(response.ok){const result=await response.json();playbackProof?.acknowledge(result.proofAccepted);}return response.ok;}catch{return false;}
   };
   const showIdentification=()=>{
-    const display=playerState?.display||{},details=playerState?.identification||{},groups=Array.isArray(details.groupNames)&&details.groupNames.length?details.groupNames.join(', '):'Keine Gruppe',pixelRatio=Number(window.devicePixelRatio||1),resolution=`${window.innerWidth} × ${window.innerHeight} px${pixelRatio!==1?` · Pixeldichte ${pixelRatio}`:''}`;
+    const display=playerState?.display||{},details=playerState?.identification||{},groups=Array.isArray(details.groupNames)&&details.groupNames.length?details.groupNames.join(', '):'Keine Gruppe',resolution=playerResolutionLabel(playerResolutionInfo(window.innerWidth,window.innerHeight,window.devicePixelRatio));
     let overlay=document.querySelector('#player-identification');
     if(!overlay){overlay=document.createElement('aside');overlay.id='player-identification';overlay.className='player-identification';document.body.appendChild(overlay);}
     overlay.innerHTML=`<div class="player-identification-brand">KIOSKY · DISPLAY IDENTIFIZIEREN</div><h1>${escapeHtml(display.name||'Unbenanntes Display')}</h1><div class="player-identification-grid"><section><small>Standort</small><strong>${escapeHtml(display.location||'Ohne Standort')}</strong></section><section><small>Server</small><strong>${escapeHtml(details.serverUrl||window.location.origin)}</strong></section><section><small>Display-Gruppe</small><strong>${escapeHtml(groups)}</strong></section><section><small>Aktuelle Auflösung</small><strong>${escapeHtml(resolution)}</strong></section></div><p>Diese Information wird nach 20 Sekunden automatisch ausgeblendet.</p>`;
@@ -6329,9 +6329,25 @@ async function copyText(value) {
   }
 }
 
+// CSS coordinates and backing pixels differ on HiDPI monitors. Keep CSS sizes
+// for layout/matrix geometry; the raster estimate describes the browser output,
+// not a claim about an HDMI mode or a TV's physical panel.
+function playerResolutionInfo(width,height,ratio=1){
+  const valid=value=>Number.isFinite(Number(value))&&Number(value)>0;
+  if(!valid(width)||!valid(height))return null;
+  const density=valid(ratio)&&Number(ratio)>=.25&&Number(ratio)<=10?Number(ratio):1;
+  return{width:Math.round(Number(width)),height:Math.round(Number(height)),ratio:density,rasterWidth:Math.round(Number(width)*density),rasterHeight:Math.round(Number(height)*density)};
+}
+function playerResolutionLabel(info){return info?`${info.width} × ${info.height} CSS-Pixel${info.ratio!==1?` · Raster ca. ${info.rasterWidth} × ${info.rasterHeight} Pixel · Pixeldichte ${info.ratio}`:''}`:'Noch keine Browsergröße gemeldet';}
+function displayPresetDimensions(preset,orientation){const sizes={'1920x1080':[1920,1080],'3840x2160':[3840,2160],'4096x2160':[4096,2160]},size=Object.hasOwn(sizes,preset)?sizes[preset]:null;return size?{width:size[orientation==='portrait'?1:0],height:size[orientation==='portrait'?0:1]}:null;}
+function syncDisplayResolutionPreset(){
+  const width=Number(document.querySelector('#display-width').value),height=Number(document.querySelector('#display-height').value),orientation=document.querySelector('#display-orientation').value;
+  document.querySelector('#display-resolution-preset').value=['1920x1080','3840x2160','4096x2160'].find(key=>{const size=displayPresetDimensions(key,orientation);return size.width===width&&size.height===height;})||'custom';
+}
+function applyDisplayResolutionPreset(){const size=displayPresetDimensions(document.querySelector('#display-resolution-preset').value,document.querySelector('#display-orientation').value);if(size){document.querySelector('#display-width').value=size.width;document.querySelector('#display-height').value=size.height;}}
 function displayConfiguredResolution(display){return display.resolution||{width:1920,height:1080};}
 function displayEffectiveResolution(display){return display.resolutionMode==='native'&&display.detectedResolution?display.detectedResolution:displayConfiguredResolution(display);}
-function displayResolutionSummary(display){if(display.resolutionMode==='native'){const current=display.detectedResolution;return current?`Responsiv · aktuell ${current.width} × ${current.height}`:'Responsiv · native Browsergröße';}const configured=displayConfiguredResolution(display);return`Fest · ${configured.width} × ${configured.height}`;}
+function displayResolutionSummary(display){if(display.resolutionMode==='native'){const current=display.detectedResolution;return current?`Automatisch · ${playerResolutionLabel(playerResolutionInfo(current.width,current.height,display.devicePixelRatio))}`:'Automatisch · Monitor / Browserfenster';}const configured=displayConfiguredResolution(display);return`Fest · ${configured.width} × ${configured.height}`;}
 function displayCanControl(){return state.currentUser?.canControlDisplays??['admin','editor'].includes(state.currentUser?.role);}
 function displayCanManage(){return state.currentUser?.canManageDisplays??['admin','editor'].includes(state.currentUser?.role);}
 function launcherDownloadMenu(display){if(!displayCanManage())return '';const base=`/api/displays/${encodeURIComponent(display.id)}/launcher/`,desktop=kioskyRuntime.platform==='standalone'?`<strong>Zugeordneter Player für dieses Display</strong><a href="${base}windows-x64">Windows 64 Bit <small>.exe</small></a><a href="${base}linux-x64">Ubuntu / Debian 64 Bit</a><a href="${base}linux-mint-x64">Linux Mint 64 Bit <small>Autostart</small></a><a href="${base}macos-universal">macOS <small>Apple Silicon & Intel · .app</small></a>`:'',pairing=`<button type="button" data-pair-player="${escapeHtml(display.id)}">Universal Player <small>Code koppeln</small></button>`,center=kioskyRuntime.playerCenterUrl||'/player';return`<details class="launcher-download"><summary title="Player einrichten" aria-label="Player für ${escapeHtml(display.name)} einrichten">↓</summary><div>${desktop}<strong>Universal Player</strong><a href="${escapeHtml(center)}" target="_blank" rel="noopener">Player Center öffnen <small>Downloads mit Kopplungscode</small></a>${pairing}<small>Der Universal Player zeigt beim ersten Start einen sechsstelligen Code. Diesen Code hier mit dem Display koppeln.</small></div></details>`;}
@@ -6448,9 +6464,10 @@ function updateDisplayUrlPreview() {
 function syncDisplayResolutionFields(display=null){
   const fixed=document.querySelector('#display-resolution-mode').value==='fixed',fields=document.querySelector('#display-fixed-resolution-fields');
   fields.hidden=!fixed;
-  fields.querySelectorAll('input').forEach(input=>{input.disabled=!fixed;});
+  fields.querySelectorAll('input,select').forEach(input=>{input.disabled=!fixed;});
+  syncDisplayResolutionPreset();
   const detected=display?.detectedResolution;
-  document.querySelector('#display-resolution-help').textContent=fixed?'Der Player nutzt diese feste Zielauflösung für Planung und Matrix-Berechnung.':detected?`Zuletzt vom Browser gemeldet: ${detected.width} × ${detected.height} px${display.devicePixelRatio?` · Pixeldichte ${display.devicePixelRatio}`:''}.`:'Der Player passt sich automatisch an das Browserfenster an und meldet seine aktuelle Größe.';
+  document.querySelector('#display-resolution-help').textContent=(fixed?'Feste Zielmaße für Planung und Matrix; der Player füllt weiterhin sein tatsächliches Fenster.':'Automatisch passend zum Monitorfenster, auch UHD / 4K und Hochformat.')+(detected?' Zuletzt gemeldet: '+playerResolutionLabel(playerResolutionInfo(detected.width,detected.height,display.devicePixelRatio))+'.':' Die Ausgabeauflösung und Drehung im Betriebssystem einstellen.');
 }
 
 function renderDisplayDefaultOptions(){
@@ -6509,6 +6526,9 @@ document.querySelector('#display-name').addEventListener('input', event => {
 });
 document.querySelector('#display-slug').addEventListener('input', event => { event.target.dataset.manual = 'true'; event.target.value = slugify(event.target.value); updateDisplayUrlPreview(); });
 document.querySelector('#display-resolution-mode').addEventListener('change',()=>syncDisplayResolutionFields());
+document.querySelector('#display-resolution-preset').addEventListener('change',applyDisplayResolutionPreset);
+document.querySelector('#display-orientation').addEventListener('change',applyDisplayResolutionPreset);
+for(const id of ['display-width','display-height'])document.querySelector('#'+id).addEventListener('input',syncDisplayResolutionPreset);
 document.querySelector('#display-player-pairing-code').addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase().replace(/[^23456789A-HJ-NP-Z]/g,'').slice(0,6);});
 document.querySelector('#display-player-pairing-code').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();document.querySelector('#pair-display-player').click();}});
 document.querySelector('#pair-display-player').addEventListener('click',async()=>{

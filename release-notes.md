@@ -1,6 +1,7 @@
-## [3.46.3]
+## [3.46.4]
 
-- Verwaltungsantworten sind an die aktuelle Sitzung gebunden. Überholte Katalogantworten nach Schreibzugriffen oder Ansichtswechseln werden verworfen; Standalone-Abmeldung und Sitzungsablauf erneuern den privaten Oberflächenzustand.
-- Parallele identische Leseabrufe werden zusammengefasst; abgeschlossene Antworten werden nicht dauerhaft zwischengespeichert. Lesefristen, klare Fehler bei ungültigen Antworten und Erhalt des bisherigen Datenstands verbessern langsame/gestörte Verbindungen. Schreibzugriffe werden nicht automatisch wiederholt.
-- Video-Miniaturen laden keine Videometadaten mehr auf Vorrat. Die echte Video-Vorschau und Metadatenermittlung bleiben im Editor erhalten. Große Mehrfachauswahlen benötigen nur noch lineare Katalogarbeit.
-- Größere Auswahlflächen, lesbarere Aktionsbuttons und mindestens 44-Pixel-Touch-Ziele in der Slide-/Kanalbibliothek für Smartphones und Tablets.
+- UHD-/4K-Auflösungsvorlagen für Displays mit Quer-/Hochformat und benutzerdefinierten Maßen; vorhandene Konfigurationen bleiben erhalten.
+- WordPress/TYPO3 geben die gemeldete Browsergröße jetzt wie Standalone als erkannte Auflösung aus, ohne feste Maße zu überschreiben.
+- Displayübersicht und Identifikation unterscheiden CSS-Fenstergröße und aus Pixeldichte berechnetes Raster, auch bei 150-/200-Prozent-Skalierung.
+- Windows-Player verwendet Per-Monitor-V2-DPI-Awareness und passt Vollbild/WebView2 bei DPI-Wechseln an den zugeordneten Monitor an.
+- UHD-Raster, responsive Texte, Live-Ausrichtungswechsel und echte UHD-Videos in den gemeinsamen Ausgaben geprüft; Hardware-/Tizen-Grenzen dokumentiert.

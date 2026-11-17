@@ -44,3 +44,6 @@ Nach Installation des Kiosky-Updates beziehen bereits automatisch aktualisierbar
 Player die neue Laufzeit über ihre bestehende Update-Routine. Alternativ den
 aktuellen Download vom eigenen `/player` starten. Den Player neu starten, um die
 Fenster- und Browserargumente sicher auf die neue Laufzeit umzustellen.
+
+Auflösungsvorlagen, HiDPI-Diagnose und Grenzen der TV-/Pi-Hardware:
+[Full HD, UHD / 4K und Hochformat](player-resolution.md).
