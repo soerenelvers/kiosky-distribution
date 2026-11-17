@@ -13,6 +13,7 @@ require_once __DIR__.'/TicketLinks.php';
 require_once __DIR__.'/ContentHistory.php';
 require_once __DIR__.'/PlaybackProof.php';
 require_once __DIR__.'/PlayerHealth.php';
+require_once __DIR__.'/WarningPresentation.php';
 require_once __DIR__.'/CustomerContent.php';
 require_once __DIR__.'/DisplaySimulation.php';
 require_once __DIR__.'/PublicationCheck.php';
@@ -822,8 +823,16 @@ final class Api
 
         if (preg_match('#^/api/dwd/config/([^/]+)$#', $path, $match)) {
             $locationId = rawurldecode($match[1]);
-            if ($method === 'GET') return $this->ok(['configuration' => $state['dwd'][$locationId] ?? ['locationId' => $locationId, 'enabled' => true, 'confirmationRequired' => true, 'minSeverity' => 2, 'eventTypes' => [], 'targets' => ['location:' . $locationId]]]);
+            if ($method === 'GET') return $this->ok(['configuration' => $state['dwd'][$locationId] ?? ['locationId' => $locationId, 'enabled' => true, 'confirmationRequired' => true, 'minSeverity' => 2, 'eventTypes' => [], 'targets' => ['location:' . $locationId],'presentation'=>WarningPresentation::settings(null)]]);
             if ($method === 'PUT') {
+                foreach(['enabled','confirmationRequired']as$key)if(array_key_exists($key,$body)&&!is_bool($body[$key]))throw new RuntimeException('DWD-Aktivierung und Bestätigung müssen als Ja/Nein angegeben werden.',422);
+                $minimum=$body['minSeverity'] ?? $state['dwd'][$locationId]['minSeverity'] ?? 2;
+                if(!is_numeric($minimum)||(float)$minimum!==(float)(int)$minimum||(int)$minimum<0||(int)$minimum>5)throw new RuntimeException('Bitte eine gültige DWD-Mindestwarnstufe wählen.',422);
+                $body['minSeverity']=(int)$minimum;$body['enabled']=($body['enabled'] ?? true)!==false;$body['confirmationRequired']=($body['confirmationRequired'] ?? true)!==false;
+                $body['eventTypes']=array_slice(array_values(array_unique(array_filter(array_map(static fn($value)=>trim((string)$value),is_array($body['eventTypes'] ?? null)?$body['eventTypes']:[])))),0,100);
+                $body['targets']=is_array($body['targets'] ?? null)&&$body['targets']?array_slice(array_values(array_unique(array_map('strval',$body['targets']))),0,500):['location:'.$locationId];
+                $body['presentation']=WarningPresentation::settings($body['presentation'] ?? $state['dwd'][$locationId]['presentation'] ?? null,true);
+                $priorPresentation=WarningPresentation::settings($state['dwd'][$locationId]['presentation'] ?? null);$body['presentationRevision']=$priorPresentation===$body['presentation']?($state['dwd'][$locationId]['presentationRevision'] ?? 'legacy'):$this->uuid();
                 $state['dwd'][$locationId] = array_replace($state['dwd'][$locationId] ?? [], $body, ['locationId' => $locationId, 'id' => (string)($state['dwd'][$locationId]['id'] ?? $this->uuid()), 'updatedAt' => $this->now()]);
                 return $this->ok(['configuration' => $state['dwd'][$locationId]], true);
             }
@@ -832,31 +841,31 @@ final class Api
             if (!$this->dwd) throw new RuntimeException('Der DWD-HTTP-Dienst ist in dieser CMS-Ausgabe nicht verfügbar.', 503);
             $locationId = rawurldecode($match[2]);
             $location = $this->required($state['locations'], $locationId, 'Standort');
-            $warnings = $this->dwd->warnings((string)($location['warningAreaCode'] ?? ''));
             $configuration = $state['dwd'][$locationId] ?? ['locationId' => $locationId, 'enabled' => true, 'confirmationRequired' => true, 'minSeverity' => 2, 'eventTypes' => [], 'targets' => ['location:' . $locationId]];
-            $warnings = array_values(array_filter($warnings, static function (array $warning) use ($configuration): bool {
-                if ((int)($warning['severity'] ?? 0) < (int)($configuration['minSeverity'] ?? 2)) return false;
-                $types = is_array($configuration['eventTypes'] ?? null) ? array_filter(array_map('strval', $configuration['eventTypes'])) : [];
-                return !$types || in_array((string)($warning['warningType'] ?? ''), $types, true);
-            }));
-            if ($match[1] === 'warnings' && $method === 'GET') return $this->ok(['data' => $warnings]);
+            if($match[1]==='sync'&&$method==='POST'&&($configuration['enabled'] ?? true)===false)throw new RuntimeException('DWD ist für diesen Standort deaktiviert.',409);
+            $fetched=$this->dwd->warnings((string)($location['warningAreaCode'] ?? ''));
+            if($match[1]==='sync'&&$method==='POST'&&$this->store instanceof StateSnapshotReader){$fresh=$this->store->snapshot();if(DwdService::configurationKey($fresh['dwd'][$locationId] ?? [],$locationId)!==DwdService::configurationKey($configuration,$locationId))throw new RuntimeException('DWD-Einstellungen wurden während des Abrufs geändert. Bitte erneut abrufen.',409);}
+            if($match[1]==='warnings'&&$method==='GET')return $this->ok(['data'=>$fetched,'fetched'=>count($fetched),'source'=>'Deutscher Wetterdienst','updatedAt'=>$this->now()]);
             if ($match[1] === 'sync' && $method === 'POST') {
-                $saved = [];
+                $configuration['id']??=$this->uuid();$warnings=DwdService::selectWarnings($fetched,$configuration,QualityClock::now());$saved=[];
+                $template=$this->first($state['warningTemplates'],static fn($item)=>($item['status'] ?? 'active')==='active'&&in_array($item['warningType'] ?? '',['weather','severe_weather'],true));
                 foreach ($warnings as $warning) {
-                    $existing = $this->first($state['warnings'], fn(array $item): bool => ($item['source'] ?? '') === 'dwd' && ($item['externalId'] ?? '') === ($warning['externalId'] ?? ''));
+                    $existing = $this->first($state['warnings'], fn(array $item): bool => ($item['source'] ?? '') === 'dwd' && ($item['locationId'] ?? '')===$locationId && ($item['externalId'] ?? '') === ($warning['externalId'] ?? ''));
+                    $auto=($configuration['confirmationRequired'] ?? true)===false;
+                    $status=in_array($existing['status'] ?? '',['active','ended'],true)?$existing['status']:($auto?'active':'pending');
                     $warning = array_replace($existing ?? [], $warning, [
-                        'locationId' => $locationId,
-                        'priority' => 900,
-                        'targets' => $configuration['targets'] ?? ['location:' . $locationId],
-                        'returnBehavior' => 'resume_current_schedule',
-                        'status' => empty($configuration['confirmationRequired']) ? 'active' : 'pending',
-                        ...((empty($configuration['confirmationRequired'])) ? ['publishedAt' => $this->now()] : []),
+                        'providerId'=>$configuration['id'],'locationId'=>$locationId,'warningType'=>'weather','priority'=>$template['priority'] ?? 900,
+                        'targets'=>$configuration['targets'] ?? ['location:'.$locationId],
+                        'document'=>$template['document'] ?? [],'returnBehavior'=>'resume_current_schedule','status'=>$status,
+                        ...($status==='active'?['publishedAt'=>$existing['publishedAt'] ?? $this->now()]:[]),
                     ]);
-                    $saved[] = $this->saveRecord($state, 'warnings', $warning, $existing['id'] ?? null);
+                    $saved[]=$this->saveRecord($state,'warnings',$warning,$existing['id'] ?? null);
                 }
-                $state['dwd'][$locationId] = array_replace($configuration, ['lastCheckedAt' => $this->now()]);
-                $this->audit($state, 'dwd.warnings.synced', $locationId);
-                return $this->ok(['data' => $saved, 'fetched' => count($warnings), 'autoPublished' => empty($configuration['confirmationRequired'])], true);
+                $current=array_column($fetched,'externalId');$ended=0;
+                foreach($state['warnings'] as &$warning)if(($warning['source'] ?? '')==='dwd'&&($warning['locationId'] ?? '')===$locationId&&in_array($warning['status'] ?? '',['active','pending'],true)&&(!in_array($warning['externalId'] ?? '',$current,true)||!empty($warning['endsAt'])&&strtotime($warning['endsAt'])<=QualityClock::now())){$warning['status']='ended';$warning['endedAt']=$this->now();$warning['updatedAt']=$this->now();$ended++;}unset($warning);
+                $state['dwd'][$locationId]=array_replace($configuration,['lastCheckedAt'=>$this->now(),'lastError'=>null]);
+                $this->audit($state,'dwd.warnings.synced',$locationId);
+                return $this->ok(['data'=>$saved,'fetched'=>count($fetched),'ended'=>$ended,'autoPublished'=>($configuration['confirmationRequired'] ?? true)===false],true);
             }
             throw new RuntimeException('Methode nicht erlaubt.', 405);
         }
@@ -2144,12 +2153,15 @@ final class Api
         if ($matrixLayout) $targets[] = 'matrix:' . $matrixLayout['id'];
         $warningCandidates=array_values(array_filter(array_reverse($state['warnings']),fn(array $item):bool=>($item['status'] ?? '')==='active'&&(empty($item['startsAt'])||strtotime($item['startsAt'])<=QualityClock::now())&&(empty($item['endsAt'])||strtotime($item['endsAt'])>QualityClock::now())&&count(array_intersect($targets,$item['targets'] ?? []))>0&&empty($releasedPresets[PresetHandoff::key('warning',$item)])));
         usort($warningCandidates,static fn(array $a,array $b):int=>self::compareWarnings($a,$b));
-        $warning=$warningCandidates[0] ?? null;
+        foreach($warningCandidates as &$candidate)if(($candidate['source'] ?? '')==='dwd'){$candidate['dwdPresentation']=$state['dwd'][$candidate['locationId'] ?? '']['presentation'] ?? null;$candidate['dwdPresentationRevision']=$state['dwd'][$candidate['locationId'] ?? '']['presentationRevision'] ?? 'legacy';}unset($candidate);
+        $warningPresentation=WarningPresentation::select($this->license()->allows($state,'operations','displays')?$warningCandidates:[],$state['dwdPresentations'][$display['id']] ?? [],(int)round(QualityClock::micro()*1000),$preview||array_key_exists('fontId',$body));
+        $presentationChanged=!$preview&&!array_key_exists('fontId',$body)&&$warningPresentation['changed'];if($presentationChanged){$activeIds=array_flip(array_column(array_filter($state['warnings'],static fn($item)=>($item['source'] ?? '')==='dwd'&&($item['status'] ?? '')==='active'),'id'));$state['dwdPresentations'][$display['id']]=array_intersect_key($warningPresentation['ledger'],$activeIds);}
+        $warning=$warningPresentation['warning'];
         $emergency = $warning ? [
             'id' => $warning['id'], 'type' => $warning['warningType'] ?? 'info', 'title' => $warning['title'] ?? '',
             'message' => $warning['instructions'] ?? ($warning['description'] ?? ''), 'description' => $warning['description'] ?? '',
             'targets' => $warning['targets'] ?? [], 'active' => true, 'source' => $warning['source'] ?? 'manual',
-            'severity' => $warning['severity'] ?? 1, 'endsAt' => $warning['endsAt'] ?? null, 'document' => $warning['document'] ?? [],
+            'presentationEndsAt'=>$warning['presentationEndsAt'] ?? null, 'severity' => $warning['severity'] ?? 1, 'endsAt' => $warning['endsAt'] ?? null, 'document' => $warning['document'] ?? [],
         ] : null;
         $commands = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') === $display['id']));
         $serverTime = $this->now();
@@ -2175,14 +2187,14 @@ final class Api
         }
         $output=[
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
-            'slides' => $slides, 'emergency' => $emergency, 'warning' => $emergency,
+            'slides' => $slides, 'warningPresentation'=>['nextChangeAtMs'=>$warningPresentation['nextChangeAtMs']], 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
             'selectionReason'=>['kind'=>$emergency?'warning':($assignment?'assignment':(str_starts_with($selection['sourceKey'],'schedule:')?'schedule':'default')),'scheduleId'=>str_starts_with($selection['sourceKey'],'schedule:')?substr($selection['sourceKey'],9):null,'targetType'=>$assignment['target']['type']??null,'candidates'=>$selection['candidateSchedules']??[],'emptyFallback'=>!$assignment&&!str_starts_with($selection['sourceKey'],'schedule:')&&!empty($selection['candidateSchedules'])],
             'playbackProof'=>['grants'=>!$preview&&$this->proofStore&&$this->license()->allows($state,'advertising')?PlaybackProof::grants((string)$display['id'],$channel,$slides,$this->proofSecret):new \stdClass()],
             'playbackSync' => $playbackSync, 'contentRevision'=>$revision, 'commands' => $preview?[]:$commands, 'serverTime' => $serverTime,
         ];
         $flowChanged=false;if(!$preview&&($flowSchedules||!empty($state['eventAutomation']['observations'][$display['id']]))&&$this->license()->allows($state,'events','schedule','operations','channels','displays')){$state['eventAutomation']??=EventAutomation::empty();$flowChanged=EventAutomation::observe($state['eventAutomation'],$flowSchedules,array_replace($display,['matrixId'=>$matrixLayout['id']??null]),$output,QualityClock::micro());}
-        return $this->ok($output,$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged||$flowChanged);
+        return $this->ok($output,$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged||$flowChanged||$presentationChanged);
     }
 
     /** @param array<string,mixed> $state @param array<string,mixed>|null $matrix @return array<string,mixed>|null */
@@ -2863,7 +2875,7 @@ final class Api
             'menuAccess' => [], 'events' => [], 'eventSchedules' => [], 'slides' => [], 'slideVersions' => [], 'channels' => [], 'templates' => [],
             'mediaFolders' => [], 'mediaAssets' => [], 'presets' => [], 'displays' => [], 'groups' => [],
             'locations' => [], 'matrices' => [], 'schedules' => [], 'scheduleTargetOrder' => [], 'trash' => [],
-            'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'presetTriggers' => [], 'presetTriggerRuns' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [],
+            'warnings' => [], 'proof' => [], 'commands' => [], 'assignments' => [], 'presetExecutions' => [], 'presetTriggers' => [], 'presetTriggerRuns' => [], 'playerPairings' => [], 'audit' => [], 'dwd' => [], 'dwdPresentations'=>[],
             'featureSettings' => ['dashboard' => true, 'events' => true, 'displays' => true, 'channels' => true, 'menus' => true, 'advertising' => true, 'media' => true, 'schedule' => true, 'operations' => true, 'integrations' => true, 'updates' => true, 'settings' => true, 'users' => true, 'content' => true, 'presets_warnings' => true],
             'navigationOrder' => ['dashboard', 'events', 'displays', 'channels', 'menus', 'advertising', 'media', 'schedule', 'operations', 'integrations', 'updates', 'settings', 'users'],
             'publicCalendarSettings' => PublicEventCalendar::DEFAULTS,

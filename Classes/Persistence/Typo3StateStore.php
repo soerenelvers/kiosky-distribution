@@ -11,7 +11,7 @@ use Kiosky\Core\StateConflict;
 use RuntimeException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
-final class Typo3StateStore implements StateStore
+final class Typo3StateStore implements StateStore, \Kiosky\Core\StateSnapshotReader
 {
     private const TABLE = 'tx_kiosky_state';
     private bool $loaded = false;
@@ -31,6 +31,13 @@ final class Typo3StateStore implements StateStore
         $this->loaded = true;
         $this->loadedRaw = $row ? (string)$row['state_json'] : null;
         return $state;
+    }
+
+    public function snapshot():array
+    {
+        // The connection is shared, the mutable CAS baseline belongs to the clone.
+        $reader=clone $this;
+        return $reader->load();
     }
 
     private function decode(string $raw): array

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "4a410f2d775977b92b66d045e568c3bd58f69a14",
+  "source_commit": "66cb28f603fa663f9522c12a906cf43492a4917c",
   "product": "kiosky",
-  "version": "3.46.4",
-  "released_at": "2026-11-17T11:54:48.414Z",
+  "version": "3.47.0",
+  "released_at": "2026-11-17T21:17:34.748Z",
   "channel": "stable",
-  "release_notes": "## [3.46.4]\n\n- UHD-/4K-Auflösungsvorlagen für Displays mit Quer-/Hochformat und benutzerdefinierten Maßen; vorhandene Konfigurationen bleiben erhalten.\n- WordPress/TYPO3 geben die gemeldete Browsergröße jetzt wie Standalone als erkannte Auflösung aus, ohne feste Maße zu überschreiben.\n- Displayübersicht und Identifikation unterscheiden CSS-Fenstergröße und aus Pixeldichte berechnetes Raster, auch bei 150-/200-Prozent-Skalierung.\n- Windows-Player verwendet Per-Monitor-V2-DPI-Awareness und passt Vollbild/WebView2 bei DPI-Wechseln an den zugeordneten Monitor an.\n- UHD-Raster, responsive Texte, Live-Ausrichtungswechsel und echte UHD-Videos in den gemeinsamen Ausgaben geprüft; Hardware-/Tizen-Grenzen dokumentiert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.46.4",
+  "release_notes": "## [3.47.0]\n\n- Sicherheitsblocker im optionalen Update-Dienst behoben: unnötigen Next/Vite/Vinext-Starter durch statische Statusseite und eigenständigen Worker ersetzt; anfällige picomatch-Abhängigkeit entfernt, keine Audit-Ausnahmen. Lizenz-API, signierte Downloads, Hosting-Bindungen und SQL-Migrationen bleiben erhalten.\n- DWD-Gemeindekennungen wie 806532023 (Stadt Wetzlar) verwenden den offiziellen gemeindegenauen WFS; Kreiskennungen bleiben kompatibel. Vollständigkeit, Gültigkeit und Gebiet werden vor einer Übernahme geprüft.\n- DWD-Warnungen je Standort einmalig oder alle X Minuten mit Dauer in Minuten:Sekunden einblenden; alter Dauermodus bleibt erhalten. Persistente Anzeigezähler je Display, lokale Zeitgrenzen und Offline-Ausblenden verhindern ungewollte Neustarts oder endlose Einblendungen.\n- Gemeinsame Filter-/Bestätigungslogik in Standalone, WordPress und TYPO3; bestätigte Meldungen bleiben bestätigt, beendete werden nicht reaktiviert. Erfolgreiche vollständige Snapshots beenden zurückgenommene/abgelaufene Providerwarnungen.\n- DWD-Vorschau und Freigabe sind klar getrennt; Warnstufen, angekündigte Meldungen, Filter und Abruffehler sind sichtbar und mobil bedienbar.\n- Parallele Konfigurationsänderungen brechen veraltete Importe ab. Native CMS-Snapshots erhalten den ursprünglichen Schreibvergleich; Anzeigezähler bleiben mit parallelen Inhaltsänderungen und vollständigen Systemumzügen kompatibel.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.47.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.46.4",
+    "core_version": "3.47.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.46.4",
-    "typo3_extension_version": "3.46.4"
+    "wordpress_plugin_version": "3.47.0",
+    "typo3_extension_version": "3.47.0"
   },
   "components": {
     "core": {
-      "version": "3.46.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.4.zip?ref=v3.46.4",
-      "sha256": "b1042c0dadba81162887c3ed82277b644b13e5d880ea67c83bba67afbffad5c3"
+      "version": "3.47.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.47.0.zip?ref=v3.47.0",
+      "sha256": "4b7be6f0bbb3426e098939241220f91bb23261fdfdd72f9b02b8c4019696465c"
     },
     "standalone": {
-      "version": "3.46.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.46.4.zip?ref=v3.46.4",
-      "sha256": "b1042c0dadba81162887c3ed82277b644b13e5d880ea67c83bba67afbffad5c3"
+      "version": "3.47.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.47.0.zip?ref=v3.47.0",
+      "sha256": "4b7be6f0bbb3426e098939241220f91bb23261fdfdd72f9b02b8c4019696465c"
     },
     "wordpress": {
-      "version": "3.46.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.46.4.zip?ref=v3.46.4",
-      "sha256": "93719b56f9233aba4e570cc704e2c3908bd9b42e7ef132bd8c29ddeaa3127718",
+      "version": "3.47.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.47.0.zip?ref=v3.47.0",
+      "sha256": "b986603dbfadcad36b81396315b9c1fda398f383bc77bf7727af53b49b48ea53",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.46.4",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.46.4.zip?ref=v3.46.4",
-      "sha256": "e582e2fe63c0a94cc7cf5b3637ba5e9d8cc5d4edb27c21b2dcf4e85ff75930dc",
+      "version": "3.47.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.47.0.zip?ref=v3.47.0",
+      "sha256": "c44cc8fcbb1d87bb862f58ad144390f8622a0669b5c7aea2cbf3d234d12024a2",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

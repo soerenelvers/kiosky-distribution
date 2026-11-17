@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Kiosky\Core;
+require_once __DIR__.'/StateSnapshotReader.php';
 
 interface StateStore
 {

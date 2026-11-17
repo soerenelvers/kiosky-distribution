@@ -14,7 +14,7 @@ final class SystemMigration
     public const LIMIT=128000000;
     public const COLLECTIONS=['events','eventSchedules','slides','slideVersions','templates','channels','locations','groups','displays','matrices','schedules','assignments','presets','warningTemplates','warnings','presetTriggers','presetTriggerRuns','mediaFolders','mediaAssets'];
     public const SETTINGS=['featureSettings','scheduleTargetOrder','eventEditorSettings','eventTemplates','publicCalendarSettings','advertisingSettings','menuSettings','menuShare','navigationOrder','titleExclusions','fonts','playerHealthSettings','eventAutomation'];
-    public const EXTRA=['users','apiUsers','menuAccess','contentChannelAccess','menuSubscriptions','dwd','presetHandoffs','crewbrain','easyjob','activeEventSource','externalSources','trash'];
+    public const EXTRA=['users','apiUsers','menuAccess','contentChannelAccess','menuSubscriptions','dwd','dwdPresentations','presetHandoffs','crewbrain','easyjob','activeEventSource','externalSources','trash'];
     private const AAD='kiosky-system-migration:1';
     private static function password(mixed $value):string{if(!is_string($value)||strlen($value)<12||strlen($value)>256)throw new RuntimeException('Das Paketpasswort muss 12 bis 256 UTF-8-Bytes lang sein.',422);return $value;}
     private static function bytes(mixed $value,?int $length=null):string
