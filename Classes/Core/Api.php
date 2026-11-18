@@ -84,7 +84,11 @@ final class Api
             if($this->store instanceof CmsMediaStateStore){
                 $runtime=preg_match('#^/api/(?:player/[^/]+/(?:state|heartbeat|commands|proof)|dwd(?:/.*)?|operations(?:/.*)?|warnings(?:/[^/]+/(?:publish|end))?)$#',$path)===1;
                 $catalog=$method==='GET'&&preg_match('#^/api/(?:(?:displays|locations|display-groups|groups|matrix-displays)(?:/[^/]+)?|displays/[^/]+/output)$#',$path)===1;
-                $mediaScope=$this->store->lightweight($runtime||$catalog);
+                // These settings never consume or migrate media. Advertising and
+                // fonts retain their existing native media/storage behavior.
+                $settings=preg_match('#^/api/settings/(?:features|events|public-calendar|menus|menu-share|player-health)$#D',$path)===1;
+                $session=preg_match('#^/api/auth/(?:me|setup-status|logout|password)$#D',$path)===1;
+                $mediaScope=$this->store->lightweight($runtime||$catalog||$settings||$session);
             }
             if($path==='/api/content-transfer/migration/import'&&$method==='POST'&&($this->identity['role'] ?? '')==='admin')$migrationLock=SystemMigration::lock();
             if(preg_match('#^/api/customer-(portal|content)(/|$)#',$path)){if(str_starts_with($path,'/api/customer-content')&&!$this->canManageCustomerContent())throw new RuntimeException('Für Kundenfreigaben fehlen Verwaltungsrechte.',403);if(!$this->customerVault)throw new RuntimeException('Privater Kundenupload-Speicher ist nicht eingerichtet.',503);$customerLock=$this->customerVault->lock();if(str_starts_with($path,'/api/customer-portal'))$this->customerVault->rate((string)($this->identity['ipAddress']??'unknown'));}

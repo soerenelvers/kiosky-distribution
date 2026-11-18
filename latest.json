@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "2d39c81e369babc6de5447208f93f153eb7a60b1",
+  "source_commit": "3b862bd3f7e9a7c01c6fd969cee3241398fc5e9f",
   "product": "kiosky",
-  "version": "3.48.0",
-  "released_at": "2026-11-17T23:26:11.491Z",
+  "version": "3.48.1",
+  "released_at": "2026-11-18T16:02:12.476Z",
   "channel": "stable",
-  "release_notes": "## [3.48.0]\n\n- DWD-Warnungen direkt aus der Übersicht auswählen; Ziele und Anzeigeregeln vor dem Auslösen festlegen. Mehrfachauswahl zeigt mehrere Warnungen gemeinsam in einer responsiven Ausgabe.\n- Einmalig, alle X Minuten oder bis zum amtlichen Ende / zur Rücknahme; individuelle Regeln bleiben bei Abgleichen erhalten. Einzelablauf und Rücknahmen entfernen nur betroffene Einträge; Offline-Player beachten bekannte Ablaufzeiten.\n- Player-, DWD-, Status- und Zielkatalogabfragen in WordPress/TYPO3 lesen nicht mehr die gesamte Mediathek. Ausgaben lösen nur zugewiesene Medien auf; native Berechtigungen, Dateiänderungen und geschützte Schriften bleiben berücksichtigt.\n- WordPress führt Laufzeitstände unabhängiger Displays konfliktfrei zusammen; echte Inhalts-/Rechteänderungen und konkurrierende Änderungen desselben Ausspielwegs bleiben geschützt.\n- Player-Uhrkorrektur zieht Serververarbeitung von der gemessenen Laufzeit ab. DWD-Speicherkonflikte wiederholen keinen bereits erfolgreichen externen Abruf.\n- Standort / alle Displays / eigene Auswahl mit Suche, Online-Status und deduplizierter Empfängervorschau. Veraltete Gruppenbearbeitungen können neuere Auslösungen nicht überschreiben.\n- Rücknahmen werden je Installation im Hintergrund geprüft: Standalone-Timer, WordPress-Cron und TYPO3-Scheduler beziehungsweise CLI. Fehler erhalten vorhandene Warnungen; keine ungefragte Freigabe neuer Warnungen.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.48.0",
+  "release_notes": "## [3.48.1]\n\n- Die Einstellungsübersicht lädt Werbung samt Mediathek und Kalender erst beim Öffnen des jeweiligen Bereichs.\n\n- Standalone-Player lösen nur tatsächlich verwendete Medien-IDs auf; wiederholte Referenzen und fehlende IDs werden je Antwort einmal gelesen. Dateiänderungen bleiben beim nächsten Abruf sichtbar.\n- CMS-Einstellungen für Module, Veranstaltungen, Kalender, Speisekarten und Player-Überwachung benötigen keine Mediathek-Vollabfrage und lösen keine Medienmigration aus. Rechte und Schreibkonfliktschutz bleiben erhalten.\n- Die Live-Ausgabevorschau lädt nur sichtbare beziehungsweise nahe Displaykarten einschließlich sichtbarer Matrix-Mitglieder, mit höchstens zwei parallelen Abrufen. Scrollen lädt weitere Ausgaben nach.\n- Hintergrundabfragen pausieren bei geschlossenen Überwachungspanels, in anderen Ansichten, versteckten Tabs und offenen Bearbeitungsdialogen. Player-Abfragefrequenzen und Warnungsreaktion bleiben unverändert.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.48.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.48.0",
+    "core_version": "3.48.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.48.0",
-    "typo3_extension_version": "3.48.0"
+    "wordpress_plugin_version": "3.48.1",
+    "typo3_extension_version": "3.48.1"
   },
   "components": {
     "core": {
-      "version": "3.48.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.0.zip?ref=v3.48.0",
-      "sha256": "b33de28e960a2aa77beb22bec6ffa9945b96ea82f3cacb0fa04f3d19f41cd72e"
+      "version": "3.48.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.1.zip?ref=v3.48.1",
+      "sha256": "2df7756906df29bee09824a33aca3f73854ea3b3a7f6e61bf14ca52144413aff"
     },
     "standalone": {
-      "version": "3.48.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.0.zip?ref=v3.48.0",
-      "sha256": "b33de28e960a2aa77beb22bec6ffa9945b96ea82f3cacb0fa04f3d19f41cd72e"
+      "version": "3.48.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.1.zip?ref=v3.48.1",
+      "sha256": "2df7756906df29bee09824a33aca3f73854ea3b3a7f6e61bf14ca52144413aff"
     },
     "wordpress": {
-      "version": "3.48.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.48.0.zip?ref=v3.48.0",
-      "sha256": "d6addd529d59393d1f6db1bc8a7867aa66c7134925cc2de836c502231c59ece5",
+      "version": "3.48.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.48.1.zip?ref=v3.48.1",
+      "sha256": "f1ca2259e1bc0bdba612694c905c91a28b33a2513c28ac93eb6ed2a340edd029",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.48.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.48.0.zip?ref=v3.48.0",
-      "sha256": "e5d370667fc099d9acb0eed972ca1153dd995672b3b8afe5bfaffd7f68f01809",
+      "version": "3.48.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.48.1.zip?ref=v3.48.1",
+      "sha256": "1d5c35f2c435822063d7c5f203e913f8d132ff6a7e8d7d68c3c54dd200afd669",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

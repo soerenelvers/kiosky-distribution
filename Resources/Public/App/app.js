@@ -1201,7 +1201,7 @@ function setView(view) {
     if(licenseAllows('easyjob'))loadEasyJobConfiguration();
     if(licenseAllows('api'))loadApiUsers();
   }
-  if(view==='settings'){showSettingsLevel();loadFeatureSettings();if(licenseAllows('advertising'))loadAdvertisingSettings();if(licenseAllows('events'))loadPublicCalendarSettings();}
+  if(view==='settings'){showSettingsLevel();loadFeatureSettings();}
   if (view === 'menus'){mountMenuModule('menu-module-root','cards');if(state.currentUser?.role==='admin'&&state.currentUser?.canManageSettings!==false){loadMenuModuleSettings();loadMenuShareSettings();}}
   if (view === 'users') loadUsers();
   if (view === 'events') loadEvents();
@@ -6428,12 +6428,22 @@ function renderDisplays() {
 }
 
 const displayOutputSnapshots=new Map();let displayOutputPollRunning=false;
+function visibleDisplayOutputIds(cards,matrices,height){
+  const ids=new Set();
+  for(const card of cards){
+    if(card.bottom < -height || card.top > height*2)continue;
+    if(card.displayId)ids.add(card.displayId);
+    if(card.matrixId)for(const member of matrices.find(matrix=>matrix.id===card.matrixId)?.members||[])ids.add(member.displayId);
+  }
+  return ids;
+}
 async function refreshDisplayOutputs(){
-  if(displayOutputPollRunning||state.view!=='displays'||document.hidden||!document.querySelector('#display-live-overview').open)return;
+  if(displayOutputPollRunning||state.view!=='displays'||document.hidden||document.querySelector('dialog[open]')||!document.querySelector('#display-live-overview').open)return;
   displayOutputPollRunning=true;
   try{
-    const queue=[...state.displays],ids=new Set(queue.map(display=>display.id));for(const id of displayOutputSnapshots.keys())if(!ids.has(id))displayOutputSnapshots.delete(id);
-    await Promise.all(Array.from({length:Math.min(4,queue.length)},async()=>{while(queue.length){const display=queue.shift();if(document.hidden||!document.querySelector('#display-live-overview').open||state.view!=='displays')break;
+    const visible=visibleDisplayOutputIds([...document.querySelectorAll('#display-live-table [data-output-display],#display-live-table [data-output-matrix]')].map(card=>{const rect=card.getBoundingClientRect();return{displayId:card.dataset.outputDisplay,matrixId:card.dataset.outputMatrix,top:rect.top,bottom:rect.bottom};}),state.matrices,window.innerHeight);
+    const queue=state.displays.filter(display=>visible.has(display.id)),ids=new Set(state.displays.map(display=>display.id));for(const id of displayOutputSnapshots.keys())if(!ids.has(id))displayOutputSnapshots.delete(id);
+    await Promise.all(Array.from({length:Math.min(2,queue.length)},async()=>{while(queue.length){const display=queue.shift();if(document.hidden||document.querySelector('dialog[open]')||!document.querySelector('#display-live-overview').open||state.view!=='displays')break;
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
       try{const output=await apiRequest(`/api/displays/${encodeURIComponent(display.id)}/output`,{cache:'no-store',signal:controller.signal});if(document.querySelector('#display-live-overview').open&&state.view==='displays')displayOutputSnapshots.set(display.id,{output,receivedAt:Date.now()});}
       catch{if(document.querySelector('#display-live-overview').open&&state.view==='displays')displayOutputSnapshots.set(display.id,{error:true,receivedAt:Date.now()});}finally{clearTimeout(timeout);}
@@ -6460,7 +6470,7 @@ function matrixLivePreview(matrix){
   const members=[...matrix.members].sort((a,b)=>a.row-b.row||a.column-b.column),displayById=new Map(state.displays.map(display=>[display.id,display]));
   const cells=Array.from({length:matrix.rows*matrix.columns},(_,index)=>{const row=Math.floor(index/matrix.columns),column=index%matrix.columns,member=members.find(item=>item.row===row&&item.column===column),display=member?displayById.get(member.displayId):null,live=display?liveContentForDisplay(display):null;return`<span class="matrix-live-cell">${live?.slideRecord?slideThumb(live.slideRecord,live.event):`<i>${display?escapeHtml(live.channel):'Leer'}</i>`}</span>`;}).join('');
   const online=members.filter(member=>displayById.get(member.displayId)?.online).length,lastSeenAt=members.map(member=>displayById.get(member.displayId)?.lastSeenAt).filter(Boolean).sort().at(-1);
-  return`<article class="display-live-card is-matrix"><div class="display-live-screen"><div class="matrix-live-preview" style="--matrix-columns:${matrix.columns};--matrix-rows:${matrix.rows}">${cells}</div><span class="display-live-state ${online===members.length&&members.length?'is-online':''}">${online}/${members.length} verbunden</span></div><footer><span><strong>${escapeHtml(matrix.name)}</strong><small>Matrix-Display · ${matrix.rows} × ${matrix.columns}</small></span><time>${lastSeenAt?escapeHtml(formatLastSeen(lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
+  return`<article class="display-live-card is-matrix" data-output-matrix="${escapeHtml(matrix.id)}"><div class="display-live-screen"><div class="matrix-live-preview" style="--matrix-columns:${matrix.columns};--matrix-rows:${matrix.rows}">${cells}</div><span class="display-live-state ${online===members.length&&members.length?'is-online':''}">${online}/${members.length} verbunden</span></div><footer><span><strong>${escapeHtml(matrix.name)}</strong><small>Matrix-Display · ${matrix.rows} × ${matrix.columns}</small></span><time>${lastSeenAt?escapeHtml(formatLastSeen(lastSeenAt)):'Noch nie verbunden'}</time></footer></article>`;
 }
 function renderDisplayLiveOverview(){
   const overview=document.querySelector('#display-live-overview'),table=document.querySelector('#display-live-table'),updated=document.querySelector('#display-live-updated');if(!overview||!table||!updated)return;
@@ -6484,6 +6494,8 @@ function renderManagementTables(){
 document.querySelectorAll('[data-display-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-display-tab]').forEach(item=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-display-tab-panel]').forEach(panel=>panel.classList.toggle('is-active',panel.dataset.displayTabPanel===button.dataset.displayTab));}));
 document.querySelector('#display-live-overview').addEventListener('toggle',()=>{if(!document.querySelector('#display-live-overview').open)displayOutputSnapshots.clear();renderDisplayLiveOverview();void refreshDisplayOutputs();});
 setInterval(()=>{void refreshDisplayOutputs();},10000);
+let displayOutputScrollTimer;
+window.addEventListener('scroll',()=>{if(state.view!=='displays')return;clearTimeout(displayOutputScrollTimer);displayOutputScrollTimer=setTimeout(()=>void refreshDisplayOutputs(),180);},{passive:true,capture:true});
 ['display-search','display-status-filter','display-location-filter','display-group-filter','display-matrix-filter'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',()=>{state.displayPage=1;renderDisplays();}));
 ['group-search','matrix-search','location-search','trash-search','trash-type-filter'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',renderManagementTables));
 document.querySelectorAll('[data-display-page]').forEach(button=>button.addEventListener('click',()=>{state.displayPage+=Number(button.dataset.displayPage);renderDisplays();}));
@@ -7711,8 +7723,8 @@ renderDisplays();
 renderGroupManager();
 renderSchedule();
 renderOperations();
-setInterval(() => { if (state.view === 'operations') renderOperations(); }, 30000);
-setInterval(() => { if (state.view === 'displays' && !document.querySelector('dialog[open]')) loadDisplays(); }, 30000);
+setInterval(() => { if (state.view === 'operations' && !document.hidden && !document.querySelector('dialog[open]')) renderOperations(); }, 30000);
+setInterval(() => { if (state.view === 'displays' && !document.hidden && !document.querySelector('dialog[open]')) loadDisplays(); }, 30000);
 setInterval(() => {
   if (!slideDialog.open) return;
   const textEvent=editorSelectedEvent();document.querySelectorAll('.canvas-element.type-text').forEach(node=>{const element=state.editorElements.find(item=>item.id===node.dataset.editorElement);if(element)node.querySelector('.canvas-text-content')?.classList.toggle('is-condition-inactive',!eventTextVisible(element,textEvent));});
@@ -7888,7 +7900,7 @@ function renderPlayerHealth(){
  const form=document.querySelector('#player-health-settings-form');if(!form.dataset.loaded){document.querySelector('#health-enabled').checked=result.settings.enabled;for(const key of ['offlineDelay','mediaDelay','staleDelay','emptyDelay'])document.querySelector('#health-'+key).value=result.settings[key];form.dataset.loaded='1';}
 }
 async function loadPlayerHealth(){
- if(playerHealthLoading||document.hidden||!state.currentUser||state.currentUser.role==='designer'||!licenseAllows('displays')||!moduleEnabled('displays'))return;playerHealthLoading=true;
+ if(playerHealthLoading||document.hidden||state.view!=='displays'||!document.querySelector('#player-health-panel').open||!state.currentUser||state.currentUser.role==='designer'||!licenseAllows('displays')||!moduleEnabled('displays'))return;playerHealthLoading=true;
  try{const result=await apiRequest('/api/displays/health');playerHealthResult=result;renderPlayerHealth();document.querySelector('#player-health-status').textContent='Stand: '+healthTime(result.checkedAt)+' · Zeiten Europe/Berlin';}
  catch(error){document.querySelector('#player-health-status').textContent='Prüfung fehlgeschlagen: '+error.message+' Der letzte bestätigte Stand bleibt sichtbar.';}finally{playerHealthLoading=false;}
 }
@@ -7899,7 +7911,7 @@ for(const id of ['player-health-search','player-health-filter'])document.querySe
 document.querySelector('#player-health-prev').addEventListener('click',()=>{playerHealthPage--;renderPlayerHealth();});document.querySelector('#player-health-next').addEventListener('click',()=>{playerHealthPage++;renderPlayerHealth();});
 document.querySelector('#player-health-list').addEventListener('click',async event=>{const button=event.target.closest('[data-health-pause]');if(!button)return;button.disabled=true;try{await apiRequest('/api/displays/'+encodeURIComponent(button.dataset.healthPause)+'/monitoring',{method:'POST',body:JSON.stringify({paused:button.dataset.healthPaused==='true'})});await loadPlayerHealth();}catch(error){showToast(error.message);}finally{button.disabled=false;}});
 document.querySelector('#player-health-settings-form').addEventListener('submit',async event=>{event.preventDefault();const values={enabled:document.querySelector('#health-enabled').checked};for(const key of ['offlineDelay','mediaDelay','staleDelay','emptyDelay'])values[key]=Number(document.querySelector('#health-'+key).value);const button=event.target.querySelector('button[type=submit]');button.disabled=true;try{await apiRequest('/api/settings/player-health',{method:'PUT',body:JSON.stringify(values)});await loadPlayerHealth();showToast('Überwachung gespeichert. Neue Wartezeiten gelten ab jetzt.');}catch(error){showToast(error.message);}finally{button.disabled=false;}});
-setInterval(()=>void loadPlayerHealth(),15000);
+setInterval(()=>{if(state.view==='displays'&&document.querySelector('#player-health-panel').open&&!document.querySelector('dialog[open]'))void loadPlayerHealth();},15000);
 
 // Customer capabilities are separate from CMS sessions and live content permissions.
 let customerModel=null,customerDisplays=[],customerEvents=[],customerReview=null,customerLoading=false;

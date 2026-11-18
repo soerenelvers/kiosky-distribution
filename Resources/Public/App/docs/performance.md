@@ -81,3 +81,44 @@ werden verworfen. Große Auswahlen verwenden lineare ID-Sets, Videominiaturen
 starten keine Videometadatenabrufe. Touch-Auswahl und Bibliotheksaktionen erhalten
 mindestens 44-Pixel-Flächen. Details, Prüfumfang und offene Punkte:
 [Stabilitäts- und Bedienungsprüfung](reviews/stability-usability-2026-11-17.md).
+
+## Bedarfsgerechte Zugriffe (3.48.1)
+
+- Standalone löst Medien im Player und in der Ausgabevorschau über indizierte
+  Einzelzugriffe auf. Dieselbe ID und fehlende IDs werden je Antwort nur einmal
+  abgefragt. Textausgaben benötigen keinen Medien-Datenbankabruf. Kein Cache
+  über Requestgrenzen: verschobene/geänderte/gelöschte Dateien werden beim nächsten
+  Zustandsabruf wieder geprüft. Die vollständige Mediathek bleibt in der Verwaltung
+  verfügbar. Simulations-Snapshots behalten ihren bestehenden unveränderlichen Bestand.
+- WordPress und TYPO3 überspringen die Mediathek für den CMS-Anmeldestatus und die Einstellungen
+  `features`, `events`, `public-calendar`, `menus`, `menu-share` und `player-health`.
+  Vorhandene Medienreferenzen bleiben unverändert; diese Aufrufe starten keine
+  historische Medienmigration. Werbe-/Schriftverwaltung und Medienauswahl behalten
+  ihre eigenen Zugriffe und Berechtigungen.
+- Die aufgeklappte aktuelle Ausspielung lädt Karten im sichtbaren Bereich plus
+  einer Bildschirmhöhe Vorlauf. Sichtbare Matrizen laden ihre zugehörigen Displays.
+  Höchstens zwei Vorschauabrufe laufen gleichzeitig; Scrollen lädt nach. Offene
+  Bearbeitungsdialoge halten weitere Vorschauabrufe an. Bereits beim Server
+  eingetroffene Aufrufe können dort noch zu Ende laufen.
+- Die Einstellungsübersicht lädt Werbe- und Kalendereinstellungen erst beim Öffnen
+  des jeweiligen Bereichs. Damit entfällt auch die vorzeitige Mediathek-Abfrage.
+- Die Überwachung fragt periodisch nur in der Displayansicht bei offenem Panel ab.
+  Automatische Display-/Warnungsansichten aktualisieren sich nicht in versteckten
+  Tabs oder über geöffneten Dialogen. Manuelles Aktualisieren bleibt möglich.
+  Lizenzprüfungen und die normalen Player-/Heartbeat-/Befehlsintervalle bleiben erhalten.
+
+Nachweise: `tests/playback-media-performance.test.ts` prüft eine Bibliothek mit
+mehr als 2.500 Medien gegen tatsächlich verwendete Referenzen, Nullabrufe bei Text,
+fehlende IDs sowie Dateiänderungen und Löschung. `tests/cms-media-test.php` prüft
+Lesen/Schreiben der sechs Einstellungsbereiche bei gesperrtem Medienkatalog,
+Medienerhalt und unveränderte Rechte. `tests/dwd-load-test.py` kombiniert fünf
+Player, einen absichtlich langsamen Provider und zwanzig Einstellungsänderungen.
+`tests/resource-efficiency-browser.py` prüft 40 Displays, sichtbare Vorschauen,
+Nachladen beim Scrollen und ruhende Hintergrundabfragen in allen drei UI-Transporten.
+
+Die Messungen sind isolierte Regressionstests, keine Zusage für jedes Hosting.
+Plesk-PHP-Worker, Datenmenge, SQL-Latenz, Netz und Mediencodec bleiben relevant.
+Produktive PHP-FPM-/Datenbank-/Browser-Profile wurden hier nicht erhoben. Es gibt
+keine Schema-/Datenmigration, Serverkonfigurationsänderung oder neue Abhängigkeit.
+Rollback auf 3.48.0 benötigt keine Datenrückmigration. Nach dem Update die
+Verwaltungsoberfläche und Player einmal neu laden.
