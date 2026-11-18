@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.48.1-20261118160210%2B3b862bd3" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.48.1-20261118160210%2B3b862bd3">
+  <link href="player/fonts/builtins.css?v=3.49.0-20261118173111%2B8443577a" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.49.0-20261118173111%2B8443577a">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1491,6 +1491,7 @@
           <button type="button" draggable="true" data-add-element="countdown"><span>00:00</span><strong>Countdown</strong></button>
           <button type="button" draggable="true" data-add-element="image"><span>▧</span><strong>Bild</strong></button>
           <button type="button" draggable="true" data-add-element="video"><span>▶</span><strong>Video</strong></button>
+          <button type="button" id="add-video-url" data-license-modules="channels media"><span>↗</span><strong>Video per URL</strong></button>
           <button type="button" draggable="true" data-add-element="web"><span>↗</span><strong>Website</strong></button>
           <button type="button" draggable="true" data-add-element="event"><span>◫</span><strong>Eventdaten</strong></button>
           <button type="button" draggable="true" data-add-element="event-stamp"><span>◈</span><strong>Event-Stempel</strong></button>
@@ -1557,7 +1558,7 @@
             <div data-property-section="event-field"><label class="form-field"><span>Dynamisches Veranstaltungsfeld</span><select id="property-event-field"><option value="title">Titel</option><option value="subtitle">Untertitel</option><option value="date">Datum</option><option value="setupStart">Aufbau</option><option value="admissionStart">Einlass</option><option value="eventStart">Beginn</option><option value="breakStart">Pause von</option><option value="breakEnd">Pause bis</option><option value="eventEnd">Ende</option><option value="venue">Spielort</option><option value="room">Raum / Saal</option><option value="remainingTickets">Restkarten / Ticketstatus</option><option value="boxOfficeOpenAt">Abendkasse öffnet</option><option value="publicNotes">Öffentlicher Hinweis</option><option value="ticketQr">Ticket-Link als QR-Code</option><option value="ticketUrl">Ticket-Link als Text</option><option value="description">Beschreibung</option><option value="organizer">Veranstalter</option><option value="eventType">Kategorie</option><option value="externalNumber">Veranstaltungsnummer</option><option value="status">Status</option><option value="boxOfficeAvailable">Abendkasse verfügbar</option></select></label><label class="form-field"><span>Text davor</span><input id="property-event-prefix" type="text" placeholder="z. B. Einlass: "></label><label class="form-field"><span>Platzhalter in der Vorlagenübersicht</span><input id="property-event-fallback" type="text" placeholder="Bei fehlendem Wert auf dem Display unsichtbar"></label><label class="toggle-label"><input id="property-event-locked" type="checkbox"> Position in der Vorlage sperren</label></div>
             <div id="qr-caption-properties" hidden></div>
             <div data-property-section="image" class="editor-media-property"><button class="media-library-picker" id="property-image-library" type="button"><span>▦</span><strong>Bild aus Mediendatenbank wählen</strong><small id="property-image-selection">Noch kein Bild ausgewählt</small></button><p class="property-note">Neue Bilder werden in der Mediendatenbank hochgeladen und dort einem Ordner zugeordnet.</p></div>
-            <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><p class="property-note">Neue Videos werden zentral in der Mediendatenbank hochgeladen und gepflegt.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label></div>
+            <div data-property-section="video" class="editor-media-property"><button class="media-library-picker" id="property-video-library" type="button"><span>▶</span><strong>Video aus Mediendatenbank wählen</strong><small id="property-video-selection">Noch kein Video ausgewählt</small></button><label class="form-field"><span>Video-URL</span><input id="property-video-url" type="url" maxlength="2000" placeholder="https://…/video.mp4 oder YouTube-Link" autocomplete="off" spellcheck="false"></label><button type="button" class="button button-secondary" id="property-video-url-apply">URL übernehmen</button><p id="property-video-url-status" class="property-note" role="status" aria-live="polite">Direkte Videodatei oder YouTube-Video verlinken. Die Datei wird nicht kopiert.</p><label class="toggle-label"><input id="property-video-muted" type="checkbox" checked> Ohne Ton abspielen</label><label class="toggle-label"><input id="property-video-hide-captions" type="checkbox" checked> Untertitel ausblenden</label><label class="toggle-label"><input id="property-video-controls" type="checkbox"> Bedienelemente anzeigen</label><p class="property-note">Autostart mit Ton kann vom Browser blockiert werden. Eingebrannte Texte sowie Anbieterlogos und Werbung lassen sich nicht entfernen.</p></div>
             <fieldset id="media-placement-properties" class="editor-media-placement" hidden>
               <legend>Medienplatzierung</legend>
               <label class="form-field"><span>Darstellung</span><select id="property-media-fit"><option value="cover">Inhalt beschneiden</option><option value="contain">Inhalt einpassen</option><option value="none">Originalgröße anzeigen</option></select></label>
@@ -1899,15 +1900,16 @@
   <dialog id="customer-invitation-dialog" class="customer-dialog"><form id="customer-invitation-form"><header class="customer-dialog-header"><h2>Kundenlink erstellen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog" aria-label="Kundenlink-Dialog schließen">×</button></header><div class="customer-form-grid"><label class="form-field"><span>Kunde</span><input id="customer-invitation-name" maxlength="180" required></label><label class="form-field"><span>Kunden-Tag (mit Präfix „Kunde:“)</span><input id="customer-invitation-tag" maxlength="90" placeholder="Leer: Kundenname"></label></div><label class="form-field"><span>Veranstaltung suchen</span><input id="customer-invitation-event-search" type="search"></label><label class="form-field"><span>Veranstaltung</span><select id="customer-invitation-event" required></select></label><fieldset><legend>Für diesen Kunden erlaubte Displays</legend><label class="form-field"><span>Displays suchen</span><input id="customer-invitation-display-search" type="search"></label><div id="customer-invitation-displays" class="customer-target-list"></div></fieldset><div class="customer-form-grid"><label class="form-field"><span>Ausspielung frühestens</span><input id="customer-window-start" type="datetime-local" required></label><label class="form-field"><span>Ausspielung spätestens</span><input id="customer-window-end" type="datetime-local" required></label><label class="form-field"><span>Kundenlink gültig bis</span><input id="customer-edit-until" type="datetime-local" required></label></div><p>Zeiten gelten für Europe/Berlin. Der Link erlaubt höchstens 20 Dateien, je 20 MB und insgesamt 100 MB. Er erteilt keine CMS- oder direkten Ausspielrechte.</p><p id="customer-invitation-message" role="status"></p><label class="form-field" id="customer-link-result" hidden><span>Kundenlink – nur jetzt vollständig angezeigt, bitte kopieren</span><input id="customer-invitation-url" readonly></label><div class="dialog-actions"><button type="button" class="button button-secondary" id="customer-link-copy" hidden>Link kopieren</button><button type="submit" class="button button-primary" id="customer-link-submit">Link erstellen</button><button type="button" class="button button-secondary" data-close-dialog="customer-invitation-dialog">Schließen</button></div></form></dialog>
   <dialog id="customer-review-dialog" class="customer-dialog"><header class="customer-dialog-header"><h2>Ausspielvorschlag prüfen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog" aria-label="Vorschlagsprüfung schließen">×</button></header><div id="customer-review-summary"></div><div id="customer-review-preview"></div><label class="form-field"><span>Begründung bei Ablehnung (optional)</span><textarea id="customer-review-note" maxlength="1000" rows="3"></textarea></label><p id="customer-review-status" role="status"></p><div class="dialog-actions"><button type="button" class="button button-primary" id="customer-review-approve">Freigeben und Zeitzuweisungen anlegen</button><button type="button" class="button button-secondary" id="customer-review-reject">Ablehnen</button><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog">Schließen</button></div></dialog>
 
-  <script src="runtime-config.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/fullscreen-control.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/media-placement.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/editor-alignment.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/event-image.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/font-library.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/touch-layout.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/health-telemetry.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
-  <script src="player/playback-proof.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
+  <script src="runtime-config.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/fullscreen-control.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/media-placement.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/video-options.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/editor-alignment.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/event-image.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/font-library.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/touch-layout.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/health-telemetry.js?v=3.49.0-20261118173111%2B8443577a"></script>
+  <script src="player/playback-proof.js?v=3.49.0-20261118173111%2B8443577a"></script>
   <dialog id="event-flow-template-dialog" data-license-modules="events schedule operations channels displays" class="event-flow-dialog" aria-labelledby="event-flow-template-title"><form id="event-flow-template-form">
     <div class="section-heading"><h2 id="event-flow-template-title">Ablaufvorlage</h2><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
     <label>Vorlagenname<input id="event-flow-template-name" required maxlength="200"></label>
@@ -1924,7 +1926,7 @@
     <fieldset><legend>Ziel-Displays, Gruppen und Matrizen</legend><input type="search" id="event-flow-target-search" placeholder="Ziele suchen" aria-label="Ausspielziele suchen"><div id="event-flow-targets" class="event-flow-targets"></div></fieldset>
     <p class="event-flow-error" role="alert"></p><div class="section-actions"><button type="submit" class="button button-primary">Zuordnung speichern</button><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
   </form></dialog>
-  <script src="app.js?v=3.48.1-20261118160210%2B3b862bd3"></script>
+  <script src="app.js?v=3.49.0-20261118173111%2B8443577a"></script>
 
 </body>
 </html>

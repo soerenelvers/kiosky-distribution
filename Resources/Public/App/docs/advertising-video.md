@@ -92,3 +92,6 @@ Persistenz, beide Werbeformate und den tatsächlichen Player-Platzhalter in Chro
 `KIOSKY_BROWSER_ENGINE=webkit` nutzt zusätzlich WebKit. Native CMS-Picker-Callbacks
 werden im Browser isoliert simuliert; die CMS-Domain wird separat über beide
 nativen PHP-APIs getestet.
+
+Video-Links und Ton-/Untertitel-/Bedienelementeoptionen im Slide-/Vorlagen-Editor:
+[Video per URL](slide-video-url.md).

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "3b862bd3f7e9a7c01c6fd969cee3241398fc5e9f",
+  "source_commit": "8443577a5714877fabbe34780b913355fff07b83",
   "product": "kiosky",
-  "version": "3.48.1",
-  "released_at": "2026-11-18T16:02:12.476Z",
+  "version": "3.49.0",
+  "released_at": "2026-11-18T17:31:13.241Z",
   "channel": "stable",
-  "release_notes": "## [3.48.1]\n\n- Die Einstellungsübersicht lädt Werbung samt Mediathek und Kalender erst beim Öffnen des jeweiligen Bereichs.\n\n- Standalone-Player lösen nur tatsächlich verwendete Medien-IDs auf; wiederholte Referenzen und fehlende IDs werden je Antwort einmal gelesen. Dateiänderungen bleiben beim nächsten Abruf sichtbar.\n- CMS-Einstellungen für Module, Veranstaltungen, Kalender, Speisekarten und Player-Überwachung benötigen keine Mediathek-Vollabfrage und lösen keine Medienmigration aus. Rechte und Schreibkonfliktschutz bleiben erhalten.\n- Die Live-Ausgabevorschau lädt nur sichtbare beziehungsweise nahe Displaykarten einschließlich sichtbarer Matrix-Mitglieder, mit höchstens zwei parallelen Abrufen. Scrollen lädt weitere Ausgaben nach.\n- Hintergrundabfragen pausieren bei geschlossenen Überwachungspanels, in anderen Ansichten, versteckten Tabs und offenen Bearbeitungsdialogen. Player-Abfragefrequenzen und Warnungsreaktion bleiben unverändert.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.48.1",
+  "release_notes": "## [3.49.0]\n\n- Video-Elemente im Slide-/Vorlagen-Editor unterstützen direkte HTTP-/HTTPS-Videolinks und YouTube-Video-Links. Neuer Einstieg „Video per URL“; die bestehende native Medienauswahl bleibt erhalten.\n- Pro Video: stumm/mit Ton, Untertitel ausblenden und Bedienelemente anzeigen. Vorschau und Player berücksichtigen dieselben Einstellungen. YouTube erhält Ton-/Untertitelvorgaben und einen eingeschränkten, auf Ursprung und konkretes iframe geprüften Steuerkanal ohne fremdes JavaScript.\n- Ein Quellenwechsel entfernt alte Medienreferenzen, Schnittdaten und Metadaten; Position und Gestaltung bleiben erhalten. Ungültige URLs verändern den vorhandenen Inhalt nicht.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.49.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.48.1",
+    "core_version": "3.49.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.48.1",
-    "typo3_extension_version": "3.48.1"
+    "wordpress_plugin_version": "3.49.0",
+    "typo3_extension_version": "3.49.0"
   },
   "components": {
     "core": {
-      "version": "3.48.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.1.zip?ref=v3.48.1",
-      "sha256": "2df7756906df29bee09824a33aca3f73854ea3b3a7f6e61bf14ca52144413aff"
+      "version": "3.49.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.49.0.zip?ref=v3.49.0",
+      "sha256": "6e025c3801b3b612465a8ac9ef2c392b0ed081f1a9f6920840823cd2ed14ca06"
     },
     "standalone": {
-      "version": "3.48.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.48.1.zip?ref=v3.48.1",
-      "sha256": "2df7756906df29bee09824a33aca3f73854ea3b3a7f6e61bf14ca52144413aff"
+      "version": "3.49.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.49.0.zip?ref=v3.49.0",
+      "sha256": "6e025c3801b3b612465a8ac9ef2c392b0ed081f1a9f6920840823cd2ed14ca06"
     },
     "wordpress": {
-      "version": "3.48.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.48.1.zip?ref=v3.48.1",
-      "sha256": "f1ca2259e1bc0bdba612694c905c91a28b33a2513c28ac93eb6ed2a340edd029",
+      "version": "3.49.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.49.0.zip?ref=v3.49.0",
+      "sha256": "e65539e7fc48b71caa0a1e66736ff8810333421a23d351ec4ba07ee78479f5db",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.48.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.48.1.zip?ref=v3.48.1",
-      "sha256": "1d5c35f2c435822063d7c5f203e913f8d132ff6a7e8d7d68c3c54dd200afd669",
+      "version": "3.49.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.49.0.zip?ref=v3.49.0",
+      "sha256": "46843e083d61e43358e5329894cf344e55e2cf46f6b2694a42d67048efd5ba13",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

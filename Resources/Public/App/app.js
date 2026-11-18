@@ -789,7 +789,7 @@ function preparePlaybackTransition(slide,animate,elapsedMs){
     outgoing.removeAttribute('id');outgoing.className='player-layout-slide player-outgoing-slide is-visible';outgoing.setAttribute('aria-hidden','true');outgoing.inert=true;
     Object.assign(outgoing.style,{position:'absolute',left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`,margin:'0',opacity:'1',transform:'none',transition:'none',transitionDelay:'',zIndex:'0',pointerEvents:'none'});
     outgoing.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
-    outgoing.querySelectorAll('video,audio').forEach(media=>{media.muted=true;});
+    outgoing.querySelectorAll('video,audio').forEach(media=>{media.muted=true;});globalThis.KioskyVideoOptions?.mute(outgoing);
     outgoing.parentElement.insertBefore(incoming,outgoing);slide=incoming;
   }
   releasePlaybackMedia(slide);slide.style.transition='none';slide.classList.remove('is-visible');slide.style.transitionDelay='';
@@ -2612,7 +2612,7 @@ function renderModuleSwitching(){
 const editorElementLabels={text:'Text',ticker:'Laufelement',weather:'Wetterdaten','qr-code':'QR-Code',countdown:'Countdown',image:'Bild',video:'Video',web:'Website',event:'Eventdaten','event-overview':'Veranstaltungsübersicht','event-table':'Event-Tabelle','event-stamp':'Event-Stempel','event-field':'Eventfeld',wayfinding:'Wegweisung','alert-icon':'Warnsymbol'};
 function editorElementLicensed(type){return licenseAllows('channels')&&(!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&(!['image','video'].includes(type)||licenseAllows('media'));}
 function editorElementEnabled(type,settings=state.featureSettings||{}){return editorElementLicensed(type)&& (!['event','event-table','event-field','event-stamp','event-overview'].includes(type)||licenseAllows('events'))&&settings[`editor_${type}`]!==false;}
-function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');}
+function applyEditorElementVisibility(){document.querySelectorAll('[data-add-element]').forEach(button=>{button.hidden=!editorElementEnabled(button.dataset.addElement);});const picker=document.querySelector('.editor-icon-picker');if(picker)picker.hidden=!editorElementEnabled('alert-icon');const videoUrl=document.querySelector('#add-video-url');if(videoUrl)videoUrl.hidden=!editorElementEnabled('video');}
 function renderEditorElementSettings(){
   const list=document.querySelector('#editor-element-settings');if(!list)return;
   list.innerHTML=Object.entries(editorElementLabels).filter(([type])=>editorElementLicensed(type)).map(([type,label])=>`<label><input type="checkbox" data-editor-element-setting="${escapeHtml(type)}" ${editorElementEnabled(type)?'checked':''} ${!licenseAllows('channels')||(['event','event-table','event-field','event-stamp','event-overview'].includes(type)&&!licenseAllows('events'))?'disabled':''}><span><strong>${escapeHtml(label)}</strong><small>Im Slide-Editor verfügbar</small></span></label>`).join('');
@@ -3779,14 +3779,15 @@ function youtubeVideoId(value){
 }
 function youtubeVideoMarkup(element,src,autoplay=false){
   const id=youtubeVideoId(src);if(!id)return '';
-  const url=new URL('https://www.youtube-nocookie.com/embed/'+id);for(const [key,value] of Object.entries({autoplay:autoplay?'1':'0',mute:'1',loop:'1',playlist:id,playsinline:'1',controls:autoplay?'0':'1',rel:'0',disablekb:'1'}))url.searchParams.set(key,value);
+  const url=new URL('https://www.youtube-nocookie.com/embed/'+id);for(const [key,value] of Object.entries({autoplay:autoplay?'1':'0',mute:element.muted===false?'0':'1',cc_load_policy:element.hideCaptions===false?'1':'0',enablejsapi:'1',loop:'1',playlist:id,playsinline:'1',controls:element.showControls===true||(!autoplay&&element.showControls===undefined)?'1':'0',rel:'0',disablekb:'1'}))url.searchParams.set(key,value);
+  if(globalThis.location?.origin&&/^https?:$/.test(globalThis.location.protocol))url.searchParams.set('origin',globalThis.location.origin);
   const start=Math.max(0,Math.floor(Number(element.trimStart)||0)),end=Math.floor(Number(element.trimEnd)||0);if(start)url.searchParams.set('start',String(start));if(end>start)url.searchParams.set('end',String(end));
-  return `<span class="media-placement"><iframe src="${escapeHtml(url.href)}" title="YouTube-Werbevideo" ${KioskyMediaPlacement.attributes(element)} allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></span>`;
+  return `<span class="media-placement"><iframe data-kiosky-video="youtube" data-video-muted="${element.muted!==false}" data-video-hide-captions="${element.hideCaptions!==false}" src="${escapeHtml(url.href)}" title="YouTube-Werbevideo" ${KioskyMediaPlacement.attributes(element)} allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></span>`;
 }
 function mediaContentMarkup(element,src,video=false,extra=''){
   if(video&&youtubeVideoId(src)){if(/\bautoplay\b/.test(extra))return youtubeVideoMarkup(element,src,true);return `<span class="media-placement"><img src="https://i.ytimg.com/vi/${youtubeVideoId(src)}/hqdefault.jpg" alt="YouTube-Video" loading="lazy" ${KioskyMediaPlacement.attributes(element)}></span>`;}
   if(!video&&element.eventImageEdit&&globalThis.KioskyEventImage)return `<span class="media-placement">${KioskyEventImage.markup({imageUrl:src,imageEdit:element.eventImageEdit},element.mediaFit,'placed-media event-image-crop',element)}</span>`;
-  return `<span class="media-placement">${video?`<video src="${escapeHtml(src)}" ${element.posterSrc?`poster="${escapeHtml(element.posterSrc)}"`:""} ${KioskyMediaPlacement.attributes(element)} playsinline ${extra}></video>`:`<img src="${escapeHtml(src)}" alt="" ${KioskyMediaPlacement.attributes(element)} ${extra}>`}</span>`;
+  return `<span class="media-placement">${video?`<video data-video-hide-captions="${element.hideCaptions!==false}" ${element.showControls===true?'controls':'disablepictureinpicture'} controlslist="nodownload noremoteplayback" src="${escapeHtml(src)}" ${element.posterSrc?`poster="${escapeHtml(element.posterSrc)}"`:""} ${KioskyMediaPlacement.attributes(element)} playsinline ${extra}></video>`:`<img src="${escapeHtml(src)}" alt="" ${KioskyMediaPlacement.attributes(element)} ${extra}>`}</span>`;
 }
 function previewTypography(value) {
   if(Array.isArray(value))return value.map(previewTypography);
@@ -4771,7 +4772,7 @@ function createEditorElement(type, x = 12, y = 16) {
   if (type === 'event-field') return { ...base, field: 'title', prefix: '', fallback: '–', locked: false, fontSize: 42, color: '#ffffff', width: 58, height: 18 };
   if (type === 'image') return { ...base, src: '', width: 42, height: 46 };
   if (type === 'alert-icon') { const picker=document.querySelector('#alert-icon-picker'),key=picker?.value||'general-warning',alt=picker?.selectedOptions?.[0]?.textContent||'Warnsymbol'; return { ...base, type: 'image', src: assetUrl(`/media/alerts/${key}.svg`), alt, background: 'transparent', width: 24, height: 36 }; }
-  if (type === 'video') return { ...base, src: '', muted: true, width: 52, height: 48 };
+  if (type === 'video') return { ...base, src: '', muted: true, hideCaptions:true, showControls:false, width: 52, height: 48 };
   if (type === 'wayfinding') return { ...base, x: 0, y: 0, width: 100, height: 100, background: 'transparent', color: '#ffffff', locked: false, logo: { src: '', position: 'top-left' }, clock: { enabled: false, position: 'bottom-right' }, rows: [
     { id: `row-${Date.now()}-1`, separator: false, expandCenter: false, left: { kind: 'arrow', direction: 'right' }, center: { kind: 'text', fontSizeUnit:'pt', responsiveText:true, text: 'Großer Saal', textStyle: 'heading', align: 'left' }, right: { kind: 'text', fontSizeUnit:'pt', responsiveText:true, text: '1. OG', textStyle: 'label', align: 'right' } },
     { id: `row-${Date.now()}-2`, separator: true, expandCenter: false, left: { kind: 'empty' }, center: { kind: 'text', fontSizeUnit:'pt', responsiveText:true, text: 'Foyer', textStyle: 'subheading', align: 'left' }, right: { kind: 'empty' } }
@@ -4899,6 +4900,16 @@ function addEditorElement(type, x, y) {
   scheduleSlideAutosave({ immediate: true, successMessage: 'Element wurde hinzugefügt und die Slide gespeichert.' });
 }
 
+function videoUrlElement(element,value){
+  const raw=String(value||'').trim();
+  if(!raw||raw.length>2000||/[\u0000-\u001f\u007f]/.test(raw))throw new Error('Bitte eine gültige Video-URL eingeben.');
+  let url;try{url=new URL(raw);}catch{throw new Error('Bitte eine vollständige Video-URL mit https:// eingeben.');}
+  if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new Error('Nur HTTP-/HTTPS-Links ohne eingebettete Zugangsdaten sind erlaubt.');
+  if(['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com','youtu.be'].includes(url.hostname.toLowerCase())&&!youtubeVideoId(raw))throw new Error('Bitte einen gültigen YouTube-Video-Link verwenden, keinen Kanal oder eine Playlist.');
+  const next={...element,type:'video',src:url.href};
+  for(const key of ['mediaAssetId','trimStart','trimEnd','durationSeconds','mediaNaturalWidth','mediaNaturalHeight','posterSrc'])delete next[key];
+  return next;
+}
 function applyMediaAssetToElement(element, asset) {
   if (!element || !asset) return;
   element.type = asset.type === 'video' ? 'video' : 'image';
@@ -5408,7 +5419,11 @@ function syncEditorProperties() {
   document.querySelector('#property-event-locked').checked = Boolean(element.locked);
   const selectedAsset = state.mediaAssets.find(asset => asset.id === element.mediaAssetId);
   document.querySelector('#property-image-selection').textContent = element.type === 'image' ? selectedAsset?.name || (element.src ? 'Bestehendes Bild · bitte bei Bedarf neu zuordnen' : 'Noch kein Bild ausgewählt') : '';
-  document.querySelector('#property-video-selection').textContent = element.type === 'video' ? selectedAsset?.name || (element.src ? 'Bestehendes Video · bitte bei Bedarf neu zuordnen' : 'Noch kein Video ausgewählt') : '';
+  document.querySelector('#property-video-selection').textContent = element.type === 'video' ? selectedAsset?.name || (element.src ? 'Video per URL verknüpft' : 'Noch kein Video ausgewählt') : '';
+  document.querySelector('#property-video-url').value = element.type==='video'?element.src||'':'';
+  document.querySelector('#property-video-url-status').textContent=element.type==='video'&&element.src?(youtubeVideoId(element.src)?'YouTube-Video verlinkt. Die Laufzeit folgt der Kanaleinstellung.':'Videoquelle übernommen. Die Datei muss vom Player erreichbar sein.'):'Direkte Videodatei oder YouTube-Video verlinken. Die Datei wird nicht kopiert.';
+  document.querySelector('#property-video-hide-captions').checked=element.hideCaptions!==false;
+  document.querySelector('#property-video-controls').checked=element.showControls===true;
   document.querySelector('#property-web-url').value = element.type === 'web' ? element.src || '' : '';
   document.querySelector('#property-video-muted').checked = element.muted !== false;
   syncMediaPlacementProperties(element);
@@ -5768,7 +5783,7 @@ const propertyBindings = [
   ['property-text-condition','eventCondition',value=>value],['property-text-condition-field','eventConditionField',value=>value],['property-text-condition-value','eventConditionValue',value=>value],
   ['property-stamp-condition','stampCondition',value=>value],['property-stamp-field','stampField',value=>value],['property-stamp-value','stampValue',value=>value],['property-stamp-style','stampStyle',value=>value],['property-stamp-text-color','stampTextColor',value=>value],
   ['property-overview-count','eventCount',value=>overviewEventCount(value)], ['property-text', 'text', value => value], ['property-font-size', 'fontSize', value=>Math.max(.5,Math.min(1000,Number(value)||.5))], ['property-responsive-text','responsiveText',(_,input)=>input.checked], ['property-auto-font-size','autoFontSize',(_,input)=>input.checked], ['property-color', 'color', value => value], ['property-event', 'event', value => value], ['property-event-heading','eventHeading',value=>value], ['property-event-table-labels','eventTableLabels',(_,input)=>input.checked], ['property-event-table-empty','eventTableShowEmpty',(_,input)=>input.checked],
-  ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked],
+  ['property-web-url', 'src', value => value], ['property-video-muted', 'muted', (_, input) => input.checked], ['property-video-hide-captions','hideCaptions',(_,input)=>input.checked], ['property-video-controls','showControls',(_,input)=>input.checked],
   ['property-event-field', 'field', value => value], ['property-event-prefix', 'prefix', value => value], ['property-event-fallback', 'fallback', value => value], ['property-event-locked', 'locked', (_, input) => input.checked],
   ['property-background', 'background', value => value],
   ['property-rotation', 'rotation', Number], ['property-opacity', 'opacity', Number], ['property-padding', 'padding', Number], ['property-radius', 'radius', Number],
@@ -5843,6 +5858,13 @@ document.querySelectorAll('[data-ticker-add]').forEach(button => button.addEvent
   scheduleSlideAutosave();
 }));
 
+document.querySelector('#add-video-url').addEventListener('click',()=>{if(!editorElementEnabled('video'))return;addEditorElement('video');setEditorMobilePanel('properties');document.querySelector('#property-video-url').focus();});
+document.querySelector('#property-video-url-apply').addEventListener('click',()=>{
+  const element=selectedEditorElement();if(!element||element.type!=='video')return;
+  try{const next=videoUrlElement(element,document.querySelector('#property-video-url').value);pushEditorHistory();for(const key of Object.keys(element))delete element[key];Object.assign(element,next);renderEditorCanvas();scheduleSlideAutosave({immediate:true,successMessage:'Video-URL wurde übernommen und die Slide gespeichert.'});}
+  catch(error){document.querySelector('#property-video-url-status').textContent=error.message;}
+});
+document.querySelector('#property-video-url').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();document.querySelector('#property-video-url-apply').click();}});
 document.querySelector('#property-image-library').addEventListener('click', () => openMediaLibrary(asset => {
   const element = selectedEditorElement();
   if (!element) return;
