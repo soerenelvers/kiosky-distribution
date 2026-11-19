@@ -2027,3 +2027,24 @@ body[data-license-missing~="media"] :is(#event-image-select,#event-bulk-image-se
 .emergency-warning-card small { display:block; font-size:.8em; letter-spacing:normal; }
 .emergency-warning-card p { max-width:none; margin:.7em 0 0; font-size:1em; line-height:1.3; white-space:pre-wrap; overflow-wrap:anywhere; }
 .emergency-takeover.has-dwd-warnings small { color:inherit; opacity:.92; }
+
+/* Seasonal overlays animate transforms/opacity only; library previews stay static. */
+.seasonal-overlay { position:absolute; inset:0; overflow:hidden; display:grid; place-items:center; pointer-events:none; user-select:none; color:var(--seasonal-color); }
+.seasonal-overlay svg { width:100%; height:100%; overflow:hidden; }
+.seasonal-flake { position:absolute; top:-8%; width:var(--size); min-width:2px; max-width:12px; height:108%; animation:seasonal-snow var(--duration) linear var(--delay) infinite; }
+.seasonal-flake i { display:block; width:100%; height:0; padding-top:100%; border-radius:50%; background:var(--seasonal-color); }
+.seasonal-star { position:absolute; line-height:1; font-family:Arial,sans-serif; font-size:18px; text-align:center; animation:seasonal-twinkle var(--seasonal-period) ease-in-out infinite alternate; }
+.seasonal-light,.seasonal-glow { animation:seasonal-twinkle var(--seasonal-period) ease-in-out infinite alternate; }
+.seasonal-sway { transform-box:fill-box; transform-origin:50% 100%; animation:seasonal-sway calc(var(--seasonal-period) * 2) ease-in-out infinite alternate; }
+.seasonal-wave { transform-box:fill-box; transform-origin:0% 100%; animation:seasonal-wave var(--seasonal-period) ease-in-out infinite alternate; }
+@keyframes seasonal-snow { from { transform:translate3d(0,0,0); } to { transform:translate3d(var(--drift),110%,0); } }
+@keyframes seasonal-twinkle { from { opacity:.45; } to { opacity:1; } }
+@keyframes seasonal-sway { from { transform:rotate(-1deg); } to { transform:rotate(1deg); } }
+@keyframes seasonal-wave { from { transform:rotate(-8deg); } to { transform:rotate(8deg); } }
+.seasonal-overlay[data-seasonal-motion="false"] * { animation:none!important; }
+.seasonal-overlay[data-seasonal-motion="false"] .seasonal-flake { top:var(--rest-y); height:0; transform:none; }
+@media (prefers-reduced-motion:reduce) { .seasonal-overlay * { animation:none!important; } .seasonal-flake { top:var(--rest-y); height:0; transform:none; } }
+
+.seasonal-star svg { display:block; width:100%; height:auto; }
+
+.seasonal-player-element { pointer-events:none; }

@@ -1,5 +1,6 @@
-## [3.49.0]
+## [3.50.0]
 
-- Video-Elemente im Slide-/Vorlagen-Editor unterstützen direkte HTTP-/HTTPS-Videolinks und YouTube-Video-Links. Neuer Einstieg „Video per URL“; die bestehende native Medienauswahl bleibt erhalten.
-- Pro Video: stumm/mit Ton, Untertitel ausblenden und Bedienelemente anzeigen. Vorschau und Player berücksichtigen dieselben Einstellungen. YouTube erhält Ton-/Untertitelvorgaben und einen eingeschränkten, auf Ursprung und konkretes iframe geprüften Steuerkanal ohne fremdes JavaScript.
-- Ein Quellenwechsel entfernt alte Medienreferenzen, Schnittdaten und Metadaten; Position und Gestaltung bleiben erhalten. Ungültige URLs verändern den vorhandenen Inhalt nicht.
+- Neues Element „Animierte Deko“ in Slides und Vorlagen: Schneefall, Weihnachtsbaum mit Lichtern, winkender Schneemann, leuchtender Halloween-Kürbis und funkelnde Sterne.
+- Motive, Akzentfarbe, Geschwindigkeit, Animation ein/aus und Partikelanzahl im Editor einstellen; Position, Größe, Drehung, Deckkraft und Ebenen wie gewohnt nutzen.
+- Lokale Vektoren/CSS ohne externe Dienste, Canvas oder Animationstimer. Maximal 40 Partikel je Overlay; Bibliotheksminiaturen bleiben statisch, reduzierte Bewegung wird respektiert. Overlays blockieren im Player keine Bedienelemente darunter.
+- Gemeinsame Darstellung in Editor, Vorschau und Player für Standalone, WordPress und TYPO3; Werkzeug unter den Editor-Einstellungen ein-/ausblendbar. Keine Datenmigration erforderlich.
