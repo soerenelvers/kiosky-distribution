@@ -1,6 +1,6 @@
-## [3.50.0]
+## [3.51.1]
 
-- Neues Element „Animierte Deko“ in Slides und Vorlagen: Schneefall, Weihnachtsbaum mit Lichtern, winkender Schneemann, leuchtender Halloween-Kürbis und funkelnde Sterne.
-- Motive, Akzentfarbe, Geschwindigkeit, Animation ein/aus und Partikelanzahl im Editor einstellen; Position, Größe, Drehung, Deckkraft und Ebenen wie gewohnt nutzen.
-- Lokale Vektoren/CSS ohne externe Dienste, Canvas oder Animationstimer. Maximal 40 Partikel je Overlay; Bibliotheksminiaturen bleiben statisch, reduzierte Bewegung wird respektiert. Overlays blockieren im Player keine Bedienelemente darunter.
-- Gemeinsame Darstellung in Editor, Vorschau und Player für Standalone, WordPress und TYPO3; Werkzeug unter den Editor-Einstellungen ein-/ausblendbar. Keine Datenmigration erforderlich.
+- Lichterketten bleiben auch im Hochkant- und Quadratformat mit dem Kabel verbunden; die SVG-Verankerung richtet sich an der Kabelkante aus.
+- Schneefall zeigt erkennbare sechsarmige Schneeflocken statt runder Punkte.
+- Animierte Deko erweitert: quer über die Fläche hoppelnder Osterhase, sieben kullernde Ostereier am unteren Rand und umlaufende Lichterkette mit sanftem Blinken.
+- Farbe und Tempo am Element ändern; Lichteranzahl auf 8–40 begrenzt. Statische Miniaturen und reduzierte Bewegung zeigen alle Motive sichtbar ohne Animation. Gemeinsame Ausgabe für Standalone, WordPress und TYPO3; keine Datenmigration oder neue Abhängigkeit.

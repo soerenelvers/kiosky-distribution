@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "f0b79d182d7d5de2d40107d857cdf621f3ebef8a",
+  "source_commit": "5358d139fa1fd2c53ef7f05cb81b30f9850c4ee0",
   "product": "kiosky",
-  "version": "3.50.0",
-  "released_at": "2026-11-19T13:38:38.751Z",
+  "version": "3.51.1",
+  "released_at": "2026-11-19T14:51:27.845Z",
   "channel": "stable",
-  "release_notes": "## [3.50.0]\n\n- Neues Element „Animierte Deko“ in Slides und Vorlagen: Schneefall, Weihnachtsbaum mit Lichtern, winkender Schneemann, leuchtender Halloween-Kürbis und funkelnde Sterne.\n- Motive, Akzentfarbe, Geschwindigkeit, Animation ein/aus und Partikelanzahl im Editor einstellen; Position, Größe, Drehung, Deckkraft und Ebenen wie gewohnt nutzen.\n- Lokale Vektoren/CSS ohne externe Dienste, Canvas oder Animationstimer. Maximal 40 Partikel je Overlay; Bibliotheksminiaturen bleiben statisch, reduzierte Bewegung wird respektiert. Overlays blockieren im Player keine Bedienelemente darunter.\n- Gemeinsame Darstellung in Editor, Vorschau und Player für Standalone, WordPress und TYPO3; Werkzeug unter den Editor-Einstellungen ein-/ausblendbar. Keine Datenmigration erforderlich.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.50.0",
+  "release_notes": "## [3.51.1]\n\n- Lichterketten bleiben auch im Hochkant- und Quadratformat mit dem Kabel verbunden; die SVG-Verankerung richtet sich an der Kabelkante aus.\n- Schneefall zeigt erkennbare sechsarmige Schneeflocken statt runder Punkte.\n- Animierte Deko erweitert: quer über die Fläche hoppelnder Osterhase, sieben kullernde Ostereier am unteren Rand und umlaufende Lichterkette mit sanftem Blinken.\n- Farbe und Tempo am Element ändern; Lichteranzahl auf 8–40 begrenzt. Statische Miniaturen und reduzierte Bewegung zeigen alle Motive sichtbar ohne Animation. Gemeinsame Ausgabe für Standalone, WordPress und TYPO3; keine Datenmigration oder neue Abhängigkeit.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.51.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.50.0",
+    "core_version": "3.51.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.50.0",
-    "typo3_extension_version": "3.50.0"
+    "wordpress_plugin_version": "3.51.1",
+    "typo3_extension_version": "3.51.1"
   },
   "components": {
     "core": {
-      "version": "3.50.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.50.0.zip?ref=v3.50.0",
-      "sha256": "64d5d0215fffde890b72299da417bb51743c8264974a5a1aa36c01f3bcdca2bd"
+      "version": "3.51.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.1.zip?ref=v3.51.1",
+      "sha256": "b4e60ccc0bb2be4937ce4bffb30828dc853fb0d1b7f471f2c91f1083b1d81807"
     },
     "standalone": {
-      "version": "3.50.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.50.0.zip?ref=v3.50.0",
-      "sha256": "64d5d0215fffde890b72299da417bb51743c8264974a5a1aa36c01f3bcdca2bd"
+      "version": "3.51.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.1.zip?ref=v3.51.1",
+      "sha256": "b4e60ccc0bb2be4937ce4bffb30828dc853fb0d1b7f471f2c91f1083b1d81807"
     },
     "wordpress": {
-      "version": "3.50.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.50.0.zip?ref=v3.50.0",
-      "sha256": "ec11af7c26c17d3cf4c26475c54f99a851139e47ab1e67387d7c514d7c4d054e",
+      "version": "3.51.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.51.1.zip?ref=v3.51.1",
+      "sha256": "da96098f6d10cc380a6ad39acf039b8f2e1db3bdfa19c259ca39f4643e228e09",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.50.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.50.0.zip?ref=v3.50.0",
-      "sha256": "fb06456723bf13641a6360fc9ada1beca2c949232250f650836584d6a5653f92",
+      "version": "3.51.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.51.1.zip?ref=v3.51.1",
+      "sha256": "9c14600976c8513e1a106d9af7fe18a04f78c6fefeac71fee1bcdbafc08afed0",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
