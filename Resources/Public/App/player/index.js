@@ -6,7 +6,7 @@
   const serverAddress = document.querySelector('#server-address');
   const status = document.querySelector('#catalog-status');
   const grid = document.querySelector('#player-grid');
-  const piRelease='https://github.com/soerenelvers/kiosky/releases/download/raspberry-pi-v1.0.0-beta.2';
+  const piRelease='https://github.com/soerenelvers/kiosky-distribution/releases/download/raspberry-pi-v1.0.0-beta.2';
   serverAddress.textContent = window.location.origin;
 
   function browserCard() {

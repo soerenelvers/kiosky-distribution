@@ -21,8 +21,8 @@ Hardwareabnahme; ein erfolgreich gebautes Image ersetzt diese Prüfung nicht.
 
 1. Unter `/player` das passende `kiosky-player-<modell>.img.xz` herunterladen.
    **Anleitung und SHA-256-Prüfsummen** öffnet die dauerhafte
-   [Image-Vorabversion](https://github.com/soerenelvers/kiosky/releases/tag/raspberry-pi-v1.0.0-beta.2).
-   Für das private Repository ist eine GitHub-Anmeldung mit Zugriffsberechtigung nötig.
+   [Image-Vorabversion](https://github.com/soerenelvers/kiosky-distribution/releases/tag/raspberry-pi-v1.0.0-beta.2).
+   Die generischen Images sind über das öffentliche Distributions-Repository ohne GitHub-Anmeldung verfügbar. Kiosky-Zugangsdaten sind in den Images nicht enthalten.
    `SHA256SUMS.txt` herunterladen und die Prüfsumme vergleichen. Diese Images sind
    ausdrücklich Beta-Versionen; die Hardwareabnahme steht noch aus.
 2. Raspberry Pi Imager öffnen, **eigenes Image** wählen und auf eine SD-Karte mit
@@ -132,6 +132,10 @@ Der Publisher prüft alle vier Artefakte, Quellcommit, Builder und SHA-256-Prüf
 Er erstellt eine unveränderliche **Vorabversion**, ohne den neuesten Kiosky-Stable-Release
 zu ersetzen. `images.json` dokumentiert Herkunft, Größen und Prüfsummen. Bereits
 existierende Image-Versionen werden nicht überschrieben. Neue Versionen benötigen
-neue Versionsnummern und entsprechend aktualisierte Links im Player Center.
+neue Versionsnummern. Vor dem Aktualisieren der Player-Center-Links müssen die geprüften Images auch im öffentlichen Repository `soerenelvers/kiosky-distribution` als unveränderliche Vorabversion bereitstehen. Der interne Image-Build veröffentlicht zunächst im privaten Quellrepository; dessen Download-Links sind für Nutzer ohne Repositoryzugriff nicht geeignet.
+
+Die öffentliche Bereitstellung enthält ausschließlich die vier generischen `.img.xz`-Images sowie `images.json`, `kiosky-player.example.json`, `README.md` und `SHA256SUMS.txt`. Vor Veröffentlichung die Herkunft aus dem erfolgreichen Image-Workflow, alle Größen und SHA-256-Werte sowie die XZ-Integrität prüfen. Image-Dateien und Manifest bleiben unverändert; die Anleitung darf auf die öffentlichen Downloads verweisen, ihre Prüfsumme wird entsprechend aktualisiert. Keine Kundenkonfigurationen, Browserprofile, Tokens oder Quellrepository-Archive übernehmen. Die öffentliche Vorabversion wird nicht als neuester Kiosky-Stable-Release markiert. Alle vier Download-URLs anschließend ohne GitHub-Anmeldung prüfen.
+
+Die großen Images werden direkt von der öffentlichen Distribution geladen und nicht durch WordPress/PHP oder den Kiosky-Server geleitet. Der Konfigurationsdownload auf `/player` bleibt installationsspezifisch und erhält insbesondere die richtigen CMS-/Unterverzeichnispfade.
 
 Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.

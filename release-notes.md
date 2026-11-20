@@ -1,6 +1,4 @@
-## [3.51.1]
+## [3.51.2]
 
-- Lichterketten bleiben auch im Hochkant- und Quadratformat mit dem Kabel verbunden; die SVG-Verankerung richtet sich an der Kabelkante aus.
-- Schneefall zeigt erkennbare sechsarmige Schneeflocken statt runder Punkte.
-- Animierte Deko erweitert: quer über die Fläche hoppelnder Osterhase, sieben kullernde Ostereier am unteren Rand und umlaufende Lichterkette mit sanftem Blinken.
-- Farbe und Tempo am Element ändern; Lichteranzahl auf 8–40 begrenzt. Statische Miniaturen und reduzierte Bewegung zeigen alle Motive sichtbar ohne Animation. Gemeinsame Ausgabe für Standalone, WordPress und TYPO3; keine Datenmigration oder neue Abhängigkeit.
+- Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 im Player Center aus der öffentlichen Kiosky-Distribution laden: keine GitHub-Anmeldung erforderlich und kein 404 wegen des privaten Quellrepositorys.
+- Anleitung und Prüfsummen führen ebenfalls zur öffentlichen Image-Vorabversion. Die installationsspezifische Konfiguration bleibt für Standalone, WordPress und TYPO3 unverändert; große Images werden direkt geladen, ohne PHP-/Server-Proxy.
