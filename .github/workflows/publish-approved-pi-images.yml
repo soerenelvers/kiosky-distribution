@@ -1,0 +1,97 @@
+name: Publish approved Raspberry Pi images
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        required: true
+        type: string
+      image_downloads:
+        description: Short-lived read URLs for the four approved image files
+        required: true
+        type: string
+      metadata:
+        description: Base64 contents of the four approved metadata files
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: approved-raspberry-pi-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.actor == 'soerenelvers' && github.repository == 'soerenelvers/kiosky-distribution'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Verify and upload only the approved eight assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          import base64,hashlib,json,os,subprocess,urllib.parse,urllib.request
+          from pathlib import Path
+          REPO='soerenelvers/kiosky-distribution'
+          TAG='raspberry-pi-v1.0.0-beta.3'
+          RELEASE_ID=452640006
+          EXPECTED=json.loads('{"README.md":{"bytes":10714,"sha256":"e3b0dadc7e3da46797e412ae54010f8e36a6bf8ad3ede74b2f599d1fcfea4066"},"SHA256SUMS.txt":{"bytes":614,"sha256":"c969fbd0908e714dde86405345a306d7b45c1b3b0f5a7a4e7ee171afe73b2ee7"},"images.json":{"bytes":970,"sha256":"a83652d23ac13d494b173155d8f003ce1a60f33bb62264c357a510934b469c5b"},"kiosky-player-pi3.img.xz":{"bytes":392720800,"sha256":"1e9ae764926091b4bad2ed14b5731032c8b72fe61eee0c7a9115fa622117a76b"},"kiosky-player-pi4.img.xz":{"bytes":392785656,"sha256":"1e65df15885445336dcf9e1c1bc326cdb5e273abd16b80ac59f526129e71aca0"},"kiosky-player-pi5.img.xz":{"bytes":396245144,"sha256":"f9926b8d72dc979eb33670456bab581d99a1a4d6e4326c953636abb5fedf73ea"},"kiosky-player-zero2w.img.xz":{"bytes":392765572,"sha256":"043bbcbb5e57c915852c62f1e9cfdc3cb3367bf33cee3cd2cd6589e3f58bb459"},"kiosky-player.example.json":{"bytes":193,"sha256":"be2edfe68a96239308f7ce160851a3d06895ba7e0f7442d936bf98615dc8f4a1"}}')
+          assert os.environ['GITHUB_REPOSITORY']==REPO and os.environ['GITHUB_ACTOR']=='soerenelvers'
+          event=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          assert event['inputs']['confirmation']=='PUBLISH APPROVED PI IMAGES'
+          downloads=json.loads(event['inputs']['image_downloads'])
+          metadata=json.loads(event['inputs']['metadata'])
+          models=('zero2w','pi3','pi4','pi5')
+          images={f'kiosky-player-{m}.img.xz' for m in models}
+          assert set(downloads)==images and set(metadata)==set(EXPECTED)-images
+          for url in downloads.values():
+              parsed=urllib.parse.urlsplit(url)
+              assert parsed.scheme=='https' and parsed.hostname=='release-assets.githubusercontent.com' and not parsed.username and not parsed.password and not parsed.fragment
+              print('::add-mask::'+url,flush=True)
+          def gh(*args,input=None):
+              r=subprocess.run(['gh',*args],input=input,capture_output=True,text=True)
+              assert r.returncode==0,'GitHub operation failed; details suppressed'
+              return r.stdout
+          release=json.loads(gh('api',f'repos/{REPO}/releases/{RELEASE_ID}'))
+          assert release['tag_name']==TAG and release['draft'] and release['prerelease']
+          stage=Path(os.environ['GITHUB_WORKSPACE'])/'approved-pi-assets'
+          stage.mkdir(parents=True)
+          def digest(path):
+              with path.open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
+          for name,value in metadata.items():
+              data=base64.b64decode(value,validate=True)
+              assert len(data)==EXPECTED[name]['bytes'] and hashlib.sha256(data).hexdigest()==EXPECTED[name]['sha256']
+              (stage/name).write_bytes(data)
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args):return None
+          opener=urllib.request.build_opener(NoRedirect)
+          for name,url in downloads.items():
+              try:
+                  with opener.open(url,timeout=120) as response,(stage/name).open('wb') as output:
+                      assert response.status==200
+                      total=0
+                      while chunk:=response.read(1024*1024):
+                          total+=len(chunk);assert total<=EXPECTED[name]['bytes'];output.write(chunk)
+                  assert total==EXPECTED[name]['bytes'] and digest(stage/name)==EXPECTED[name]['sha256']
+                  subprocess.run(['xz','-t','-T2',str(stage/name)],check=True,capture_output=True)
+                  print('Verified '+name,flush=True)
+              except Exception:
+                  raise RuntimeError('Approved image download/verification failed: '+name) from None
+          assert {p.name for p in stage.iterdir()}==set(EXPECTED)
+          manifest=json.loads((stage/'images.json').read_text())
+          assert manifest['source_commit']=='0e37a298c62ef4b123b08e921cba98356717fd5c' and manifest['hardware_validated'] is False
+          existing={a['name']:a for a in release['assets']}
+          assert set(existing)<=set(EXPECTED)
+          for name,a in existing.items():assert a['state']=='uploaded' and a['size']==EXPECTED[name]['bytes'] and a['digest']=='sha256:'+EXPECTED[name]['sha256']
+          missing=[str(stage/name) for name in sorted(EXPECTED) if name not in existing]
+          if missing:gh('release','upload',TAG,*missing,'--repo',REPO)
+          release=json.loads(gh('api',f'repos/{REPO}/releases/{RELEASE_ID}'))
+          assets={a['name']:a for a in release['assets']}
+          assert set(assets)==set(EXPECTED) and release['draft']
+          for name,a in assets.items():assert a['state']=='uploaded' and a['size']==EXPECTED[name]['bytes'] and a['digest']=='sha256:'+EXPECTED[name]['sha256']
+          gh('api',f'repos/{REPO}/releases/{RELEASE_ID}','--method','PATCH','--input','-',input=json.dumps({'draft':False,'prerelease':True,'make_latest':'false'}))
+          print('Published exactly eight approved Raspberry Pi assets.')
+          PYCODE
