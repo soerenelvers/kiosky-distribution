@@ -1,4 +1,5 @@
-## [3.51.2]
+## [3.51.3]
 
-- Raspberry-Pi-Images für Zero 2 W und Pi 3/4/5 im Player Center aus der öffentlichen Kiosky-Distribution laden: keine GitHub-Anmeldung erforderlich und kein 404 wegen des privaten Quellrepositorys.
-- Anleitung und Prüfsummen führen ebenfalls zur öffentlichen Image-Vorabversion. Die installationsspezifische Konfiguration bleibt für Standalone, WordPress und TYPO3 unverändert; große Images werden direkt geladen, ohne PHP-/Server-Proxy.
+- Raspberry-Pi-Images starten über die tatsächlichen MBR-PARTUUIDs statt firmwareabhängiger `by-slot`-Aliase. Behebt das Warten auf `/dev/disk/by-slot/system` bei Pi-4-Bootloadern, die Partition 0 melden.
+- Image-Prüfung kontrolliert Kernel-Startzeile, Root-/Boot-Einträge in fstab, Partitionstabelle und Bytegleichheit der geprüften Dateisysteme mit dem ausgelieferten Disk-Image.
+- Player-Center und Anleitung verweisen auf Image-Beta 3 für alle vier Modelle. Betroffene Karten müssen neu beschrieben werden; ein reines Backend-Update kann einen Fehler vor dem Systemstart nicht reparieren.

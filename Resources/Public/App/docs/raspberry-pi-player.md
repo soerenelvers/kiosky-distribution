@@ -21,7 +21,7 @@ Hardwareabnahme; ein erfolgreich gebautes Image ersetzt diese Prüfung nicht.
 
 1. Unter `/player` das passende `kiosky-player-<modell>.img.xz` herunterladen.
    **Anleitung und SHA-256-Prüfsummen** öffnet die dauerhafte
-   [Image-Vorabversion](https://github.com/soerenelvers/kiosky-distribution/releases/tag/raspberry-pi-v1.0.0-beta.2).
+   [Image-Vorabversion](https://github.com/soerenelvers/kiosky-distribution/releases/tag/raspberry-pi-v1.0.0-beta.3).
    Die generischen Images sind über das öffentliche Distributions-Repository ohne GitHub-Anmeldung verfügbar. Kiosky-Zugangsdaten sind in den Images nicht enthalten.
    `SHA256SUMS.txt` herunterladen und die Prüfsumme vergleichen. Diese Images sind
    ausdrücklich Beta-Versionen; die Hardwareabnahme steht noch aus.
@@ -68,6 +68,25 @@ Die Boot-Partition ist unverschlüsselt: Karte vor dem ersten Start entsprechend
 Zum Ändern von WLAN oder Serveradresse eine neue `kiosky-player.json` auf die Boot-Partition
 legen und neu starten. Der Wechsel auf eine andere Serveradresse kann eine neue Kopplung
 erfordern, weil Browserdaten an den Serverursprung gebunden sind.
+
+## Startfehler „/dev/disk/by-slot/system does not exist“
+
+Beta 2 kann auf Pi 4 mit älteren Bootloader-Metadaten beim Start in der
+Initramfs-Shell hängen bleiben. Die SD-Partitionen sind vorhanden; der
+firmwareabhängige Alias wird nicht erzeugt. Wiederholtes Neustarten behebt dies
+nicht.
+
+Ab **1.0.0-beta.3** verwenden Kernel-Startzeile und `/etc/fstab` die tatsächlichen
+MBR-Partitionskennungen (`PARTUUID`), wie bei Raspberry Pi OS. Boot-Partition 1 und
+Root-Partition 2 werden zusätzlich gegen die ausgelieferte Image-Datei geprüft;
+die geprüften Partitionsdateien müssen bytegenau im Disk-Image enthalten sein.
+Diese Boot-Prüfung ergänzt die bisherigen Datei-, Autostart- und Sicherheitsprüfungen.
+Ein vollständiger Start-/HDMI-/WLAN-Test auf echter Hardware bleibt erforderlich.
+
+Betroffene Karten benötigen das neue, zum Modell passende Image. Die
+`kiosky-player.json` vor dem erneuten Schreiben auf dem Computer sichern und danach
+wieder auf die Boot-Partition kopieren. Ein Backend-/Plugin-Update allein repariert
+eine Karte nicht, die bereits vor dem Betriebssystemstart hängen bleibt.
 
 ## Betrieb und Updates
 
@@ -126,7 +145,7 @@ veröffentlicht werden.
 Der manuell gestartete Workflow **Raspberry Pi player images** baut alle vier Images
 auf ARM64-Runnern. Auf Pull Requests laufen nur die Konfigurations-/Paketprüfungen.
 Zum Veröffentlichen auf `main` muss der Repository-Owner `publish=true`, die separate
-Image-Version `1.0.0-beta.2` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
+Image-Version `1.0.0-beta.3` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
 Die neueste CI des exakten Main-Commits einschließlich `CI gate` muss erfolgreich sein.
 Der Publisher prüft alle vier Artefakte, Quellcommit, Builder und SHA-256-Prüfsummen.
 Er erstellt eine unveränderliche **Vorabversion**, ohne den neuesten Kiosky-Stable-Release
