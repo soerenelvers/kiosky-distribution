@@ -6,7 +6,7 @@ namespace Kiosky\Core;
 use RuntimeException;
 
 /** Projects native CMS media into the shared API; never persists a parallel media catalogue. */
-final class CmsMediaStateStore implements StateStore, StateSnapshotReader
+final class CmsMediaStateStore implements StateStore, StateSnapshotReader, PlayerHeartbeatStore
 {
     private array $snapshot = ['folders'=>[], 'assets'=>[]];
     private array $references = [];
@@ -134,6 +134,11 @@ final class CmsMediaStateStore implements StateStore, StateSnapshotReader
             return;
         }
         $this->persist($state);
+    }
+
+    public function saveHeartbeat(array $before, array $after): bool
+    {
+        return $this->store instanceof PlayerHeartbeatStore && $this->store->saveHeartbeat($before, $after);
     }
 
     public function saveMigration(array $state): void

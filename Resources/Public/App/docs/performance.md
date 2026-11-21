@@ -122,3 +122,49 @@ Produktive PHP-FPM-/Datenbank-/Browser-Profile wurden hier nicht erhoben. Es gib
 keine Schema-/Datenmigration, Serverkonfigurationsänderung oder neue Abhängigkeit.
 Rollback auf 3.48.0 benötigt keine Datenrückmigration. Nach dem Update die
 Verwaltungsoberfläche und Player einmal neu laden.
+
+## Serverlast vieler Player (3.51.5)
+
+Alle Player erhalten weiterhin alle fünf Sekunden den aktuellen Zustand einschließlich
+Steuerbefehlen. Der separate Drei-Sekunden-Abruf von `/commands` entfällt für neue
+Player-Webdateien; die API bleibt für ältere Player nutzbar. Folgeabrufe beginnen
+mit einer zufälligen Phase innerhalb von fünf Sekunden. Warnungen und Zeitpläne
+behalten ihre Abruffrequenz. Identifizieren, Neuladen und Vollbild werden über
+denselben Zustandsabruf angenommen, typischerweise innerhalb von fünf Sekunden.
+Aus Offline-Snapshots werden keine Befehle ausgeführt.
+
+Bei 15 ruhenden Playern: bisher rechnerisch 540 Zustands-/Befehls-/periodische
+Heartbeat-Anfragen pro Minute, jetzt 240, also etwa 56 % weniger. Hinzu kommen
+wie bisher Statusmeldungen bei tatsächlichen Slidewechseln, Befehlsbestätigungen,
+Medien, Schriften und andere Benutzeraktionen. Das ist keine CPU-Prozentzusage.
+
+WordPress legt gewöhnliche Statusmeldungen in der kleinen Option
+`kiosky_player_status_v1` mit `autoload=false` ab. Nur fest erlaubte Statusfelder
+werden übernommen; die Zuordnung ist an den Hash des aktuellen Player-Schlüssels
+gebunden. Gelöschte Displays und alte Kopplungen werden nicht wiederhergestellt.
+Unabhängige Statusmeldungen verwenden einen eigenen Compare-and-swap; bei
+Inhalts-/Konfigurationsänderungen und Befehlsbestätigungen bleibt der bisherige
+Speicherweg erhalten. Weder Redis noch ein Datenbankschemawechsel ist erforderlich.
+Bei einem Rollback schreibt der ältere Code Status wieder im Hauptdatensatz.
+Die Backend-Inhalte und alle Kopplungen bleiben im bisherigen Format.
+
+`php tests/wordpress-player-load-test.php` prüft Konkurrenz, Schlüsselwechsel,
+verzögerte Meldungen, Befehle und Speicherfehler. Im isolierten Speichervergleich
+(15 Player, 60 Meldungen, rund 1,9 MB Inhaltsdaten) sank die geschriebene Datenmenge
+von 116.661.585 auf 216.891 Bytes, um 99,81 %. Dabei wird der PHP-Speicherpfad
+mit simuliertem WPDB geprüft; WordPress-Bootstrap, echte SQL-Ausführungszeit und
+produktive Serverlast sind nicht Bestandteil dieser Messung.
+
+`python3 tests/player-server-load-browser.py` startet nach dem Build 15 echte
+Chromium-Player mit WordPress-UI-Transport gegen eine isolierte Node-API. Er prüft
+Anfragen, Identifizieren, genau einmaliges Neuladen, Warnungen auf allen Displays
+und Offline-Verhalten. `wordpress-external-api-smoke.php` kontrolliert bei der
+nativen CMS-Installations-/Upgrade-Prüfung zusätzlich mit echtem WordPress/WPDB,
+dass 60 Statusmeldungen keinen Schreibzugriff auf den großen Inhaltsdatensatz
+auslösen und alle 15 Anzeigen ihren aktuellen Status behalten.
+
+Nach dem Systemupdate die Player-Webseite einmal neu laden, damit die neuen
+Abrufintervalle aktiv werden. Bereits geöffnete alte Webdateien behalten bis zum
+Neuladen ihre bisherigen Timer. Für diese Server-/Webplayer-Änderung reicht das Neuladen. Die zusätzlich eingeführte
+Raspberry-Pi-Mehrschirmfunktion benötigt Sway und ist in Image-Beta 4 enthalten;
+auf alten Cage-Images bleibt der Einzelplayer erhalten.

@@ -101,7 +101,10 @@ final class Api
                 $display=$this->first($state['displays'],static fn(array $item):bool=>($item['slug'] ?? '')===rawurldecode($licensePlayer[1])&&empty($item['deletedAt'])&&($item['status'] ?? '')!=='archived');
                 if($display&&$playerKey!==''&&hash_equals((string)($display['playerKey'] ?? ''),$playerKey))$this->refreshLicenseState($state);
             }
-            $lifecycleChanged=!str_starts_with($path,'/api/content-transfer/migration/')&&!preg_match('#^/api/displays/[^/]+/simulate$#',$path)&&EventLifecycle::synchronize($state);
+            // Status/command requests do not select event content. The state GET,
+            // editor and scheduler still apply lifecycle changes when needed.
+            $statusOnly=preg_match('#^/api/player/[^/]+/(heartbeat|commands|proof)$#D',$path)===1;
+            $lifecycleChanged=!$statusOnly&&!str_starts_with($path,'/api/content-transfer/migration/')&&!preg_match('#^/api/displays/[^/]+/simulate$#',$path)&&EventLifecycle::synchronize($state);
             $historyBefore=$state;
             $result = $this->route($state, $method, $path, $body, $playerKey);
             if(preg_match('#^/api/(?:player/[^/]+/state|displays/[^/]+/output)$#',$path)&&$method==='GET'){
@@ -121,7 +124,8 @@ final class Api
             if ($result[2] || $lifecycleChanged) {
                 $state['updatedAt'] = $this->now();
                 $migrationSaving=!empty($state['_migrationSaving']);unset($state['_migrationSaving']);
-                if($this->store instanceof CmsMediaStateStore&&($migrationSaving||($method==='POST'&&preg_match('#^/api/customer-content/[^/]+/approve$#',$path))))$this->store->saveMigration($state);else $this->store->save($state);
+                $heartbeatSaved=$method==='POST'&&preg_match('#^/api/player/[^/]+/heartbeat$#D',$path)&&!$lifecycleChanged&&$this->store instanceof PlayerHeartbeatStore&&$this->store->saveHeartbeat($historyBefore,$state);
+                if(!$heartbeatSaved){if($this->store instanceof CmsMediaStateStore&&($migrationSaving||($method==='POST'&&preg_match('#^/api/customer-content/[^/]+/approve$#',$path))))$this->store->saveMigration($state);else $this->store->save($state);}
                 if(isset($state['customerContent'])&&preg_match('#^/api/customer-(portal|content)(/|$)#',$path))try{$this->customerVault?->clean($state['customerContent']['uploads']);}catch(\Throwable){}
                 if ($this->store instanceof CmsMediaStateStore) $result[1] = $this->store->resolveReferences($result[1]);
             }
@@ -2190,8 +2194,11 @@ final class Api
     private function player(array &$state, string $method, string $slug, string $action, array $body, string $playerKey): array
     {
         $rawDisplay = $this->first($state['displays'], fn(array $item): bool => ($item['slug'] ?? '') === $slug && empty($item['deletedAt']) && ($item['status'] ?? '') !== 'archived');
-        $display = $rawDisplay ? $this->listCollection(array_replace($state, ['displays' => [$rawDisplay]]), 'displays')[0] : null;
+        // Heartbeats and commands only require the authenticated raw record;
+        // projecting names/channels/events for every status request is wasteful.
+        $display = $rawDisplay;
         if (!$display || !hash_equals((string)($display['playerKey'] ?? ''), $playerKey)) throw new RuntimeException('Display wurde nicht gefunden.', 404);
+        if($action==='state')$display=$this->listCollection(array_replace($state,['displays'=>[$rawDisplay]]),'displays')[0];
         $preview=($body['preview'] ?? '')==='1'||($body['preview'] ?? null)===1;
         $deliveryChanged=false;
         if (!$preview && in_array($action,['state','commands'],true) && $method==='GET') {
@@ -2207,7 +2214,11 @@ final class Api
             $body['online'] = true;
             $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
             // Heartbeat metadata may never overwrite credentials, routing or display configuration.
-            $fields=PlayerHealth::metadata($body);$fields['lastSeenAt']=$this->now();$fields['playerHealth']=PlayerHealth::normalize($body['diagnostics']??null,is_array($rawDisplay['playerHealth']??null)?$rawDisplay['playerHealth']:null);
+            $fields=PlayerHealth::metadata($body);$seenUs=(int)floor(QualityClock::micro()*1000000);
+            // Preserve ordering even for legacy players without health telemetry,
+            // including a heartbeat immediately following a full command save.
+            $fields['lastSeenAt']=gmdate('Y-m-d\TH:i:s',intdiv($seenUs,1000000)).sprintf('.%06dZ',$seenUs%1000000);
+            $fields['playerHealth']=PlayerHealth::normalize($body['diagnostics']??null,is_array($rawDisplay['playerHealth']??null)?$rawDisplay['playerHealth']:null);
             // Persist status into the raw record: $display contains read-only projections.
             $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($state['displays'][$index],$fields);
             $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));

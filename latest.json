@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "0e37a298c62ef4b123b08e921cba98356717fd5c",
+  "source_commit": "1a2705878764b6d983cfb4e48d75f78450489e4e",
   "product": "kiosky",
-  "version": "3.51.3",
-  "released_at": "2026-11-20T12:11:02.178Z",
+  "version": "3.51.5",
+  "released_at": "2026-11-21T20:11:13.690Z",
   "channel": "stable",
-  "release_notes": "## [3.51.3]\n\n- Raspberry-Pi-Images starten über die tatsächlichen MBR-PARTUUIDs statt firmwareabhängiger `by-slot`-Aliase. Behebt das Warten auf `/dev/disk/by-slot/system` bei Pi-4-Bootloadern, die Partition 0 melden.\n- Image-Prüfung kontrolliert Kernel-Startzeile, Root-/Boot-Einträge in fstab, Partitionstabelle und Bytegleichheit der geprüften Dateisysteme mit dem ausgelieferten Disk-Image.\n- Player-Center und Anleitung verweisen auf Image-Beta 3 für alle vier Modelle. Betroffene Karten müssen neu beschrieben werden; ein reines Backend-Update kann einen Fehler vor dem Systemstart nicht reparieren.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.51.3",
+  "release_notes": "## [3.51.5]\n\n- Raspberry-Pi-Images für alle vier Modelle um eine Mehrschirm-Sitzung erweitert: pro aktivem Ausgang ein eigenständiger Vollbildplayer mit getrenntem Profil und Kopplung, automatischem Hotplug und erhaltenem primären Profil bei Inplace-Updates. Alte Cage-Images laufen ohne Zusatzpaket weiter als Einzelplayer; für Mehrschirm das neue Beta-4-Image verwenden.\n- Wegweisungs-Pfeile in Slides und Vorlagen erhalten einen Zoom-Regler von 10 bis 250 Prozent. Editor, Vorschau und Wiedergabe verwenden denselben begrenzten Wert; bestehende Pfeile bleiben bei 100 Prozent.\n\n- WordPress speichert gewöhnliche Player-Statusmeldungen getrennt vom großen Inhaltsdatensatz. Frische Anzeigeinformationen bleiben für Backend und API sichtbar; Änderungen an Inhalten, Player-Schlüsseln und Befehlsbestätigungen verwenden weiterhin den abgesicherten Vergleichs-/Speicherweg.\n- Player verarbeiten Steuerbefehle aus dem Zustandsabruf alle fünf Sekunden. Der zusätzliche Drei-Sekunden-Abruf entfällt; die ersten Folgeabrufe werden zeitlich verteilt, um Lastspitzen bei vielen Playern zu vermindern. Offline werden keine gespeicherten Befehle ausgeführt.\n- CMS-Status-/Befehlsabrufe überspringen unnötige Veranstaltungs-Lebenszyklusberechnungen und Anzeigeprojektionen. Inhaltsabruf, Zeitplanung, Warnungen und Scheduler behalten die bisherigen Auswertungen.\n- Regressionen mit 15 Browser-Playern und 60 WordPress-Statusmeldungen ergänzt; native WordPress-Installations-/Upgrade-Prüfung kontrolliert den separaten Speicherweg.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.51.5",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.51.3",
+    "core_version": "3.51.5",
     "api_version": "1",
-    "wordpress_plugin_version": "3.51.3",
-    "typo3_extension_version": "3.51.3"
+    "wordpress_plugin_version": "3.51.5",
+    "typo3_extension_version": "3.51.5"
   },
   "components": {
     "core": {
-      "version": "3.51.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.3.zip?ref=v3.51.3",
-      "sha256": "e965fff9e27009e8a6b560cc4a969b6ffbecfbc67666432f0cce82116c0f987b"
+      "version": "3.51.5",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.5.zip?ref=v3.51.5",
+      "sha256": "ef81dcd13e3cb94f5b03c9c826050c391b7bbc208aa3867d146ddadbd92241b5"
     },
     "standalone": {
-      "version": "3.51.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.3.zip?ref=v3.51.3",
-      "sha256": "e965fff9e27009e8a6b560cc4a969b6ffbecfbc67666432f0cce82116c0f987b"
+      "version": "3.51.5",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.5.zip?ref=v3.51.5",
+      "sha256": "ef81dcd13e3cb94f5b03c9c826050c391b7bbc208aa3867d146ddadbd92241b5"
     },
     "wordpress": {
-      "version": "3.51.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.51.3.zip?ref=v3.51.3",
-      "sha256": "43f3bb6af5112fe19663842754e0c13acdfaacfb9c2c722e318a2baa1a912b99",
+      "version": "3.51.5",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.51.5.zip?ref=v3.51.5",
+      "sha256": "f79c1f16717b97a3526676ffa873be8ae96bcd2acd312d8c9e75507c3fa60ee8",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.51.3",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.51.3.zip?ref=v3.51.3",
-      "sha256": "9f92e131489c2cb0aa341aa7eebb8ea692bff3057b57603c35cdb97b0d092d34",
+      "version": "3.51.5",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.51.5.zip?ref=v3.51.5",
+      "sha256": "227f4731bb5cbde4445cb9b254f72f8219f5a453550f41a001c404b4cb5b96be",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

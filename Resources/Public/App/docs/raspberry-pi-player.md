@@ -2,7 +2,8 @@
 
 Die Images werden mit dem offiziellen [rpi-image-gen](https://github.com/raspberrypi/rpi-image-gen)
 aus der schlanken Debian-Trixie-/Raspberry-Pi-Paketbasis gebaut. Installiert werden
-Chromium, der kleine Wayland-Compositor Cage und NetworkManager; eine Desktopumgebung,
+Chromium, die schlanke Sway-Mehrschirm-Sitzung, Cage als kompatible Rückfallebene
+und NetworkManager; eine Desktopumgebung,
 SSH-Server oder Kiosky-Server sind nicht enthalten. Der Player verbindet sich mit einer
 vorhandenen Standalone-, WordPress- oder TYPO3-Installation.
 
@@ -21,7 +22,7 @@ Hardwareabnahme; ein erfolgreich gebautes Image ersetzt diese Prüfung nicht.
 
 1. Unter `/player` das passende `kiosky-player-<modell>.img.xz` herunterladen.
    **Anleitung und SHA-256-Prüfsummen** öffnet die dauerhafte
-   [Image-Vorabversion](https://github.com/soerenelvers/kiosky-distribution/releases/tag/raspberry-pi-v1.0.0-beta.3).
+   [Image-Vorabversion](https://github.com/soerenelvers/kiosky-distribution/releases/tag/raspberry-pi-v1.0.0-beta.4).
    Die generischen Images sind über das öffentliche Distributions-Repository ohne GitHub-Anmeldung verfügbar. Kiosky-Zugangsdaten sind in den Images nicht enthalten.
    `SHA256SUMS.txt` herunterladen und die Prüfsumme vergleichen. Diese Images sind
    ausdrücklich Beta-Versionen; die Hardwareabnahme steht noch aus.
@@ -145,7 +146,7 @@ veröffentlicht werden.
 Der manuell gestartete Workflow **Raspberry Pi player images** baut alle vier Images
 auf ARM64-Runnern. Auf Pull Requests laufen nur die Konfigurations-/Paketprüfungen.
 Zum Veröffentlichen auf `main` muss der Repository-Owner `publish=true`, die separate
-Image-Version `1.0.0-beta.3` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
+Image-Version `1.0.0-beta.4` und `confirmation=PUBLISH KIOSKY PI IMAGES` angeben.
 Die neueste CI des exakten Main-Commits einschließlich `CI gate` muss erfolgreich sein.
 Der Publisher prüft alle vier Artefakte, Quellcommit, Builder und SHA-256-Prüfsummen.
 Er erstellt eine unveränderliche **Vorabversion**, ohne den neuesten Kiosky-Stable-Release
@@ -158,3 +159,40 @@ Die öffentliche Bereitstellung enthält ausschließlich die vier generischen `.
 Die großen Images werden direkt von der öffentlichen Distribution geladen und nicht durch WordPress/PHP oder den Kiosky-Server geleitet. Der Konfigurationsdownload auf `/player` bleibt installationsspezifisch und erhält insbesondere die richtigen CMS-/Unterverzeichnispfade.
 
 Siehe [Vollbild und Vordergrund der Player](player-kiosk.md) für Taskleisten, Menüleisten und Wartungszugriff.
+
+## Mehrere Bildschirme ab Image-Beta 4
+
+Das neue Image verwendet eine schlanke Sway-Sitzung und startet für jeden aktiven
+Bildschirmausgang eine eigene Chromium-Instanz im Vollbild. Jeder Ausgang zeigt
+bei der Erstverbindung seinen eigenen Kopplungscode und kann als eigenständiges
+Kiosky-Display mit eigenen Inhalten zugewiesen werden. Ein zusätzlicher aktiver
+Ausgang wird automatisch aufgenommen; Abziehen beendet nur dessen Browser.
+Beim Wiederanschließen wird dasselbe Profil mit seiner Kopplung geöffnet.
+Die Zuordnung bleibt an den Anschlussnamen gebunden, etwa `HDMI-A-1`.
+
+Die gemeinsame Verwaltung ist in den Images für Zero 2 W, Pi 3, Pi 4 und Pi 5
+enthalten. Pi 4/5 haben zwei HDMI-Anschlüsse. Pi 3 und Zero 2 W besitzen regulär
+nur einen HDMI-Ausgang; mehrere unabhängige Anzeigen setzen dort weitere durch
+Hardware/Treiber unterstützte Ausgänge voraus. Das Image erzeugt keine zusätzlichen
+physischen Anschlüsse. Mehrere Videoplayer benötigen entsprechend mehr RAM und
+GPU-Leistung; Auflösung und Codec auf der Zielhardware prüfen.
+
+Der erste erkannte Ausgang verwendet weiterhin `/var/lib/kiosky/chromium`, weitere
+Ausgänge getrennte Profile unter `/var/lib/kiosky/instances/<ID>/chromium`.
+`/var/lib/kiosky/outputs.json` hält nur die Anschluss-/Profilzuordnung (0600), keine
+Server- oder WLAN-Zugangsdaten. Die Browser-Sandbox bleibt aktiv. Jeder Browser
+hat einen eigenen Cache mit 16 MiB Grenze. Alle Fenster werden ohne Task-/Menüleiste
+und mit verborgenem Mauszeiger auf ihren eigenen Ausgang gelegt.
+
+Ein Komponentenupdate bewahrt vorhandene Profile. Auf bisherigen Cage-Images ohne
+Sway bleibt dabei der bisherige Einzelplayer nutzbar; das Dateikomponentenupdate
+installiert keine zusätzlichen Betriebssystempakete. Für die neue Mehrschirmfunktion
+das passende Beta-4-Image aufspielen. **Beim Neubeschreiben der SD-Karte werden
+vorhandene Profile gelöscht; danach die Anzeigen neu koppeln.** Zuvor die
+`kiosky-player.json` für Server/WLAN sichern bzw. neu unter `/player` herunterladen.
+
+`python3 tests/pi-multi-browser-smoke.py` prüft zwei echte virtuelle Sway-Ausgänge
+mit getrennten Chromium-Profilen, Vollbildzuordnung, Abziehen/Wiederanschließen
+und Profilpersistenz nach Sitzungsneustart. Die Browser-Sonderflags zur lokalen
+Teststeuerung stehen ausschließlich im Test-Wrapper. Physische HDMI-/GPU-Abnahme
+auf jedem Modell ist weiterhin erforderlich; Images bleiben Beta.
