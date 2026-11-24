@@ -15,6 +15,7 @@
   const code = document.querySelector('#pairing-code');
   const status = document.querySelector('#pairing-status');
   const error = document.querySelector('#error');
+  const showCode=value=>{code.textContent=value;const qr=document.querySelector('#pairing-qr');if(qr){qr.innerHTML=window.KioskyPairingQr?.markup(value)||'';qr.hidden=!qr.innerHTML;}};
   let pollTimer = 0;
   let creating = false;
   let retryDelay = 3000;
@@ -87,6 +88,7 @@
     const timeout = window.setTimeout(() => controller.abort(), 10000);
     error.hidden = true;
     code.textContent = '••••••';
+    document.querySelector('#pairing-qr')?.setAttribute('hidden','');
     status.textContent = 'Kopplungscode wird erzeugt …';
     try {
       const response = await fetch(apiUrl('/api/player-pairings'), {
@@ -99,7 +101,7 @@
       const pairing = await response.json();
       retryDelay = 3000;
       write(keys.pairing, JSON.stringify(pairing));
-      code.textContent = pairing.code;
+      showCode(pairing.code);
       status.textContent = 'Code ist 15 Minuten gültig · wartet auf Zuordnung …';
       poll(pairing);
     } catch (reason) {
@@ -141,7 +143,7 @@
   } else {
     const pairing = savedPairing();
     if (pairing) {
-      code.textContent = pairing.code;
+      showCode(pairing.code);
       status.textContent = 'Code ist 15 Minuten gültig · wartet auf Zuordnung …';
       poll(pairing);
     } else {

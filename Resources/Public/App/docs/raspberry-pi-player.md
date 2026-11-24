@@ -196,3 +196,18 @@ mit getrennten Chromium-Profilen, Vollbildzuordnung, Abziehen/Wiederanschließen
 und Profilpersistenz nach Sitzungsneustart. Die Browser-Sonderflags zur lokalen
 Teststeuerung stehen ausschließlich im Test-Wrapper. Physische HDMI-/GPU-Abnahme
 auf jedem Modell ist weiterhin erforderlich; Images bleiben Beta.
+
+## Ausgänge direkt im Backend drehen
+
+Ab Kiosky 3.52.0 unter **Displays → Bearbeiten → Ausgabe drehen** je Ausgang
+0°, 90° links/rechts oder 180° wählen. Die Einstellung wird über den regulären
+Player-Zustandsabruf übernommen; eine Änderung an Sway oder am Pi ist nicht nötig.
+
+## Kopplung per QR-Code
+
+Die Startanzeige zeigt zusätzlich zum sechsstelligen Code einen QR-Code.
+Im Backend das gewünschte Display bearbeiten, **QR-Code scannen** wählen und
+Kamerazugriff erlauben. Alternativ ein JPG-/PNG-/WebP-Foto wählen oder den Code
+weiterhin eingeben. Nach dem Scan die Zuordnung mit **Koppeln** bestätigen.
+Die Kamera benötigt HTTPS (lokale Tests: localhost). Bilder werden lokal gelesen
+und nicht hochgeladen; der kurzlebige Code enthält keinen Player-Schlüssel.

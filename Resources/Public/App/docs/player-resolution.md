@@ -51,8 +51,12 @@ und responsive Schriftgrößen ohne erneute Kopplung an.
 
 ## Hardware- und TV-Grenzen
 
-- Ein physisch gedrehter Desktopmonitor benötigt eine passende Betriebssystem-
-  Drehung. „Hochformat“ im Backend dreht kein HDMI-Signal.
+- Unter **Displays → Bearbeiten → Ausgabe drehen** kann die gesamte Player-Ausgabe
+  unabhängig je Display auf 0°, 90° links, 90° rechts oder 180° gestellt werden.
+  Bei 90° werden die logischen Maße vertauscht; automatische Slides, Matrixsegmente,
+  Warnungen und Identifikation folgen der Drehung. Sie wird beim nächsten Zustandsabruf
+  übernommen und im Offline-Stand gespeichert. „Ausrichtung“ bleibt die Inhaltsauswahl.
+  Die Einstellung dreht die Webausgabe, nicht das HDMI-Signal oder das Betriebssystem.
 - Raspberry Pi 4/5 können geeignete UHD-Ausgänge anbieten; Kabel, Port, Firmware,
   Bildwiederholrate und Videocodec sind mitzuprüfen. Für den Zero 2 W bleibt Full HD
   das vorgesehene Ziel; dieses Update macht aus ihm keine garantierte UHD-Hardware.

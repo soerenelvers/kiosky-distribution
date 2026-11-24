@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#08110f">
   <title>Kiosky Player koppeln</title>
-  <link rel="stylesheet" href="/player/browser.css?v=3.51.5-20261121201112%2B1a270587">
+  <link rel="stylesheet" href="/player/browser.css?v=3.52.0-20261124111150%2B141d930f">
 </head>
 <body>
   <main>
@@ -14,7 +14,8 @@
       <a class="brand" href="/player"><span>K</span>KIOSKY PLAYER</a>
       <p class="eyebrow">Erster Start</p>
       <h1>Player mit einem<br>Display verbinden.</h1>
-      <p class="lead">Geben Sie diesen Code im Kiosky-Backend beim gewünschten Display ein.</p>
+      <p class="lead">Scannen Sie den QR-Code unter „Player koppeln“ im Kiosky-Backend oder geben Sie den Code ein.</p>
+      <div id="pairing-qr" class="pairing-qr" aria-label="QR-Code zum Koppeln" hidden></div>
       <div id="pairing-code" class="pairing-code" aria-label="Kopplungscode">••••••</div>
       <p id="pairing-status" class="status" role="status">Kopplungscode wird erzeugt …</p>
       <div class="actions">
@@ -24,7 +25,8 @@
       <p id="error" class="error" hidden></p>
     </section>
   </main>
-  <script src="/player/fullscreen-control.js?v=3.51.5-20261121201112%2B1a270587"></script>
-  <script src="/player/browser.js?v=3.51.5-20261121201112%2B1a270587"></script>
+  <script src="/player/fullscreen-control.js?v=3.52.0-20261124111150%2B141d930f"></script>
+  <script src="/player/pairing-qr.js?v=3.52.0-20261124111150%2B141d930f"></script>
+  <script src="/player/browser.js?v=3.52.0-20261124111150%2B141d930f"></script>
 </body>
 </html>

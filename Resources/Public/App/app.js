@@ -896,6 +896,10 @@ function playerServerClockOffset(value,startedAt,receivedAt,previous=0){
   return Number.isFinite(serverTimeMs)?serverTimeMs-(startedAt+receivedAt)/2:previous;
 }
 
+function playerOutputGeometry(width,height,rotation=0){
+  const angle=[0,90,180,270].includes(rotation)?rotation:0,swap=angle===90||angle===270;
+  return {width:swap?height:width,height:swap?width:height,rotation:angle};
+}
 async function renderDisplayPlayer(slug) {
   document.body.className = 'player-mode';
   const updateBase=new URL(kioskyRuntime.playerBaseUrl||'/',window.location.href);
@@ -932,10 +936,11 @@ async function renderDisplayPlayer(slug) {
       if(playerState)globalThis.KioskyFonts?.setCatalog(playerState.fonts||[]);document.querySelector('#player-offline-indicator')?.removeAttribute('hidden');return playerState;
     }
   };
-  const playbackIdentity=value=>JSON.stringify({content:value.contentRevision||{channel:value.channel,directSlide:value.directSlide,assignment:value.assignment,slides:value.slides},sync:value.playbackSync?.key,matrix:value.matrix,orientation:value.display?.orientation,weather:value.display?.weatherLocation});
+  const playbackIdentity=value=>JSON.stringify({content:value.contentRevision||{channel:value.channel,directSlide:value.directSlide,assignment:value.assignment,slides:value.slides},sync:value.playbackSync?.key,matrix:value.matrix,orientation:value.display?.orientation,rotation:value.display?.rotation||0,weather:value.display?.weatherLocation});
 
-  const browserOrientation=()=>window.innerHeight>window.innerWidth?'portrait':'landscape';
-  const applyMatrixViewport=()=>{const display=document.querySelector('.display-player'),canvas=document.querySelector('#player-matrix-canvas'),matrix=playerState?.matrix,active=matrix?.mode==='matrix'&&matrix.totalResolution&&matrix.viewport;if(!display||!canvas)return;display.classList.toggle('is-matrix-segment',Boolean(active));if(!active){canvas.removeAttribute('style');return;}const total=matrix.totalResolution,viewport=matrix.viewport,scaleX=window.innerWidth/Math.max(1,Number(viewport.width)),scaleY=window.innerHeight/Math.max(1,Number(viewport.height));canvas.style.width=`${Number(total.width)}px`;canvas.style.height=`${Number(total.height)}px`;canvas.style.left=`${-Number(viewport.x||0)*scaleX}px`;canvas.style.top=`${-Number(viewport.y||0)*scaleY}px`;canvas.style.transform=`scale(${scaleX},${scaleY})`;canvas.style.transformOrigin='top left';};
+  const outputSize=()=>playerOutputGeometry(window.innerWidth,window.innerHeight,playerState?.display?.rotation);
+  const browserOrientation=()=>outputSize().height>outputSize().width?'portrait':'landscape';
+  const applyMatrixViewport=()=>{const size=outputSize(),frame=document.querySelector('#player-output');if(frame){frame.style.setProperty('--player-vw',(size.width/100)+'px');frame.style.setProperty('--player-vh',(size.height/100)+'px');frame.dataset.outputOrientation=size.height>size.width?'portrait':'landscape';frame.style.width=size.width+'px';frame.style.height=size.height+'px';frame.style.transform=`translate(-50%,-50%) rotate(${size.rotation}deg)`;frame.dataset.rotation=String(size.rotation);}const display=document.querySelector('.display-player'),canvas=document.querySelector('#player-matrix-canvas'),matrix=playerState?.matrix,active=matrix?.mode==='matrix'&&matrix.totalResolution&&matrix.viewport;if(!display||!canvas)return;display.classList.toggle('is-matrix-segment',Boolean(active));if(!active){canvas.removeAttribute('style');return;}const total=matrix.totalResolution,viewport=matrix.viewport,scaleX=size.width/Math.max(1,Number(viewport.width)),scaleY=size.height/Math.max(1,Number(viewport.height));canvas.style.width=`${Number(total.width)}px`;canvas.style.height=`${Number(total.height)}px`;canvas.style.left=`${-Number(viewport.x||0)*scaleX}px`;canvas.style.top=`${-Number(viewport.y||0)*scaleY}px`;canvas.style.transform=`scale(${scaleX},${scaleY})`;canvas.style.transformOrigin='top left';};
   const itemOrientation=item=>item?.slide?.orientation==='auto'?browserOrientation():item?.slide?.orientation==='portrait'?'portrait':'landscape';
 
   const renderPlayerItem=(item,animate=true,elapsedMs=0)=>{if(!item)return;
@@ -944,7 +949,7 @@ async function renderDisplayPlayer(slug) {
     preloadImages([settings.background?.imageSrc,settings.logo?.src,...(next?playbackItemElements(next,itemOrientation(next)):[]).filter(element=>element.type==='image').map(element=>element.src)]);
     renderedOrientation=itemOrientation(item);renderPlaybackSlide(document.querySelector('#player-slide'),document.querySelector('.display-player'),item,renderedOrientation,animate,elapsedMs,playerState?.matrix?.mode==='matrix');applyMatrixViewport();updatePlaybackClocks(document,playerState?.display,Date.now()+serverClockOffsetMs);};
   window.addEventListener('resize',()=>scheduleAutomaticTextFit(document));
-  const renderShell=state=>{const display=state.display;releasePlaybackMedia(document.querySelector('#player-slide'));document.body.innerHTML=`<main class="display-player display-player-${display.orientation}"><div class="player-brand">KIOSKY</div><div class="player-matrix-canvas" id="player-matrix-canvas"><section id="player-slide" class="player-layout-slide"></section></div><div class="player-status"><span>${display.name}</span><span id="player-clock"></span></div></main><div class="player-offline-indicator" id="player-offline-indicator" ${playerStateOffline?'':'hidden'}>Offline · gespeicherte Inhalte werden weiter abgespielt</div><aside class="emergency-takeover" id="player-emergency" hidden><div class="emergency-symbol">!</div><small id="player-emergency-type"></small><strong id="player-emergency-title"></strong><p id="player-emergency-message"></p><span>Bitte beachten Sie die Anweisungen des Personals.</span><div class="emergency-ticker" id="player-emergency-ticker" role="status" aria-label="Lauftext" hidden><span id="player-emergency-ticker-text"></span></div></aside>`;applyPlayerBackground(display);applyMatrixViewport();};
+  const renderShell=state=>{const display=state.display;releasePlaybackMedia(document.querySelector('#player-slide'));document.body.innerHTML=`<div id="player-output" class="player-output"><main class="display-player display-player-${display.orientation}"><div class="player-brand">KIOSKY</div><div class="player-matrix-canvas" id="player-matrix-canvas"><section id="player-slide" class="player-layout-slide"></section></div><div class="player-status"><span>${display.name}</span><span id="player-clock"></span></div></main><div class="player-offline-indicator" id="player-offline-indicator" ${playerStateOffline?'':'hidden'}>Offline · gespeicherte Inhalte werden weiter abgespielt</div><aside class="emergency-takeover" id="player-emergency" hidden><div class="emergency-symbol">!</div><small id="player-emergency-type"></small><strong id="player-emergency-title"></strong><p id="player-emergency-message"></p><span>Bitte beachten Sie die Anweisungen des Personals.</span><div class="emergency-ticker" id="player-emergency-ticker" role="status" aria-label="Lauftext" hidden><span id="player-emergency-ticker-text"></span></div></aside></div>`;applyPlayerBackground(display);applyMatrixViewport();};
   let proofStorage;try{proofStorage=localStorage;}catch{proofStorage={getItem:()=>null,setItem:()=>{}};}
   const playbackProof=globalThis.KioskyPlaybackProof?.create({storage:proofStorage,key:'kiosky.proof.'+slug,now:()=>Date.now()+serverClockOffsetMs,root:()=>document.querySelector('#player-slide'),visible:()=>document.visibilityState==='visible'&&window.KioskyTvPresentationVisible!==false&&!playerState?.warning&&!playerState?.emergency,grant:item=>playerState?.playbackProof?.grants?.[item?.slide?.id]||''});
   const heartbeat=async(item,acknowledgedCommandIds=[])=>{
@@ -953,7 +958,7 @@ async function renderDisplayPlayer(slug) {
   const showIdentification=()=>{
     const display=playerState?.display||{},details=playerState?.identification||{},groups=Array.isArray(details.groupNames)&&details.groupNames.length?details.groupNames.join(', '):'Keine Gruppe',resolution=playerResolutionLabel(playerResolutionInfo(window.innerWidth,window.innerHeight,window.devicePixelRatio));
     let overlay=document.querySelector('#player-identification');
-    if(!overlay){overlay=document.createElement('aside');overlay.id='player-identification';overlay.className='player-identification';document.body.appendChild(overlay);}
+    if(!overlay){overlay=document.createElement('aside');overlay.id='player-identification';overlay.className='player-identification';(document.querySelector('#player-output')||document.body).appendChild(overlay);}
     overlay.innerHTML=`<div class="player-identification-brand">KIOSKY · DISPLAY IDENTIFIZIEREN</div><h1>${escapeHtml(display.name||'Unbenanntes Display')}</h1><div class="player-identification-grid"><section><small>Standort</small><strong>${escapeHtml(display.location||'Ohne Standort')}</strong></section><section><small>Server</small><strong>${escapeHtml(details.serverUrl||window.location.origin)}</strong></section><section><small>Display-Gruppe</small><strong>${escapeHtml(groups)}</strong></section><section><small>Aktuelle Auflösung</small><strong>${escapeHtml(resolution)}</strong></section></div><p>Diese Information wird nach 20 Sekunden automatisch ausgeblendet.</p>`;
     overlay.classList.add('is-visible');
     clearTimeout(identificationTimer);
@@ -983,7 +988,7 @@ async function renderDisplayPlayer(slug) {
     if(regular.some(command=>command.command==='sync'))await refreshPlayer(true);
     if(regular.some(command=>command.command==='identify'))showIdentification();
   };
-  const emergencyDesignMarkup=documentData=>{const elements=Array.isArray(documentData?.layout?.elements)?documentData.layout.elements:[];if(!elements.length)return'';return`<div class="emergency-design-layer">${elements.map(element=>{const x=Math.max(0,Math.min(100,Number(element.x||0))),y=Math.max(0,Math.min(100,Number(element.y||0))),width=Math.max(3,Math.min(100,Number(element.width||30))),fontSize=Math.max(12,Math.min(180,Number(element.fontSize||32))),content=escapeHtml(String(element.text||'')),color=/^#[0-9a-f]{6}$/i.test(String(element.color||''))?element.color:'#ffffff',style=`left:${x}%;top:${y}%;width:${width}%;color:${color};${textFontStyle(element,32,`${fontSize/7.8}vw`)};text-align:${['left','center','right'].includes(element.align)?element.align:'left'};font-weight:${element.bold?800:400}`;return`<div class="emergency-design-element ${element.type==='icon'?'is-icon':''}" style="${escapeHtml(style)}">${content}</div>`;}).join('')}</div>`;};
+  const emergencyDesignMarkup=documentData=>{const elements=Array.isArray(documentData?.layout?.elements)?documentData.layout.elements:[];if(!elements.length)return'';return`<div class="emergency-design-layer">${elements.map(element=>{const x=Math.max(0,Math.min(100,Number(element.x||0))),y=Math.max(0,Math.min(100,Number(element.y||0))),width=Math.max(3,Math.min(100,Number(element.width||30))),fontSize=Math.max(12,Math.min(180,Number(element.fontSize||32))),content=escapeHtml(String(element.text||'')),color=/^#[0-9a-f]{6}$/i.test(String(element.color||''))?element.color:'#ffffff',style=`left:${x}%;top:${y}%;width:${width}%;color:${color};${textFontStyle(element,32,`calc(${fontSize/7.8} * var(--player-vw,1vw))`)};text-align:${['left','center','right'].includes(element.align)?element.align:'left'};font-weight:${element.bold?800:400}`;return`<div class="emergency-design-element ${element.type==='icon'?'is-icon':''}" style="${escapeHtml(style)}">${content}</div>`;}).join('')}</div>`;};
   let emergencyIdentity,warningPresentationTimer=null;
   const armWarningPresentation=(current=playerState?.emergency)=>{
     clearTimeout(warningPresentationTimer);const now=Date.now()+serverClockOffsetMs,candidates=[Number(playerState?.warningPresentation?.nextChangeAtMs),Date.parse(current?.presentationEndsAt||''),Date.parse(current?.endsAt||''),...(current?.warnings||[]).map(item=>Date.parse(item.endsAt||''))].filter(value=>Number.isFinite(value)&&value>now);
@@ -1007,11 +1012,11 @@ async function renderDisplayPlayer(slug) {
     renderEmergency(effective);
     const overlay=document.querySelector('#player-emergency');if(!overlay)return;
     overlay.classList.toggle('has-dwd-warnings',Boolean(effective&&grouped));
-    const identity=effective&&grouped?JSON.stringify(members):'';
+    const identity=effective&&grouped?JSON.stringify([browserOrientation(),members]):'';
     if(identity===emergencyGroupIdentity)return;emergencyGroupIdentity=identity;
     overlay.querySelector('.emergency-warning-list')?.remove();
     if(!identity)return;
-    const columns=window.innerHeight>window.innerWidth?1:members.length>6?3:2,rows=Math.ceil(members.length/columns);
+    const columns=browserOrientation()==='portrait'?1:members.length>6?3:2,rows=Math.ceil(members.length/columns);
     overlay.style.setProperty('--dwd-warning-columns',columns);overlay.style.setProperty('--dwd-warning-rows',rows);
     overlay.insertAdjacentHTML('beforeend',`<div class="emergency-warning-list">${members.map(item=>`<article class="emergency-warning-card" data-warning-id="${escapeHtml(item.id)}"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.areaName||'DWD')} · Stufe ${Number(item.severity)||1}</small><p>${escapeHtml(item.instructions||item.description||'')}</p></article>`).join('')}</div>`);
     fitDwdWarningCards(overlay);
@@ -1034,7 +1039,7 @@ async function renderDisplayPlayer(slug) {
     if(statePollRunning){if(force)pendingForcedRefresh=true;return;}statePollRunning=true;
     try{
       const previous=contentIdentity;if(!await fetchState())return;
-      applyPlayerBackground(playerState.display);contentIdentity=playbackIdentity(playerState);if(!playerState.slides.length)preloadImages.clear();applyEmergency();applyMatrixViewport();
+      applyPlayerBackground(playerState.display);contentIdentity=playbackIdentity(playerState);if(!playerState.slides.length)preloadImages.clear();applyMatrixViewport();applyEmergency();
       if(force||previous!==contentIdentity)startPlayback(true);else if(playerState?.playbackSync)startSynchronizedPlayback(false);
       // State already carries commands. Never replay them from an offline snapshot.
       if(!playerStateOffline)await handleCommands(playerState.commands);
@@ -6549,7 +6554,7 @@ function syncDisplayResolutionFields(display=null){
   fields.querySelectorAll('input,select').forEach(input=>{input.disabled=!fixed;});
   syncDisplayResolutionPreset();
   const detected=display?.detectedResolution;
-  document.querySelector('#display-resolution-help').textContent=(fixed?'Feste Zielmaße für Planung und Matrix; der Player füllt weiterhin sein tatsächliches Fenster.':'Automatisch passend zum Monitorfenster, auch UHD / 4K und Hochformat.')+(detected?' Zuletzt gemeldet: '+playerResolutionLabel(playerResolutionInfo(detected.width,detected.height,display.devicePixelRatio))+'.':' Die Ausgabeauflösung und Drehung im Betriebssystem einstellen.');
+  document.querySelector('#display-resolution-help').textContent=(fixed?'Feste Zielmaße für Planung und Matrix; der Player füllt weiterhin sein tatsächliches Fenster.':'Automatisch passend zum Monitorfenster, auch UHD / 4K und Hochformat.')+(detected?' Zuletzt gemeldet: '+playerResolutionLabel(playerResolutionInfo(detected.width,detected.height,display.devicePixelRatio))+'.':' Die Ausgabeauflösung wird am Gerät eingestellt; die Ausgabe kann hier in Kiosky gedreht werden.');
 }
 
 function renderDisplayDefaultOptions(){
@@ -6578,6 +6583,7 @@ function openDisplayDialog(displayId = null) {
   document.querySelector('#display-slug').value = display ? display.slug : '';
   document.querySelector('#display-slug').dataset.manual = display ? 'true' : 'false';
   document.querySelector('#display-orientation').value = display ? display.orientation : 'landscape';
+  document.querySelector('#display-rotation').value=String(display?.rotation||0);
   document.querySelector('#display-type').value=display?.displayType||'standard';
   document.querySelector('#display-resolution-mode').value=display?.resolutionMode||(display?'fixed':'native');
   document.querySelector('#display-width').value=display?.resolution?.width||1920;
@@ -6611,6 +6617,7 @@ document.querySelector('#display-resolution-mode').addEventListener('change',()=
 document.querySelector('#display-resolution-preset').addEventListener('change',applyDisplayResolutionPreset);
 document.querySelector('#display-orientation').addEventListener('change',applyDisplayResolutionPreset);
 for(const id of ['display-width','display-height'])document.querySelector('#'+id).addEventListener('input',syncDisplayResolutionPreset);
+document.querySelector('#scan-pairing-code').addEventListener('click',()=>window.KioskyPairingScanner.open({vendorUrl:assetUrl('vendor/jsqr/jsQR.js'),onCode:code=>{document.querySelector('#display-player-pairing-code').value=code;document.querySelector('#display-player-pairing-status').textContent='QR-Code erkannt. Bitte zum Koppeln bestätigen.';document.querySelector('#pair-display-player').focus();}}));
 document.querySelector('#display-player-pairing-code').addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase().replace(/[^23456789A-HJ-NP-Z]/g,'').slice(0,6);});
 document.querySelector('#display-player-pairing-code').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();document.querySelector('#pair-display-player').click();}});
 document.querySelector('#pair-display-player').addEventListener('click',async()=>{
@@ -6630,7 +6637,7 @@ document.querySelector('#display-form').addEventListener('submit', async event =
   const editId = document.querySelector('#display-edit-id').value;
   if (state.displays.some(display => display.slug === slug && display.id !== editId)) { event.preventDefault(); showToast('Diese URL-Kennung ist bereits vergeben.'); return; }
   const selectedGroups = [...document.querySelectorAll('#display-group-options input:checked')].map(input => input.value);
-  const payload={name,slug,orientation:document.querySelector('#display-orientation').value,displayType:document.querySelector('#display-type').value,resolutionMode:document.querySelector('#display-resolution-mode').value,width:Number(document.querySelector('#display-width').value)||1920,height:Number(document.querySelector('#display-height').value)||1080,defaultContentType:document.querySelector('#display-default-content-type').value,defaultSlideId:document.querySelector('#display-default-content-type').value==='slide'?document.querySelector('#display-default-slide').value||undefined:undefined,defaultChannelId:document.querySelector('#display-default-content-type').value==='channel'?document.querySelector('#display-channel').value||undefined:undefined,locationId:document.querySelector('#display-location').value||undefined,timezone:state.displays.find(display=>display.id===editId)?.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin',status:document.querySelector('#display-status').value,cacheEnabled:document.querySelector('#display-cache-enabled').checked,groupIds:selectedGroups};
+  const payload={name,slug,rotation:Number(document.querySelector('#display-rotation').value),orientation:document.querySelector('#display-orientation').value,displayType:document.querySelector('#display-type').value,resolutionMode:document.querySelector('#display-resolution-mode').value,width:Number(document.querySelector('#display-width').value)||1920,height:Number(document.querySelector('#display-height').value)||1080,defaultContentType:document.querySelector('#display-default-content-type').value,defaultSlideId:document.querySelector('#display-default-content-type').value==='slide'?document.querySelector('#display-default-slide').value||undefined:undefined,defaultChannelId:document.querySelector('#display-default-content-type').value==='channel'?document.querySelector('#display-channel').value||undefined:undefined,locationId:document.querySelector('#display-location').value||undefined,timezone:state.displays.find(display=>display.id===editId)?.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Berlin',status:document.querySelector('#display-status').value,cacheEnabled:document.querySelector('#display-cache-enabled').checked,groupIds:selectedGroups};
   try{await apiRequest(editId?`/api/displays/${editId}`:'/api/displays',{method:editId?'PUT':'POST',body:JSON.stringify(payload)});displayDialog.close();await loadDisplays();showToast(`Display „${name}“ wurde gespeichert.`);}catch(error){showToast(error.message);}
 });
 

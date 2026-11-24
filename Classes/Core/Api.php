@@ -2631,6 +2631,7 @@ final class Api
             $item['playerBackgroundColor'] = preg_match('/^#[0-9a-f]{6}$/i',(string)($location['playerBackgroundColor'] ?? ''))?strtolower($location['playerBackgroundColor']):'#000000';
             $item['clockTimezone'] = $location['timezone'] ?? $item['timezone'] ?? 'Europe/Berlin';
             $item['resolution'] = ['width' => (int)($item['width'] ?? 1920), 'height' => (int)($item['height'] ?? 1080)];
+            $item['rotation']=in_array($item['rotation'] ?? 0,[0,90,180,270],true)?($item['rotation'] ?? 0):0;
             $item['resolutionMode'] = ($item['resolutionMode'] ?? '') === 'native' ? 'native' : 'fixed';
             unset($item['detectedResolution']);
             $viewportWidth=$item['viewportWidth'] ?? null;$viewportHeight=$item['viewportHeight'] ?? null;
@@ -2747,6 +2748,11 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='displays'){
+            $rotation=array_key_exists('rotation',$body)?$body['rotation']:($current['rotation'] ?? 0);
+            if(!is_int($rotation)||!in_array($rotation,[0,90,180,270],true))throw new RuntimeException('Ungültige Display-Drehung.',422);
+            $body['rotation']=$rotation;
+        }
         if($collection==='events'){
             $body=TicketLinks::apply($body,$current);
             if($current&&EventLifecycle::effective($current)==='removed')throw new RuntimeException('Veranstaltung wurde gelöscht, weitere Daten sind nicht mehr verfügbar.',409);

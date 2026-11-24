@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "1a2705878764b6d983cfb4e48d75f78450489e4e",
+  "source_commit": "141d930fbd33cc52e038d4bf688fb3590168a268",
   "product": "kiosky",
-  "version": "3.51.5",
-  "released_at": "2026-11-21T20:11:13.690Z",
+  "version": "3.52.0",
+  "released_at": "2026-11-24T11:11:52.265Z",
   "channel": "stable",
-  "release_notes": "## [3.51.5]\n\n- Raspberry-Pi-Images für alle vier Modelle um eine Mehrschirm-Sitzung erweitert: pro aktivem Ausgang ein eigenständiger Vollbildplayer mit getrenntem Profil und Kopplung, automatischem Hotplug und erhaltenem primären Profil bei Inplace-Updates. Alte Cage-Images laufen ohne Zusatzpaket weiter als Einzelplayer; für Mehrschirm das neue Beta-4-Image verwenden.\n- Wegweisungs-Pfeile in Slides und Vorlagen erhalten einen Zoom-Regler von 10 bis 250 Prozent. Editor, Vorschau und Wiedergabe verwenden denselben begrenzten Wert; bestehende Pfeile bleiben bei 100 Prozent.\n\n- WordPress speichert gewöhnliche Player-Statusmeldungen getrennt vom großen Inhaltsdatensatz. Frische Anzeigeinformationen bleiben für Backend und API sichtbar; Änderungen an Inhalten, Player-Schlüsseln und Befehlsbestätigungen verwenden weiterhin den abgesicherten Vergleichs-/Speicherweg.\n- Player verarbeiten Steuerbefehle aus dem Zustandsabruf alle fünf Sekunden. Der zusätzliche Drei-Sekunden-Abruf entfällt; die ersten Folgeabrufe werden zeitlich verteilt, um Lastspitzen bei vielen Playern zu vermindern. Offline werden keine gespeicherten Befehle ausgeführt.\n- CMS-Status-/Befehlsabrufe überspringen unnötige Veranstaltungs-Lebenszyklusberechnungen und Anzeigeprojektionen. Inhaltsabruf, Zeitplanung, Warnungen und Scheduler behalten die bisherigen Auswertungen.\n- Regressionen mit 15 Browser-Playern und 60 WordPress-Statusmeldungen ergänzt; native WordPress-Installations-/Upgrade-Prüfung kontrolliert den separaten Speicherweg.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.51.5",
+  "release_notes": "## [3.52.0]\n\n- Display-Ausgabe zentral um 90° links/rechts oder 180° drehen, unabhängig pro Player. Logische Maße, automatische Slides, Matrixausschnitte, Warnungen, Identifikation und Offline-Stand berücksichtigen die Drehung. Standalone erhält eine additive Migration; alte Displays bleiben ungedreht und alte API-Schreibzugriffe bewahren die Einstellung.\n- Kopplungsanzeige um einen QR-Code erweitert. Backend scannt Kamera oder Foto lokal mit dem mitgelieferten, fest versionierten jsQR-Leser; die Zuordnung wird weiterhin ausdrücklich bestätigt. Manueller Code, bestehende Rechte und Ablaufprüfung bleiben erhalten.\n- Gleiche Oberfläche für Standalone, WordPress und TYPO3; QR-Leser wird nur beim Scan geladen, Kamera bei Schließen/Verlassen abgeschaltet.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.52.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.51.5",
+    "core_version": "3.52.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.51.5",
-    "typo3_extension_version": "3.51.5"
+    "wordpress_plugin_version": "3.52.0",
+    "typo3_extension_version": "3.52.0"
   },
   "components": {
     "core": {
-      "version": "3.51.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.5.zip?ref=v3.51.5",
-      "sha256": "ef81dcd13e3cb94f5b03c9c826050c391b7bbc208aa3867d146ddadbd92241b5"
+      "version": "3.52.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.0.zip?ref=v3.52.0",
+      "sha256": "0f78ad0cc2f049fd22cf05df5b8934b5c6f281ae903d1ad8efb81ea439ac8e83"
     },
     "standalone": {
-      "version": "3.51.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.51.5.zip?ref=v3.51.5",
-      "sha256": "ef81dcd13e3cb94f5b03c9c826050c391b7bbc208aa3867d146ddadbd92241b5"
+      "version": "3.52.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.0.zip?ref=v3.52.0",
+      "sha256": "0f78ad0cc2f049fd22cf05df5b8934b5c6f281ae903d1ad8efb81ea439ac8e83"
     },
     "wordpress": {
-      "version": "3.51.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.51.5.zip?ref=v3.51.5",
-      "sha256": "f79c1f16717b97a3526676ffa873be8ae96bcd2acd312d8c9e75507c3fa60ee8",
+      "version": "3.52.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.52.0.zip?ref=v3.52.0",
+      "sha256": "ac02fccf10bdeb701c8c9d84b78f7ffa43160956c9fa57eeff332a8143e4c9a6",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.51.5",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.51.5.zip?ref=v3.51.5",
-      "sha256": "227f4731bb5cbde4445cb9b254f72f8219f5a453550f41a001c404b4cb5b96be",
+      "version": "3.52.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.52.0.zip?ref=v3.52.0",
+      "sha256": "ac021d604066918c01762ddd5717c46cf804045638b2f185893b3f40781823b9",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [
