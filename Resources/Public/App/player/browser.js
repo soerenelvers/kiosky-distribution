@@ -47,6 +47,7 @@
   }
 
   function openPlayer(playerUrl) {
+    remove('kiosky-player-unpaired');
     write(keys.playerUrl, playerUrl);
     status.textContent = 'Verbunden. Player wird gestartet …';
     const target=new URL(playerUrl,window.location.href);target.searchParams.set('kiosky_start',String(Date.now()));
@@ -68,7 +69,7 @@
         openPlayer(result.playerUrl);
         return;
       }
-      if (result.status === 'expired') {
+      if (result.status === 'expired' || result.status === 'revoked') {
         remove(keys.pairing);
         status.textContent = 'Code ist abgelaufen. Neuer Code wird erzeugt …';
         pollTimer = window.setTimeout(createPairing, 900);

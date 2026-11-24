@@ -919,13 +919,46 @@ async function renderDisplayPlayer(slug) {
   const headers={'X-Player-Key':key,'Content-Type':'application/json','Accept':'application/json',...(kioskyRuntime.playerRequestHeaders||{})};
   const playerFetch=async(url,options={},readJson=false)=>{
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
-    try{const response=await fetch(url,{...options,signal:controller.signal});return readJson?{ok:response.ok,value:await response.json()}:response;}finally{clearTimeout(timeout);}
+    try{const response=await fetch(url,{...options,signal:controller.signal});return readJson?{ok:response.ok,status:response.status,value:await response.json()}:response;}finally{clearTimeout(timeout);}
+  };
+  const deviceStorageKey=`kiosky-player-device:${slug}`,unpairedStorageKey=`kiosky-player-unpaired:${slug}`;
+  const rememberDevice=nextKey=>{
+    const next=new URL(window.location.href);next.searchParams.set('key',nextKey);
+    try{localStorage.setItem(deviceStorageKey,nextKey);localStorage.setItem('kiosky-player-url',next.href);localStorage.removeItem('kiosky-player-unpaired');}catch{}
+    window.location.replace(next.href);
+  };
+  const returnToPairing=()=>{
+    clearTimeout(timer);releasePlaybackMedia(document.querySelector('#player-slide'));
+    try{localStorage.removeItem(cacheKey);localStorage.removeItem('kiosky.proof.'+slug);localStorage.removeItem(deviceStorageKey);localStorage.removeItem('kiosky-player-url');localStorage.removeItem('kiosky-browser-pairing');localStorage.removeItem('kiosky-display-name');localStorage.setItem('kiosky-player-unpaired','1');localStorage.setItem(unpairedStorageKey,'1');}catch{}
+    const target=new URL(kioskyRuntime.playerBaseUrl||'/',location.href);target.pathname=/\/kiosky-player\/?$/.test(target.pathname)?target.pathname.replace(/\/kiosky-player\/?$/,'/kiosky-player-browser/'):target.pathname.replace(/\/?$/,'/')+'player/browser.html';target.search='';target.hash='';
+    target.searchParams.set('reset','1');target.searchParams.set('kiosky_start',String(Date.now()));window.location.replace(target.href);
+  };
+  try{
+    if(!key.startsWith('pc.')){
+      if(localStorage.getItem(unpairedStorageKey)==='1'||localStorage.getItem('kiosky-player-unpaired')==='1'){
+        let preferred;try{preferred=new URL(localStorage.getItem('kiosky-player-url')||'',window.location.href);}catch{}
+        if(preferred&&preferred.origin===location.origin&&!preferred.username&&!preferred.password&&preferred.searchParams.get('display')&&preferred.searchParams.get('key')?.startsWith('pc.')){window.location.replace(preferred.href);return;}
+        returnToPairing();return;
+      }
+      const saved=localStorage.getItem(deviceStorageKey);if(saved?.startsWith('pc.')){rememberDevice(saved);return;}
+    }
+  }catch{}
+  let registrationAttempted=false;
+  const registerExistingPlayer=async()=>{
+    if(key.startsWith('pc.')||registrationAttempted)return false;registrationAttempted=true;
+    let secret;try{secret=localStorage.getItem('kiosky-player-registration:'+slug);if(!/^[a-f0-9]{64}$/.test(secret||'')){secret=[...crypto.getRandomValues(new Uint8Array(32))].map(n=>n.toString(16).padStart(2,'0')).join('');localStorage.setItem('kiosky-player-registration:'+slug,secret);}}catch{return false;}
+    const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({registerPlayer:true,registrationSecret:secret,platform:playerDevice()})},true);
+    if(response.status===410||response.status===404){returnToPairing();return true;}
+    if(response.ok&&response.value.playerKey?.startsWith('pc.')){rememberDevice(response.value.playerKey);return true;}return false;
   };
   const fetchState=async()=>{
     try{
+      if(await registerExistingPlayer())return null;
       const requestStartedAt=Date.now(),response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/state`),{headers,cache:'no-store'},true),responseReceivedAt=Date.now();
+      if(response.status===410||response.status===404&&response.value?.error){returnToPairing();return null;}
       if(!response.ok)throw new Error('Player nicht gefunden');
       const next=response.value;if(!next?.display||!Array.isArray(next.slides))throw new Error('Ungültiger Player-Stand');
+      if(key.startsWith('pc.'))try{localStorage.setItem(deviceStorageKey,key);localStorage.removeItem(unpairedStorageKey);localStorage.removeItem('kiosky-player-unpaired');}catch{}
       serverClockOffsetMs=playerServerClockOffset(next,requestStartedAt,responseReceivedAt,serverClockOffsetMs);
       playerStateOffline=false;healthTelemetry?.success(next,responseReceivedAt-requestStartedAt);playerState=next;globalThis.KioskyFonts?.setCatalog(playerState.fonts||[]);playerState.cachedClockOffsetMs=serverClockOffsetMs;
       // Storage quota / private browsing must not discard a successfully received update.
@@ -6596,6 +6629,7 @@ function openDisplayDialog(displayId = null) {
   document.querySelector('#display-status').value=display?.status||'active';
   document.querySelector('#display-cache-enabled').checked=display?.cacheEnabled!==false;
   document.querySelector('#display-player-pairing').hidden=!display;
+  if(display)void loadDisplayPlayers(display.id);
   document.querySelector('#display-player-pairing-code').value='';
   document.querySelector('#display-player-pairing-status').textContent='';
   document.querySelector('#display-player-pairing-status').className='';
@@ -6617,6 +6651,21 @@ document.querySelector('#display-resolution-mode').addEventListener('change',()=
 document.querySelector('#display-resolution-preset').addEventListener('change',applyDisplayResolutionPreset);
 document.querySelector('#display-orientation').addEventListener('change',applyDisplayResolutionPreset);
 for(const id of ['display-width','display-height'])document.querySelector('#'+id).addEventListener('input',syncDisplayResolutionPreset);
+let displayPlayersSequence=0;
+async function loadDisplayPlayers(displayId){
+  const sequence=++displayPlayersSequence,root=document.querySelector('#display-players');root.textContent='Player werden geladen …';
+  try{const result=await apiRequest(`/api/displays/${encodeURIComponent(displayId)}/players`);if(sequence!==displayPlayersSequence||document.querySelector('#display-edit-id').value!==displayId)return;
+    root.innerHTML=result.data.length?result.data.map((player,index)=>`<div class="display-player-connection"><span><strong>Player ${index+1} · ${escapeHtml(player.platform||'Player')}</strong><small>${escapeHtml(player.id.slice(-8))} · ${player.online?'Online':'Offline'} · ${player.lastSeenAt?escapeHtml(formatLastSeen(player.lastSeenAt)):'Noch keine Rückmeldung'}</small></span><button type="button" class="button button-secondary" data-unpair-player="${escapeHtml(player.id)}" ${displayCanManage()?'':'hidden'}>Entkoppeln</button></div>`).join(''):'<p>Noch keine einzeln verwaltbaren Player. Bestehende Player erscheinen nach ihrem nächsten Online-Start mit aktuellem Softwarestand.</p>';
+  }catch(error){if(sequence===displayPlayersSequence)root.textContent=`Player konnten nicht geladen werden: ${error.message}`;}
+}
+document.querySelector('#refresh-display-players').addEventListener('click',()=>loadDisplayPlayers(document.querySelector('#display-edit-id').value));
+async function unpairDisplayPlayer(playerId=null){
+  const id=document.querySelector('#display-edit-id').value;if(!id)return;
+  if(!confirm(playerId?'Diesen Player entkoppeln? Die anderen Player und die Inhalte des Displays bleiben erhalten.':'Alle Player dieses Displays entkoppeln? Auch bisherige direkte Player-URLs werden ungültig. Das Display und seine Inhalte bleiben erhalten.'))return;
+  try{await apiRequest(`/api/displays/${encodeURIComponent(id)}/players${playerId?'/'+encodeURIComponent(playerId):''}`,{method:'DELETE'});await loadDisplayPlayers(id);showToast(playerId?'Player wurde entkoppelt.':'Alle Player wurden entkoppelt.');if(!playerId){await loadDisplays();updateDisplayUrlPreview();}}catch(error){showToast(error.message);}
+}
+document.querySelector('#display-players').addEventListener('click',event=>{const button=event.target.closest('[data-unpair-player]');if(button)void unpairDisplayPlayer(button.dataset.unpairPlayer);});
+document.querySelector('#unpair-all-display-players').addEventListener('click',()=>unpairDisplayPlayer());
 document.querySelector('#scan-pairing-code').addEventListener('click',()=>window.KioskyPairingScanner.open({vendorUrl:assetUrl('vendor/jsqr/jsQR.js'),onCode:code=>{document.querySelector('#display-player-pairing-code').value=code;document.querySelector('#display-player-pairing-status').textContent='QR-Code erkannt. Bitte zum Koppeln bestätigen.';document.querySelector('#pair-display-player').focus();}}));
 document.querySelector('#display-player-pairing-code').addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase().replace(/[^23456789A-HJ-NP-Z]/g,'').slice(0,6);});
 document.querySelector('#display-player-pairing-code').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();document.querySelector('#pair-display-player').click();}});
@@ -6625,7 +6674,7 @@ document.querySelector('#pair-display-player').addEventListener('click',async()=
   if(!displayId)return;
   if(code.length!==6){status.textContent='Bitte den vollständigen sechsstelligen Code eingeben.';status.className='is-error';return;}
   button.disabled=true;status.textContent='Kopplung wird geprüft …';status.className='';
-  try{const display=state.displays.find(item=>item.id===displayId);await apiRequest(`/api/displays/${displayId}/pair`,{method:'POST',body:JSON.stringify({code})});status.textContent=`Player wurde erfolgreich mit „${display?.name||'dem Display'}“ gekoppelt.`;status.className='is-success';document.querySelector('#display-player-pairing-code').value='';showToast('Player wurde gekoppelt.');}
+  try{const display=state.displays.find(item=>item.id===displayId);await apiRequest(`/api/displays/${displayId}/pair`,{method:'POST',body:JSON.stringify({code})});status.textContent=`Player wurde erfolgreich mit „${display?.name||'dem Display'}“ gekoppelt.`;status.className='is-success';document.querySelector('#display-player-pairing-code').value='';showToast('Player wurde gekoppelt.');await loadDisplayPlayers(displayId);}
   catch(error){status.textContent=error.message;status.className='is-error';}
   finally{button.disabled=false;}
 });

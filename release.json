@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "eb319262c38c445f914d29c62799c1a6a8cec8bb",
+  "source_commit": "5236a7c834f889fac7513851ec85e3fcf4e23032",
   "product": "kiosky",
-  "version": "3.52.1",
-  "released_at": "2026-11-24T12:28:44.986Z",
+  "version": "3.53.0",
+  "released_at": "2026-11-24T17:42:47.701Z",
   "channel": "stable",
-  "release_notes": "## [3.52.1]\n\n- Kopplungsseiten und anschließende Playeraufrufe umgehen alte CMS-/Proxy-HTML-Caches durch einen rein navigationsbezogenen Startparameter. Windows, Linux/Mint, macOS und Raspberry Pi behalten gespeicherte Serveradresse, Profile und Kopplung; alte Kopplungsseiten ohne QR-Element werden einmalig frisch geöffnet.\n- Matrix-Standardinhalt zwischen Kanal und festem Slide umschaltbar, einschließlich API, Wiedergabe, Duplizieren und Systemumzug in Standalone, WordPress und TYPO3. Zuschnitt, Blenden, Versatz und Skalierung bleiben beim Bearbeiten erhalten.\n- Inaktive/gelöschte Matrixkopien blockieren oder überlagern keine aktiven Displayzuordnungen. Standalone ersetzt den zu strikten eindeutigen Index durch aktive Zuordnungssperren; es werden keine Matrix-, Inhalts- oder Zeitplandaten gelöscht.\n- Fehlender CMS-Matrixstatus verwendet Aktiv als Standard; ungültige neue Größen werden abgewiesen und frühere leere Zuschnittgrößen fallen auf sichtbare Displaymaße zurück. Matrix-Player laden nur ihre aktive Matrix statt den gesamten Katalog.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.52.1",
+  "release_notes": "## [3.53.0]\n\n- Mehrere Player pro Display mit eigenen, einzeln widerrufbaren Zugangsschlüsseln. Neue Kopplungen geben keinen gemeinsamen Display-Schlüssel mehr aus; bestehende direkte Player werden beim nächsten Online-Start mit aktueller Oberfläche ohne erneute Codeeingabe registriert.\n- Gekoppelte Player in den Display-Einstellungen anzeigen, Status aktualisieren, einzeln oder gemeinsam entkoppeln. „Alle entkoppeln“ sperrt auch bisherige direkte Display-URLs. Das Display, Inhalte und Zeitzuweisungen bleiben erhalten. Ein entkoppelter Player kehrt bei der nächsten erfolgreichen Serververbindung zum Kopplungscode zurück und verwirft seinen Inhaltscache.\n- Fernbefehle werden pro Player zugestellt und bestätigt. Die Bestätigung eines Players verbraucht keinen Befehl für die anderen Player desselben Displays.\n- Standalone schreibt abgeschlossene Befehlsbestätigungen bei normalen oder wiederholten Heartbeats nicht erneut; die Erledigt-Zeitpunkte bleiben erhalten.\n- WordPress hält unabhängige Player-Statusdaten in der kleinen Laufzeitablage, ohne alle Inhalte pro Heartbeat neu zu speichern. Verschlüsselte Systemumzüge mit Zugangsdaten erhalten die neuen Kopplungen; bereits widerrufene Ziel-Zugangsdaten werden nicht reaktiviert.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.53.0",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.52.1",
+    "core_version": "3.53.0",
     "api_version": "1",
-    "wordpress_plugin_version": "3.52.1",
-    "typo3_extension_version": "3.52.1"
+    "wordpress_plugin_version": "3.53.0",
+    "typo3_extension_version": "3.53.0"
   },
   "components": {
     "core": {
-      "version": "3.52.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.1.zip?ref=v3.52.1",
-      "sha256": "c9143d26d5f3b9bef0aa8e0c618146ea6a3da15388e0f6d7132862b9177e5d62"
+      "version": "3.53.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.53.0.zip?ref=v3.53.0",
+      "sha256": "777c52406831b4ec857d1a93f0a8fce5fee66420e27a91bc9c4b00d7b49ed8f7"
     },
     "standalone": {
-      "version": "3.52.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.1.zip?ref=v3.52.1",
-      "sha256": "c9143d26d5f3b9bef0aa8e0c618146ea6a3da15388e0f6d7132862b9177e5d62"
+      "version": "3.53.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.53.0.zip?ref=v3.53.0",
+      "sha256": "777c52406831b4ec857d1a93f0a8fce5fee66420e27a91bc9c4b00d7b49ed8f7"
     },
     "wordpress": {
-      "version": "3.52.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.52.1.zip?ref=v3.52.1",
-      "sha256": "89c2f0f681a7f294d49e3e0258f5425d60c80e9d6b44f624f7fd01727f9986d5",
+      "version": "3.53.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.53.0.zip?ref=v3.53.0",
+      "sha256": "653c157b85128e12e156c69ab9258d986a145f05ffc95183a75424ba19ce94b8",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.52.1",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.52.1.zip?ref=v3.52.1",
-      "sha256": "15e61cae5a0928ceb33a39e404486950f641d299f07e19ac45d77394eb3ea4ca",
+      "version": "3.53.0",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.53.0.zip?ref=v3.53.0",
+      "sha256": "dddfb0380dda5f06b917f8c4452cf3af3ec3e8c6869a61abd319ab2c381588aa",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

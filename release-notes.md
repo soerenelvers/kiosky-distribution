@@ -1,6 +1,7 @@
-## [3.52.1]
+## [3.53.0]
 
-- Kopplungsseiten und anschließende Playeraufrufe umgehen alte CMS-/Proxy-HTML-Caches durch einen rein navigationsbezogenen Startparameter. Windows, Linux/Mint, macOS und Raspberry Pi behalten gespeicherte Serveradresse, Profile und Kopplung; alte Kopplungsseiten ohne QR-Element werden einmalig frisch geöffnet.
-- Matrix-Standardinhalt zwischen Kanal und festem Slide umschaltbar, einschließlich API, Wiedergabe, Duplizieren und Systemumzug in Standalone, WordPress und TYPO3. Zuschnitt, Blenden, Versatz und Skalierung bleiben beim Bearbeiten erhalten.
-- Inaktive/gelöschte Matrixkopien blockieren oder überlagern keine aktiven Displayzuordnungen. Standalone ersetzt den zu strikten eindeutigen Index durch aktive Zuordnungssperren; es werden keine Matrix-, Inhalts- oder Zeitplandaten gelöscht.
-- Fehlender CMS-Matrixstatus verwendet Aktiv als Standard; ungültige neue Größen werden abgewiesen und frühere leere Zuschnittgrößen fallen auf sichtbare Displaymaße zurück. Matrix-Player laden nur ihre aktive Matrix statt den gesamten Katalog.
+- Mehrere Player pro Display mit eigenen, einzeln widerrufbaren Zugangsschlüsseln. Neue Kopplungen geben keinen gemeinsamen Display-Schlüssel mehr aus; bestehende direkte Player werden beim nächsten Online-Start mit aktueller Oberfläche ohne erneute Codeeingabe registriert.
+- Gekoppelte Player in den Display-Einstellungen anzeigen, Status aktualisieren, einzeln oder gemeinsam entkoppeln. „Alle entkoppeln“ sperrt auch bisherige direkte Display-URLs. Das Display, Inhalte und Zeitzuweisungen bleiben erhalten. Ein entkoppelter Player kehrt bei der nächsten erfolgreichen Serververbindung zum Kopplungscode zurück und verwirft seinen Inhaltscache.
+- Fernbefehle werden pro Player zugestellt und bestätigt. Die Bestätigung eines Players verbraucht keinen Befehl für die anderen Player desselben Displays.
+- Standalone schreibt abgeschlossene Befehlsbestätigungen bei normalen oder wiederholten Heartbeats nicht erneut; die Erledigt-Zeitpunkte bleiben erhalten.
+- WordPress hält unabhängige Player-Statusdaten in der kleinen Laufzeitablage, ohne alle Inhalte pro Heartbeat neu zu speichern. Verschlüsselte Systemumzüge mit Zugangsdaten erhalten die neuen Kopplungen; bereits widerrufene Ziel-Zugangsdaten werden nicht reaktiviert.

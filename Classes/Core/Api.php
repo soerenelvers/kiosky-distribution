@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kiosky\Core;
 require_once __DIR__.'/QualityClock.php';
+require_once __DIR__.'/PlayerConnections.php';
 
 use RuntimeException;
 use Throwable;
@@ -99,7 +100,7 @@ final class Api
                 $this->assertRolePermission($method,$path);$this->refreshLicenseState($state);
             }elseif($method==='GET'&&preg_match('#^/api/player/([^/]+)/state$#',$path,$licensePlayer)){
                 $display=$this->first($state['displays'],static fn(array $item):bool=>($item['slug'] ?? '')===rawurldecode($licensePlayer[1])&&empty($item['deletedAt'])&&($item['status'] ?? '')!=='archived');
-                if($display&&$playerKey!==''&&hash_equals((string)($display['playerKey'] ?? ''),$playerKey))$this->refreshLicenseState($state);
+                if($display&&$playerKey!==''&&(PlayerConnections::authenticate($state,$display,$playerKey)!==null||hash_equals((string)($display['playerKey'] ?? ''),$playerKey)))$this->refreshLicenseState($state);
             }
             // Status/command requests do not select event content. The state GET,
             // editor and scheduler still apply lifecycle changes when needed.
@@ -321,27 +322,30 @@ final class Api
         if ($path === '/api/users/invitations' && $method === 'GET') return $this->ok(['data' => []]);
         if ($path === '/api/audit-logs' && $method === 'GET') return $this->ok(['data' => array_reverse($state['audit'])]);
         if ($path === '/api/player-pairings' && $method === 'POST') {
+            $state['playerPairings']=array_values(array_filter($state['playerPairings'],static fn(array $p):bool=>(($p['status']??'')!=='pending'||strtotime($p['expiresAt']??'')>QualityClock::now())&&(empty($p['revokedAt'])||strtotime($p['revokedAt'])>QualityClock::now()-604800)));
             $alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
             do {
                 $code = '';
                 for ($i = 0; $i < 6; $i++) $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
             } while ($this->first($state['playerPairings'], fn(array $item): bool => ($item['code'] ?? '') === $code && strtotime((string)($item['expiresAt'] ?? '')) > QualityClock::now()));
             $pairing = $this->record([
-                'code' => $code, 'secret' => bin2hex(random_bytes(24)), 'status' => 'pending',
+                'code' => $code, 'secretHash' => hash('sha256',$pairingSecret=bin2hex(random_bytes(24))), 'credentialVersion'=>1, 'status' => 'pending',
                 'platform' => (string)($body['platform'] ?? 'Universal Player'),
                 'playerBaseUrl' => (string)($body['playerBaseUrl'] ?? ''), 'expiresAt' => gmdate('c', QualityClock::now() + 900),
             ]);
             $state['playerPairings'][] = $pairing;
-            return $this->created(['id' => $pairing['id'], 'code' => $code, 'secret' => $pairing['secret'], 'status' => 'pending', 'expiresAt' => $pairing['expiresAt']]);
+            return $this->created(['id' => $pairing['id'], 'code' => $code, 'secret' => $pairingSecret, 'status' => 'pending', 'expiresAt' => $pairing['expiresAt']]);
         }
         if (preg_match('#^/api/player-pairings/([^/]+)$#', $path, $match) && $method === 'GET') {
             $pairing = $this->required($state['playerPairings'], rawurldecode($match[1]), 'Kopplung');
-            if (!hash_equals((string)$pairing['secret'], $playerKey)) throw new RuntimeException('Kopplung wurde nicht gefunden.', 404);
-            if (strtotime((string)$pairing['expiresAt']) <= QualityClock::now()) return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'expired']);
+            if (!hash_equals((string)($pairing['secretHash'] ?? hash('sha256',(string)($pairing['secret']??''))), hash('sha256',$playerKey))) throw new RuntimeException('Kopplung wurde nicht gefunden.', 404);
+            if(!empty($pairing['revokedAt']))return $this->ok(['id'=>$pairing['id'],'status'=>'revoked']);
+            if (($pairing['status']??'')==='pending' && strtotime((string)$pairing['expiresAt']) <= QualityClock::now()) return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'expired']);
             if (($pairing['status'] ?? '') !== 'paired') return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'pending']);
             $display = $this->required($state['displays'], (string)$pairing['displayId'], 'Display');
+            if(($pairing['credentialVersion']??0)!==1||!hash_equals((string)($pairing['displayKeyHash']??''),hash('sha256',(string)$display['playerKey'])))return $this->ok(['id'=>$pairing['id'],'status'=>'revoked']);
             $base = rtrim((string)($pairing['playerBaseUrl'] ?? ''), '/') . '/';
-            return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'paired', 'display' => ['id' => $display['id'], 'name' => $display['name']], 'playerUrl' => $base . '?display=' . rawurlencode((string)$display['slug']) . '&key=' . rawurlencode((string)$display['playerKey'])]);
+            return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'paired', 'display' => ['id' => $display['id'], 'name' => $display['name']], 'playerUrl' => $base . '?display=' . rawurlencode((string)$display['slug']) . '&key=' . rawurlencode(($pairing['credentialVersion']??0)===1?'pc.'.$pairing['id'].'.'.$playerKey:(string)$display['playerKey'])]);
         }
 
         if (preg_match('#^/api/player/([^/]+)/(state|heartbeat|proof|commands)$#', $path, $match)) {
@@ -765,6 +769,18 @@ final class Api
             if ($method === 'PUT') return $this->ok(['asset' => $this->saveRecord($state, 'mediaAssets', $body, $id)], true);
             if ($method === 'DELETE') return $this->trashRecord($state, 'mediaAssets', 'media', $id);
         }
+        if(preg_match('#^/api/displays/([^/]+)/players(?:/([^/]+))?$#',$path,$match)){
+            $display=$this->required($this->active($state['displays']),rawurldecode($match[1]),'Display');
+            if($method==='GET'&&empty($match[2]))return $this->ok(['data'=>PlayerConnections::listing($state,$display)]);
+            if($method==='DELETE'){
+                $id=isset($match[2])?rawurldecode($match[2]):null;
+                foreach($state['playerPairings'] as &$p)if(($p['displayId']??'')===$display['id']&&($id===null||$p['id']===$id))$p['revokedAt']??=$this->now();unset($p);
+                if($id===null){$index=$this->index($state['displays'],$display['id']);$state['displays'][$index]['playerKey']=bin2hex(random_bytes(24));unset($state['displays'][$index]['playerConnections']);$state['displays'][$index]['online']=false;$state['displays'][$index]['lastSeenAt']=null;}
+                $this->audit($state,'display.player.unpaired',(string)$display['id']);
+                return $this->ok(['ok'=>true],true);
+            }
+            throw new RuntimeException('Methode nicht erlaubt.',405);
+        }
         if (preg_match('#^/api/displays/([^/]+)/pair$#', $path, $match) && $method === 'POST') {
             $display = $this->required($state['displays'], rawurldecode($match[1]), 'Display');
             $code = strtoupper(trim((string)($body['code'] ?? '')));
@@ -774,6 +790,9 @@ final class Api
             $state['playerPairings'][$index]['status'] = 'paired';
             $state['playerPairings'][$index]['displayId'] = $display['id'];
             $state['playerPairings'][$index]['pairedAt'] = $this->now();
+            $state['playerPairings'][$index]['credentialVersion']=1;
+            $state['playerPairings'][$index]['displayKeyHash']=hash('sha256',(string)$display['playerKey']);
+            if(isset($state['playerPairings'][$index]['secret'])){$state['playerPairings'][$index]['secretHash']=hash('sha256',$state['playerPairings'][$index]['secret']);unset($state['playerPairings'][$index]['secret']);}
             return $this->ok(['pairing' => ['id' => $pairing['id'], 'status' => 'paired']], true);
         }
 
@@ -859,7 +878,7 @@ final class Api
             $displayId=rawurldecode($match[1]);$this->required($this->active($state['displays']),$displayId,'Display');
             if (!in_array($body['command'] ?? '',['sync','reload','identify','fullscreen'],true)) throw new RuntimeException('Unbekannter Player-Befehl.',422);
             $command = $this->record(['displayId' => $displayId, 'command' => $body['command']]);
-            $state['commands'][] = $command;
+            $command['playerIds']=PlayerConnections::targets($state,$displayId);$state['commands'][] = $command;
             return $this->created(['command' => $command]);
         }
         if($path==='/api/preset-triggers'){
@@ -1830,7 +1849,7 @@ final class Api
             $id=rawurldecode($match[1]);$this->required($this->active($state['displays']),$id,'Display');
             if(!in_array($body['command'] ?? '',['reload','identify','fullscreen','sync'],true))throw new RuntimeException('Unbekannter Player-Befehl.',422);
             $command=$this->record(['displayId'=>$id,'command'=>$body['command'],'status'=>'pending']);
-            $state['commands'][]=$command;
+            $command['playerIds']=PlayerConnections::targets($state,(string)$command['displayId']);$state['commands'][]=$command;
             $this->audit($state,'external.display.command.queued',$id);
             return $this->created(['command'=>$command]);
         }
@@ -2197,14 +2216,18 @@ final class Api
         // Heartbeats and commands only require the authenticated raw record;
         // projecting names/channels/events for every status request is wasteful.
         $display = $rawDisplay;
-        if (!$display || !hash_equals((string)($display['playerKey'] ?? ''), $playerKey)) throw new RuntimeException('Display wurde nicht gefunden.', 404);
+        $connectionId=$display?PlayerConnections::authenticate($state,$display,$playerKey):null;
+        if(!$connectionId&&str_starts_with($playerKey,'pc.'))throw new RuntimeException('Player wurde entkoppelt. Bitte erneut koppeln.',410);
+        if (!$display || (!$connectionId&&!hash_equals((string)($display['playerKey'] ?? ''), $playerKey))) throw new RuntimeException('Display wurde nicht gefunden.', 404);
         if($action==='state')$display=$this->listCollection(array_replace($state,['displays'=>[$rawDisplay]]),'displays')[0];
+        if($action==='heartbeat'&&$method==='POST'&&($body['registerPlayer']??false)===true&&!$connectionId)return $this->ok(PlayerConnections::register($state,$display,(string)($body['registrationSecret']??''),(string)($body['platform']??'Web Player')),true);
+        $deliveryKey=$connectionId??$display['id'];
         $preview=($body['preview'] ?? '')==='1'||($body['preview'] ?? null)===1;
         $deliveryChanged=false;
         if (!$preview && in_array($action,['state','commands'],true) && $method==='GET') {
-            $pending=array_values(array_filter($state['commands'],fn(array $item): bool => ($item['displayId'] ?? '')===$display['id']));
-            $ids=array_column($pending,'id');$deliveryChanged=($state['deliveredPlayerCommands'][$display['id']] ?? [])!==$ids;
-            $state['deliveredPlayerCommands'][$display['id']]=$ids;
+            $pending=PlayerConnections::pending($state,(string)$display['id'],$connectionId);
+            $ids=array_column($pending,'id');$deliveryChanged=($state['deliveredPlayerCommands'][$deliveryKey] ?? [])!==$ids;
+            $state['deliveredPlayerCommands'][$deliveryKey]=$ids;
             if ($action==='commands') return $this->ok(['commands'=>$pending],$deliveryChanged);
         }
         if ($action === 'heartbeat' && $method === 'POST') {
@@ -2212,7 +2235,7 @@ final class Api
             if($this->proofStore&&$this->license()->allows($state,'advertising')&&is_array($body['proofReceipts']??null)&&count($body['proofReceipts'])<=20){foreach($body['proofReceipts'] as $receipt){if(!is_array($receipt))continue;$row=PlaybackProof::receipt((string)$display['id'],$receipt,$this->proofSecret);if($row)$receipts[]=$row;if(is_string($receipt['id']??null))$proofAccepted[]=$receipt['id'];}try{if($receipts)$this->proofStore->insert($receipts);}catch(\Throwable){$proofAccepted=[];error_log('Kiosky: Ausspielnachweise vorübergehend nicht gespeichert; Player wird weiter bedient.');}}
             $body['lastSeenAt'] = $this->now();
             $body['online'] = true;
-            $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$display['id']] ?? []);
+            $ids=array_key_exists('acknowledgedCommandIds',$body)?(is_array($body['acknowledgedCommandIds'])?array_slice($body['acknowledgedCommandIds'],0,100):[]):($state['deliveredPlayerCommands'][$deliveryKey] ?? []);
             // Heartbeat metadata may never overwrite credentials, routing or display configuration.
             $fields=PlayerHealth::metadata($body);$seenUs=(int)floor(QualityClock::micro()*1000000);
             // Preserve ordering even for legacy players without health telemetry,
@@ -2220,8 +2243,9 @@ final class Api
             $fields['lastSeenAt']=gmdate('Y-m-d\TH:i:s',intdiv($seenUs,1000000)).sprintf('.%06dZ',$seenUs%1000000);
             $fields['playerHealth']=PlayerHealth::normalize($body['diagnostics']??null,is_array($rawDisplay['playerHealth']??null)?$rawDisplay['playerHealth']:null);
             // Persist status into the raw record: $display contains read-only projections.
+            if($connectionId){$fields['playerConnections']=$rawDisplay['playerConnections']??[];$fields['playerConnections'][$connectionId]=['lastSeenAt'=>$fields['lastSeenAt']];}
             $index=$this->index($state['displays'],$display['id']);$state['displays'][$index]=array_replace($state['displays'][$index],$fields);
-            $state['commands'] = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') !== $display['id'] || ($ids!==null && !in_array($item['id'],$ids,true))));
+            PlayerConnections::acknowledge($state,(string)$display['id'],$connectionId,$ids??[]);
             return $this->ok(['ok' => true,'proofAccepted'=>$proofAccepted], true);
         }
         if ($action === 'proof' && $method === 'POST') {
@@ -2282,7 +2306,7 @@ final class Api
             'targets' => $warning['targets'] ?? [], 'active' => true, 'source' => $warning['source'] ?? 'manual',
             'warnings'=>$warning['warnings']??null,'presentationEndsAt'=>$warning['presentationEndsAt'] ?? null, 'severity' => $warning['severity'] ?? 1, 'endsAt' => $warning['endsAt'] ?? null, 'document' => $warning['document'] ?? [],
         ] : null;
-        $commands = array_values(array_filter($state['commands'], fn(array $item): bool => ($item['displayId'] ?? '') === $display['id']));
+        $commands = PlayerConnections::pending($state,(string)$display['id'],$connectionId);
         $serverTime = $this->now();
         $matrixMode = $matrixLayout && ($assignment ? ($assignment['target']['type'] ?? '')==='matrix' : !empty($selection['matrixMode']));
         $playbackSync = [
@@ -2304,6 +2328,7 @@ final class Api
             if(!in_array($id,array_column($fonts,'id'),true))throw new RuntimeException('Diese Schrift ist dem Display nicht zugewiesen.',404);
             return $this->ok($this->fontFile($state,$id),$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
         }
+        if($connectionId)unset($display['playerKey'],$display['playerConnections']);
         $output=[
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'warningPresentation'=>['nextChangeAtMs'=>$warningPresentation['nextChangeAtMs']], 'emergency' => $emergency, 'warning' => $emergency,
