@@ -220,7 +220,10 @@ if [ "${1:-}" = --managed ];then
         if [ -z "$player" ];then
             set -- $geometry
             [ "$#" = 4 ] || exit 3
-            "$browser" --kiosk --start-fullscreen --new-window --hide-scrollbars --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--window-position=$1,$2" "--window-size=$3,$4" "--user-data-dir=$root/profile" "$url" >/dev/null 2>&1 &
+            kiosky_start_url=$url
+            case "$url" in *'#'*) ;; *) case "$url" in *'?'*) kiosky_start_separator='&';; *) kiosky_start_separator='?';; esac
+                kiosky_start_url="${url}${kiosky_start_separator}kiosky_start=$(/bin/date +%s)";; esac
+            "$browser" --kiosk --start-fullscreen --new-window --hide-scrollbars --no-first-run --no-default-browser-check --noerrdialogs --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --disk-cache-size=33554432 "--window-position=$1,$2" "--window-size=$3,$4" "--user-data-dir=$root/profile" "$kiosky_start_url" >/dev/null 2>&1 &
             player=$!;sleep 2;kill -0 "$player" 2>/dev/null || exit 3
             printf '%s' "$$" > "$root/player.ready"
         fi

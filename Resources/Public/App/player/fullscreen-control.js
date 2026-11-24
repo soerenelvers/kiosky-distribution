@@ -1,4 +1,9 @@
 (() => {
+  // Older cached first-start HTML has no QR slot. Repair once without clearing
+  // local storage or changing the paired display identity.
+  if(typeof document!=='undefined'&&document.querySelector?.('#pairing-code')&&!document.querySelector?.('#pairing-qr')&&window.location?.href){
+    const fresh=new URL(window.location.href);if(!fresh.searchParams.has('kiosky_start')){fresh.searchParams.set('kiosky_start',String(Date.now()));window.location.replace(fresh.href);}
+  }
   const extensionId='nlboncnanjoobakmbginlgmganglphlf';
   const nativeFullscreen=()=>new Promise(resolve=>{
     const embedded=window.chrome?.webview;

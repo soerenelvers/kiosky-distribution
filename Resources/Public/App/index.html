@@ -6,8 +6,8 @@
   <meta name="description" content="Kiosky – Verwaltung für Veranstaltungen, Displays und Website-Inhalte">
   <title>Kiosky – Veranstaltungs- und Displaysteuerung</title>
   <link rel="icon" href="data:,">
-  <link href="player/fonts/builtins.css?v=3.52.0-20261124111150%2B141d930f" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.52.0-20261124111150%2B141d930f">
+  <link href="player/fonts/builtins.css?v=3.52.1-20261124122842%2Beb319262" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.52.1-20261124122842%2Beb319262">
 </head>
 <body>
   <section class="auth-screen" id="auth-screen">
@@ -1790,7 +1790,7 @@
   </dialog>
 
   <dialog id="matrix-dialog" class="wide-dialog matrix-dialog">
-    <form class="dialog-content" id="matrix-form"><button class="dialog-close" type="button" data-close-dialog="matrix-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Gemeinsame Anzeigefläche</p><h2 id="matrix-dialog-title">Matrix-Display anlegen</h2><input id="matrix-edit-id" type="hidden"><div class="form-grid"><label class="form-field span-two"><span>Name</span><input id="matrix-name" required maxlength="200"></label><label class="form-field"><span>Zeilen</span><input id="matrix-rows" type="number" min="1" max="20" value="1"></label><label class="form-field"><span>Spalten</span><input id="matrix-columns" type="number" min="1" max="20" value="2"></label><label class="form-field"><span>Standardkanal</span><select id="matrix-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Status</span><select id="matrix-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="matrix-description" rows="2"></textarea></label></div><p class="property-note">Displays in die Rasterfelder ziehen oder im Feld auswählen. Bereits aktive Matrix-Zuordnungen werden serverseitig verhindert.</p><div class="matrix-configurator"><aside><strong>Verfügbare Displays</strong><div id="matrix-display-pool"></div></aside><section><div class="matrix-grid" id="matrix-grid"></div><div class="matrix-resolution" id="matrix-resolution">Gesamtauflösung: 0 × 0 px</div></section></div><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="matrix-dialog">Abbrechen</button><button class="button button-primary" type="submit">Matrix speichern</button></div></form>
+    <form class="dialog-content" id="matrix-form"><button class="dialog-close" type="button" data-close-dialog="matrix-dialog" aria-label="Dialog schließen">×</button><p class="eyebrow">Gemeinsame Anzeigefläche</p><h2 id="matrix-dialog-title">Matrix-Display anlegen</h2><input id="matrix-edit-id" type="hidden"><div class="form-grid"><label class="form-field span-two"><span>Name</span><input id="matrix-name" required maxlength="200"></label><label class="form-field"><span>Zeilen</span><input id="matrix-rows" type="number" min="1" max="20" value="1"></label><label class="form-field"><span>Spalten</span><input id="matrix-columns" type="number" min="1" max="20" value="2"></label><label class="form-field"><span>Standardinhalt</span><select id="matrix-content-type"><option value="channel">Kanal</option><option value="slide">Fester Slide</option></select></label><label class="form-field" id="matrix-slide-field" hidden><span>Standardslide</span><select id="matrix-slide"><option value="">Keine Standardslide</option></select></label><label class="form-field" id="matrix-channel-field"><span>Standardkanal</span><select id="matrix-channel"><option value="">Kein Standardkanal</option></select></label><label class="form-field"><span>Status</span><select id="matrix-status"><option value="active">Aktiv</option><option value="disabled">Deaktiviert</option></select></label><label class="form-field span-two"><span>Beschreibung</span><textarea id="matrix-description" rows="2"></textarea></label></div><p class="property-note">Displays in die Rasterfelder ziehen oder im Feld auswählen. Bereits aktive Matrix-Zuordnungen werden serverseitig verhindert.</p><div class="matrix-configurator"><aside><strong>Verfügbare Displays</strong><div id="matrix-display-pool"></div></aside><section><div class="matrix-grid" id="matrix-grid"></div><div class="matrix-resolution" id="matrix-resolution">Gesamtauflösung: 0 × 0 px</div></section></div><div class="dialog-actions"><button class="button button-secondary" type="button" data-close-dialog="matrix-dialog">Abbrechen</button><button class="button button-primary" type="submit">Matrix speichern</button></div></form>
   </dialog>
 
   <dialog id="preset-trigger-dialog" class="wide-dialog" aria-labelledby="preset-trigger-title">
@@ -1910,19 +1910,19 @@
   <dialog id="customer-review-dialog" class="customer-dialog"><header class="customer-dialog-header"><h2>Ausspielvorschlag prüfen</h2><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog" aria-label="Vorschlagsprüfung schließen">×</button></header><div id="customer-review-summary"></div><div id="customer-review-preview"></div><label class="form-field"><span>Begründung bei Ablehnung (optional)</span><textarea id="customer-review-note" maxlength="1000" rows="3"></textarea></label><p id="customer-review-status" role="status"></p><div class="dialog-actions"><button type="button" class="button button-primary" id="customer-review-approve">Freigeben und Zeitzuweisungen anlegen</button><button type="button" class="button button-secondary" id="customer-review-reject">Ablehnen</button><button type="button" class="button button-secondary" data-close-dialog="customer-review-dialog">Schließen</button></div></dialog>
 
   <dialog id="pairing-scan-dialog" aria-labelledby="pairing-scan-title"><div class="dialog-content"><h2 id="pairing-scan-title">Player-QR-Code scannen</h2><p>Code scannen, prüfen und anschließend beim ausgewählten Display auf „Koppeln“ klicken.</p><video id="pairing-scan-video" playsinline muted autoplay></video><p id="pairing-scan-status" role="status"></p><label class="form-field"><span>Alternativ QR-Foto auswählen</span><input type="file" id="pairing-scan-file" accept="image/*" capture="environment"></label><button type="button" class="button button-secondary" id="pairing-scan-close">Schließen</button></div></dialog>
-  <script src="runtime-config.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/pairing-qr.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/pairing-scan.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/fullscreen-control.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/seasonal-overlays.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/media-placement.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/video-options.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/editor-alignment.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/event-image.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/font-library.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/touch-layout.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/health-telemetry.js?v=3.52.0-20261124111150%2B141d930f"></script>
-  <script src="player/playback-proof.js?v=3.52.0-20261124111150%2B141d930f"></script>
+  <script src="runtime-config.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/pairing-qr.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/pairing-scan.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/fullscreen-control.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/seasonal-overlays.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/media-placement.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/video-options.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/editor-alignment.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/event-image.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/font-library.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/touch-layout.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/health-telemetry.js?v=3.52.1-20261124122842%2Beb319262"></script>
+  <script src="player/playback-proof.js?v=3.52.1-20261124122842%2Beb319262"></script>
   <dialog id="event-flow-template-dialog" data-license-modules="events schedule operations channels displays" class="event-flow-dialog" aria-labelledby="event-flow-template-title"><form id="event-flow-template-form">
     <div class="section-heading"><h2 id="event-flow-template-title">Ablaufvorlage</h2><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
     <label>Vorlagenname<input id="event-flow-template-name" required maxlength="200"></label>
@@ -1939,7 +1939,7 @@
     <fieldset><legend>Ziel-Displays, Gruppen und Matrizen</legend><input type="search" id="event-flow-target-search" placeholder="Ziele suchen" aria-label="Ausspielziele suchen"><div id="event-flow-targets" class="event-flow-targets"></div></fieldset>
     <p class="event-flow-error" role="alert"></p><div class="section-actions"><button type="submit" class="button button-primary">Zuordnung speichern</button><button type="button" class="button button-secondary" data-flow-close>Abbrechen</button></div>
   </form></dialog>
-  <script src="app.js?v=3.52.0-20261124111150%2B141d930f"></script>
+  <script src="app.js?v=3.52.1-20261124122842%2Beb319262"></script>
 
 </body>
 </html>

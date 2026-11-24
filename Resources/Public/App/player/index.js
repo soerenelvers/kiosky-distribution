@@ -1,6 +1,7 @@
 (() => {
   const runtime=window.KioskyPlayerCenterRuntime||{};
-  const browserUrl=runtime.browserUrl||'/player/browser.html';
+  const browserTarget=new URL(runtime.browserUrl||'/player/browser.html',window.location.href);browserTarget.searchParams.set('kiosky_start',String(Date.now()));
+  const browserUrl=browserTarget.toString();
   const downloadBase=runtime.downloadBase||'/player/downloads/';
   const downloads=runtime.downloads||{};
   const serverAddress = document.querySelector('#server-address');

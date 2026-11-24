@@ -94,3 +94,11 @@ Browseremulation ersetzt keine Abnahme mit physischen UHD-Monitoren, gemischten
 Monitor-DPI-Werten, den vorgesehenen TV-Geräten oder einem Hardware-Videodecoder.
 Keine feste Bildrate oder unterbrechungsfreie 4K-Wiedergabe auf beliebiger Hardware
 wird zugesichert.
+
+## Matrix-Standardinhalt
+
+Im Matrixdialog kann der Standardinhalt ein Kanal oder ein fester Slide sein.
+Die Matrix stellt diesen über ihre aktiven Mitglieder gemeinsam dar. Zeitpläne,
+Presets und Warnungen behalten die bestehenden Prioritäten. Inaktive Kopien
+reservieren keine Displays. Das Ändern des Inhalts erhält vorhandene Zuschnitte,
+Versätze und Blenden; beim Aktivieren wird eine Doppelbelegung abgefangen.

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "source_commit": "141d930fbd33cc52e038d4bf688fb3590168a268",
+  "source_commit": "eb319262c38c445f914d29c62799c1a6a8cec8bb",
   "product": "kiosky",
-  "version": "3.52.0",
-  "released_at": "2026-11-24T11:11:52.265Z",
+  "version": "3.52.1",
+  "released_at": "2026-11-24T12:28:44.986Z",
   "channel": "stable",
-  "release_notes": "## [3.52.0]\n\n- Display-Ausgabe zentral um 90° links/rechts oder 180° drehen, unabhängig pro Player. Logische Maße, automatische Slides, Matrixausschnitte, Warnungen, Identifikation und Offline-Stand berücksichtigen die Drehung. Standalone erhält eine additive Migration; alte Displays bleiben ungedreht und alte API-Schreibzugriffe bewahren die Einstellung.\n- Kopplungsanzeige um einen QR-Code erweitert. Backend scannt Kamera oder Foto lokal mit dem mitgelieferten, fest versionierten jsQR-Leser; die Zuordnung wird weiterhin ausdrücklich bestätigt. Manueller Code, bestehende Rechte und Ablaufprüfung bleiben erhalten.\n- Gleiche Oberfläche für Standalone, WordPress und TYPO3; QR-Leser wird nur beim Scan geladen, Kamera bei Schließen/Verlassen abgeschaltet.",
-  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.52.0",
+  "release_notes": "## [3.52.1]\n\n- Kopplungsseiten und anschließende Playeraufrufe umgehen alte CMS-/Proxy-HTML-Caches durch einen rein navigationsbezogenen Startparameter. Windows, Linux/Mint, macOS und Raspberry Pi behalten gespeicherte Serveradresse, Profile und Kopplung; alte Kopplungsseiten ohne QR-Element werden einmalig frisch geöffnet.\n- Matrix-Standardinhalt zwischen Kanal und festem Slide umschaltbar, einschließlich API, Wiedergabe, Duplizieren und Systemumzug in Standalone, WordPress und TYPO3. Zuschnitt, Blenden, Versatz und Skalierung bleiben beim Bearbeiten erhalten.\n- Inaktive/gelöschte Matrixkopien blockieren oder überlagern keine aktiven Displayzuordnungen. Standalone ersetzt den zu strikten eindeutigen Index durch aktive Zuordnungssperren; es werden keine Matrix-, Inhalts- oder Zeitplandaten gelöscht.\n- Fehlender CMS-Matrixstatus verwendet Aktiv als Standard; ungültige neue Größen werden abgewiesen und frühere leere Zuschnittgrößen fallen auf sichtbare Displaymaße zurück. Matrix-Player laden nur ihre aktive Matrix statt den gesamten Katalog.",
+  "release_notes_url": "https://github.com/soerenelvers/kiosky-distribution/tree/v3.52.1",
   "minimum_requirements": {
     "node": "22.5",
     "php": "8.2",
@@ -14,34 +14,34 @@
     "typo3": "13.4"
   },
   "compatibility": {
-    "core_version": "3.52.0",
+    "core_version": "3.52.1",
     "api_version": "1",
-    "wordpress_plugin_version": "3.52.0",
-    "typo3_extension_version": "3.52.0"
+    "wordpress_plugin_version": "3.52.1",
+    "typo3_extension_version": "3.52.1"
   },
   "components": {
     "core": {
-      "version": "3.52.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.0.zip?ref=v3.52.0",
-      "sha256": "0f78ad0cc2f049fd22cf05df5b8934b5c6f281ae903d1ad8efb81ea439ac8e83"
+      "version": "3.52.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.1.zip?ref=v3.52.1",
+      "sha256": "c9143d26d5f3b9bef0aa8e0c618146ea6a3da15388e0f6d7132862b9177e5d62"
     },
     "standalone": {
-      "version": "3.52.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.0.zip?ref=v3.52.0",
-      "sha256": "0f78ad0cc2f049fd22cf05df5b8934b5c6f281ae903d1ad8efb81ea439ac8e83"
+      "version": "3.52.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-app-3.52.1.zip?ref=v3.52.1",
+      "sha256": "c9143d26d5f3b9bef0aa8e0c618146ea6a3da15388e0f6d7132862b9177e5d62"
     },
     "wordpress": {
-      "version": "3.52.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.52.0.zip?ref=v3.52.0",
-      "sha256": "ac02fccf10bdeb701c8c9d84b78f7ffa43160956c9fa57eeff332a8143e4c9a6",
+      "version": "3.52.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky-wordpress-3.52.1.zip?ref=v3.52.1",
+      "sha256": "89c2f0f681a7f294d49e3e0258f5425d60c80e9d6b44f624f7fd01727f9986d5",
       "requires_php": "8.1",
       "requires_wordpress": "6.6",
       "tested_up_to": "7.1"
     },
     "typo3": {
-      "version": "3.52.0",
-      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.52.0.zip?ref=v3.52.0",
-      "sha256": "ac021d604066918c01762ddd5717c46cf804045638b2f185893b3f40781823b9",
+      "version": "3.52.1",
+      "download_url": "https://api.github.com/repos/soerenelvers/kiosky-distribution/contents/dist/kiosky_3.52.1.zip?ref=v3.52.1",
+      "sha256": "15e61cae5a0928ceb33a39e404486950f641d299f07e19ac45d77394eb3ea4ca",
       "package": "casesound/kiosky",
       "requires_php": "8.2",
       "supported_typo3": [

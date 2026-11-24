@@ -2389,7 +2389,9 @@ final class Api
         $candidateSchedules=array_map(static fn(array $s):array=>array_intersect_key($s,array_flip(['id','contentId','targetType','targetId','ruleName','contentName'])),$schedules);
         $candidates=[];
         if($schedule){$type=$schedule['contentType'] ?? (!empty($schedule['slideId'])?'slide':'channel');$id=$schedule['contentId'] ?? $schedule[$type.'Id'] ?? ''; $candidates[]=['type'=>$type,'id'=>$id,'sourceKey'=>'schedule:'.$schedule['id'],'eventContextId'=>$schedule['eventId']??null,'epoch'=>$schedule['startsAt'],'matrixMode'=>$matrix&&($schedule['targetType'] ?? '')==='matrix'];}
-        if(!empty($matrix['defaultChannelId']))$candidates[]=['type'=>'channel','id'=>$matrix['defaultChannelId'],'matrixMode'=>true];
+        $matrixType=($matrix['defaultContentType'] ?? 'channel')==='slide'?'slide':'channel';
+        $matrixContent=$matrix[$matrixType==='slide'?'defaultSlideId':'defaultChannelId'] ?? '';
+        if($matrixContent)$candidates[]=['type'=>$matrixType,'id'=>$matrixContent,'matrixMode'=>true];
         $type=($display['defaultContentType'] ?? 'channel')==='slide'?'slide':'channel';
         $id=$display[$type==='slide'?'defaultSlideId':'defaultChannelId'] ?? '';
         if($id)$candidates[]=['type'=>$type,'id'=>$id,'matrixMode'=>false];
@@ -2428,7 +2430,7 @@ final class Api
     private function matrixLayout(array $state, string $displayId): ?array
     {
         $matrix = $this->first($this->active($state['matrices']), static fn(array $candidate): bool =>
-            ($candidate['status'] ?? '') === 'active'
+            ($candidate['status'] ?? 'active') === 'active'
             && in_array($displayId, array_column(is_array($candidate['members'] ?? null) ? $candidate['members'] : [], 'displayId'), true)
         );
         if (!$matrix) return null;
@@ -2437,8 +2439,8 @@ final class Api
         if (!$member) return null;
         $columns = max(1, (int)($matrix['columns'] ?? 1));
         $rows = max(1, (int)($matrix['rows'] ?? 1));
-        $widthFor = static fn(array $item): int => (int)(($item['orientation'] ?? '') === 'portrait' ? ($item['physicalHeight'] ?? 1920) : ($item['physicalWidth'] ?? 1920));
-        $heightFor = static fn(array $item): int => (int)(($item['orientation'] ?? '') === 'portrait' ? ($item['physicalWidth'] ?? 1080) : ($item['physicalHeight'] ?? 1080));
+        $widthFor = static fn(array $item): int => (int)(($item['orientation'] ?? '') === 'portrait' ? (is_numeric($item['physicalHeight'] ?? null)&&(float)$item['physicalHeight']>=240&&(float)$item['physicalHeight']<=16384?(int)$item['physicalHeight']:1080) : (is_numeric($item['physicalWidth'] ?? null)&&(float)$item['physicalWidth']>=240&&(float)$item['physicalWidth']<=16384?(int)$item['physicalWidth']:1920));
+        $heightFor = static fn(array $item): int => (int)(($item['orientation'] ?? '') === 'portrait' ? (is_numeric($item['physicalWidth'] ?? null)&&(float)$item['physicalWidth']>=240&&(float)$item['physicalWidth']<=16384?(int)$item['physicalWidth']:1920) : (is_numeric($item['physicalHeight'] ?? null)&&(float)$item['physicalHeight']>=240&&(float)$item['physicalHeight']<=16384?(int)$item['physicalHeight']:1080));
         $columnWidths = [];
         for ($column = 0; $column < $columns; $column++) {
             $columnWidths[] = max([0, ...array_map($widthFor, array_filter($members, static fn(array $item): bool => (int)($item['column'] ?? 0) === $column))]);
@@ -2455,13 +2457,15 @@ final class Api
             'name' => $matrix['name'] ?? 'Matrix',
             'rows' => $rows,
             'columns' => $columns,
+            'defaultContentType' => $matrix['defaultContentType'] ?? 'channel',
+            'defaultSlideId' => $matrix['defaultSlideId'] ?? null,
             'defaultChannelId' => $matrix['defaultChannelId'] ?? null,
             'totalResolution' => ['width' => array_sum($columnWidths), 'height' => array_sum($rowHeights)],
             'viewport' => [
                 'x' => is_numeric($crop['x'] ?? null) ? (float)$crop['x'] : array_sum(array_slice($columnWidths, 0, $memberColumn)) + (float)($member['offsetX'] ?? 0),
                 'y' => is_numeric($crop['y'] ?? null) ? (float)$crop['y'] : array_sum(array_slice($rowHeights, 0, $memberRow)) + (float)($member['offsetY'] ?? 0),
-                'width' => is_numeric($crop['width'] ?? null) ? (float)$crop['width'] : $widthFor($member),
-                'height' => is_numeric($crop['height'] ?? null) ? (float)$crop['height'] : $heightFor($member),
+                'width' => is_numeric($crop['width'] ?? null) && (float)$crop['width']>0 ? (float)$crop['width'] : $widthFor($member),
+                'height' => is_numeric($crop['height'] ?? null) && (float)$crop['height']>0 ? (float)$crop['height'] : $heightFor($member),
                 'scale' => (float)($member['scale'] ?? 1),
                 'row' => $memberRow,
                 'column' => $memberColumn,
@@ -2578,7 +2582,7 @@ final class Api
             }, $items);
         }
         if ($collection === 'matrices') {
-            return array_map(function (array $item) use ($channels): array {
+            return array_map(function (array $item) use ($channels,$state): array {
                 $members = is_array($item['members'] ?? null) ? $item['members'] : [];
                 $columns = max(1, (int)($item['columns'] ?? 1));
                 $rows = max(1, (int)($item['rows'] ?? 1));
@@ -2597,7 +2601,9 @@ final class Api
                     )]);
                 }
                 $channel = $channels[$item['defaultChannelId'] ?? ''] ?? null;
-                $item['channelName'] = $channel['name'] ?? null;
+                $item['defaultContentType']=$item['defaultContentType'] ?? 'channel';
+                $fixedSlide=$this->first($state['slides'],static fn(array $s):bool=>$s['id']===($item['defaultSlideId'] ?? ''));
+                $item['channelName'] = $item['defaultContentType']==='slide'?($fixedSlide['name'] ?? null):($channel['name'] ?? null);
                 $item['totalResolution'] = ['width' => array_sum($columnWidths), 'height' => array_sum($rowHeights)];
                 return $item;
             }, $items);
@@ -2606,7 +2612,7 @@ final class Api
         $locations = []; $slides = []; $memberships = [];
         foreach ($state['locations'] as $record) $locations[$record['id']] ??= $record;
         foreach ($state['slides'] as $record) $slides[$record['id']] ??= $record;
-        foreach ($this->active($state['matrices']) as $matrix) {
+        foreach (array_filter($this->active($state['matrices']),static fn(array $m):bool=>($m['status'] ?? 'active')==='active') as $matrix) {
             foreach ($matrix['members'] ?? [] as $member) $memberships[$member['displayId']] ??= [$matrix, $member];
         }
         $now = QualityClock::now();
@@ -2692,6 +2698,7 @@ final class Api
         $columns = (int)($input['columns'] ?? 0);
         $members = is_array($input['members'] ?? null) ? $input['members'] : [];
         if ($rows < 1 || $rows > 20 || $columns < 1 || $columns > 20) throw new RuntimeException('Das Matrix-Raster muss zwischen 1×1 und 20×20 liegen.');
+        if(!in_array($input['status'] ?? 'active',['active','disabled'],true))throw new RuntimeException('Ungültiger Matrixstatus.',422);
         $positions = [];
         $displayIds = [];
         foreach ($members as $member) {
@@ -2700,15 +2707,17 @@ final class Api
             $row = (int)($member['row'] ?? -1);
             $column = (int)($member['column'] ?? -1);
             $this->required($state['displays'], $displayId, 'Display');
+            foreach(['physicalWidth'=>1920,'physicalHeight'=>1080] as $field=>$fallback){$value=$member[$field] ?? $fallback;if(!is_int($value)||$value<240||$value>16384)throw new RuntimeException('Ungültige Matrix-Displaygröße.',422);}
+            if(isset($member['orientation'])&&!in_array($member['orientation'],['landscape','portrait'],true))throw new RuntimeException('Ungültige Matrix-Ausrichtung.',422);
             if ($row < 0 || $column < 0 || $row >= $rows || $column >= $columns) throw new RuntimeException('Eine Display-Position liegt außerhalb des Matrix-Rasters.');
             $position = $row . ':' . $column;
             if (isset($positions[$position])) throw new RuntimeException('Jedes Matrix-Feld darf nur einmal belegt sein.');
             if (isset($displayIds[$displayId])) throw new RuntimeException('Ein Display darf in einer Matrix nur einmal vorkommen.');
             $positions[$position] = true;
             $displayIds[$displayId] = true;
-            if (($input['status'] ?? '') !== 'active') continue;
+            if (($input['status'] ?? 'active') !== 'active') continue;
             $conflict = $this->first($this->active($state['matrices']), static fn(array $matrix): bool =>
-                ($matrix['status'] ?? '') === 'active'
+                ($matrix['status'] ?? 'active') === 'active'
                 && ($matrix['id'] ?? '') !== $matrixId
                 && in_array($displayId, array_column(is_array($matrix['members'] ?? null) ? $matrix['members'] : [], 'displayId'), true)
             );
@@ -2748,6 +2757,16 @@ final class Api
     private function saveRecord(array &$state, string $collection, array $body, ?string $id = null): array
     {
         $current = $id ? $this->required($state[$collection], $id, ucfirst($collection)) : [];
+        if($collection==='matrices'){
+            $body['status']=$body['status'] ?? $current['status'] ?? 'active';
+            $type=$body['defaultContentType'] ?? (array_key_exists('defaultChannelId',$body)?'channel':($current['defaultContentType'] ?? 'channel'));
+            if(!in_array($type,['channel','slide'],true))throw new RuntimeException('Ungültiger Matrix-Standardinhalt.',422);
+            $body['defaultContentType']=$type;
+            $body['defaultSlideId']=$type==='slide'?(array_key_exists('defaultSlideId',$body)?$body['defaultSlideId']:($current['defaultSlideId'] ?? null)):null;
+            $body['defaultChannelId']=$type==='channel'?(array_key_exists('defaultChannelId',$body)?$body['defaultChannelId']:($current['defaultChannelId'] ?? null)):null;
+            if($body['defaultSlideId'])$this->required($this->active($state['slides']),(string)$body['defaultSlideId'],'Matrix-Standardslide');
+            if($body['defaultChannelId'])$this->required($this->active($state['channels']),(string)$body['defaultChannelId'],'Matrix-Standardkanal');
+        }
         if($collection==='displays'){
             $rotation=array_key_exists('rotation',$body)?$body['rotation']:($current['rotation'] ?? 0);
             if(!is_int($rotation)||!in_array($rotation,[0,90,180,270],true))throw new RuntimeException('Ungültige Display-Drehung.',422);

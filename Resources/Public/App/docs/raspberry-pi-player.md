@@ -211,3 +211,11 @@ Kamerazugriff erlauben. Alternativ ein JPG-/PNG-/WebP-Foto wählen oder den Code
 weiterhin eingeben. Nach dem Scan die Zuordnung mit **Koppeln** bestätigen.
 Die Kamera benötigt HTTPS (lokale Tests: localhost). Bilder werden lokal gelesen
 und nicht hochgeladen; der kurzlebige Code enthält keinen Player-Schlüssel.
+
+## Alte Kopplungsseite trotz Serverupdate
+
+Ab 3.52.1 öffnet der lokale Startdienst die konfigurierte Serveradresse mit einem
+einmaligen Cache-Parameter. Dieser ändert weder die gespeicherte Adresse noch
+Kopplung, WLAN oder Browserprofile. Das Komponentenupdate verteilt die Korrektur
+auch auf vorhandene Images; ein erneutes Flashen ist dafür nicht erforderlich.
+Die aktuelle Kopplungsseite enthält QR-Code und Textcode.

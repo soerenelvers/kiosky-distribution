@@ -49,7 +49,8 @@
   function openPlayer(playerUrl) {
     write(keys.playerUrl, playerUrl);
     status.textContent = 'Verbunden. Player wird gestartet …';
-    window.setTimeout(() => window.location.replace(playerUrl), 500);
+    const target=new URL(playerUrl,window.location.href);target.searchParams.set('kiosky_start',String(Date.now()));
+    window.setTimeout(() => window.location.replace(target.href), 500);
   }
 
   async function poll(pairing) {
