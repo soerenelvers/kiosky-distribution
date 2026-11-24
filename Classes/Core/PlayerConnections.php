@@ -15,7 +15,7 @@ final class PlayerConnections
     {
         $out=[];foreach($state['playerPairings']??[] as $p){if(($p['displayId']??'')!==$display['id']||($p['credentialVersion']??0)!==1||!empty($p['revokedAt'])||($p['status']??'')!=='paired'||!hash_equals((string)($p['displayKeyHash']??''),hash('sha256',(string)$display['playerKey'])))continue;
             $seen=$display['playerConnections'][$p['id']]['lastSeenAt']??null;$time=$seen?strtotime($seen):false;
-            $out[]=['id'=>$p['id'],'platform'=>$p['platform']??'Player','pairedAt'=>$p['pairedAt']??null,'lastSeenAt'=>$seen,'online'=>$time!==false&&QualityClock::now()>=$time&&QualityClock::now()-$time<=60];
+            $out[]=['id'=>$p['id'],'name'=>(string)($p['name']??''),'platform'=>$p['platform']??'Player','pairedAt'=>$p['pairedAt']??null,'lastSeenAt'=>$seen,'online'=>$time!==false&&QualityClock::now()>=$time&&QualityClock::now()-$time<=60];
         }return $out;
     }
     public static function register(array &$state,array $display,string $secret,string $platform):array
@@ -32,7 +32,7 @@ final class PlayerConnections
     }
     public static function pending(array $state,string $displayId,?string $playerId):array
     {
-        return array_values(array_filter($state['commands']??[],static fn(array $c):bool=>($c['displayId']??'')===$displayId&&($playerId===null?empty($c['legacyAcknowledged']):(in_array($playerId,$c['playerIds']??[],true)&&!in_array($playerId,$c['acknowledgedPlayerIds']??[],true)))&&(!isset($c['createdAt'])||strtotime($c['createdAt'])>QualityClock::now()-86400)));
+        return array_values(array_filter($state['commands']??[],static fn(array $c):bool=>($c['displayId']??'')===$displayId&&($playerId===null?(empty($c['targetPlayerId'])&&empty($c['legacyAcknowledged'])):(in_array($playerId,$c['playerIds']??[],true)&&!in_array($playerId,$c['acknowledgedPlayerIds']??[],true)))&&(!isset($c['createdAt'])||strtotime($c['createdAt'])>QualityClock::now()-86400)));
     }
     public static function acknowledge(array &$state,string $displayId,?string $playerId,array $ids):void
     {

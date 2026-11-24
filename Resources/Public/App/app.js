@@ -913,6 +913,43 @@ async function renderDisplayPlayer(slug) {
   const playerDevice=()=>kioskyRuntime.nativeScreenAwake?'Samsung Tizen TV':'Web Player';
   const key=new URLSearchParams(window.location.search).get('key')||''; const cacheKey=`kiosky-player-cache-${slug}`; let playerState=null,playerStateOffline=false,index=0,timer=null,currentItem=null,currentMatrixIndex=-1,renderedOrientation=null,resizeTimer=null,identificationTimer=null,statePollRunning=false,pendingForcedRefresh=false,serverClockOffsetMs=0,playbackSyncKey='',contentIdentity='',playbackEpochMs=null;
   globalThis.KioskyFonts?.configure({offline:true,fetchFile:async id=>{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/state?fontId=${id}`),{headers:{...kioskyRuntime.requestHeaders,'X-Player-Key':key},cache:'no-store'},true);if(!response.ok)throw new Error('Schriftzugriff verweigert.');return response.value;}});
+  let captureBusy=false;const capturedRequests=new Set();
+  const capturePlayer=async request=>{
+    if(!request||captureBusy||capturedRequests.has(request.id)||request.expiresAt<=Date.now()+serverClockOffsetMs||!/^[a-f0-9]{32}$/.test(request.id))return;
+    captureBusy=true;capturedRequests.add(request.id);
+    try{
+      const data=await new Promise(resolve=>{
+        const timeout=setTimeout(()=>{delete window.KioskyPlayerCaptureReceive;resolve(null);},15000);
+        window.KioskyPlayerCaptureReceive=(id,data)=>{if(id!==request.id)return;clearTimeout(timeout);delete window.KioskyPlayerCaptureReceive;resolve(data);};
+        if(window.chrome?.webview?.postMessage)window.chrome.webview.postMessage('kiosky:capture:'+request.id);
+        else if(window.KioskyNativeCapture)window.KioskyNativeCapture(request.id);
+        else{clearTimeout(timeout);delete window.KioskyPlayerCaptureReceive;resolve(null);}
+      });
+      let image=null;
+      if(typeof data==='string'&&data.length<24000000&&data.startsWith('data:image/png;base64,')){
+        const bitmap=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=data;});const canvas=document.createElement('canvas'),scale=Math.min(1,1280/bitmap.width,1280/bitmap.height);canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();image=canvas.toDataURL('image/png');
+      }
+      await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/capture`),{method:'POST',headers,body:JSON.stringify({id:request.id,...(image?{data:image}:{unsupported:true})})});
+    }catch{}finally{captureBusy=false;}
+  };
+  let offlinePrepared='',offlinePreparing=false,offlineAttemptRevision='',offlineRetryAt=0;
+  const prepareOffline=async()=>{
+    const revision=playerState?.contentRevision||JSON.stringify(playerState?.slides||[]);
+    if(offlinePrepared===revision||offlinePreparing||offlineAttemptRevision===revision&&Date.now()<offlineRetryAt||!key.startsWith('pc.')||!navigator.serviceWorker||playerState?.display?.cacheEnabled===false)return;
+    offlinePreparing=true;offlineAttemptRevision=revision;offlineRetryAt=Date.now()+300000;
+    const watchdog=setTimeout(()=>{offlinePreparing=false;},90000);
+    try{
+      const endpoint=new URL(updateBase);endpoint.pathname=endpoint.pathname.replace(/kiosky-player-update\/$/,'kiosky-player-offline/');
+      const registration=await navigator.serviceWorker.register(endpoint.href,{scope:new URL('../',endpoint).pathname});await navigator.serviceWorker.ready;
+      const worker=registration.active;if(!worker)return;
+      const assets=[...document.querySelectorAll('script[src],link[rel="stylesheet"][href]')].map(node=>node.src||node.href);
+      const walk=value=>{if(typeof value==='string'){try{const url=new URL(value,location.href);if(url.origin===location.origin&&/\.(?:png|jpe?g|webp|gif|svg|mp4|webm)(?:\?|$)/i.test(url.href))assets.push(url.href);}catch{}}else if(value&&typeof value==='object')Object.values(value).forEach(walk);};walk(playerState?.slides);
+      const browser=new URL(kioskyRuntime.playerBaseUrl||location.href);browser.search='';browser.pathname=browser.pathname.includes('/kiosky-player')?browser.pathname.replace(/kiosky-player\/?$/,'kiosky-player-browser/'):'/player/browser.html';
+      const channel=new MessageChannel();channel.port1.onmessage=event=>{offlinePrepared=event.data?.ready===true?revision:'';offlinePreparing=false;clearTimeout(watchdog);};
+      let aliases=[];try{aliases=JSON.parse(localStorage.getItem('kiosky-player-launcher-aliases')||'[]');}catch{}
+      worker.postMessage({type:'kiosky:offline:prepare',page:location.href,browser:browser.href,assets:[...new Set(assets)],aliases},[channel.port2]);
+    }catch{offlinePreparing=false;clearTimeout(watchdog);}
+  };
   const cachePlayerState=createPlayerCacheWriter(value=>localStorage.setItem(cacheKey,value));
   const preloadImages=createPlayerImagePreloader(Image,navigator.deviceMemory<=1?1_048_576:4_194_304);
   window.addEventListener('pagehide',()=>preloadImages.clear());
@@ -922,12 +959,24 @@ async function renderDisplayPlayer(slug) {
     try{const response=await fetch(url,{...options,signal:controller.signal});return readJson?{ok:response.ok,status:response.status,value:await response.json()}:response;}finally{clearTimeout(timeout);}
   };
   const deviceStorageKey=`kiosky-player-device:${slug}`,unpairedStorageKey=`kiosky-player-unpaired:${slug}`;
-  const rememberDevice=nextKey=>{
+  const rememberLauncherAlias=async()=>{
+    try{
+      if(key.startsWith('pc.')||!key||!crypto.subtle)return;
+      const source=new URL(location.href);source.searchParams.delete('kiosky_start');
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source.href));
+      const hash=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+      const old=JSON.parse(localStorage.getItem('kiosky-player-launcher-aliases')||'[]');
+      localStorage.setItem('kiosky-player-launcher-aliases',JSON.stringify([...new Set([hash,...(Array.isArray(old)?old.filter(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value)):[])])].slice(0,5)));
+    }catch{}
+  };
+  const rememberDevice=async nextKey=>{
+    await rememberLauncherAlias();
     const next=new URL(window.location.href);next.searchParams.set('key',nextKey);
     try{localStorage.setItem(deviceStorageKey,nextKey);localStorage.setItem('kiosky-player-url',next.href);localStorage.removeItem('kiosky-player-unpaired');}catch{}
     window.location.replace(next.href);
   };
-  const returnToPairing=()=>{
+  const returnToPairing=async()=>{
+    try{if(navigator.serviceWorker?.controller){const channel=new MessageChannel();await new Promise(resolve=>{const timeout=setTimeout(resolve,1500);channel.port1.onmessage=()=>{clearTimeout(timeout);resolve();};navigator.serviceWorker.controller.postMessage({type:'kiosky:offline:clear'},[channel.port2]);});}}catch{}
     clearTimeout(timer);releasePlaybackMedia(document.querySelector('#player-slide'));
     try{localStorage.removeItem(cacheKey);localStorage.removeItem('kiosky.proof.'+slug);localStorage.removeItem(deviceStorageKey);localStorage.removeItem('kiosky-player-url');localStorage.removeItem('kiosky-browser-pairing');localStorage.removeItem('kiosky-display-name');localStorage.setItem('kiosky-player-unpaired','1');localStorage.setItem(unpairedStorageKey,'1');}catch{}
     const target=new URL(kioskyRuntime.playerBaseUrl||'/',location.href);target.pathname=/\/kiosky-player\/?$/.test(target.pathname)?target.pathname.replace(/\/kiosky-player\/?$/,'/kiosky-player-browser/'):target.pathname.replace(/\/?$/,'/')+'player/browser.html';target.search='';target.hash='';
@@ -937,7 +986,7 @@ async function renderDisplayPlayer(slug) {
     if(!key.startsWith('pc.')){
       if(localStorage.getItem(unpairedStorageKey)==='1'||localStorage.getItem('kiosky-player-unpaired')==='1'){
         let preferred;try{preferred=new URL(localStorage.getItem('kiosky-player-url')||'',window.location.href);}catch{}
-        if(preferred&&preferred.origin===location.origin&&!preferred.username&&!preferred.password&&preferred.searchParams.get('display')&&preferred.searchParams.get('key')?.startsWith('pc.')){window.location.replace(preferred.href);return;}
+        if(preferred&&preferred.origin===location.origin&&!preferred.username&&!preferred.password&&preferred.searchParams.get('display')&&preferred.searchParams.get('key')?.startsWith('pc.')){await rememberLauncherAlias();window.location.replace(preferred.href);return;}
         returnToPairing();return;
       }
       const saved=localStorage.getItem(deviceStorageKey);if(saved?.startsWith('pc.')){rememberDevice(saved);return;}
@@ -962,7 +1011,7 @@ async function renderDisplayPlayer(slug) {
       serverClockOffsetMs=playerServerClockOffset(next,requestStartedAt,responseReceivedAt,serverClockOffsetMs);
       playerStateOffline=false;healthTelemetry?.success(next,responseReceivedAt-requestStartedAt);playerState=next;globalThis.KioskyFonts?.setCatalog(playerState.fonts||[]);playerState.cachedClockOffsetMs=serverClockOffsetMs;
       // Storage quota / private browsing must not discard a successfully received update.
-      cachePlayerState(next);
+      cachePlayerState(next);void prepareOffline();void capturePlayer(next.player?.captureRequest);
       document.querySelector('#player-offline-indicator')?.setAttribute('hidden','');return playerState;
     }catch{
       playerStateOffline=true;healthTelemetry?.failure();if(!playerState)try{const cached=JSON.parse(localStorage.getItem(cacheKey));if(cached?.display&&Array.isArray(cached.slides)){playerState={...cached,commands:[]};serverClockOffsetMs=Number(cached.cachedClockOffsetMs||0);}}catch{}
@@ -986,13 +1035,13 @@ async function renderDisplayPlayer(slug) {
   let proofStorage;try{proofStorage=localStorage;}catch{proofStorage={getItem:()=>null,setItem:()=>{}};}
   const playbackProof=globalThis.KioskyPlaybackProof?.create({storage:proofStorage,key:'kiosky.proof.'+slug,now:()=>Date.now()+serverClockOffsetMs,root:()=>document.querySelector('#player-slide'),visible:()=>document.visibilityState==='visible'&&window.KioskyTvPresentationVisible!==false&&!playerState?.warning&&!playerState?.emergency,grant:item=>playerState?.playbackProof?.grants?.[item?.slide?.id]||''});
   const heartbeat=async(item,acknowledgedCommandIds=[])=>{
-    try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({diagnostics:healthTelemetry?.snapshot(),proofReceipts:playbackProof?.batch()||[],channelId:playerState?.channel?.id||null,slideId:item?.slide?.id||null,version:`${playerDevice()} · Player 1.3`,cached:true,acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});if(response.ok){const result=await response.json();playbackProof?.acknowledge(result.proofAccepted);}return response.ok;}catch{return false;}
+    try{const response=await playerFetch(apiUrl(`/api/player/${encodeURIComponent(slug)}/heartbeat`),{method:'POST',headers,body:JSON.stringify({diagnostics:healthTelemetry?.snapshot(),proofReceipts:playbackProof?.batch()||[],channelId:playerState?.channel?.id||null,slideId:item?.slide?.id||null,version:`${playerDevice()} · Player 1.3`,cached:Boolean(offlinePrepared),acknowledgedCommandIds,viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio||1})});if(response.ok){const result=await response.json();playbackProof?.acknowledge(result.proofAccepted);}return response.ok;}catch{return false;}
   };
   const showIdentification=()=>{
     const display=playerState?.display||{},details=playerState?.identification||{},groups=Array.isArray(details.groupNames)&&details.groupNames.length?details.groupNames.join(', '):'Keine Gruppe',resolution=playerResolutionLabel(playerResolutionInfo(window.innerWidth,window.innerHeight,window.devicePixelRatio));
     let overlay=document.querySelector('#player-identification');
     if(!overlay){overlay=document.createElement('aside');overlay.id='player-identification';overlay.className='player-identification';(document.querySelector('#player-output')||document.body).appendChild(overlay);}
-    overlay.innerHTML=`<div class="player-identification-brand">KIOSKY · DISPLAY IDENTIFIZIEREN</div><h1>${escapeHtml(display.name||'Unbenanntes Display')}</h1><div class="player-identification-grid"><section><small>Standort</small><strong>${escapeHtml(display.location||'Ohne Standort')}</strong></section><section><small>Server</small><strong>${escapeHtml(details.serverUrl||window.location.origin)}</strong></section><section><small>Display-Gruppe</small><strong>${escapeHtml(groups)}</strong></section><section><small>Aktuelle Auflösung</small><strong>${escapeHtml(resolution)}</strong></section></div><p>Diese Information wird nach 20 Sekunden automatisch ausgeblendet.</p>`;
+    overlay.innerHTML=`<div class="player-identification-brand">KIOSKY · DISPLAY IDENTIFIZIEREN</div><h1>${escapeHtml(display.name||'Unbenanntes Display')}</h1><div class="player-identification-grid"><section><small>Player</small><strong>${escapeHtml(playerState?.player?.name||'Player')} · ${escapeHtml(playerState?.player?.id?.slice(-8)||'Legacy')}</strong></section><section><small>Standort</small><strong>${escapeHtml(display.location||'Ohne Standort')}</strong></section><section><small>Server</small><strong>${escapeHtml(details.serverUrl||window.location.origin)}</strong></section><section><small>Display-Gruppe</small><strong>${escapeHtml(groups)}</strong></section><section><small>Aktuelle Auflösung</small><strong>${escapeHtml(resolution)}</strong></section></div><p>Diese Information wird nach 20 Sekunden automatisch ausgeblendet.</p>`;
     overlay.classList.add('is-visible');
     clearTimeout(identificationTimer);
     identificationTimer=setTimeout(()=>overlay.classList.remove('is-visible'),20000);
@@ -6652,10 +6701,12 @@ document.querySelector('#display-resolution-preset').addEventListener('change',a
 document.querySelector('#display-orientation').addEventListener('change',applyDisplayResolutionPreset);
 for(const id of ['display-width','display-height'])document.querySelector('#'+id).addEventListener('input',syncDisplayResolutionPreset);
 let displayPlayersSequence=0;
+document.querySelector('#player-rollout-save').addEventListener('click',async()=>{try{await apiRequest('/api/settings/player-rollout',{method:'PUT',body:JSON.stringify({percentage:Number(document.querySelector('#player-rollout-percentage').value)})});showToast('Update-Freigabe gespeichert.');}catch(error){showToast(error.message);}});
 async function loadDisplayPlayers(displayId){
+  if(state.currentUser?.role==='admin'&&state.currentUser?.canManageSettings!==false)apiRequest('/api/settings/player-rollout').then(value=>{document.querySelector('#player-rollout-percentage').value=String(value.percentage);}).catch(error=>showToast(error.message));
   const sequence=++displayPlayersSequence,root=document.querySelector('#display-players');root.textContent='Player werden geladen …';
   try{const result=await apiRequest(`/api/displays/${encodeURIComponent(displayId)}/players`);if(sequence!==displayPlayersSequence||document.querySelector('#display-edit-id').value!==displayId)return;
-    root.innerHTML=result.data.length?result.data.map((player,index)=>`<div class="display-player-connection"><span><strong>Player ${index+1} · ${escapeHtml(player.platform||'Player')}</strong><small>${escapeHtml(player.id.slice(-8))} · ${player.online?'Online':'Offline'} · ${player.lastSeenAt?escapeHtml(formatLastSeen(player.lastSeenAt)):'Noch keine Rückmeldung'}</small></span><button type="button" class="button button-secondary" data-unpair-player="${escapeHtml(player.id)}" ${displayCanManage()?'':'hidden'}>Entkoppeln</button></div>`).join(''):'<p>Noch keine einzeln verwaltbaren Player. Bestehende Player erscheinen nach ihrem nächsten Online-Start mit aktuellem Softwarestand.</p>';
+    root.innerHTML=result.data.length?result.data.map((player,index)=>`<div class="display-player-connection"><span><strong>${escapeHtml(player.name||('Player '+(index+1)))} · ${escapeHtml(player.platform||'Player')}</strong><small>${escapeHtml(player.id.slice(-8))} · ${player.online?'Online':'Offline'} · ${player.lastSeenAt?escapeHtml(formatLastSeen(player.lastSeenAt)):'Noch keine Rückmeldung'}</small></span><button type="button" class="button button-secondary" data-capture-player="${escapeHtml(player.id)}" ${displayCanControl()?'':'hidden'}>Bildschirmfoto</button><button type="button" class="button button-secondary" data-name-player="${escapeHtml(player.id)}" ${displayCanManage()?'':'hidden'}>Benennen</button><button type="button" class="button button-secondary" data-identify-player="${escapeHtml(player.id)}" ${displayCanControl()?'':'hidden'}>Identifizieren</button><button type="button" class="button button-secondary" data-unpair-player="${escapeHtml(player.id)}" ${displayCanManage()?'':'hidden'}>Entkoppeln</button></div>`).join(''):'<p>Noch keine einzeln verwaltbaren Player. Bestehende Player erscheinen nach ihrem nächsten Online-Start mit aktuellem Softwarestand.</p>';
   }catch(error){if(sequence===displayPlayersSequence)root.textContent=`Player konnten nicht geladen werden: ${error.message}`;}
 }
 document.querySelector('#refresh-display-players').addEventListener('click',()=>loadDisplayPlayers(document.querySelector('#display-edit-id').value));
@@ -6664,6 +6715,24 @@ async function unpairDisplayPlayer(playerId=null){
   if(!confirm(playerId?'Diesen Player entkoppeln? Die anderen Player und die Inhalte des Displays bleiben erhalten.':'Alle Player dieses Displays entkoppeln? Auch bisherige direkte Player-URLs werden ungültig. Das Display und seine Inhalte bleiben erhalten.'))return;
   try{await apiRequest(`/api/displays/${encodeURIComponent(id)}/players${playerId?'/'+encodeURIComponent(playerId):''}`,{method:'DELETE'});await loadDisplayPlayers(id);showToast(playerId?'Player wurde entkoppelt.':'Alle Player wurden entkoppelt.');if(!playerId){await loadDisplays();updateDisplayUrlPreview();}}catch(error){showToast(error.message);}
 }
+document.querySelector('#display-players').addEventListener('click',async event=>{
+ const button=event.target.closest('[data-capture-player]');if(!button)return;
+ const displayId=document.querySelector('#display-edit-id').value,playerId=button.dataset.capturePlayer,path=`/api/displays/${encodeURIComponent(displayId)}/players/${encodeURIComponent(playerId)}`;
+ button.disabled=true;try{
+  await apiRequest(path,{method:'PUT',body:JSON.stringify({command:'screenshot'})});
+  const deadline=Date.now()+65000;let result;
+  while(Date.now()<deadline){await new Promise(resolve=>setTimeout(resolve,2000));if(document.querySelector('#display-edit-id').value!==displayId||!document.querySelector('#display-dialog').open)return;result=await apiRequest(path);if(result.data||result.unsupported)break;}
+  if(result?.unsupported){showToast('Dieser Player unterstützt noch keine automatische Bildschirmaufnahme.');return;}
+  if(!result?.data){showToast('Keine Aufnahme eingetroffen. Ist der Player online?');return;}
+  const dialog=document.querySelector('#player-screenshot-dialog');dialog.querySelector('img').src=result.data;dialog.querySelector('time').textContent='Aufgenommen: '+new Date(result.capturedAt).toLocaleString();dialog.showModal();
+ }catch(error){showToast(error.message);}finally{button.disabled=false;}
+});
+document.querySelector('#display-players').addEventListener('click',async event=>{
+  const control=event.target.closest('[data-name-player],[data-identify-player]');if(!control)return;
+  const displayId=document.querySelector('#display-edit-id').value,id=control.dataset.namePlayer||control.dataset.identifyPlayer;
+  let input={command:'identify'};if(control.dataset.namePlayer){const name=window.prompt('Player-Name (höchstens 80 Zeichen)');if(name===null)return;input={name};}
+  control.disabled=true;try{await apiRequest(`/api/displays/${encodeURIComponent(displayId)}/players/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});await loadDisplayPlayers(displayId);showToast(input.command?'Identifikation für diesen Player angefordert.':'Player-Name gespeichert.');}catch(error){showToast(error.message);}finally{control.disabled=false;}
+});
 document.querySelector('#display-players').addEventListener('click',event=>{const button=event.target.closest('[data-unpair-player]');if(button)void unpairDisplayPlayer(button.dataset.unpairPlayer);});
 document.querySelector('#unpair-all-display-players').addEventListener('click',()=>unpairDisplayPlayer());
 document.querySelector('#scan-pairing-code').addEventListener('click',()=>window.KioskyPairingScanner.open({vendorUrl:assetUrl('vendor/jsqr/jsQR.js'),onCode:code=>{document.querySelector('#display-player-pairing-code').value=code;document.querySelector('#display-player-pairing-status').textContent='QR-Code erkannt. Bitte zum Koppeln bestätigen.';document.querySelector('#pair-display-player').focus();}}));

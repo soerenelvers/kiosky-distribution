@@ -33,9 +33,12 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         if ($sitePath !== '/' && str_starts_with($uriPath,$sitePath)) $uriPath = substr($uriPath,strlen($sitePath));
         $path = '/' . trim($uriPath, '/') . '/';
         $base = $request->getUri()->getScheme() . '://' . $request->getUri()->getAuthority() . rtrim($sitePath,'/');
+        if($path==='/kiosky-player-offline/'){if(!in_array($request->getMethod(),['GET','HEAD'],true))return new Response('php://temp',405);$response=new Response('php://temp',200,['Content-Type'=>'application/javascript','Cache-Control'=>'no-cache','Service-Worker-Allowed'=>$sitePath,'X-Content-Type-Options'=>'nosniff']);if($request->getMethod()==='GET')$response->getBody()->write((string)file_get_contents((string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/player/offline-worker.js')));return $response;}
         if($path==='/kiosky-player-update/') {
             if(!in_array(strtoupper($request->getMethod()),['GET','HEAD'],true))return new Response('php://temp',405,['Allow'=>'GET, HEAD']);
             $query=$request->getQueryParams();
+            [, $rollout]=$this->apiFactory->create(['id'=>'public','name'=>'','email'=>'','role'=>'viewer'],true)->handle('GET','/api/player-rollout');
+            if(!PlayerLauncher::rolloutAllowed((int)$rollout['percentage'],$query['cohort']??null))return new Response('php://temp',204,['Cache-Control'=>'no-store']);
             try{$update=PlayerLauncher::update(is_string($query['platform']??null)?$query['platform']:'',($query['file']??'')==='1',(string)GeneralUtility::getFileAbsFileName('EXT:kiosky/Resources/Public/App/launchers/'));}
             catch(\RuntimeException $error){return new JsonResponse(['error'=>['message'=>$error->getMessage()]],$error->getCode()?:503,['Cache-Control'=>'no-store']);}
             $response=new Response('php://temp',200,['Content-Type'=>$update['contentType'],'Content-Length'=>(string)strlen($update['body']),'Cache-Control'=>'no-store','X-Content-Type-Options'=>'nosniff']);
@@ -96,7 +99,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
             [$status,$payload]=$api->handle('GET',$apiPath);
             return new JsonResponse($payload,$status,['Cache-Control'=>'no-store','Referrer-Policy'=>'no-referrer','X-Content-Type-Options'=>'nosniff']);
         }
-        $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof|commands)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
+        $isPlayer = preg_match('#^/api/player/[^/]+/(state|heartbeat|proof|commands|capture)$#', $apiPath) === 1 || str_starts_with($apiPath, '/api/player-pairings');
         $pairingCors=preg_match('#^/api/player-pairings(?:/[^/]+)?$#',$apiPath)?\Kiosky\Core\TizenPlayer::pairingHeaders():[];
         if($pairingCors&&strtoupper($request->getMethod())==='OPTIONS')return new Response('php://temp',204,$pairingCors);
         $isExternal = $apiPath === '/api/v1' || str_starts_with($apiPath, '/api/v1/');
@@ -126,7 +129,7 @@ final readonly class PlayerMiddleware implements MiddlewareInterface
         try{$body=\Kiosky\Core\PlayerRequest::decode((string)$request->getBody(),$apiPath);}catch(\RuntimeException $e){return new JsonResponse(['error'=>['code'=>'INVALID_PLAYER_REQUEST','message'=>$e->getMessage()]],$e->getCode(),$pairingCors);}
         $query = $request->getQueryParams();
         unset($query['path']);
-        $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat)$#',$apiPath)===1);
+        $api = $this->apiFactory->create(['id' => 'player', 'name' => 'Player', 'email' => '', 'role' => 'viewer'],preg_match('#^/api/player/[^/]+/(commands|heartbeat|capture)$#',$apiPath)===1);
         [$status, $payload] = $api->handle($request->getMethod(), $apiPath, array_merge($query, is_array($body) ? $body : []), $request->getHeaderLine('X-Player-Key'));
         return new JsonResponse($payload, $status, ['Cache-Control' => 'no-store', 'Referrer-Policy'=>'no-referrer']+$pairingCors);
     }

@@ -79,6 +79,7 @@ final class PermissionService
         // Explicit kitchen/card grants remain enforced by the shared menu API.
         if ($matches('/api/menus')) return true;
         if ($read) return true;
+        if (strtoupper($method)==='PUT'&&preg_match('#^/api/displays/[^/]+/players/[^/]+$#',$path)) return $this->isGranted(self::CONTROL_DISPLAYS,$user)||$this->isGranted(self::MANAGE_DISPLAYS,$user);
         if (preg_match('#^/api/operations/displays/[^/]+/commands$#', $path)) return $this->isGranted(self::CONTROL_DISPLAYS, $user);
         if (preg_match('#^/api/trash/(preset|warning|warning-template|preset-trigger)(?:/|$)#', $path)) return $this->isGranted(self::TRIGGER_EMERGENCY, $user);
         if (preg_match('#^/api/trash/(event|event-template)(?:/|$)#', $path)) return $this->isGranted(self::MANAGE_EVENTS, $user);

@@ -7,6 +7,7 @@ use RuntimeException;
 final class FontStorage
 {
     public function __construct(private readonly string $directory) {}
+    public function playerSnapshots():PlayerSnapshots{require_once __DIR__.'/PlayerSnapshots.php';return new PlayerSnapshots($this->directory.'/player-snapshots');}
     public static function decode(mixed $source): array
     {
         if (!is_string($source) || strlen($source)>2700000 || !preg_match('#^data:[a-z0-9.+/-]+;base64,([A-Za-z0-9+/]+={0,2})$#D',$source,$match)) throw new RuntimeException('Ungültige Schriftdatei oder Datei größer als 2 MB.',422);

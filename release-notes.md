@@ -1,7 +1,8 @@
-## [3.53.0]
+## [3.54.0]
 
-- Mehrere Player pro Display mit eigenen, einzeln widerrufbaren Zugangsschlüsseln. Neue Kopplungen geben keinen gemeinsamen Display-Schlüssel mehr aus; bestehende direkte Player werden beim nächsten Online-Start mit aktueller Oberfläche ohne erneute Codeeingabe registriert.
-- Gekoppelte Player in den Display-Einstellungen anzeigen, Status aktualisieren, einzeln oder gemeinsam entkoppeln. „Alle entkoppeln“ sperrt auch bisherige direkte Display-URLs. Das Display, Inhalte und Zeitzuweisungen bleiben erhalten. Ein entkoppelter Player kehrt bei der nächsten erfolgreichen Serververbindung zum Kopplungscode zurück und verwirft seinen Inhaltscache.
-- Fernbefehle werden pro Player zugestellt und bestätigt. Die Bestätigung eines Players verbraucht keinen Befehl für die anderen Player desselben Displays.
-- Standalone schreibt abgeschlossene Befehlsbestätigungen bei normalen oder wiederholten Heartbeats nicht erneut; die Erledigt-Zeitpunkte bleiben erhalten.
-- WordPress hält unabhängige Player-Statusdaten in der kleinen Laufzeitablage, ohne alle Inhalte pro Heartbeat neu zu speichern. Verschlüsselte Systemumzüge mit Zugangsdaten erhalten die neuen Kopplungen; bereits widerrufene Ziel-Zugangsdaten werden nicht reaktiviert.
+- Gekoppelte Player unabhängig benennen und einzeln identifizieren; die Einblendung zeigt den Namen und die Gerätekennung. Displayweite Befehle bleiben erhalten.
+- Geschützte Bildschirmfoto-Anforderung für native WebView2-/Chromium-Player: tatsächliche Browserausgabe statt Konfigurationsvorschau, zeitlich begrenzte Anforderung und Anzeige, begrenzte Dateigröße, keine Aufnahme fremder Desktopfenster und kein Debugging-Port. Nicht unterstützte Browser melden dies ausdrücklich.
+- Dauerhafter HTTPS-App-/Mediencache für Offline-Kaltstarts nach einer erfolgreichen Ersteinrichtung; neue Caches ersetzen vorherige Caches erst nach vollständiger Vorbereitung. Externe Streams und zu große Medien bleiben onlineabhängig.
+- Globale gestaffelte Playerupdates mit Pause sowie 5-, 25-, 50- und 100-Prozent-Freigabe. Gruppenzuordnung bleibt lokal erhalten; zuerst die neuen Updater einmal bei vollständiger Freigabe verteilen.
+- Gemeinsame Umsetzung für Standalone, WordPress und TYPO3 einschließlich Geräte-/Standort-/Rollenprüfungen, privater CMS-Fotoablage und Playernamen bei verschlüsselten Systemumzügen.
+- Ticketanbieterprüfung für Eventim, ADticket/Reservix und eintrittskarten.io dokumentiert. Der automatische Restkartenabruf bleibt mangels freigegebener Bestandsverträge und Testzugänge offen; bestehende manuelle Angaben und Ticket-Auswahlseiten bleiben nutzbar.

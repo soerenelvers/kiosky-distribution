@@ -81,6 +81,8 @@ final class PlayerLauncher
         return $data;
     }
 
+    public static function rolloutAllowed(int $percentage,mixed $cohort):bool{return $percentage===100||is_string($cohort)&&preg_match('/^(?:[0-9]|[1-9][0-9])$/D',$cohort)&&((int)$cohort)<$percentage;}
+
     public static function update(string $platform,bool $file,string $root): array {
         $names=['windows-x64'=>'windows-x64.bin','linux-x64'=>'linux-x64.bin','macos-universal'=>'macos-player.sh','raspberry-pi'=>'raspberry-pi.json'];
         if($platform==='web'&&!$file)$names['web']='';

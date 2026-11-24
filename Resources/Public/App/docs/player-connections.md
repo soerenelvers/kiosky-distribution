@@ -23,3 +23,6 @@ Diese Verwaltungsrouten erfordern eine berechtigte Benutzersitzung; die External
 Verschlüsselte vollständige Systemumzüge übernehmen die aktiven Kopplungen ausschließlich mit aktivierter Zugangsdatenübernahme. Pakete ohne Zugangsdaten enthalten keine Player-Kennwörter oder Kopplungshashes. Bereits am Ziel widerrufene Schlüssel werden beim Import eines älteren Pakets nicht wieder gültig. Geänderte Serveradressen müssen wie bisher am Player umgestellt werden. Inhalte-/Slideexporte enthalten keine Player-Zugänge.
 
 Standalone-Migration 055 ergänzt bestehende Tabellen und die individuellen Befehlsbestätigungen; sie entfernt keine Inhalte. Bei einem Downgrade versteht die frühere Anwendung die individuellen Schlüssel nicht. Vor einem Downgrade konsistente Datenbanksicherung wiederherstellen und die betroffenen Player neu koppeln.
+
+Eigene Playernamen, Einzelidentifikation, Bildschirmfotos, Offline-Kaltstart und
+gestaffelte Updates: [Playerverwaltung](player-management.md).

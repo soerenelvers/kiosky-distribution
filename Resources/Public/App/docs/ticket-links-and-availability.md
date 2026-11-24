@@ -86,3 +86,22 @@ WordPress-Update. Bereits verlorene Daten werden dadurch nicht wiederhergestellt
 dafür wird eine frühere Datensicherung benötigt. Das gezielte endgültige Löschen
 von Inhalten und ausdrücklich bestätigte Systemumzüge behalten ihr dokumentiertes
 Verhalten.
+
+## Anbieterprüfung vom 24. November 2026
+
+Die folgenden Anbieter wurden für eine automatische Bestandsanbindung geprüft.
+Eine funktionierende Restkartenintegration ist damit **noch nicht verfügbar**:
+
+| Anbieter | Verifizierter Stand | Für die Implementierung fehlt |
+| --- | --- | --- |
+| Eventim | In der Recherche kein freigegebenes öffentliches Restkarten-API-Schema gefunden. Die öffentliche Such-/Shopdarstellung ist keine verlässliche Bestandszusage. | Partnerfreigabe, Endpunkt-/Feldbeschreibung und Testzugang für Bestandsdaten. |
+| ADticket / Reservix | Reservix bietet offiziell [APIs und Schnittstellen](https://www.reservix.net/ticketing-apis-und-schnittstellen-mit-reichweite/) sowie [Affiliate-Integration](https://www.reservix.net/affiliate-partnerschaft/) an. Die dokumentierte ACM-Zutrittsschnittstelle benötigt einen Schlüssel und ist nicht ohne Weiteres ein Restkartenbestand. | Passendes Bestandsprodukt, Rechte und bestätigtes Antwortschema, keine gekauften Tickets oder Kundendaten. |
+| eintrittskarten.io | Die öffentliche Hilfe dokumentiert keine freigegebene Bestandsschnittstelle. Die [Nutzungsbedingungen § 6](https://eintrittskarten.io/agb) untersagen die systematische Auslesung von Verfügbarkeiten. | Vom Anbieter freigegebener API-/Feed-Vertrag oder schriftlich freigegebener automatischer Abruf. |
+
+Es werden keine undokumentierten Shop-Endpunkte nachgebaut, Kaufvorgänge ausgeführt
+oder Abfragen erfunden. Fehlende Anbieterantworten dürfen niemals `0 Restkarten`,
+`ausverkauft` oder eine geschätzte Zahl ergeben. Bei mehreren Anbietern dürfen
+Kontingente nicht addiert werden, solange nicht feststeht, dass sie unabhängig sind.
+Manuelle Ticketangaben und die vorhandene Ticketauswahlseite funktionieren weiterhin.
+Die Anbieterkonfiguration, automatische Synchronisation und Abnahme mit echten
+Antworten bleiben bis zur Bereitstellung dieser Informationen offen.

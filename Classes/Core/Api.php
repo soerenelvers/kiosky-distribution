@@ -78,16 +78,17 @@ final class Api
         $migrationLock=null;$customerLock=null;$mediaScope=null;$processingStarted=hrtime(true);
         try {
             $method = strtoupper($method);
+            if($method==='GET'&&$path==='/api/player-rollout'){return [200,['percentage'=>(int)(($this->store instanceof StateSnapshotReader?$this->store->snapshot():$this->store->load())['playerRollout']['percentage']??100)]];}
             $query = [];
             parse_str((string)(parse_url($path, PHP_URL_QUERY) ?: ''), $query);
             $body = array_merge($query, $body);
             $path = '/' . ltrim((string)(parse_url($path, PHP_URL_PATH) ?: ''), '/');
             if($this->store instanceof CmsMediaStateStore){
-                $runtime=preg_match('#^/api/(?:player/[^/]+/(?:state|heartbeat|commands|proof)|dwd(?:/.*)?|operations(?:/.*)?|warnings(?:/[^/]+/(?:publish|end))?)$#',$path)===1;
+                $runtime=preg_match('#^/api/(?:player/[^/]+/(?:state|heartbeat|commands|proof|capture)|displays/[^/]+/players(?:/[^/]+)?|dwd(?:/.*)?|operations(?:/.*)?|warnings(?:/[^/]+/(?:publish|end))?)$#',$path)===1;
                 $catalog=$method==='GET'&&preg_match('#^/api/(?:(?:displays|locations|display-groups|groups|matrix-displays)(?:/[^/]+)?|displays/[^/]+/output)$#',$path)===1;
                 // These settings never consume or migrate media. Advertising and
                 // fonts retain their existing native media/storage behavior.
-                $settings=preg_match('#^/api/settings/(?:features|events|public-calendar|menus|menu-share|player-health)$#D',$path)===1;
+                $settings=preg_match('#^/api/settings/(?:features|events|public-calendar|menus|menu-share|player-health|player-rollout)$#D',$path)===1;
                 $session=preg_match('#^/api/auth/(?:me|setup-status|logout|password)$#D',$path)===1;
                 $mediaScope=$this->store->lightweight($runtime||$catalog||$settings||$session);
             }
@@ -104,7 +105,7 @@ final class Api
             }
             // Status/command requests do not select event content. The state GET,
             // editor and scheduler still apply lifecycle changes when needed.
-            $statusOnly=preg_match('#^/api/player/[^/]+/(heartbeat|commands|proof)$#D',$path)===1;
+            $statusOnly=preg_match('#^/api/player/[^/]+/(heartbeat|commands|proof|capture)$#D',$path)===1;
             $lifecycleChanged=!$statusOnly&&!str_starts_with($path,'/api/content-transfer/migration/')&&!preg_match('#^/api/displays/[^/]+/simulate$#',$path)&&EventLifecycle::synchronize($state);
             $historyBefore=$state;
             $result = $this->route($state, $method, $path, $body, $playerKey);
@@ -348,7 +349,7 @@ final class Api
             return $this->ok(['id' => $pairing['id'], 'code' => $pairing['code'], 'status' => 'paired', 'display' => ['id' => $display['id'], 'name' => $display['name']], 'playerUrl' => $base . '?display=' . rawurlencode((string)$display['slug']) . '&key=' . rawurlencode(($pairing['credentialVersion']??0)===1?'pc.'.$pairing['id'].'.'.$playerKey:(string)$display['playerKey'])]);
         }
 
-        if (preg_match('#^/api/player/([^/]+)/(state|heartbeat|proof|commands)$#', $path, $match)) {
+        if (preg_match('#^/api/player/([^/]+)/(state|heartbeat|proof|commands|capture)$#', $path, $match)) {
             return $this->player($state, $method, rawurldecode($match[1]), $match[2], $body, $playerKey);
         }
 
@@ -769,9 +770,20 @@ final class Api
             if ($method === 'PUT') return $this->ok(['asset' => $this->saveRecord($state, 'mediaAssets', $body, $id)], true);
             if ($method === 'DELETE') return $this->trashRecord($state, 'mediaAssets', 'media', $id);
         }
+        if($path==='/api/settings/player-rollout'){if($method==='GET')return $this->ok($state['playerRollout']??['percentage'=>100]);if($method==='PUT'){$value=$body['percentage']??null;if(!is_int($value)||$value<0||$value>100)throw new RuntimeException('Update-Freigabe muss zwischen 0 und 100 Prozent liegen.',422);$state['playerRollout']=['percentage'=>$value];$this->audit($state,'player.rollout.updated','player_rollout');return $this->ok($state['playerRollout'],true);}}
         if(preg_match('#^/api/displays/([^/]+)/players(?:/([^/]+))?$#',$path,$match)){
             $display=$this->required($this->active($state['displays']),rawurldecode($match[1]),'Display');
+            if(($this->identity['allLocations']??true)===false&&!in_array($display['locationId']??'', $this->identity['locationIds']??[],true))throw new RuntimeException('Dieses Display ist nicht freigegeben.',403);
+            if($method==='GET'&&!empty($match[2])){if(!$this->canControlPlayers())throw new RuntimeException('Keine Steuerungsrechte.',403);$id=rawurldecode($match[2]);if(!in_array($id,array_column(PlayerConnections::listing($state,$display),'id'),true))throw new RuntimeException('Player wurde nicht gefunden.',404);if(!$this->fontStorage)throw new RuntimeException('Geschützter Playerspeicher ist nicht verfügbar.',503);$photo=$this->fontStorage->playerSnapshots()->get($id);$pairing=$state['playerPairings'][$this->index($state['playerPairings'],$id)];$pending=$pairing['captureRequest']??[];return $this->ok(($photo['id']??'')===($pending['id']??'')?$photo:['pending'=>($pending['expiresAt']??0)>microtime(true)*1000]);}
             if($method==='GET'&&empty($match[2]))return $this->ok(['data'=>PlayerConnections::listing($state,$display)]);
+            if($method==='PUT'&&!empty($match[2])){
+                if(!$this->canControlPlayers())throw new RuntimeException('Keine Steuerungsrechte.',403);
+                $id=rawurldecode($match[2]);if(!in_array($id,array_column(PlayerConnections::listing($state,$display),'id'),true))throw new RuntimeException('Player wurde nicht gefunden.',404);
+                if(($body['command']??'')==='screenshot'){$index=$this->index($state['playerPairings'],$id);$old=$state['playerPairings'][$index]['captureRequest']??[];if(($old['expiresAt']??0)>microtime(true)*1000)throw new RuntimeException('Eine Fotoanforderung läuft bereits.',409);$state['playerPairings'][$index]['captureRequest']=['id'=>bin2hex(random_bytes(16)),'expiresAt'=>(int)(microtime(true)*1000)+60000];}
+                elseif(($body['command']??'')==='identify')$state['commands'][]=['id'=>bin2hex(random_bytes(16)),'displayId'=>$display['id'],'command'=>'identify','createdAt'=>$this->now(),'targetPlayerId'=>$id,'playerIds'=>[$id]];
+                else{if(!$this->canReadPlayerKeys())throw new RuntimeException('Keine Geräteverwaltungsrechte.',403);$name=$body['name']??null;if(!is_string($name)||mb_strlen(trim($name))>80||preg_match('/[\\x00-\\x1f\\x7f]/',$name))throw new RuntimeException('Bitte einen Player-Namen mit höchstens 80 Zeichen angeben.',422);$index=$this->index($state['playerPairings'],$id);$state['playerPairings'][$index]['name']=trim($name);}
+                $this->audit($state,($body['command']??'')==='identify'?'display.player.identified':(($body['command']??'')==='screenshot'?'display.player.screenshot.requested':'display.player.renamed'),(string)$display['id']);return $this->ok(['ok'=>true],true);
+            }
             if($method==='DELETE'){
                 $id=isset($match[2])?rawurldecode($match[2]):null;
                 foreach($state['playerPairings'] as &$p)if(($p['displayId']??'')===$display['id']&&($id===null||$p['id']===$id))$p['revokedAt']??=$this->now();unset($p);
@@ -2220,6 +2232,7 @@ final class Api
         if(!$connectionId&&str_starts_with($playerKey,'pc.'))throw new RuntimeException('Player wurde entkoppelt. Bitte erneut koppeln.',410);
         if (!$display || (!$connectionId&&!hash_equals((string)($display['playerKey'] ?? ''), $playerKey))) throw new RuntimeException('Display wurde nicht gefunden.', 404);
         if($action==='state')$display=$this->listCollection(array_replace($state,['displays'=>[$rawDisplay]]),'displays')[0];
+        if($action==='capture'&&$method==='POST'){if(!$connectionId)throw new RuntimeException('Einzelne Player-Kopplung erforderlich.',403);if(!$this->fontStorage)throw new RuntimeException('Geschützter Playerspeicher ist nicht verfügbar.',503);$player=$state['playerPairings'][$this->index($state['playerPairings'],$connectionId)];$this->fontStorage->playerSnapshots()->receive($connectionId,$player['captureRequest']??[],$body);return $this->ok(['ok'=>true]);}
         if($action==='heartbeat'&&$method==='POST'&&($body['registerPlayer']??false)===true&&!$connectionId)return $this->ok(PlayerConnections::register($state,$display,(string)($body['registrationSecret']??''),(string)($body['platform']??'Web Player')),true);
         $deliveryKey=$connectionId??$display['id'];
         $preview=($body['preview'] ?? '')==='1'||($body['preview'] ?? null)===1;
@@ -2328,8 +2341,11 @@ final class Api
             if(!in_array($id,array_column($fonts,'id'),true))throw new RuntimeException('Diese Schrift ist dem Display nicht zugewiesen.',404);
             return $this->ok($this->fontFile($state,$id),$changed||$deliveryChanged||$handoffChanged||$presetTriggerChanged);
         }
+        $playerIdentity=$connectionId?$this->first(PlayerConnections::listing($state,$display),fn(array $p):bool=>$p['id']===$connectionId):null;
+        if($connectionId){$playerIdentity=array_intersect_key($playerIdentity??[],array_flip(['id','name']));$pairing=$state['playerPairings'][$this->index($state['playerPairings'],$connectionId)];$request=$pairing['captureRequest']??null;$playerIdentity['captureRequest']=$request&&$request['expiresAt']>microtime(true)*1000?$request:null;}
         if($connectionId)unset($display['playerKey'],$display['playerConnections']);
         $output=[
+            'player'=>$playerIdentity,
             'fonts'=>$fonts, 'display' => $display, 'channel' => $channel, 'directSlide' => $directSlide, 'assignment' => $assignment,
             'slides' => $slides, 'warningPresentation'=>['nextChangeAtMs'=>$warningPresentation['nextChangeAtMs']], 'emergency' => $emergency, 'warning' => $emergency,
             'matrix' => $matrixLayout ? array_replace($matrixLayout, ['mode' => $matrixMode ? 'matrix' : 'individual']) : null,
